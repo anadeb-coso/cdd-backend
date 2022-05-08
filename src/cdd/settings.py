@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
-import environ
 from pathlib import Path
+
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -123,6 +124,16 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Format localization
+# https://docs.djangoproject.com/en/4.0/topics/i18n/formatting/#format-localization
+
+DATE_INPUT_FORMATS = [
+    '%d-%m-%Y', '%d/%m/%Y', '%d/%m/%y',  # '25-10-2006', '25/10/2006', '25/10/06'
+    '%d %b %Y', '%d %b, %Y',  # '25 Oct 2006', '25 Oct, 2006'
+    '%d %B %Y', '%d %B, %Y',  # '25 October 2006', '25 October, 2006'
+]
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
@@ -132,3 +143,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# CouchDB
+
+NO_SQL_USER = env('NO_SQL_USER')
+
+NO_SQL_PASS = env('NO_SQL_PASS')
+
+NO_SQL_URL = env('NO_SQL_URL')
