@@ -30,13 +30,19 @@ class Facilitator(models.Model):
         if not self.id:
             now = time.time()
             self.no_sql_user = str(int(now))
-            no_sql_password_length = 13
-            self.no_sql_password = secrets.token_urlsafe(no_sql_password_length)
+
+            no_sql_pass_length = 13
+            self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
+
             self.no_sql_db_name = f'facilitator_{self.no_sql_user}'
+
             if not self.code:
                 self.code = self.get_code(self.no_sql_user)
-            password = f'ChangeItNow{self.code}'
-            self.password = make_password(password, salt=None, hasher='default')
+
+            if not self.password:
+                self.password = f'ChangeItNow{self.code}'
+            self.password = make_password(self.password, salt=None, hasher='default')
+
             nsc = NoSQLClient()
             nsc.create_user(self.no_sql_user, self.no_sql_pass)
             facilitator_db = nsc.create_db(self.no_sql_db_name)
