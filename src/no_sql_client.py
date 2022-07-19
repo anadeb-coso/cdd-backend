@@ -44,9 +44,11 @@ class NoSQLClient:
         except Exception as e:
             print(e)
 
-    def delete_user(self, username):
+    def delete_user(self, username, no_sql_db=None):
         db = self.get_db('_users')
         self.delete_document(db, f'org.couchdb.user:{username}')
+        if no_sql_db:
+            self.delete_db(no_sql_db)
 
     def create_replication(self, source_db, target_db, **kwargs):
         from cloudant.replicator import Replicator

@@ -28,8 +28,13 @@ class Facilitator(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            now = time.time()
-            self.no_sql_user = str(int(now))
+            now = str(int(time.time()))
+
+            # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
+            while Facilitator.objects.filter(no_sql_user=now).exists():
+                now = str(int(time.time()))
+
+            self.no_sql_user = now
 
             no_sql_pass_length = 13
             self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
@@ -55,8 +60,12 @@ class Facilitator(models.Model):
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        NoSQLClient().delete_user(self.no_sql_user)
-
+        no_sql_db = None
+        if "no_sql_db" in kwargs:
+            no_sql_db = kwargs.pop("no_sql_db")
+        NoSQLClient().delete_user(self.no_sql_user, no_sql_db)
+        print(f'self.no_sql_user {self.no_sql_user}')
+        print(f'no_sql_db {no_sql_db}')
         super().delete(*args, **kwargs)
 
     @staticmethod
