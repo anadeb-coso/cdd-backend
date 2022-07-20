@@ -7,13 +7,15 @@ from no_sql_client import NoSQLClient
 
 
 class Command(BaseCommand):
-    help = 'Loads administrative levels from csv file to CouchDB'
+    help = "Creates a Facilitator and a related NoSQL database for each database administrative level and given level" \
+           " (if one doesn't exist, otherwise don't create)"
     error_messages = {
-        "more_than_one": "There is more than one document type facilitator in the design database.",
-        "only_one": "Make sure there is only one document of type facilitator in the design database.",
-        "no_facilitator": "There is no document type facilitator in the design database.",
+        "more_than_one": "There is more than one document type facilitator in the facilitator database. "
+                         "Make sure there is only one document of type facilitator in the facilitator database.",
+        "no_facilitator": "There is no document type facilitator in the facilitator database.",
         "no_administrative_level": "There is no document of type administrative_level with the given name.",
         "no_database": "There is no database with the given name.",
+        "no_design": "There is no database design.",
     }
 
     def add_arguments(self, parser):
@@ -24,12 +26,11 @@ class Command(BaseCommand):
         database = kwargs['database']
         administrative_level = kwargs['administrative_level']
 
-        # for f in Facilitator.objects.exclude(username='test'):
-        #     facilitator_db_name = f.no_sql_db_name
-        #     f.delete(no_sql_db=facilitator_db_name)
-        #     print(f'deleted {facilitator_db_name}')
-
         nsc = NoSQLClient()
+        try:
+            nsc.get_db('design')
+        except Exception as e:
+            raise CommandError(f'{self.error_messages["no_database"]} {e}')
         try:
             administrative_level_db = nsc.get_db(database)
         except Exception as e:
@@ -42,31 +43,34 @@ class Command(BaseCommand):
             }
         )
         if len(regions[:]) == 0:
-            raise CommandError(f'{self.error_messages["no_administrative_level"]}')
+            raise CommandError(self.error_messages["no_administrative_level"])
 
         added = 0
         for doc in regions:
             facilitator, created = Facilitator.objects.get_or_create(
                 username=f'{doc["name"].replace(" ", "_")}_{doc["administrative_id"]}')
-            if created:
-                added += 1
-            else:
+            if not created:
+                self.stdout.write(
+                    f'Found existing facilitator (username: {facilitator.username}) '
+                    f'for {administrative_level}: {doc["name"]}')
                 continue
             facilitator_db_name = facilitator.no_sql_db_name
             facilitator_db = nsc.get_db(facilitator_db_name)
             query_result = facilitator_db.get_query_result({"type": 'facilitator'})[:]
             start = time.time()
+
+            # Wait up to 10 seconds while the document of type facilitator is replicated in the newly created database
+            # for the facilitator
             while len(query_result) == 0:
                 query_result = facilitator_db.get_query_result({"type": 'facilitator'})[:]
-                print(f'esperando documento para facilitator {facilitator.no_sql_user}')
                 end = time.time()
-                if (end - start) > 10:
+                if end - start > 10:
                     facilitator.delete(no_sql_db=facilitator_db_name)
-                    raise CommandError(f'{self.error_messages["no_facilitator"]}')
+                    raise CommandError(self.error_messages["no_facilitator"])
 
             if len(query_result) > 1:
                 facilitator.delete(no_sql_db=facilitator_db_name)
-                raise CommandError(f'{self.error_messages["more_than_one"]} {self.error_messages["only_one"]}')
+                raise CommandError(self.error_messages["more_than_one"])
 
             facilitator_doc = facilitator_db[query_result[0]['_id']]
             facilitator_doc["administrative_levels"] = [
@@ -77,4 +81,7 @@ class Command(BaseCommand):
             ]
             facilitator_doc.save()
 
+            added += 1
+            self.stdout.write(
+                f'Created facilitator (username: {facilitator.username}) for {administrative_level}: {doc["name"]}')
         self.stdout.write(self.style.SUCCESS(f'Successfully added {added} facilitators'))
