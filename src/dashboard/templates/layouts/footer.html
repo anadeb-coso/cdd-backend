@@ -1,0 +1,11 @@
+{% load i18n %}
+
+<footer class="main-footer">
+    {% now "Y" as current_year %}
+    <strong>{% translate 'Copyright' %} &copy; {{ current_year }}
+        <a href="">CDD</a>.</strong>
+    {% translate 'All rights reserved' %}.
+    <div class="float-right d-none d-sm-inline-block">
+        <b>{% translate 'Version' %}</b> 0.1
+    </div>
+</footer>

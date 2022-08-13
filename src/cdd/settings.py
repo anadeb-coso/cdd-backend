@@ -47,6 +47,7 @@ INSTALLED_APPS = [
 
 CREATED_APPS = [
     'authentication',
+    'dashboard',
 ]
 
 THIRD_PARTY_APPS = [
@@ -144,6 +145,11 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_URL = '/'
+
+LOGIN_REDIRECT_URL = 'dashboard:facilitators:list'
+
+LOGOUT_REDIRECT_URL = '/'
 
 # CouchDB
 

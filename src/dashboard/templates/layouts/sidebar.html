@@ -1,0 +1,49 @@
+{% load static i18n %}
+
+<!-- Main Sidebar Container -->
+<aside class="main-sidebar sidebar-light-primary soft-shadow sidebar-no-expand">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Sidebar user panel (optional) -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="image">
+                {% if user.photo %}
+                    <img src="{{ user.photo.url }}" class="img-circle" alt="User Image"/>
+                {% else %}
+                    <img src="{% static 'images/default-avatar.jpg' %}" class="img-circle" alt="User Image"/>
+                {% endif %}
+            </div>
+            <div class="info">
+                <a href="#" class="d-block name">{{ user.first_name }} {{ user.last_name }}</a>
+                <p class="email">{{ user.email }}</p>
+            </div>
+        </div>
+
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:facilitators:list' %}"
+                       class="nav-link {% if active_level1 == 'facilitators' %}active{% endif %}">
+                        <i class="nav-icon fa fa-user-friends"></i>
+                        <p>{% translate "Facilitators" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="toogle-sidebar-button">
+            <ul class="nav nav-pills nav-sidebar flex-column">
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-widget="pushmenu">
+                        <i class="fa text-primary" ></i>
+                        <p>{% translate "Toggle Sidebar" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+    </div>
+    <!-- /.sidebar -->
+</aside>
