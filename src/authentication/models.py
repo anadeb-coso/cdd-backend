@@ -59,6 +59,10 @@ class Facilitator(models.Model):
 
         return super().save(*args, **kwargs)
 
+    def create_manually(self, *args, **kwargs):
+
+        return super().save(*args, **kwargs)
+
     def delete(self, *args, **kwargs):
         no_sql_db = None
         if "no_sql_db" in kwargs:
