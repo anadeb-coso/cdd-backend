@@ -1,0 +1,17 @@
+{% extends "layouts/base_error.html" %}
+{% load static i18n %}
+
+{% block title %}403{% endblock %}
+{% block content %}
+    <div class="error-page">
+        <h2 class="headline text-warning"> 403</h2>
+        <div class="error-content">
+            <h3><i class="fas fa-exclamation-triangle text-warning"></i>
+                {% translate "Access Denied" %}
+            </h3>
+            <p>
+                {% translate "Full authentication is required to access this resource." %}
+            </p>
+        </div>
+    </div>
+{% endblock content %}

@@ -1,0 +1,17 @@
+{% extends "layouts/base_error.html" %}
+{% load static i18n %}
+
+{% block title %}404{% endblock %}
+{% block content %}
+    <div class="error-page">
+        <h2 class="headline text-warning"> 404</h2>
+        <div class="error-content">
+            <h3><i class="fas fa-exclamation-triangle text-warning"></i>
+                {% translate "Sorry but we couldn't find this page" %}
+            </h3>
+            <p>
+                {% translate "This page you are looking for does not exist." %}
+            </p>
+        </div>
+    </div>
+{% endblock content %}

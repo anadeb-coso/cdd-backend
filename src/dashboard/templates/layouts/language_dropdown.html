@@ -1,0 +1,27 @@
+{% load i18n %}
+
+<li class="nav-item dropdown">
+    <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="fa fa-globe"></i>
+        {% get_current_language as LANGUAGE_CODE %}
+        {% get_language_info for LANGUAGE_CODE as lang %}
+        {% get_available_languages as LANGUAGES %}
+        {% get_language_info_list for LANGUAGES as languages %} {{ lang.name_local|capfirst }}
+    </a>
+    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        {% for language in languages %}
+            {% if lang.code != language.code %}
+                <a class="dropdown-item language" data-language_code="{{ language.code }}">
+                    {% trans language.name_local|capfirst %}
+                </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <div class="hidden">
+        <form name="language_form" action="{% url 'set_language' %}" method="post">
+            {% csrf_token %}
+            <input name="next" type="hidden" value="{{ redirect_to }}"/>
+            <input name="language" type="hidden"/>
+        </form>
+    </div>
+</li>

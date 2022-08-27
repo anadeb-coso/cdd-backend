@@ -1,0 +1,91 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include 'layouts/head.html' %}
+    {% block extracss %}{% endblock %}
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
+    {% include 'layouts/navbar.html' %}
+    {% block progress-bar %}{% endblock %}
+    {% include 'layouts/sidebar.html' %}
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <div class="m-0 main-title">{{ title | safe }}</div>
+                    </div>
+                    <!-- /.col -->
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            {% for item in breadcrumb %}
+                                {% if item.url %}
+                                    <li class="breadcrumb-item">
+                                        <a href="{{ item.url }}">{{ item.title }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="breadcrumb-item {% if item == breadcrumb|last %}active{% endif %}">
+                                        {{ item.title }}
+                                    </li>
+                                {% endif %}
+                            {% empty %}
+                                <li class="breadcrumb-item active">{{ title }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                    <!-- /.col -->
+                </div>
+                <!-- /.row -->
+            </div>
+            <!-- /.container-fluid -->
+        </div>
+        <!-- /.content-header -->
+
+        <!-- Main content -->
+        <section class="content">
+            <div class="container-fluid">
+                <div class="alert-div-content">
+                    <span id="popup-messages-content">
+                        {% include 'common/messages.html' %}
+                    </span>
+                </div>
+                {% block content-header %}{% endblock %}
+                {% block content %}{% endblock %}
+                {% block content-footer %}{% endblock %}
+                {% block modals %}{% endblock %}
+            </div>
+            <!-- /.container-fluid -->
+        </section>
+        <!-- /.content -->
+    </div>
+    <!-- /.content-wrapper -->
+
+    {#    {% include 'layouts/footer.html' %}#}
+
+    <!-- Control Sidebar -->
+    <aside class="control-sidebar control-sidebar-dark">
+        <!-- Control sidebar content goes here -->
+    </aside>
+    <!-- /.control-sidebar -->
+</div>
+<!-- ./wrapper -->
+
+{% block javascript %}
+    {% include 'layouts/foot.html' %}
+    {% block select2 %}
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $("select").select2()
+            });
+        </script>
+    {% endblock select2 %}
+{% endblock javascript %}
+</body>
+
+</html>

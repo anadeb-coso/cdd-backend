@@ -1,0 +1,40 @@
+{% load static i18n %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+{#    <link href="{% static 'images/eADL_logo.png' %}" type="image/png" rel="shortcut icon"/>#}
+
+    <title>
+        {% translate "Error" %} {% block title %}{% endblock %}
+    </title>
+
+    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome Free 5.13.0 -->
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/fontawesome-free/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/fontawesome-free/css/v4-shims.min.css' %}">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="{% static 'AdminLTE/dist/css/adminlte.min.css' %}">
+
+</head>
+
+<body>
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    {% block content %}{% endblock content %}
+</section>
+</body>
+</html>

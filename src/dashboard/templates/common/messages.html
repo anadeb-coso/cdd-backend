@@ -1,0 +1,39 @@
+{% if messages %}
+    {% if messages|length > 1 %}
+        {% for message in messages %}
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <div class="alert alert-{{ message.extra_tags }}">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                            ×
+                        </button>
+                        {{ message | safe }}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        {% for message in messages %}
+            {% if message.extra_tags == 'danger' %}
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        <div class="alert alert-{{ message.extra_tags }}">{{ message | safe }}</div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="modal modal-{{ message.extra_tags }} messageModal">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-body alert-{{ message.extra_tags }}">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                                {{ message | safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}

@@ -1,0 +1,50 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-8">
+                            {% translate 'Facilitator not assigned' as not_assigned %}
+                            <div class="profile-header">
+                                <span {% if not facilitator_doc %}class="text-warning"{% endif %} id="name">
+                                    {{ facilitator_doc.name|default:not_assigned }}
+                                </span>
+                            </div>
+                            {% comment %}<span class="text-muted fs17">{% translate 'Administrative Level' %}:</span>
+                            <span class="text-bold-family fs17">
+                                {% if facilitator_doc.name %}
+                                    {{ facilitator_doc.name }}
+                                {% else %}
+                                    {% translate 'No administrative level assigned' %}
+                                {% endif %}
+                            </span>{% endcomment %}
+                            <p class="mt-2 lh14 text-gray-light">
+                                {% translate 'Tel' %}: <span id="phone">{{ facilitator_doc.phone }}</span>
+                                <br>
+                                {% translate 'Email' %}: <span id="email">{{ facilitator_doc.email }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5 display-flex flex-flow-column">
+            <div class="card">
+                <div class="card-body">
+                    <span class="text-bold-family fs17">{% translate 'Last Activity' %}:</span>
+                    <span class="text-muted fs17">{{ facilitator_doc.last_activity }}</span>
+                </div>
+            </div>
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-bold-family fs17">{% translate 'Facilitator Code' %}</div>
+                    <div class="facilitator-code mt-3" id="facilitator_code">{{ facilitator.code }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

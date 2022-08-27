@@ -1,0 +1,6 @@
+[flake8]
+max-line-length=120
+exclude=manage.py,**/migrations/**,.eggs/*
+ignore=E121,E123,E126,E127,E305,E501,W503,W504
+import-order-style=pep8
+application-import-names=cdd,authentication

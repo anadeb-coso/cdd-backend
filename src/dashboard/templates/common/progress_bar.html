@@ -1,0 +1,8 @@
+{% load i18n %}
+
+<div class="progress height6">
+    <div class="progress-bar navbar-primary" role="progressbar" aria-valuenow="5" aria-valuemin="0"
+         aria-valuemax="100" style="width: {{ percentage }}%">
+        <span class="sr-only">{{ percentage }}% {% translate 'Completed' %}</span>
+    </div>
+</div>

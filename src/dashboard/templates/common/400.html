@@ -1,0 +1,17 @@
+{% extends "layouts/base_error.html" %}
+{% load static i18n %}
+
+{% block title %}400{% endblock %}
+{% block content %}
+    <div class="error-page">
+        <h2 class="headline text-warning"> 400</h2>
+        <div class="error-content">
+            <h3><i class="fas fa-exclamation-triangle text-warning"></i>
+                {% translate "BAD REQUEST" %}
+            </h3>
+            <p>
+                {% translate "The server could not understand the request due to invalid syntax." %}
+            </p>
+        </div>
+    </div>
+{% endblock content %}
