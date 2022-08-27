@@ -22,6 +22,7 @@ inflection==0.5.1
 iniconfig==1.1.1
 jsonschema==4.4.0
 mccabe==0.6.1
+mysqlclient==2.1.1
 nodeenv==1.6.0
 packaging==21.3
 parameterized==0.8.1

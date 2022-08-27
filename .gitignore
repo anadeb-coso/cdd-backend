@@ -131,3 +131,7 @@ dmypy.json
 
 # SO
 .DS_Store
+
+src/cdd/.env.production
+
+src/cdd/.env.develop
