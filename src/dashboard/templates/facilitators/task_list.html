@@ -1,0 +1,35 @@
+{% load static i18n custom_tags %}
+
+{% for task in tasks %}
+    <div class="card-item">
+        <div class="row">
+            <div class="col-sm-8">
+                <span class="phase-title">
+                    {{ task.title }}
+                </span>
+                {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
+                {% translate 'Activity' %}: {{ task.activity_name }}
+            </div>
+            <div class="col-sm-4">
+                <div class="badge-closed-at">
+                    <i class="far fa-calendar-alt text-warning"></i>
+                    {% translate 'Completed on' %}:
+                    {{ task.completed_date|default:'-' }}
+                </div>
+
+                <div class="status-badge">
+                    {% if task.completed and task.attachments %}
+                        check verde
+                    {% elif task.completed and not task.attachments  %}
+                        triangulo warning rojo
+                    {% else %}
+                        reloj gris
+                    {% endif %}
+                </div>
+                <div>
+                    {% translate 'Proof of completion' %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
