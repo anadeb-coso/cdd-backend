@@ -61,6 +61,14 @@ class Facilitator(models.Model):
 
     def create_manually(self, *args, **kwargs):
 
+        if not self.code:
+            self.code = self.get_code(self.no_sql_user)
+
+        if not self.password:
+            self.password = f'ChangeItNow{self.code}'
+
+        self.password = make_password(self.password, salt=None, hasher='default')
+
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
