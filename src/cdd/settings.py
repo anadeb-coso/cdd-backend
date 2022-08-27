@@ -93,7 +93,7 @@ WSGI_APPLICATION = 'cdd.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db(default='sqlite:///db.sqlite3')
+    'default': env.db()
 }
 
 
