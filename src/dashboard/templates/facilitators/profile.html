@@ -47,4 +47,168 @@
             </div>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card transparent">
+                <div class="card-body">
+                    <div class="row tasks-filter">
+                        <div class="col-4 text-left">
+                            <div class="fs28 lh35 text-primary text-bold-family mb-4">
+                                {% translate 'Task List' %}<br>
+                            </div>
+                        </div>
+                        <div class="col-8 border-left">
+                            <div class="row">
+                                <div class="col-3">
+                                    <label class="label-align">{% translate 'Filter by' %}</label>
+                                </div>
+                                <div class="col-3">
+                                    {% bootstrap_field form.administrative_level show_label=False %}
+                                </div>
+                                <div class="col-3">
+                                    {% bootstrap_field form.phase show_label=False %}
+                                </div>
+                                <div class="col-3">
+                                    {% bootstrap_field form.activity show_label=False %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a class="btn fs12 text-bold-family text-primary pull-right p-0"
+                       id="clear_all_filters">
+                        {% translate "Clear all filters" %}
+                    </a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <div id="task-list"></div>
+                    <div class="text-right">
+                        <a id="previous" class="btn text-primary hidden">
+                            <i class="fa fa-chevron-left fs20 align-middle"></i>
+                        </a>
+                        <div id="current-page" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                        <a id="next" class="btn text-primary hidden">
+                            <i class="fa fa-chevron-right fs20 align-middle"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="overlay" id="spin">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+
+    <script type="text/javascript">
+        let spin = $('#spin');
+        let index = 0;
+        const offset = 10;
+        let previous = $('#previous');
+        let next = $('#next');
+        let tasks = $('#task-list');
+        let total_tasks = parseInt("{{ total_tasks }}");
+        let current_page = $('#current-page');
+        let administrative_level = $('#id_administrative_level');
+        let phase = $('#id_phase');
+        let activity = $('#id_activity');
+
+        function loadTasks() {
+            spin.show();
+            $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:task_list'  facilitator.no_sql_db_name %}",
+                data: {
+                    index: index,
+                    offset: offset,
+                    administrative_level: administrative_level.val(),
+                    phase: phase.val(),
+                    activity: activity.val(),
+                },
+                success: function (response) {
+                    spin.hide();
+                    if (index - offset >= 0) {
+                        previous.show();
+                    } else {
+                        previous.hide();
+                    }
+                    if (index + offset < total_tasks) {
+                        next.show();
+                    } else {
+                        next.hide();
+                    }
+                    tasks.html(response);
+                    if (response.trim()) {
+                        current_page.html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset));
+                    } else {
+                        current_page.html("")
+                    }
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                    current_page.html("");
+                }
+            });
+        }
+
+        loadTasks();
+
+
+        previous.click(function () {
+            index -= offset;
+            loadTasks();
+        });
+
+        next.click(function () {
+            index += offset;
+            loadTasks();
+        });
+
+
+        $('.tasks-filter input').on('change keyup', function () {
+            if (!$(this).val()) {
+                loadTasks();
+            }
+        });
+
+        $('.tasks-filter select').on('change', function () {
+            loadTasks();
+        });
+
+        $("#clear_all_filters").on("click", function () {
+            $('.tasks-filter input').val('');
+            $('.tasks-filter select').val(null).trigger('change.select2');
+            loadTasks();
+        });
+
+    </script>
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_administrative_level").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true
+        });
+        $("#id_phase").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+        });
+        $("#id_activity").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

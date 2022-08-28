@@ -1,0 +1,52 @@
+{% load static i18n custom_tags %}
+
+{% for task in tasks %}
+    <div class="card-item">
+        <div class="row">
+            <div class="col-sm-7">
+                <div class="phase-title">
+                    {{ task.name }}
+                </div>
+                <div class="phase-title mt-3">
+                    {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
+                    {% translate 'Activity' %}: {{ task.activity_name }}
+                </div>
+            </div>
+            <div class="col-sm-3">
+                <div class="badge-closed-at">
+                    <i class="far fa-calendar-alt text-warning"></i>
+                    {% translate 'Completed on' %}:
+                    {{ task.completed_date|default:'-' }}
+                </div>
+                <div class="badge-closed-at mt-1">
+                    {% if task.completed and task.attachments %}
+                        <i class="fas fa-check success-color"></i>
+                    {% elif task.completed and not task.attachments %}
+                        <i class="fas fa-exclamation-triangle warning-color"></i>
+                    {% else %}
+                        <i class="fas fa-clock gray-color"></i>
+                    {% endif %}
+                    {% translate 'Proof of completion' %}
+                </div>
+            </div>
+            <div class="col-sm-2 text-right">
+                {% if task.completed %}
+                    <div class="status-badge badge-completed">
+                        {% translate 'Completed' %}
+                    </div>
+                {% else %}
+                    <div class="status-badge badge-pending">
+                        {% translate 'Pending' %}
+                    </div>
+                {% endif %}
+                <div>
+                    <i class="fa fa-chevron-circle-right chevron-item fs18"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+{% empty %}
+    <div class="text-center">
+        {% translate 'No tasks found' %}
+    </div>
+{% endfor %}
