@@ -50,7 +50,7 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card">
+            <div class="card transparent">
                 <div class="card-body">
                     <div class="row tasks-filter">
                         <div class="col-4 text-left">
@@ -109,7 +109,7 @@
     <script type="text/javascript">
         let spin = $('#spin');
         let index = 0;
-        const offset = 2;
+        const offset = 10;
         let previous = $('#previous');
         let next = $('#next');
         let tasks = $('#task-list');
@@ -132,8 +132,6 @@
                     activity: activity.val(),
                 },
                 success: function (response) {
-                    console.log(total_tasks);
-                    console.log("TOTAL TASKS");
                     spin.hide();
                     if (index - offset >= 0) {
                         previous.show();

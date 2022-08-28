@@ -90,6 +90,9 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         administrative_level_id = self.request.GET.get('administrative_level')
         phase_id = self.request.GET.get('phase')
         activity_id = self.request.GET.get('activity')
+        print(f'administrative_level_id {administrative_level_id}')
+        print(f'phase_id {phase_id}')
+        print(f'activity_id {activity_id}')
 
         selector = {
             "type": "task"

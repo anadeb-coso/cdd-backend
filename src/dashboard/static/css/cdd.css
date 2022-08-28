@@ -14705,7 +14705,7 @@ body.text-sm .control-sidebar {
     background-color: #dedede;
 }
 
-.navbar-gray {
+.navbar-gray, .badge-pending {
     background-color: #707070;
 }
 
@@ -33006,4 +33006,16 @@ a.text-muted:hover {
 
 .card.transparent > .card-body {
     padding: 0 !important;
+}
+
+.success-color {
+    color: #24c38b;
+}
+
+.warning-color {
+    color: #ba2928;
+}
+
+.gray-color {
+    color: #707070;
 }
