@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: Your Project API
+  version: 1.0.0
+  description: Your project description
+paths:
+  /attachments/upload-to-issue:
+    post:
+      operationId: attachments_upload_to_issue_create
+      description: More descriptive text
+      tags:
+      - attachments
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IssueFileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IssueFileRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueFile'
+          description: ''
+components:
+  schemas:
+    IssueFile:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        file:
+          type: string
+          format: uri
+        doc_id:
+          type: string
+        attachment_id:
+          type: string
+      required:
+      - attachment_id
+      - doc_id
+      - file
+      - password
+      - username
+    IssueFileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        file:
+          type: string
+          format: binary
+        doc_id:
+          type: string
+          minLength: 1
+        attachment_id:
+          type: string
+          minLength: 1
+      required:
+      - attachment_id
+      - doc_id
+      - file
+      - password
+      - username
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
