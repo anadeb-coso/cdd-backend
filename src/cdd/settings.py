@@ -53,9 +53,7 @@ CREATED_APPS = [
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
-    'drf_spectacular',
-    # 'drf_spectacular_sidecar',  # required for Django collectstatic discovery
-    'rest_framework',
+    'drf_yasg',
 ]
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
@@ -157,19 +155,6 @@ LOGIN_REDIRECT_URL = 'dashboard:facilitators:list'
 
 LOGOUT_REDIRECT_URL = '/'
 
-REST_FRAMEWORK = {
-    # YOUR SETTINGS
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
-
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'Your Project API',
-    'DESCRIPTION': 'Your project description',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    # OTHER SETTINGS
-}
-
 
 # CouchDB
 
@@ -178,3 +163,10 @@ NO_SQL_USER = env('NO_SQL_USER')
 NO_SQL_PASS = env('NO_SQL_PASS')
 
 NO_SQL_URL = env('NO_SQL_URL')
+
+# S3
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+AWS_STORAGE_BUCKET_NAME=env('S3_BUCKET')
+AWS_ACCESS_KEY_ID = env('S3_ACCESS')
+AWS_SECRET_ACCESS_KEY = env('S3_SECRET')

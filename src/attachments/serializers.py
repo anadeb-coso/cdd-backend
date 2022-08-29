@@ -2,7 +2,7 @@ from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-
+from authentication.models import Facilitator
 
 class AuthMixinSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -12,7 +12,9 @@ class AuthMixinSerializer(serializers.Serializer):
         username = attrs.get('username')
         password = attrs.get('password')
 
-        if username != settings.COUCHDB_USERNAME or password != settings.COUCHDB_PASSWORD:
+        facilitator = Facilitator.objects.filter(no_sql_user=username,no_sql_pass=password)
+        print(facilitator)
+        if not facilitator:
             raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
 
         return super().validate(attrs)
@@ -57,6 +59,5 @@ class GetAttachmentSerializer(serializers.Serializer):
     db = serializers.CharField(read_only=True, required=False)
 
 
-class IssueFileSerializer(AuthMixinSerializer, FileSerializer):
-    doc_id = serializers.CharField()
-    attachment_id = serializers.CharField()
+class IssueFileSerializer(AuthMixinSerializer):
+    file = serializers.FileField()
