@@ -48,11 +48,13 @@ INSTALLED_APPS = [
 CREATED_APPS = [
     'authentication',
     'dashboard',
+    'attachments',
 ]
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
     'drf_spectacular',
+    # 'drf_spectacular_sidecar',  # required for Django collectstatic discovery
     'rest_framework',
 ]
 
@@ -154,6 +156,20 @@ LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = 'dashboard:facilitators:list'
 
 LOGOUT_REDIRECT_URL = '/'
+
+REST_FRAMEWORK = {
+    # YOUR SETTINGS
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your Project API',
+    'DESCRIPTION': 'Your project description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
+
 
 # CouchDB
 
