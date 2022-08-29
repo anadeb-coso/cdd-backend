@@ -138,11 +138,10 @@ class UploadIssueAttachmentAPIView(generics.GenericAPIView):
         if not media_storage.exists(file_path_within_bucket): # avoid overwriting existing file
             media_storage.save(file_path_within_bucket, data['file'])
             file_url = media_storage.url(file_path_within_bucket)
-
-            return JsonResponse({
+            return Response({
                 'message': 'OK',
                 'fileUrl': file_url,
-            })
+            }, status=201)
         else:
             return JsonResponse({
                 'message': 'Error: file {filename} already exists at {file_directory} in bucket {bucket_name}'.format(
