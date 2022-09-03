@@ -25,10 +25,12 @@ handler500 = 'dashboard.authentication.views.handler500'
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('attachments/', include('attachments.urls')),
     path('i18n/', include('django.conf.urls.i18n')),
     path('authentication/', include('authentication.urls')),
     path('', include('dashboard.urls')),
 ]
+
 
 if settings.DEBUG:
     from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
