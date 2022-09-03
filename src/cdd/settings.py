@@ -162,3 +162,9 @@ NO_SQL_USER = env('NO_SQL_USER')
 NO_SQL_PASS = env('NO_SQL_PASS')
 
 NO_SQL_URL = env('NO_SQL_URL')
+
+
+REST_FRAMEWORK = {
+    # https://github.com/tfranzel/drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
