@@ -46,7 +46,7 @@ class Facilitator(models.Model):
 
             if not self.password:
                 self.password = f'ChangeItNow{self.code}'
-            self.password = make_password(self.password, salt=None, hasher='default')
+                self.password = make_password(self.password, salt=None, hasher='default')
 
             nsc = NoSQLClient()
             nsc.create_user(self.no_sql_user, self.no_sql_pass)
@@ -54,9 +54,10 @@ class Facilitator(models.Model):
             nsc.replicate_design_db(facilitator_db)
             nsc.add_member_to_database(facilitator_db, self.no_sql_user)
 
-        if self.password and self.password != self.__current_password:
-            self.password = make_password(self.password, salt=None, hasher='default')
+        return super().save(*args, **kwargs)
 
+    def hash_password(self, *args, **kwards):
+        self.password = make_password(self.password, salt=None, hasher='default')
         return super().save(*args, **kwargs)
 
     def create_without_no_sql_db(self, *args, **kwargs):
@@ -71,7 +72,7 @@ class Facilitator(models.Model):
 
         return super().save(*args, **kwargs)
 
-    def create_with_no_sql_db(self, database, *args, **kwargs):
+    def create_with_no_sql_db(self, *args, **kwargs):
 
         if not self.id:
             now = str(int(time.time()))
@@ -85,7 +86,28 @@ class Facilitator(models.Model):
             no_sql_pass_length = 13
             self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
 
-            self.no_sql_db_name = f'facilitator_{self.no_sql_user}'
+            if not self.code:
+                self.code = self.get_code(self.no_sql_user)
+
+            nsc = NoSQLClient()
+            nsc.create_user(self.no_sql_user, self.no_sql_pass)
+            facilitator_db = nsc.get_db(self.no_sql_db_name)
+            nsc.add_member_to_database(facilitator_db, self.no_sql_user)
+
+        if self.password and self.password != self.__current_password:
+            self.password = make_password(self.password, salt=None, hasher='default')
+
+        return super().save(*args, **kwargs)
+
+
+    def create_with_manually_assign_database(self, *args, **kwargs):
+
+        if not self.id:
+            now = str(int(time.time()))
+
+            # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
+            while Facilitator.objects.filter(no_sql_user=now).exists():
+                now = str(int(time.time()))
 
             if not self.code:
                 self.code = self.get_code(self.no_sql_user)
@@ -96,7 +118,7 @@ class Facilitator(models.Model):
 
             nsc = NoSQLClient()
             nsc.create_user(self.no_sql_user, self.no_sql_pass)
-            facilitator_db = nsc.get_db(database)
+            facilitator_db = nsc.get_db(self.no_sql_db_name)
             nsc.add_member_to_database(facilitator_db, self.no_sql_user)
 
         if self.password and self.password != self.__current_password:
