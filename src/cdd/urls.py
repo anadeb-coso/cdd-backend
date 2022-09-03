@@ -17,9 +17,6 @@ from django.conf import settings
 from django.conf.urls import include
 from django.contrib import admin
 from django.urls import path
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework import permissions
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
@@ -30,20 +27,17 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('attachments/', include('attachments.urls')),
     path('i18n/', include('django.conf.urls.i18n')),
+    path('authentication/', include('authentication.urls')),
     path('', include('dashboard.urls')),
 ]
 
-schema_view = get_schema_view(
-    openapi.Info(
-        title="GRM API Documentation",
-        default_version='v1',
-        description="Test Documentation",
-    ),
-    public=True,
-    permission_classes=(permissions.AllowAny,),
-)
 
 if settings.DEBUG:
+    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
     urlpatterns += [
-        path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+        # YOUR PATTERNS
+        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+        # Optional UI:
+        path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     ]

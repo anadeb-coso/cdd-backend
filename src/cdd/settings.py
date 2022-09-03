@@ -53,7 +53,8 @@ CREATED_APPS = [
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
-    'drf_yasg',
+    'drf_spectacular',
+    'rest_framework',
 ]
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
@@ -164,9 +165,18 @@ NO_SQL_PASS = env('NO_SQL_PASS')
 
 NO_SQL_URL = env('NO_SQL_URL')
 
+
+REST_FRAMEWORK = {
+    # https://github.com/tfranzel/drf-spectacular
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
 # S3
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-AWS_STORAGE_BUCKET_NAME=env('S3_BUCKET')
+AWS_STORAGE_BUCKET_NAME = env('S3_BUCKET')
+
 AWS_ACCESS_KEY_ID = env('S3_ACCESS')
+
 AWS_SECRET_ACCESS_KEY = env('S3_SECRET')
