@@ -1,22 +1,28 @@
 import os
+from django.conf import settings
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import generics, parsers
 from rest_framework.response import Response
 from storages.backends.s3boto3 import S3Boto3Storage
 
-from attachments.serializers import (
-    AttachmentUpdateStatusSerializer, IssueFileSerializer
-)
+from attachments.serializers import TaskFileSerializer
+from rest_framework import serializers
 
 
 class UploadIssueAttachmentAPIView(generics.GenericAPIView):
-    serializer_class = IssueFileSerializer
+    serializer_class = TaskFileSerializer
     parser_classes = (parsers.FormParser, parsers.MultiPartParser)
 
     @extend_schema(
-        responses={201: AttachmentUpdateStatusSerializer},
-        description="Allowed file size less than or equal to 2 MB"
+        responses={201: inline_serializer(
+            'AttachmentUpdateStatusSerializer',
+            fields={
+                'message': serializers.CharField(),
+                'fileUrl': serializers.CharField(),
+            }
+        )},
+        description=f"Allowed file size less than or equal to {settings.MAX_UPLOAD_SIZE / (1024 * 1024) } MB"
     )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

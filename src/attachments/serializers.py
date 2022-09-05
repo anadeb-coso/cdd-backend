@@ -2,7 +2,9 @@ from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+
 from authentication.models import Facilitator
+
 
 class AuthMixinSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -12,8 +14,7 @@ class AuthMixinSerializer(serializers.Serializer):
         username = attrs.get('username')
         password = attrs.get('password')
 
-        facilitator = Facilitator.objects.filter(no_sql_user=username,no_sql_pass=password)
-        print(facilitator)
+        facilitator = Facilitator.objects.filter(no_sql_user=username, no_sql_pass=password)
         if not facilitator:
             raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
 
@@ -43,21 +44,4 @@ class FileSerializer(serializers.Serializer):
 
 
 class TaskFileSerializer(AuthMixinSerializer, FileSerializer):
-    doc_id = serializers.CharField()
-    phase = serializers.IntegerField(min_value=1)
-    task = serializers.IntegerField(min_value=1)
-    attachment_id = serializers.CharField()
-
-
-class AttachmentUpdateStatusSerializer(serializers.Serializer):
-    ok = serializers.BooleanField(read_only=True)
-    id = serializers.CharField(read_only=True)
-    rev = serializers.CharField(read_only=True)
-
-
-class GetAttachmentSerializer(serializers.Serializer):
-    db = serializers.CharField(read_only=True, required=False)
-
-
-class IssueFileSerializer(AuthMixinSerializer):
-    file = serializers.FileField()
+    pass
