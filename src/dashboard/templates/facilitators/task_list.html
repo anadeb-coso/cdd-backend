@@ -7,10 +7,28 @@
                 <div class="phase-title">
                     {{ task.name }}
                 </div>
-                <div class="phase-title mt-3">
+                <div class="phase-title mt-3 mb-2">
                     {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
                     {% translate 'Activity' %}: {{ task.activity_name }}
                 </div>
+                <div class="border-separator"></div>
+                <div class="text-bold-family mt-2 mb-2">
+                    {% translate "Attachments" %}
+                </div>
+                {% for attachment in task.attachments %}
+                    {% if attachment.cloud_url %}
+                        <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
+                           target="_blank">
+                            <i class="fas fa-paperclip mr-2"></i>
+                            {{ attachment.name }}
+                        </a>
+                    {% else %}
+                        <i class="fas fa-paperclip mr-2"></i>
+                        {{ attachment.name }}
+                    {% endif %}
+                {% empty %}
+                    {% translate "No attachments" %}
+                {% endfor %}
             </div>
             <div class="col-sm-3">
                 <div class="badge-closed-at">
@@ -39,9 +57,6 @@
                         {% translate 'Pending' %}
                     </div>
                 {% endif %}
-                <div>
-                    <i class="fa fa-chevron-circle-right chevron-item fs18"></i>
-                </div>
             </div>
         </div>
     </div>
