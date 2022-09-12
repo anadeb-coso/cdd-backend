@@ -1,5 +1,7 @@
 from datetime import datetime
 from operator import itemgetter
+from authentication.models import Facilitator
+from no_sql_client import NoSQLClient
 
 from django.template.defaultfilters import date as _date
 
@@ -28,3 +30,20 @@ def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
     if empty_choice:
         choices = [('', '')] + choices
     return choices
+
+def create_task_all_facilitators(database):
+    facilitators = Facilitator.objects.all()
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db(database)
+    task = nsc_database.get_query_result({"type": "task"})[0]
+    activity = nsc_database.get_query_result({"type": "activity"})[0]
+    phase = nsc_database.get_query_result({"type": "phase"})[0]
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        facilitator_administrative_levels = facilitator_database.get_query_result(
+            {"type": "facilitator"}
+        )[0]
+
+        for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+            print(administrative_level)
