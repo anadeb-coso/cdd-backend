@@ -31,6 +31,7 @@ def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
         choices = [('', '')] + choices
     return choices
 
+
 def create_task_all_facilitators(database):
     facilitators = Facilitator.objects.all()
     nsc = NoSQLClient()
@@ -38,12 +39,30 @@ def create_task_all_facilitators(database):
     task = nsc_database.get_query_result({"type": "task"})[0]
     activity = nsc_database.get_query_result({"type": "activity"})[0]
     phase = nsc_database.get_query_result({"type": "phase"})[0]
+    project = nsc_database.get_query_result({"type": "project"})[0]
     for facilitator in facilitators:
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         print(facilitator.no_sql_db_name, facilitator.username)
         facilitator_administrative_levels = facilitator_database.get_query_result(
             {"type": "facilitator"}
         )[0]
-
+        project = facilitator_database.get_query_result(
+            {"type": "project", "name": project[0]['name']}
+        )[0]
+        if not project:
+            # create the project
+            print('no hay!')
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+            # Get phase
+            fc_phase = facilitator_database.get_query_result({
+                "type": "phase",
+                "order": phase[0]['order'],
+                "phase_name": phase[0]['name']
+            })[0]
+            if not fc_phase:
+                # create the phase
+                print('no hay phase')
+            # Get or create  activity
+
+            # Get or create  task
             print(administrative_level)
