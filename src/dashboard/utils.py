@@ -46,23 +46,58 @@ def create_task_all_facilitators(database):
         facilitator_administrative_levels = facilitator_database.get_query_result(
             {"type": "facilitator"}
         )[0]
-        project = facilitator_database.get_query_result(
+        fc_project = facilitator_database.get_query_result(
             {"type": "project", "name": project[0]['name']}
         )[0]
-        if not project:
-            # create the project
-            print('no hay!')
+
+        # check if the project exists
+        if not fc_project:
+            # create the project on the facilitator database
+            nsc.create_document(facilitator_database, project[0])
+
+        # Iterate every administrative level assigned to the facilitator
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+
             # Get phase
             fc_phase = facilitator_database.get_query_result({
                 "type": "phase",
                 "order": phase[0]['order'],
-                "phase_name": phase[0]['name']
+                "phase_name": phase[0]['name'],
+                "administrative_level_id": administrative_level['id'],
+                "project_id": project['_id']
             })[0]
+
+            # Check if the phase was found
             if not fc_phase:
                 # create the phase
-                print('no hay phase')
+                new_phase = phase[0].copy()
+                del new_phase['_id']
+                del new_phase['_rev']
+                new_phase['administrative_level_id'] = administrative_level['id']
+                print(new_phase)
+                nsc.create_document(facilitator_database, new_phase)
+                # Get phase
+                fc_phase = facilitator_database.get_query_result({
+                    "type": "phase",
+                    "order": phase[0]['order'],
+                    "phase_name": phase[0]['name'],
+                    "administrative_level_id": administrative_level['id'],
+                    "project_id": project['_id']
+                })[0]
+
             # Get or create  activity
+            fc_activity = facilitator_database.get_query_result({
+                "type": "activity",
+                "order": activity[0]['order'],
+                "activity_name": activity[0]['name'],
+                "phase_id": fc_phase['_id'],
+                "administrative_level_id": administrative_level['id'],
+                "project_id": project['_id']
+            })[0]
+
+            # Check if the phase was found
+            if not fc_activity:
+                print(fc_activity)
 
             # Get or create  task
             print(administrative_level)
