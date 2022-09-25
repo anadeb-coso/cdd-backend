@@ -59,45 +59,34 @@ def create_task_all_facilitators(database):
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
 
             # Get phase
-            fc_phase = facilitator_database.get_query_result({
-                "type": "phase",
-                "order": phase[0]['order'],
-                "phase_name": phase[0]['name'],
-                "administrative_level_id": administrative_level['id'],
-                "project_id": project['_id']
-            })[0]
-
+            new_phase = phase[0].copy()
+            del new_phase['_id']
+            del new_phase['_rev']
+            new_phase['administrative_level_id'] = administrative_level['id']
+            new_phase['project_id'] = project[0]['_id']
+            fc_phase = facilitator_database.get_query_result(new_phase)[0]
             # Check if the phase was found
-            if not fc_phase:
+            if len(fc_phase) < 1:
                 # create the phase
-                new_phase = phase[0].copy()
-                del new_phase['_id']
-                del new_phase['_rev']
-                new_phase['administrative_level_id'] = administrative_level['id']
-                print(new_phase)
                 nsc.create_document(facilitator_database, new_phase)
                 # Get phase
-                fc_phase = facilitator_database.get_query_result({
-                    "type": "phase",
-                    "order": phase[0]['order'],
-                    "phase_name": phase[0]['name'],
-                    "administrative_level_id": administrative_level['id'],
-                    "project_id": project['_id']
-                })[0]
-
+                fc_phase = facilitator_database.get_query_result(new_phase)[0]
             # Get or create  activity
-            fc_activity = facilitator_database.get_query_result({
-                "type": "activity",
-                "order": activity[0]['order'],
-                "activity_name": activity[0]['name'],
-                "phase_id": fc_phase['_id'],
-                "administrative_level_id": administrative_level['id'],
-                "project_id": project['_id']
-            })[0]
+            new_activity = activity[0].copy()
+            del new_activity['_id']
+            del new_activity['_rev']
+            new_activity['administrative_level_id'] = administrative_level['id']
+            new_activity['project_id'] = project[0]['_id']
+            new_activity['phase_id'] = fc_phase[0]['_id']
 
-            # Check if the phase was found
-            if not fc_activity:
-                print(fc_activity)
+            fc_activity = facilitator_database.get_query_result(new_activity)[0]
 
+            # Check if the activity was found
+            if len(fc_activity) < 1:
+                # create the phase
+                nsc.create_document(facilitator_database, new_activity)
+                # Get phase
+                fc_activity = facilitator_database.get_query_result(new_activity)[0]
+            print(fc_activity)
             # Get or create  task
             print(administrative_level)
