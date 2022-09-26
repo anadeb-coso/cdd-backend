@@ -83,10 +83,28 @@ def create_task_all_facilitators(database):
 
             # Check if the activity was found
             if len(fc_activity) < 1:
-                # create the phase
+                # create the activity
                 nsc.create_document(facilitator_database, new_activity)
-                # Get phase
+                # Get activity
                 fc_activity = facilitator_database.get_query_result(new_activity)[0]
-            print(fc_activity)
+
             # Get or create  task
+            new_task = task[0].copy()
+            del new_task['_id']
+            del new_task['_rev']
+            new_task['administrative_level_id'] = administrative_level['id']
+            new_task['administrative_level_name'] = administrative_level['name']
+            new_task['project_id'] = project[0]['_id']
+            new_task['phase_id'] = fc_phase[0]['_id']
+            new_task['activity_id'] = fc_activity[0]['_id']
+
+            fc_task = facilitator_database.get_query_result(new_task)[0]
+
+            # Check if the task was found
+            if len(fc_task) < 1:
+                # create the activity
+                nsc.create_document(facilitator_database, new_task)
+                # Get activity
+                fc_task = facilitator_database.get_query_result(new_task)[0]
+            print(fc_task)
             print(administrative_level)
