@@ -49,6 +49,7 @@ CREATED_APPS = [
     'authentication',
     'dashboard',
     'attachments',
+    'process_manager'
 ]
 
 THIRD_PARTY_APPS = [
