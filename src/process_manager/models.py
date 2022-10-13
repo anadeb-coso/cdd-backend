@@ -13,7 +13,21 @@ from no_sql_client import NoSQLClient
 # }
 class Project(models.Model):
     name = models.CharField(max_length=255)
+    description = models.TextField()
+    couch_id = models.CharField(max_length=255, blank=True)
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            data = {
+                "name": self.name,
+                "type": "project",
+                "description": self.description,
+            }
+            nsc = NoSQLClient()
+            nsc_database = nsc.get_db("process_design")
+            new_document = nsc.create_document(nsc_database, data)
+            self.couch_id = new_document['_id']
+        return super().save(*args, **kwargs)
 
 # The Phase object on couch looks like this
 # {
@@ -21,7 +35,7 @@ class Project(models.Model):
 #     "_rev": "2-ae3f90c1f84c91ff97a4bffd5686a9b7",
 #     "type": "phase",
 #     "project_id": "219e50bc41c65648039b08eb10e7b925",
-#     "administrative_level_id": "adml123",
+#     "administrative_level_id": "adml123", NO
 #     "name": "Community Mobilization",
 #     "order": 1,
 #     "description": "Lorem ipsum",
@@ -42,9 +56,18 @@ class Phase(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id:
-            print('epale')
-            self.couch_id = '1'
-
+            data = {
+                "name": self.name,
+                "type": "phase",
+                "description": self.description,
+                "order": self.order,
+                "capacity_attachments": [],
+                "project_id": self.project.couch_id
+            }
+            nsc = NoSQLClient()
+            nsc_database = nsc.get_db("process_design")
+            new_document = nsc.create_document(nsc_database, data)
+            self.couch_id = new_document['_id']
         return super().save(*args, **kwargs)
 
 
