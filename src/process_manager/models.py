@@ -99,6 +99,7 @@ class Activity(models.Model):
     phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
     total_tasks = models.IntegerField()
     order = models.IntegerField()
+    couch_id = models.CharField(max_length=255, blank=True)
 
 
     def save(self, *args, **kwargs):
@@ -144,3 +145,34 @@ class Activity(models.Model):
 #   "form": []
 class Task(models.Model):
     name = models.CharField(max_length=255)
+    description = models.TextField()
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
+    activity = models.ForeignKey("Activity", on_delete=models.CASCADE)
+    order = models.IntegerField()
+    couch_id = models.CharField(max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+
+        if not self.id:
+            data = {
+                "type": "task",
+                "project_id": self.project.couch_id,
+                "phase_id": self.phase.couch_id,
+                "phase_name": self.phase.name,
+                "activity_id": self.activity.couch_id,
+                "activity_name": self.activity.name,
+                "name": self.name,
+                "order": self.order,
+                "description": self.description,
+                "completed": False,
+                "completed_date": "",
+                "capacity_attachments": [],
+                "attachments": [],
+                "form": []
+            }
+            nsc = NoSQLClient()
+            nsc_database = nsc.get_db("process_design")
+            new_document = nsc.create_document(nsc_database, data)
+            self.couch_id = new_document['_id']
+        return super().save(*args, **kwargs)
