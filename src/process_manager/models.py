@@ -94,6 +94,32 @@ class Phase(models.Model):
 # }
 class Activity(models.Model):
     name = models.CharField(max_length=255)
+    description = models.TextField()
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
+    total_tasks = models.IntegerField()
+    order = models.IntegerField()
+
+
+    def save(self, *args, **kwargs):
+
+        if not self.id:
+            data = {
+                "name": self.name,
+                "type": "activity",
+                "description": self.description,
+                "order": self.order,
+                "capacity_attachments": [],
+                "project_id": self.project.couch_id,
+                "phase_id": self.phase.couch_id,
+                "total_tasks": self.total_tasks,
+                "completed_tasks": 0
+            }
+            nsc = NoSQLClient()
+            nsc_database = nsc.get_db("process_design")
+            new_document = nsc.create_document(nsc_database, data)
+            self.couch_id = new_document['_id']
+        return super().save(*args, **kwargs)
 
 
 # The task object on couch looks like this
