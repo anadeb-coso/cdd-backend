@@ -16,6 +16,9 @@ class Project(models.Model):
     description = models.TextField()
     couch_id = models.CharField(max_length=255, blank=True)
 
+    def __str__(self):
+        return self.name
+
     def save(self, *args, **kwargs):
         if not self.id:
             data = {
@@ -28,6 +31,7 @@ class Project(models.Model):
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
         return super().save(*args, **kwargs)
+
 
 # The Phase object on couch looks like this
 # {
@@ -53,6 +57,9 @@ class Phase(models.Model):
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     couch_id = models.CharField(max_length=255, blank=True)
     order = models.IntegerField()
+
+    def __str__(self):
+        return self.name
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -100,6 +107,9 @@ class Activity(models.Model):
     total_tasks = models.IntegerField()
     order = models.IntegerField()
     couch_id = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.phase.name + '-' + self.name
 
 
     def save(self, *args, **kwargs):
@@ -151,6 +161,9 @@ class Task(models.Model):
     activity = models.ForeignKey("Activity", on_delete=models.CASCADE)
     order = models.IntegerField()
     couch_id = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return self.phase.name + '-' + self.activity.name + '-' + self.name
 
     def save(self, *args, **kwargs):
 
