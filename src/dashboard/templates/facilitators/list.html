@@ -4,6 +4,13 @@
 {% block content %}
     <div class="row">
         <div class="col-12">
+        <div class="float-right mb-3">
+            <a href="{% url 'dashboard:facilitators:create' %}"
+               class="btn btn-primary btn-sm rounded-xl">
+                <i class="fa fa-plus mr-2"></i>
+                {% translate "Create Facilitator" %}
+            </a>
+        </div>
             <div class="input-group mb-3 search-bar">
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>

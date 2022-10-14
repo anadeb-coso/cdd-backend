@@ -1,0 +1,53 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <form method="post">{% csrf_token %}
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                {% bootstrap_field form.name %}
+                                {% bootstrap_field form.email %}
+                                {% bootstrap_field form.phone %}
+                            </div>
+                            <div class="col-6">
+                                {% bootstrap_field form.username %}
+                                {% bootstrap_field form.password1 %}
+                                {% bootstrap_field form.password2 %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-xl">
+                            {% translate "SAVE" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+
+    <script type="text/javascript">
+
+
+    </script>
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}
