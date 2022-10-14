@@ -26,7 +26,8 @@ class NoSQLClient:
             print(e)
 
     def create_document(self, db, data, **kwargs):
-        db.create_document(data, **kwargs)
+        new_document = db.create_document(data, **kwargs)
+        return new_document
 
     def create_user(self, username, password):
         db = self.get_db('_users')
