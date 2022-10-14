@@ -2,6 +2,7 @@ from datetime import datetime
 from operator import itemgetter
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
+from process_manager.models import Phase, Activity, Task
 
 from django.template.defaultfilters import date as _date
 
@@ -32,14 +33,15 @@ def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
     return choices
 
 
-def create_task_all_facilitators(database):
+# TODO Refactor para la nueva logica
+def create_task_all_facilitators(database, task_model):
     facilitators = Facilitator.objects.all()
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
-    task = nsc_database.get_query_result({"type": "task"})[0]
-    activity = nsc_database.get_query_result({"type": "activity"})[0]
-    phase = nsc_database.get_query_result({"type": "phase"})[0]
-    project = nsc_database.get_query_result({"type": "project"})[0]
+    task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
+    activity = nsc_database.get_query_result({"_id": task_model.activity.couch_id})[0]
+    phase = nsc_database.get_query_result({"_id": task_model.phase.couch_id})[0]
+    project = nsc_database.get_query_result({"_id": task_model.project.couch_id})[0]
     for facilitator in facilitators:
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         print(facilitator.no_sql_db_name, facilitator.username)
@@ -108,3 +110,11 @@ def create_task_all_facilitators(database):
                 fc_task = facilitator_database.get_query_result(new_task)[0]
             print(fc_task)
             print(administrative_level)
+
+
+# from dashboard.utils import sync_tasks
+def sync_tasks():
+    tasks = Task.objects.all().prefetch_related()
+    for task in tasks:
+        print('syncing: ', task.phase.order, task.activity.order, task.order)
+        create_task_all_facilitators("process_design", task)
