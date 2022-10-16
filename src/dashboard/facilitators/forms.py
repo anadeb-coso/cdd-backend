@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from authentication.models import Facilitator
-from dashboard.utils import get_choices
+from dashboard.utils import get_administrative_level_choices, get_administrative_levels_by_level, get_choices
 from no_sql_client import NoSQLClient
 
 
@@ -32,6 +32,7 @@ class FacilitatorForm(forms.Form):
     error_messages = {
         "password_mismatch": _("The two password fields didn’t match."),
         'duplicated_username': _('A facilitator with that username is already registered.'),
+        'administrative_level_required': _('At least one administrative level is required.'),
     }
     name = forms.CharField()
     email = forms.EmailField(required=False)
@@ -49,6 +50,8 @@ class FacilitatorForm(forms.Form):
         strip=False,
         help_text=_("Enter the same password as before, for verification."),
     )
+    administrative_level = forms.ChoiceField()
+    administrative_levels = forms.JSONField(label='', required=False)
 
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")
@@ -73,6 +76,26 @@ class FacilitatorForm(forms.Form):
 
     def clean_username(self):
         username = self.cleaned_data['username']
-        if Facilitator.objects.filter(username=username):
+        if Facilitator.objects.filter(username=username).exists():
             self.add_error('username', self.error_messages["duplicated_username"])
         return username
+
+    def clean(self):
+        administrative_levels = self.cleaned_data['administrative_levels']
+        if not administrative_levels:
+            raise forms.ValidationError(self.error_messages['administrative_level_required'])
+        return super().clean()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        nsc = NoSQLClient()
+        administrative_levels_db = nsc.get_db('administrative_levels')
+        label = get_administrative_levels_by_level(administrative_levels_db)[0]['administrative_level'].upper()
+        self.fields['administrative_level'].label = label
+
+        administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        self.fields['administrative_level'].widget.choices = administrative_level_choices
+        self.fields['administrative_level'].choices = administrative_level_choices
+        self.fields['administrative_level'].widget.attrs['class'] = "region"
+        self.fields['administrative_levels'].widget.attrs['class'] = "hidden"

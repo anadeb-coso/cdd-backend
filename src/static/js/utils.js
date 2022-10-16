@@ -39,8 +39,11 @@ function showPopupMessage(content) {
     }
 }
 
+<!-- Checkbox style -->
 $('.form-check').addClass("icheck-primary");
 
+
+<!-- Delay for ajax calls -->
 function delay(callback, ms) {
     let timer = 0;
     return function () {

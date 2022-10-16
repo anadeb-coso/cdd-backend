@@ -130,6 +130,7 @@ class CreateFacilitatorFormView(PageMixin, generic.FormView):
             "name": data['name'],
             "email": data['email'],
             "phone": data['phone'],
+            "administrative_levels": data['administrative_levels'],
             "type": "facilitator"
         }
         nsc = NoSQLClient()
