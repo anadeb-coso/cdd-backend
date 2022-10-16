@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy
 from django.views import generic
 
 from authentication.models import Facilitator
-from dashboard.facilitators.forms import FilterTaskForm
+from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin
 from no_sql_client import NoSQLClient
 
@@ -90,9 +90,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         administrative_level_id = self.request.GET.get('administrative_level')
         phase_id = self.request.GET.get('phase')
         activity_id = self.request.GET.get('activity')
-        print(f'administrative_level_id {administrative_level_id}')
-        print(f'phase_id {phase_id}')
-        print(f'activity_id {activity_id}')
 
         selector = {
             "type": "task"
@@ -105,3 +102,38 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         if activity_id:
             selector["activity_id"] = activity_id
         return self.facilitator_db.get_query_result(selector)[index:index + offset]
+
+
+class CreateFacilitatorFormView(PageMixin, generic.FormView):
+    template_name = 'facilitators/create.html'
+    title = gettext_lazy('Create Facilitator')
+    active_level1 = 'facilitators'
+    form_class = FacilitatorForm
+    success_url = reverse_lazy('dashboard:facilitators:list')
+    breadcrumb = [
+        {
+            'url': reverse_lazy('dashboard:facilitators:list'),
+            'title': gettext_lazy('Facilitators')
+        },
+        {
+            'url': '',
+            'title': title
+        }
+    ]
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+
+        facilitator = Facilitator(username=data['username'], password=data['password1'], active=True)
+        facilitator.save(replicate_design=False)
+        doc = {
+            "name": data['name'],
+            "email": data['email'],
+            "phone": data['phone'],
+            "administrative_levels": data['administrative_levels'],
+            "type": "facilitator"
+        }
+        nsc = NoSQLClient()
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        nsc.create_document(facilitator_database, doc)
+        return super().form_valid(form)

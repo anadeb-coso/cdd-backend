@@ -1,10 +1,11 @@
 from datetime import datetime
 from operator import itemgetter
-from authentication.models import Facilitator
-from no_sql_client import NoSQLClient
-from process_manager.models import Phase, Activity, Task
 
 from django.template.defaultfilters import date as _date
+
+from authentication.models import Facilitator
+from no_sql_client import NoSQLClient
+from process_manager.models import Task
 
 
 def sort_dictionary_list_by_field(list_to_be_sorted, field, reverse=False):
@@ -31,6 +32,71 @@ def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
     if empty_choice:
         choices = [('', '')] + choices
     return choices
+
+
+def get_administrative_levels_by_level(administrative_levels_db, level=None):
+    filters = {"type": 'administrative_level'}
+    if level:
+        filters['administrative_level'] = level
+    else:
+        filters['parent_id'] = None
+    parent_id = administrative_levels_db.get_query_result(filters)[:][0]['administrative_id']
+    data = administrative_levels_db.get_query_result(
+        {
+            "type": 'administrative_level',
+            "parent_id": parent_id,
+        }
+    )
+    data = [doc for doc in data]
+    return data
+
+
+def get_administrative_level_choices(administrative_levels_db, empty_choice=True):
+    country_id = administrative_levels_db.get_query_result(
+        {
+            "type": 'administrative_level',
+            "parent_id": None,
+        }
+    )[:][0]['administrative_id']
+    query_result = administrative_levels_db.get_query_result(
+        {
+            "type": 'administrative_level',
+            "parent_id": country_id,
+        }
+    )
+    return get_choices(query_result, 'administrative_id', "name", empty_choice)
+
+
+def get_child_administrative_levels(administrative_levels_db, parent_id):
+    data = administrative_levels_db.get_query_result(
+        {
+            "type": 'administrative_level',
+            "parent_id": parent_id,
+        }
+    )
+    data = [doc for doc in data]
+    return data
+
+
+def get_parent_administrative_level(administrative_levels_db, administrative_id):
+    parent = None
+    docs = administrative_levels_db.get_query_result({
+        "administrative_id": administrative_id,
+        "type": 'administrative_level'
+    })
+
+    try:
+        doc = administrative_levels_db[docs[0][0]['_id']]
+        if 'parent_id' in doc and doc['parent_id']:
+            administrative_id = doc['parent_id']
+            docs = administrative_levels_db.get_query_result({
+                "administrative_id": administrative_id,
+                "type": 'administrative_level'
+            })
+            parent = administrative_levels_db[docs[0][0]['_id']]
+    except Exception:
+        pass
+    return parent
 
 
 # TODO Refactor para la nueva logica

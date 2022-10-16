@@ -21,6 +21,25 @@ class FacilitatorForm(forms.ModelForm):
 class FacilitatorAdmin(admin.ModelAdmin):
     form = FacilitatorForm
     readonly_fields = ('no_sql_user', 'no_sql_pass', 'no_sql_db_name')
+    list_filter = [
+        'active',
+    ]
+
+    search_fields = [
+        'no_sql_user',
+        'no_sql_db_name',
+        'username',
+        'code',
+        'active',
+    ]
+
+    list_display = [
+        'no_sql_user',
+        'no_sql_db_name',
+        'username',
+        'code',
+        'active',
+    ]
 
 
 class LogEntryAdmin(admin.ModelAdmin):

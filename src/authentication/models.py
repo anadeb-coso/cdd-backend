@@ -26,15 +26,23 @@ class Facilitator(models.Model):
     def __str__(self):
         return self.username
 
-    def save(self, *args, **kwargs):
-        if not self.id:
+    def set_no_sql_user(self):
+        now = str(int(time.time()))
+
+        # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
+        while Facilitator.objects.filter(no_sql_user=now).exists():
             now = str(int(time.time()))
 
-            # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
-            while Facilitator.objects.filter(no_sql_user=now).exists():
-                now = str(int(time.time()))
+        self.no_sql_user = now
 
-            self.no_sql_user = now
+    def save(self, *args, **kwargs):
+        replicate_design = True
+        if "replicate_design" in kwargs:
+            replicate_design = kwargs.pop("replicate_design")
+
+        if not self.id:
+
+            self.set_no_sql_user()
 
             no_sql_pass_length = 13
             self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
@@ -51,12 +59,13 @@ class Facilitator(models.Model):
             nsc = NoSQLClient()
             nsc.create_user(self.no_sql_user, self.no_sql_pass)
             facilitator_db = nsc.create_db(self.no_sql_db_name)
-            nsc.replicate_design_db(facilitator_db)
+            if replicate_design:
+                nsc.replicate_design_db(facilitator_db)
             nsc.add_member_to_database(facilitator_db, self.no_sql_user)
 
         return super().save(*args, **kwargs)
 
-    def hash_password(self, *args, **kwards):
+    def hash_password(self, *args, **kwargs):
         self.password = make_password(self.password, salt=None, hasher='default')
         return super().save(*args, **kwargs)
 
@@ -75,13 +84,7 @@ class Facilitator(models.Model):
     def create_with_no_sql_db(self, *args, **kwargs):
 
         if not self.id:
-            now = str(int(time.time()))
-
-            # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
-            while Facilitator.objects.filter(no_sql_user=now).exists():
-                now = str(int(time.time()))
-
-            self.no_sql_user = now
+            self.set_no_sql_user()
 
             no_sql_pass_length = 13
             self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
@@ -99,15 +102,10 @@ class Facilitator(models.Model):
 
         return super().save(*args, **kwargs)
 
-
     def create_with_manually_assign_database(self, *args, **kwargs):
 
         if not self.id:
-            now = str(int(time.time()))
-
-            # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
-            while Facilitator.objects.filter(no_sql_user=now).exists():
-                now = str(int(time.time()))
+            self.set_no_sql_user()
 
             if not self.code:
                 self.code = self.get_code(self.no_sql_user)
@@ -131,8 +129,8 @@ class Facilitator(models.Model):
         if "no_sql_db" in kwargs:
             no_sql_db = kwargs.pop("no_sql_db")
         NoSQLClient().delete_user(self.no_sql_user, no_sql_db)
-        print(f'self.no_sql_user {self.no_sql_user}')
-        print(f'no_sql_db {no_sql_db}')
+        # print(f'self.no_sql_user {self.no_sql_user}')
+        # print(f'no_sql_db {no_sql_db}')
         super().delete(*args, **kwargs)
 
     @staticmethod
