@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -123,8 +124,8 @@ class CreateFacilitatorFormView(PageMixin, generic.FormView):
 
     def form_valid(self, form):
         data = form.cleaned_data
-
-        facilitator = Facilitator(username=data['username'], password=data['password1'], active=True)
+        password = make_password(data['password1'], salt=None, hasher='default')
+        facilitator = Facilitator(username=data['username'], password=password, active=True)
         facilitator.save(replicate_design=False)
         doc = {
             "name": data['name'],
