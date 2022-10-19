@@ -20,16 +20,20 @@ class Project(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        if not self.id:
-            data = {
-                "name": self.name,
-                "type": "project",
-                "description": self.description,
-            }
-            nsc = NoSQLClient()
-            nsc_database = nsc.get_db("process_design")
+        data = {
+            "name": self.name,
+            "type": "project",
+            "description": self.description,
+        }
+        nsc = NoSQLClient()
+        nsc_database = nsc.get_db("process_design")
+        new_document = nsc_database.get_query_result(
+            {"_id": self.couch_id}
+        )[0]
+        if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
+
         return super().save(*args, **kwargs)
 
 
@@ -62,17 +66,20 @@ class Phase(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        if not self.id:
-            data = {
-                "name": self.name,
-                "type": "phase",
-                "description": self.description,
-                "order": self.order,
-                "capacity_attachments": [],
-                "project_id": self.project.couch_id
-            }
-            nsc = NoSQLClient()
-            nsc_database = nsc.get_db("process_design")
+        data = {
+            "name": self.name,
+            "type": "phase",
+            "description": self.description,
+            "order": self.order,
+            "capacity_attachments": [],
+            "project_id": self.project.couch_id
+        }
+        nsc = NoSQLClient()
+        nsc_database = nsc.get_db("process_design")
+        new_document = nsc_database.get_query_result(
+            {"_id": self.couch_id}
+        )[0]
+        if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
         return super().save(*args, **kwargs)
@@ -114,20 +121,23 @@ class Activity(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if not self.id:
-            data = {
-                "name": self.name,
-                "type": "activity",
-                "description": self.description,
-                "order": self.order,
-                "capacity_attachments": [],
-                "project_id": self.project.couch_id,
-                "phase_id": self.phase.couch_id,
-                "total_tasks": self.total_tasks,
-                "completed_tasks": 0
-            }
-            nsc = NoSQLClient()
-            nsc_database = nsc.get_db("process_design")
+        data = {
+            "name": self.name,
+            "type": "activity",
+            "description": self.description,
+            "order": self.order,
+            "capacity_attachments": [],
+            "project_id": self.project.couch_id,
+            "phase_id": self.phase.couch_id,
+            "total_tasks": self.total_tasks,
+            "completed_tasks": 0
+        }
+        nsc = NoSQLClient()
+        nsc_database = nsc.get_db("process_design")
+        new_document = nsc_database.get_query_result(
+            {"_id": self.couch_id}
+        )[0]
+        if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
         return super().save(*args, **kwargs)
@@ -160,32 +170,39 @@ class Task(models.Model):
     phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
     activity = models.ForeignKey("Activity", on_delete=models.CASCADE)
     order = models.IntegerField()
+    form = models.JSONField(null=True, blank=True)
     couch_id = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.phase.name + '-' + self.activity.name + '-' + self.name
 
     def save(self, *args, **kwargs):
-
-        if not self.id:
-            data = {
-                "type": "task",
-                "project_id": self.project.couch_id,
-                "phase_id": self.phase.couch_id,
-                "phase_name": self.phase.name,
-                "activity_id": self.activity.couch_id,
-                "activity_name": self.activity.name,
-                "name": self.name,
-                "order": self.order,
-                "description": self.description,
-                "completed": False,
-                "completed_date": "",
-                "capacity_attachments": [],
-                "attachments": [],
-                "form": []
-            }
-            nsc = NoSQLClient()
-            nsc_database = nsc.get_db("process_design")
+        form = []
+        if self.form:
+            form = [self.form]
+        data = {
+            "type": "task",
+            "project_id": self.project.couch_id,
+            "phase_id": self.phase.couch_id,
+            "phase_name": self.phase.name,
+            "activity_id": self.activity.couch_id,
+            "activity_name": self.activity.name,
+            "name": self.name,
+            "order": self.order,
+            "description": self.description,
+            "completed": False,
+            "completed_date": "",
+            "capacity_attachments": [],
+            "attachments": [],
+            "form": form,
+            "form_response": []
+        }
+        nsc = NoSQLClient()
+        nsc_database = nsc.get_db("process_design")
+        new_document = nsc_database.get_query_result(
+            {"_id": self.couch_id}
+        )[0]
+        if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
         return super().save(*args, **kwargs)
