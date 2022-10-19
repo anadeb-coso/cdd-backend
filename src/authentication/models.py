@@ -54,7 +54,6 @@ class Facilitator(models.Model):
 
             if not self.password:
                 self.password = f'ChangeItNow{self.code}'
-                self.password = make_password(self.password, salt=None, hasher='default')
 
             nsc = NoSQLClient()
             nsc.create_user(self.no_sql_user, self.no_sql_pass)
@@ -62,6 +61,9 @@ class Facilitator(models.Model):
             if replicate_design:
                 nsc.replicate_design_db(facilitator_db)
             nsc.add_member_to_database(facilitator_db, self.no_sql_user)
+
+        if self.password and self.password != self.__current_password:
+            self.password = make_password(self.password, salt=None, hasher='default')
 
         return super().save(*args, **kwargs)
 
