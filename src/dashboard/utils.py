@@ -5,7 +5,7 @@ from django.template.defaultfilters import date as _date
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
-from process_manager.models import Task
+from process_manager.models import Task, Phase, Activity, Project
 
 
 def sort_dictionary_list_by_field(list_to_be_sorted, field, reverse=False):
@@ -184,3 +184,27 @@ def sync_tasks():
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
         create_task_all_facilitators("process_design", task)
+
+# from dashboard.utils import reset_tasks
+def reset_tasks():
+    projects = Project.objects.all()
+    projects.update(couch_id="")
+    phases = Phase.objects.all()
+    phases.update(couch_id="")
+    activities = Activity.objects.all()
+    activities.update(couch_id="")
+    tasks = Task.objects.all()
+    tasks.update(couch_id="")
+
+    for project in projects:
+        project.save()
+
+    for phase in phases:
+        phase.save()
+
+    for activity in activities:
+        activity.save()
+
+    for task in tasks:
+        task.save()
+
