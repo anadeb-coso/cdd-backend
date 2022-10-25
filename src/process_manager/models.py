@@ -179,7 +179,7 @@ class Task(models.Model):
     def save(self, *args, **kwargs):
         form = []
         if self.form:
-            form = [self.form]
+            form = self.form
         data = {
             "type": "task",
             "project_id": self.project.couch_id,
