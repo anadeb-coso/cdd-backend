@@ -100,8 +100,8 @@ def get_parent_administrative_level(administrative_levels_db, administrative_id)
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model):
-    facilitators = Facilitator.objects.all()
+def create_task_all_facilitators(database, task_model, test_mode=False):
+    facilitators = Facilitator.objects.filter(test_mode=test_mode)
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
@@ -179,11 +179,11 @@ def create_task_all_facilitators(database, task_model):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks():
+def sync_tasks(test_mode=False):
     tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        create_task_all_facilitators("process_design", task)
+        create_task_all_facilitators("process_design", task, test_mode)
 
 # from dashboard.utils import reset_tasks
 def reset_tasks():
