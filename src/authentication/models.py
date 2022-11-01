@@ -16,7 +16,9 @@ class Facilitator(models.Model):
     password = models.CharField(max_length=128, verbose_name=_('password'))
     code = models.CharField(max_length=6, unique=True, verbose_name=_('code'))
     active = models.BooleanField(default=False, verbose_name=_('active'))
-    test_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+    develop_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+    training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+
 
     __current_password = None
 

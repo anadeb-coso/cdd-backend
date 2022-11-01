@@ -100,8 +100,8 @@ def get_parent_administrative_level(administrative_levels_db, administrative_id)
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model, test_mode=False):
-    facilitators = Facilitator.objects.filter(test_mode=test_mode)
+def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False):
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, trainning_mode=trainning_mode)
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
@@ -179,11 +179,11 @@ def create_task_all_facilitators(database, task_model, test_mode=False):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(test_mode=False):
+def sync_tasks(develop_mode=False, trainning_mode=False):
     tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        create_task_all_facilitators("process_design", task, test_mode)
+        create_task_all_facilitators("process_design", task, develop_mode, trainning_mode)
 
 # from dashboard.utils import reset_tasks
 def reset_tasks():
@@ -207,4 +207,29 @@ def reset_tasks():
 
     for task in tasks:
         task.save()
+
+
+def test_facilitators_creation(amount):
+    count = 1
+    while count <= amount:
+        facilitator = Facilitator(
+            username="training" + str(count),
+            password="123learn",
+            active=True,
+            training_mode=True,
+        )
+        facilitator.save(replicate_design=False)
+        doc = {
+            "name": "Training Acccount",
+            "email": "training@test.com",
+            "phone": "123456",
+            "administrative_levels": "fakeadministrativelevel",
+            "type": "facilitator"
+        }
+        nsc = NoSQLClient()
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        nsc.create_document(facilitator_database, doc)
+        count = count + 1
+        print(count)
+    return True
 
