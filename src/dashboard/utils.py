@@ -209,7 +209,7 @@ def reset_tasks():
         task.save()
 
 
-def test_facilitators_creation(amount):
+def create_training_facilitators(amount):
     count = 1
     while count <= amount:
         facilitator = Facilitator(
@@ -231,5 +231,15 @@ def test_facilitators_creation(amount):
         nsc.create_document(facilitator_database, doc)
         count = count + 1
         print(count)
+    return True
+
+# TODO: Test this well
+def delete_training_facilitators():
+    training_facilitators = Facilitator.objects.filtter(training_mode=True)
+    nsc = NoSQLClient()
+    for facilitator in training_facilitators:
+        nsc.delete_db(facilitator.no_sql_db_name)
+        nsc.delete_user(facilitator.no_sql_user)
+        facilitator.delete()
     return True
 
