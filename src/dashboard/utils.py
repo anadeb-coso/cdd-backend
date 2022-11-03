@@ -2,7 +2,7 @@ from datetime import datetime
 from operator import itemgetter
 
 from django.template.defaultfilters import date as _date
-
+from django.contrib.auth.hashers import make_password
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity, Project
@@ -101,7 +101,7 @@ def get_parent_administrative_level(administrative_levels_db, administrative_id)
 
 # TODO Refactor para la nueva logica
 def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False):
-    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, trainning_mode=trainning_mode)
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
@@ -179,11 +179,11 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(develop_mode=False, trainning_mode=False):
+def sync_tasks(develop_mode=False, training_mode=False):
     tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        create_task_all_facilitators("process_design", task, develop_mode, trainning_mode)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode)
 
 # from dashboard.utils import reset_tasks
 def reset_tasks():
@@ -209,8 +209,8 @@ def reset_tasks():
         task.save()
 
 
-def create_training_facilitators(amount):
-    count = 1
+def create_training_facilitators(start=1, amount=1):
+    count = start
     while count <= amount:
         facilitator = Facilitator(
             username="training" + str(count),
@@ -219,11 +219,18 @@ def create_training_facilitators(amount):
             training_mode=True,
         )
         facilitator.save(replicate_design=False)
+        password = make_password(facilitator.password, salt=None, hasher='default')
+        query_facilitator = Facilitator.objects.filter(id=facilitator.id).update(password=password)
         doc = {
             "name": "Training Acccount",
             "email": "training@test.com",
             "phone": "123456",
-            "administrative_levels": "fakeadministrativelevel",
+            "administrative_levels": [
+                {
+                    "name": "SANFATOUTE CENTRE",
+                    "id": "7e15f10d6da4ede08fa6a6810300c9ad"
+                }
+            ],
             "type": "facilitator"
         }
         nsc = NoSQLClient()
@@ -235,7 +242,7 @@ def create_training_facilitators(amount):
 
 # TODO: Test this well
 def delete_training_facilitators():
-    training_facilitators = Facilitator.objects.filtter(training_mode=True)
+    training_facilitators = Facilitator.objects.filter(training_mode=True)
     nsc = NoSQLClient()
     for facilitator in training_facilitators:
         nsc.delete_db(facilitator.no_sql_db_name)
@@ -243,3 +250,21 @@ def delete_training_facilitators():
         facilitator.delete()
     return True
 
+
+def clear_facilitator_database(develop_mode=False, training_mode=False):
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        nsc_database = nsc.get_db(facilitator.no_sql_db_name)
+        phases = nsc_database.get_query_result({"type": "phase"})
+        for phase in phases:
+            nsc.delete_document(nsc_database, phase["_id"])
+        activities = nsc_database.get_query_result({"type": "activity"})
+        for activity in activities:
+            nsc.delete_document(nsc_database, activity["_id"])
+        tasks = nsc_database.get_query_result({"type": "task"})
+        for task in tasks:
+            nsc.delete_document(nsc_database, task["_id"])
+        projects = nsc_database.get_query_result({"type": "project"})
+        for project in projects:
+            nsc.delete_document(nsc_database, project["_id"])
