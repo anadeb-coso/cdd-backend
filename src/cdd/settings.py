@@ -144,6 +144,14 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STATICFILES_DIRS = [
+    (BASE_DIR / 'dashboard/static')
+]
+
+MEDIA_ROOT = BASE_DIR / 'media/'
+
+MEDIA_URL = '/media/'
+
 
 MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
 
