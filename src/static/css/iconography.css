@@ -1,0 +1,15 @@
+.icon {
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.icon-color {
+    width: 20px;
+    height: 15px;
+    background-color: currentColor;
+}
+
+.ic-logs-color {
+    mask: url(../fonts/icons/logs.svg) no-repeat center / contain;
+    -webkit-mask: url(../fonts/icons/logs.svg) no-repeat center;
+}
