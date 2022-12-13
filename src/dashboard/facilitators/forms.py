@@ -99,3 +99,43 @@ class FacilitatorForm(forms.Form):
         self.fields['administrative_level'].choices = administrative_level_choices
         self.fields['administrative_level'].widget.attrs['class'] = "region"
         self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
+
+
+
+
+class UpdateFacilitatorForm(forms.ModelForm):
+    error_messages = {
+        'duplicated_username': _('A facilitator with that username is already registered.'),
+        'administrative_level_required': _('At least one administrative level is required.'),
+    }
+    
+    # email = forms.EmailField(required=False)
+    phone = forms.CharField(required=False)
+    # username = forms.CharField()
+    administrative_level = forms.ChoiceField(required=False)
+    administrative_levels = forms.JSONField(label='', required=False)
+
+    def clean(self):
+        administrative_levels = self.cleaned_data['administrative_levels']
+        if not administrative_levels:
+            raise forms.ValidationError(self.error_messages['administrative_level_required'])
+        return super().clean()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        nsc = NoSQLClient()
+        administrative_levels_db = nsc.get_db('administrative_levels')
+        label = get_administrative_levels_by_level(administrative_levels_db)[0]['administrative_level'].upper()
+        self.fields['administrative_level'].label = label
+
+        administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        self.fields['administrative_level'].widget.choices = administrative_level_choices
+        self.fields['administrative_level'].choices = administrative_level_choices
+        self.fields['administrative_level'].widget.attrs['class'] = "region"
+        self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
+
+
+    class Meta:
+        model = Facilitator
+        fields = [] # specify the fields to be displayed
