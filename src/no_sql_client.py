@@ -28,6 +28,19 @@ class NoSQLClient:
     def create_document(self, db, data, **kwargs):
         new_document = db.create_document(data, **kwargs)
         return new_document
+    
+    def update_doc(self, db, id, doc_new: dict):
+        try:
+            doc = db.get(id)
+            for k, v in doc_new.items():
+                if v:
+                    doc[k] = v
+            db[id] = doc
+            db[id].save()
+        except Exception as exc:
+            print(exc)
+            return {}
+        return doc
 
     def create_user(self, username, password):
         db = self.get_db('_users')
