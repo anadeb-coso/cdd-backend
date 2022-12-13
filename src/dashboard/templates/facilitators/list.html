@@ -22,8 +22,8 @@
                     <table id="table" class="table">
                         <thead>
                         <tr>
-                            <th>{% translate 'Username' %}</th>
-                            <th>{% translate 'Action' %}</th>
+                            <th width="75%">{% translate 'Username' %}</th>
+                            <th colspan="2" width="25%" >{% translate 'Action' %}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -34,6 +34,12 @@
                                     <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
                                        class="btn btn-primary btn-xs">
                                         {% translate 'See profile' %}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}"
+                                       class="btn btn-primary btn-xs">
+                                        {% translate 'Edit profile' %}
                                     </a>
                                 </td>
                             </tr>
