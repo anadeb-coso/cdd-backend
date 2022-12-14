@@ -1,0 +1,110 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if form.errors %}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <div class="alert alert-danger">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                                &times;
+                            </button>
+                            {{ error|escape }}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                            &times;
+                        </button>
+                        {{ error|escape }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            <div class="card">
+                <form method="post">{% csrf_token %}
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                {% bootstrap_field form.phone %}
+                            </div>
+                            <div class="col-6">
+                            
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <label>{% trans "Add administrative levels" %}</label>
+                                {% bootstrap_field form.administrative_level layout='horizontal' %}
+                                <div class="float-right">
+                                    <a id="add" class="btn btn-primary btn-sm rounded-xl disabled">
+                                        {% translate "ADD" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div id="selected_regions" class="col-12">
+                                {% for elt in facilitator_administrative_levels %}
+                                    <a class='tag mt-2' >
+                                        <i value='{{ elt.id }}' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>
+                                        {{ elt.name }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% bootstrap_field form.administrative_levels %}
+                    </div>
+                    <div class="card-footer">
+                        <button  type="submit" class="btn btn-primary btn-sm rounded-xl" >
+                            {% translate "SAVE" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        let _selected_region_json = {};
+        {% for elt in facilitator_administrative_levels %}
+            _selected_region_json = {
+                "name": "{{ elt.name }}",
+                "id": "{{ elt.id }}"
+            }; 
+            selected_regions_json.push(_selected_region_json);
+        {% endfor %}
+        $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
+    </script>
+
+    <script type="text/javascript">
+        let get_ancestors_url = '{% url 'dashboard:administrative_levels:get_ancestor_administrative_levels' %}';
+        let get_choices_url = '{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level' %}';
+        let choice_placeholder = "{% translate 'Click to select location' %}";
+        changeRegionTrigger(get_choices_url, choice_placeholder);
+        loadRegionSelectors(get_ancestors_url);
+    </script>
+{% endblock javascript %}
+
+{% block select2 %}
+    <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
+    <script type="text/javascript">
+        $("#id_administrative_level").select2({
+            placeholder: "{% translate 'Click to select location' %}",
+            allowClear: true
+        });
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

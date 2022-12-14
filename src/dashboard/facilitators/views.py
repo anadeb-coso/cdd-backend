@@ -1,13 +1,14 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
+from django.shortcuts import redirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
 
 from authentication.models import Facilitator
-from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm
+from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin
 from no_sql_client import NoSQLClient
 
@@ -138,3 +139,93 @@ class CreateFacilitatorFormView(PageMixin, generic.FormView):
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         nsc.create_document(facilitator_database, doc)
         return super().form_valid(form)
+
+
+
+
+class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
+    model = Facilitator
+    template_name = 'facilitators/update.html'
+    title = gettext_lazy('Edit Facilitator')
+    active_level1 = 'facilitators'
+    form_class = UpdateFacilitatorForm
+    # success_url = reverse_lazy('dashboard:facilitators:list')
+    breadcrumb = [
+        {
+            'url': reverse_lazy('dashboard:facilitators:list'),
+            'title': gettext_lazy('Facilitators')
+        },
+        {
+            'url': '',
+            'title': title
+        }
+    ]
+    
+    facilitator_db = None
+    facilitator = None
+    doc = None
+    facilitator_db_name = None
+
+    def dispatch(self, request, *args, **kwargs):
+        nsc = NoSQLClient()
+        # try:
+        self.facilitator = self.get_object()
+        self.facilitator_db_name = self.facilitator.no_sql_db_name
+        self.facilitator_db = nsc.get_db(self.facilitator_db_name)
+        query_result = self.facilitator_db.get_query_result({"type": "facilitator", "name": self.facilitator.username})[:]
+        self.doc = self.facilitator_db[query_result[0]['_id']]
+        # self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
+        # except Exception:
+        #     raise Http404
+        return super().dispatch(request, *args, **kwargs)
+
+
+
+    def get_context_data(self, **kwargs):
+        ctx = super(UpdateFacilitatorView, self).get_context_data(**kwargs)
+        form = ctx.get('form')
+        
+        if self.doc:
+            if form:
+                for label, field in form.fields.items():
+                    try:
+                        form.fields[label].value = self.doc[label]
+                    except Exception as exc:
+                        pass
+                    
+                ctx.setdefault('form', form)
+            ctx.setdefault('facilitator_administrative_levels', self.doc["administrative_levels"])
+
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        
+        if not self.facilitator_db_name:
+            raise Http404("We don't find the database name for the facilitators.")
+
+        form = UpdateFacilitatorForm(request.POST, instance=self.facilitator)
+        if form.is_valid():
+            return self.form_valid(form)
+        return self.get(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        data = form.cleaned_data
+        facilitator = form.save(commit=False)
+        facilitator = facilitator.simple_save()
+
+        _administrative_levels = []
+        for elt in data['administrative_levels']:
+            exists = False
+            for _elt in _administrative_levels:
+                if _elt.get('id') == elt.get('id'):
+                    exists = True
+            if not exists:
+                _administrative_levels.append(elt)
+
+        doc = {
+            "phone": data['phone'],
+            "administrative_levels": _administrative_levels
+        }
+        nsc = NoSQLClient()
+        nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
+        return redirect('dashboard:facilitators:list')

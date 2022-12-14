@@ -38,6 +38,9 @@ class Facilitator(models.Model):
 
         self.no_sql_user = now
 
+    def simple_save(self, *args, **kwargs):
+        return super().save(*args, **kwargs)
+
     def save(self, *args, **kwargs):
         replicate_design = True
         if "replicate_design" in kwargs:
