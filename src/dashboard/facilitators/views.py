@@ -168,15 +168,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
-        # try:
-        self.facilitator = self.get_object()
-        self.facilitator_db_name = self.facilitator.no_sql_db_name
-        self.facilitator_db = nsc.get_db(self.facilitator_db_name)
-        query_result = self.facilitator_db.get_query_result({"type": "facilitator", "name": self.facilitator.username})[:]
-        self.doc = self.facilitator_db[query_result[0]['_id']]
-        # self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
-        # except Exception:
-        #     raise Http404
+        try:
+            self.facilitator = self.get_object()
+            self.facilitator_db_name = self.facilitator.no_sql_db_name
+            self.facilitator_db = nsc.get_db(self.facilitator_db_name)
+            query_result = self.facilitator_db.get_query_result({"type": "facilitator"})[:]
+            self.doc = self.facilitator_db[query_result[0]['_id']]
+        except Exception:
+            raise Http404
         return super().dispatch(request, *args, **kwargs)
 
 
