@@ -100,9 +100,89 @@ def get_parent_administrative_level(administrative_levels_db, administrative_id)
     return parent
 
 
+
+# # TODO Refactor para la nueva logica
+# def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False):
+#     facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
+#     nsc = NoSQLClient()
+#     nsc_database = nsc.get_db(database)
+#     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
+#     activity = nsc_database.get_query_result({"_id": task_model.activity.couch_id})[0]
+#     phase = nsc_database.get_query_result({"_id": task_model.phase.couch_id})[0]
+#     project = nsc_database.get_query_result({"_id": task_model.project.couch_id})[0]
+#     for facilitator in facilitators:
+#         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+#         print(facilitator.no_sql_db_name, facilitator.username)
+#         facilitator_administrative_levels = facilitator_database.get_query_result(
+#             {"type": "facilitator"}
+#         )[0]
+#         fc_project = facilitator_database.get_query_result(
+#             {"type": "project", "name": project[0]['name']}
+#         )[0]
+
+#         # check if the project exists
+#         if not fc_project:
+#             # create the project on the facilitator database
+#             nsc.create_document(facilitator_database, project[0])
+
+#         # Iterate every administrative level assigned to the facilitator
+#         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+
+#             # Get phase
+#             new_phase = phase[0].copy()
+#             del new_phase['_id']
+#             del new_phase['_rev']
+#             new_phase['administrative_level_id'] = administrative_level['id']
+#             new_phase['project_id'] = project[0]['_id']
+#             fc_phase = facilitator_database.get_query_result(new_phase)[0]
+#             # Check if the phase was found
+#             if len(fc_phase) < 1:
+#                 # create the phase
+#                 nsc.create_document(facilitator_database, new_phase)
+#                 # Get phase
+#                 fc_phase = facilitator_database.get_query_result(new_phase)[0]
+#             # Get or create  activity
+#             new_activity = activity[0].copy()
+#             del new_activity['_id']
+#             del new_activity['_rev']
+#             new_activity['administrative_level_id'] = administrative_level['id']
+#             new_activity['project_id'] = project[0]['_id']
+#             new_activity['phase_id'] = fc_phase[0]['_id']
+
+#             fc_activity = facilitator_database.get_query_result(new_activity)[0]
+
+#             # Check if the activity was found
+#             if len(fc_activity) < 1:
+#                 # create the activity
+#                 nsc.create_document(facilitator_database, new_activity)
+#                 # Get activity
+#                 fc_activity = facilitator_database.get_query_result(new_activity)[0]
+
+#             # Get or create  task
+#             new_task = task[0].copy()
+#             del new_task['_id']
+#             del new_task['_rev']
+#             new_task['administrative_level_id'] = administrative_level['id']
+#             new_task['administrative_level_name'] = administrative_level['name']
+#             new_task['project_id'] = project[0]['_id']
+#             new_task['phase_id'] = fc_phase[0]['_id']
+#             new_task['activity_id'] = fc_activity[0]['_id']
+
+#             fc_task = facilitator_database.get_query_result(new_task)[0]
+
+#             # Check if the task was found
+#             if len(fc_task) < 1:
+#                 # create the activity
+#                 nsc.create_document(facilitator_database, new_task)
+#                 # Get activity
+#                 fc_task = facilitator_database.get_query_result(new_task)[0]
+#             print(fc_task)
+#             print(administrative_level)
+
+
 # TODO Refactor para la nueva logica
 def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False):
-    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, username="training1")
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
@@ -264,8 +344,8 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                     {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
-            print(fc_task)
-
+            print(_fc_task)
+            print(administrative_level)
 
 
 def create_task_one_facilitator(database, task_model, no_sql_db):
