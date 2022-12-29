@@ -42,6 +42,44 @@ class NoSQLClient:
             return {}
         return doc
 
+    def update_cloudant_document(self, db, doc_id, doc_new: dict, dict_of_list_values: dict = {}, attachments=[]):
+        """
+        dict_of_list_values: dict : content as key the attribut of the document who have as value as list and the values of 
+        this key are the attributes than we'll modify their values
+        """
+        _p = {}
+        try:
+            from cloudant.document import Document
+            _p = Document(db, doc_id)
+            
+            for k, v in doc_new.items():
+                if k in list(dict_of_list_values.keys()): #if we have the attributes list to modify
+                    attr = []
+                    for i in range(len(v)): #Range the interval of the list of the attribut
+                        elt = v[i].copy()
+                        new_elt = v[i].copy()
+
+                        if k == "attachments" and attachments: #if we have the attachments to modify
+                            for elt_attach in attachments: #Go through the attachments
+                                if elt_attach.get("name") and elt_attach.get("name") == elt.get("name"):
+                                    elt = attachments[i]
+
+                        for _v in dict_of_list_values[k]: # Go through the attributs list of the doc attr than we going modify
+                            if elt.get(_v):
+                                elt[_v] = new_elt.get(_v)
+                        attr.append(elt)
+
+                    _p.field_set(_p, k, attr)
+                    continue
+
+                _p.field_set(_p, k, v)
+                
+            _p.save()
+        except Exception as exc:
+            print(exc)
+            return {}
+        return _p
+
     def create_user(self, username, password):
         db = self.get_db('_users')
         return db.create_document({
