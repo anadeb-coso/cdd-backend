@@ -213,7 +213,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             del new_phase['_rev']
             new_phase['administrative_level_id'] = administrative_level['id']
             new_phase['project_id'] = project[0]['_id']
-            new_phase['phase_id'] = task_model.phase.pk
             new_phase['sql_id'] = task_model.phase.id #Add sql_id 
             # fc_phase = facilitator_database.get_query_result(new_phase)[0]
 
@@ -221,7 +220,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             fc_phase = facilitator_database.get_query_result({
                 "administrative_level_id": administrative_level['id'],
                 "project_id": project[0]['_id'],
-                "type": new_phase['type'], "phase_id": task_model.phase.pk
+                "type": new_phase['type'], "sql_id": task_model.phase.id
             })[0]
             if len(fc_phase) < 1: #if any phase find by "Search phase include id"
                 #Search phase include order
@@ -244,7 +243,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_phase['name'] = task_model.phase.name
                 _fc_phase['description'] = task_model.phase.description
                 _fc_phase['order'] = task_model.phase.order
-                _fc_phase['phase_id'] = task_model.phase.pk
                 _fc_phase['sql_id'] = task_model.phase.id #update doc by adding sql_id 
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_phase["_id"], _fc_phase) # Update phase for the facilitator
@@ -259,7 +257,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             new_activity['administrative_level_id'] = administrative_level['id']
             new_activity['project_id'] = project[0]['_id']
             new_activity['phase_id'] = fc_phase[0]['_id']
-            new_activity['activity_id'] = task_model.activity.pk
             new_activity['sql_id'] = task_model.activity.id #Add sql_id 
 
             # fc_activity = facilitator_database.get_query_result(new_activity)[0]
@@ -268,7 +265,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             fc_activity = facilitator_database.get_query_result({
                 "administrative_level_id": administrative_level['id'],
                 "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
-                "type": new_activity['type'], "activity_id": task_model.activity.pk
+                "type": new_activity['type'], "sql_id": task_model.activity.id
             })[0]
             if len(fc_activity) < 1: #if any activity find by "Search activity include id"
                 #Search activity include order
@@ -290,7 +287,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_activity['name'] = task_model.activity.name
                 _fc_activity['description'] = task_model.activity.description
                 _fc_activity['order'] = task_model.activity.order
-                _fc_activity['activity_id'] = task_model.activity.pk
                 _fc_activity['total_tasks'] = task_model.activity.total_tasks
                 _fc_activity['sql_id'] = task_model.activity.id #update doc by adding sql_id 
                 
@@ -305,7 +301,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             new_task['project_id'] = project[0]['_id']
             new_task['phase_id'] = fc_phase[0]['_id']
             new_task['activity_id'] = fc_activity[0]['_id']
-            new_task['task_id'] = task_model.pk
             new_task['sql_id'] = task_model.id #Add sql_id 
 
             # fc_task = facilitator_database.get_query_result(new_task)[0]
@@ -315,7 +310,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 "administrative_level_id": administrative_level['id'],
                 "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
                 "activity_id": fc_activity[0]['_id'],
-                "type": new_task['type'], "task_id": task_model.pk
+                "type": new_task['type'], "sql_id": task_model.id
             })[0]
             if len(fc_task) < 1: #if any task find by "Search task include id"
                  #Search task include order
@@ -345,7 +340,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     _fc_task['form'] = new_task.get("form")
                 _fc_task['attachments'] = new_task.get("attachments")
                 _fc_task['order'] = task_model.order
-                _fc_task['task_id'] = task_model.pk
                 _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
