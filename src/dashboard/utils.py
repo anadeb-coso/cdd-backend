@@ -214,6 +214,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             new_phase['administrative_level_id'] = administrative_level['id']
             new_phase['project_id'] = project[0]['_id']
             new_phase['phase_id'] = task_model.phase.pk
+            new_phase['sql_id'] = task_model.phase.id #Add sql_id 
             # fc_phase = facilitator_database.get_query_result(new_phase)[0]
 
             #Search phase include id
@@ -244,6 +245,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_phase['description'] = task_model.phase.description
                 _fc_phase['order'] = task_model.phase.order
                 _fc_phase['phase_id'] = task_model.phase.pk
+                _fc_phase['sql_id'] = task_model.phase.id #update doc by adding sql_id 
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_phase["_id"], _fc_phase) # Update phase for the facilitator
 
@@ -258,6 +260,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             new_activity['project_id'] = project[0]['_id']
             new_activity['phase_id'] = fc_phase[0]['_id']
             new_activity['activity_id'] = task_model.activity.pk
+            new_activity['sql_id'] = task_model.activity.id #Add sql_id 
 
             # fc_activity = facilitator_database.get_query_result(new_activity)[0]
 
@@ -289,6 +292,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_activity['order'] = task_model.activity.order
                 _fc_activity['activity_id'] = task_model.activity.pk
                 _fc_activity['total_tasks'] = task_model.activity.total_tasks
+                _fc_activity['sql_id'] = task_model.activity.id #update doc by adding sql_id 
                 
                 nsc.update_cloudant_document(facilitator_database,  _fc_activity["_id"], _fc_activity) # Update activity for the facilitator
 
@@ -302,6 +306,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
             new_task['phase_id'] = fc_phase[0]['_id']
             new_task['activity_id'] = fc_activity[0]['_id']
             new_task['task_id'] = task_model.pk
+            new_task['sql_id'] = task_model.id #Add sql_id 
 
             # fc_task = facilitator_database.get_query_result(new_task)[0]
 
@@ -341,11 +346,53 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_task['attachments'] = new_task.get("attachments")
                 _fc_task['order'] = task_model.order
                 _fc_task['task_id'] = task_model.pk
+                _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                     {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
             print(_fc_task)
             print(administrative_level)
+
+
+def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
+    nsc = NoSQLClient()
+    db = nsc.get_db(db_name)
+
+    nsc = NoSQLClient()
+    for obj in objects_list:
+        docs = db.get_query_result({"_id": obj.couch_id})[0]
+        if len(docs) > 0:
+            doc = docs[0].copy()
+            for attr in attrs_to_add:
+                if attr == "sql_id":
+                    doc[attr] = obj.id #update doc by adding sql_id 
+            nsc.update_cloudant_document(db,  doc["_id"], doc) # Update doc of process_design
+
+
+def over_documents(develop_mode=False, training_mode=False):
+    """Method to override the documents by adding 'sql_id' by default"""
+    phases = Phase.objects.all()
+    activities = Activity.objects.all()
+    tasks = Task.objects.all().prefetch_related()
+    projects = Project.objects.all()
+
+    print("Syncing: phases - process_design")
+    add_news_attr_to_doc("process_design", phases)
+
+    print("Syncing: activities - process_design")
+    add_news_attr_to_doc("process_design", activities)
+
+    print("Syncing: tasks - process_design")
+    add_news_attr_to_doc("process_design", tasks)
+
+    print("Syncing: projects - process_design")
+    add_news_attr_to_doc("process_design", projects)
+
+    for task in tasks:
+        print('syncing: ', task.phase.order, task.activity.order, task.order)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode)
+
+
 
 
 def create_task_one_facilitator(database, task_model, no_sql_db):
