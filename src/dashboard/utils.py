@@ -327,6 +327,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 nsc.create_document(facilitator_database, new_task)
                 # Get activity
                 fc_task = facilitator_database.get_query_result(new_task)[0]
+                print(fc_task)
             else:
                 #Update task if it exists
                 _fc_task = fc_task[0].copy()
@@ -344,7 +345,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                     {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
-            print(_fc_task)
+                print(_fc_task)
             print(administrative_level)
 
 
