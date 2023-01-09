@@ -76,6 +76,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         nbr_tasks_completed = 0
         percentage_tasks_completed = 0
         search_by_locality = False
+        _region = None
         regions = {
             "SAVANES": {
                 "nbr_tasks": 0,
@@ -138,6 +139,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     query_result = facilitator_db.get_query_result({"type": 'facilitator'})[:]
                     if query_result:
                         doc = query_result[0]
+                        _village = None
                         for _village in doc['administrative_levels']:
                             for village in liste_villages:
                                 if _village['id'] == village['administrative_id']: #_village['name'] == village['name'] and 
@@ -145,7 +147,10 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                                         if not _task['completed']:
                                             nbr_tasks_completed += 1
                                         nbr_tasks += 1
-        
+                                    if _village and not _region:
+                                        _region = get_region_of_village_by_sql_id(administrative_levels_db, _village['id']) 
+                                        
+
             percentage_tasks_completed = ((nbr_tasks_completed/nbr_tasks)*100) if nbr_tasks else 0
 
         elif _type in ["phase", "activity", "task"]:
@@ -190,6 +195,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 "nbr_tasks": nbr_tasks,
                 "nbr_tasks_completed": nbr_tasks_completed,
                 "percentage_tasks_completed": percentage_tasks_completed,
+                "region": _region["name"] if _region else None,
                 "search_by_locality": search_by_locality
             }, safe=False)
         

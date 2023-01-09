@@ -72,16 +72,25 @@
 
 
                         </div>
-                        {% comment %} <div class="overlay z-index1000" id="statistics-spin">
+                        <div class="overlay z-index1000" id="statistics-spin">
                             <i class="fas fa-10x fa-sync-alt fa-spin">
                             </i>
-                        </div> {% endcomment %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
     </div>
+    <style>
+.marker {
+display: block;
+border: none;
+border-radius: 50%;
+cursor: pointer;
+padding: 0;
+}
+</style>
 
 {% endblock %}
 {% block javascript %}
@@ -109,31 +118,51 @@
         // Set the map's max bounds.
         map.setMaxBounds(bounds);
 
-
-        const places = {
+        const geojson = {
             'type': 'FeatureCollection',
             'features': [
                 {
                     'type': 'Feature',
                     'properties': {
-                        'description': "Ford's Theater",
-                        'icon': 'theatre'
+                        'message': 'Foo',
+                        'iconSize': [60, 60]
                     },
                     'geometry': {
                         'type': 'Point',
-                        'coordinates': [0.8332327892880187, 8.770198211475261]
-                    }
+                        'coordinates': [0.496008, 10.417] //0.356008, 10.417
+                    },
+                    'id': "_savanes"
+                },
+                {
+                    'type': 'Feature',
+                    'properties': {
+                        'message': 'Bar',
+                        'iconSize': [60, 60]
+                    },
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [0.916667, 9.66667]
+                    },
+                    'id': "_kara"
+                },
+                {
+                    'type': 'Feature',
+                    'properties': {
+                        'message': 'Baz',
+                        'iconSize': [60, 60]
+                    },
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [1.0033, 8.4833] //1.1333 8.9833
+                    },
+                    'id': "_centrale"
                 }
-
             ]
         };
 
         map.on('load', function () {
 
-            map.addSource('places', {
-'type': 'geojson',
-'data': places
-});
+
 
 
             map.addLayer(
@@ -160,17 +189,45 @@
                 '{{ country_iso_code }}',
             ]);
 
+
             setTimeout(function () {
                 statistics_spin.hide();
-            }, 1000);
+            }, 200);
         });
 
-        {% comment %} {% for subproject in subprojects %}
-            let marker = new mapboxgl.Marker()
-                .setLngLat([{{ subproject.administrative_level.longitude }}, {{ subproject.administrative_level.latitude }}])
+
+            {% comment %} let marker = new mapboxgl.Marker()
+                .setLngLat([0.356008, 10.417])
+                .setTitle("SAVANES")
                 .addTo(map);
-            markers.push(marker);
-        {% endfor %} {% endcomment %}
+            markers.push(marker); {% endcomment %}
+            // Add markers to the map.
+            for (const marker of geojson.features) {
+                // Create a DOM element for each marker.
+                const el = document.createElement('div');
+                const width = marker.properties.iconSize[0];
+                const height = marker.properties.iconSize[1];
+                el.className = 'marker';
+                //el.style.backgroundImage = `url(https://placekitten.com/g/${width}/${height}/)`;
+                el.style.backgroundColor = "blue"
+                el.style.textAlign = `center`;
+                el.style.color = `white`;
+                el.style.paddingTop = `17px`;
+                el.style.width = `${width}px`;
+                el.style.height = `${height}px`;
+                el.style.backgroundSize = '100%';
+                el.setAttribute("id", marker.id);
+                {% comment %} el.style.display = `none`; {% endcomment %}
+                
+                el.addEventListener('click', () => {
+                    window.alert(marker.properties.message);
+                });
+                
+                // Add markers to the map.
+                new mapboxgl.Marker(el)
+                .setLngLat(marker.geometry.coordinates)
+                .addTo(map);
+            }
 
 
 
@@ -184,6 +241,9 @@
             $(document).on("change", ("."+"{{ field }}"), function (event) {
                 let r = "select2-id_"+"{{ field }}"+"-container";
                 selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
+
+                statistics_spin.show();
+
                 $.ajax({
                     type: 'GET',
                     url: `{% url 'dashboard:grm:get_tasks_diagnostics_view' %}`,
@@ -194,6 +254,15 @@
                     success: function (data) {
                         let table = document.getElementById("table");
                         if(data.search_by_locality){
+                            document.getElementById(("_savanes")).display = `none`;
+                            document.getElementById(("_kara")).display = `none`;
+                            document.getElementById(("_centrale")).display = `none`;
+                            console.log(data.region)
+                            if(data.region){
+                                console.log(("_"+data.region.toLowerCase()))
+                                document.getElementById(("_"+data.region.toLowerCase())).display = `inline-block`;
+                                document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
+                            }
                             table.innerHTML = `
                             <thead>
                                 <tr>
@@ -226,7 +295,8 @@
                             console.log(data.regions)
                             
                             for (const [key, value] of Object.entries(data.regions)) {
-                                console.log(key, value);
+                                document.getElementById(("_"+key.toLowerCase())).display = `inline-block`;
+                                document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
                                 table.innerHTML += `
                                 <tr>
                                     <td>`+key+`</td>
@@ -245,6 +315,8 @@
                             data = data.slice(1);
                             data.push(administrative_levels);
                         }   {% endcomment %}
+
+                        statistics_spin.hide();
                     },
                     error: function (data) {
                         alert(error_server_message + "Error " + data.status);
