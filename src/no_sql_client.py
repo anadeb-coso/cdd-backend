@@ -13,6 +13,9 @@ class NoSQLClient:
         from cloudant.client import CouchDB
         return CouchDB(self.username, self.password, url=self.url, connect=True, auto_renew=True)
 
+    def get_dbs(self):
+        return self.client.all_dbs()
+
     def get_db(self, db_name):
         return self.client[db_name]
 
