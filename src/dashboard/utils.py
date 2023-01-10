@@ -414,6 +414,22 @@ def over_documents(develop_mode=False, training_mode=False):
         create_task_all_facilitators("process_design", task, develop_mode, training_mode)
 
 
+def add_news_attrs_to_facilitators():
+    nsc = NoSQLClient()
+    facilitators = Facilitator.objects.all()
+    print("Wait...")
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        docs = facilitator_database.get_query_result({"type": "facilitator"})[:]
+        if docs:
+            doc = docs[0].copy()
+            doc["sql_id"] = facilitator.id
+            doc["develop_mode"] = facilitator.develop_mode
+            doc["training_mode"] = facilitator.training_mode
+
+            nsc.update_cloudant_document(facilitator_database,  doc["_id"], doc)
+    print("")
+    print("Done!")
 
 
 def create_task_one_facilitator(database, task_model, no_sql_db):
