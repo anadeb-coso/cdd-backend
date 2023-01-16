@@ -3,7 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from dashboard.mixins import PageMixin, AJAXRequestMixin, JSONResponseMixin
 from django.utils.translation import gettext_lazy
 from django.conf import settings
-from dashboard.grm.forms import DiagnosticsForm
+from dashboard.diagnostics.forms import DiagnosticsForm
 from dashboard.utils import (
     get_child_administrative_levels, get_parent_administrative_level, 
     get_documents_by_type, get_administrative_levels_by_type,
@@ -16,10 +16,10 @@ from authentication.models import Facilitator
 
 class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
     
-    template_name = 'grm/diagnostics.html'
-    context_object_name = 'GRM'
-    title = gettext_lazy('GRM')
-    active_level1 = 'grm'
+    template_name = 'diagnostics/diagnostics.html'
+    context_object_name = 'Diagnostics'
+    title = gettext_lazy('diagnostics')
+    active_level1 = 'diagnostics'
     form_class = DiagnosticsForm
     breadcrumb = [
         {

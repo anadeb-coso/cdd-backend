@@ -207,8 +207,12 @@ def get_documents_by_type(db, _type, empty_choice=True, attrs={}):
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False):
-    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
+def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
+
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
     task = nsc_database.get_query_result({"_id": task_model.couch_id})[0]
@@ -518,10 +522,11 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
     tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        if no_sql_db:
-            create_task_one_facilitator("process_design", task, no_sql_db)
-        else:
-            create_task_all_facilitators("process_design", task, develop_mode, training_mode)
+        # if no_sql_db:
+        #     create_task_one_facilitator("process_design", task, no_sql_db)
+        # else:
+        #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db)
         
 # from dashboard.utils import reset_tasks
 def reset_tasks():

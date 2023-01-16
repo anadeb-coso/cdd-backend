@@ -1,8 +1,8 @@
 from django.urls import path
 
-from dashboard.grm import views
+from dashboard.diagnostics import views
 
-app_name = 'grm'
+app_name = 'diagnostics'
 urlpatterns = [
     path('', views.DashboardDiagnosticsCDDView.as_view(), name='diagnostics'),
 

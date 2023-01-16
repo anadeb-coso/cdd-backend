@@ -246,7 +246,7 @@ padding: 0;
 
                 $.ajax({
                     type: 'GET',
-                    url: `{% url 'dashboard:grm:get_tasks_diagnostics_view' %}`,
+                    url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
                     data: {
                         type: "{{ field }}",
                         sql_id: this.value

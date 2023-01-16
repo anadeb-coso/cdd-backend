@@ -6,5 +6,5 @@ urlpatterns = [
     path('', include('dashboard.authentication.urls')),
     path('facilitators/', include('dashboard.facilitators.urls')),
     path('administrative-levels/', include('dashboard.administrative_levels.urls')),
-    path('grm/', include('dashboard.grm.urls')),
+    path('diagnostics/', include('dashboard.diagnostics.urls')),
 ]
