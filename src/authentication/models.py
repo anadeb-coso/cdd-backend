@@ -146,6 +146,36 @@ class Facilitator(models.Model):
         import zlib
         return str(zlib.adler32(str(seed).encode('utf-8')))[:6]
 
+    def get_name(self):
+        try:
+            nsc = NoSQLClient()
+            facilitator_database = nsc.get_db(self.no_sql_db_name)
+            return facilitator_database.get_query_result(
+                {"type": "facilitator"}
+            )[:][0]['name']
+        except Exception as e:
+            return None
+    
+    def get_email(self):
+        try:
+            nsc = NoSQLClient()
+            facilitator_database = nsc.get_db(self.no_sql_db_name)
+            return facilitator_database.get_query_result(
+                {"type": "facilitator"}
+            )[:][0]['email']
+        except Exception as e:
+            return None
+
+    def get_type(self):
+        if self.develop_mode and self.training_mode:
+            return "develop-training"
+        elif self.develop_mode:
+            return "develop"
+        elif self.training_mode:
+            return "training"
+        else:
+            return "deploy"
+
     class Meta:
         verbose_name = _('Facilitator')
         verbose_name_plural = _('Facilitators')
