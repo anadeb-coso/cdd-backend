@@ -146,10 +146,13 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                         for _village in doc['administrative_levels']:
                             for village in liste_villages:
                                 if _village['id'] == village['administrative_id']: #_village['name'] == village['name'] and 
-                                    for _task in facilitator_db.get_query_result({"type": 'task'})[:]:
-                                        if _task['completed']:
-                                            nbr_tasks_completed += 1
-                                        nbr_tasks += 1
+                                    # for _task in facilitator_db.get_query_result({"type": 'task', "administrative_level_id": _village['id']})[:]:
+                                    for _task in facilitator_db.all_docs(include_docs=True)['rows']:
+                                        _task = _task.get('doc')
+                                        if _task.get('type') == 'task' and _task.get('administrative_level_id') == str(_village['id']):
+                                            if _task['completed']:
+                                                nbr_tasks_completed += 1
+                                            nbr_tasks += 1
                                     
             if len(liste_villages) > 0:
                 _region = get_region_of_village_by_sql_id(administrative_levels_db, liste_villages[0]['administrative_id'])
@@ -164,15 +167,18 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     facilitator_db = nsc.get_db(f.no_sql_db_name)
                     query_result = facilitator_db.get_query_result({"type": _type, "sql_id": int(sql_id)})[:]
                     if query_result:
-                        for _task in facilitator_db.get_query_result({"type": 'task', (str(type_header)+"_id"): query_result[0]['_id']})[:]:
-                            if str(_task['administrative_level_id']).isdigit():
-                                _region = get_region_of_village_by_sql_id(administrative_levels_db, _task['administrative_level_id'])
-                                if _region:
-                                    _region_name = _region['name']
-                                    if regions.get(_region_name):
-                                        if _task['completed']:
-                                            regions[_region_name]["nbr_tasks_completed"] += 1
-                                        regions[_region_name]["nbr_tasks"] += 1
+                        for _task in facilitator_db.all_docs(include_docs=True)['rows']:
+                        # for _task in facilitator_db.get_query_result({"type": 'task', (str(type_header)+"_id"): query_result[0]['_id']})[:]:
+                            _task = _task.get('doc')
+                            if _task.get('type') == 'task' and _task.get((str(type_header)+"_id")) == query_result[0]['_id']:
+                                if str(_task['administrative_level_id']).isdigit():
+                                    _region = get_region_of_village_by_sql_id(administrative_levels_db, _task['administrative_level_id'])
+                                    if _region:
+                                        _region_name = _region['name']
+                                        if regions.get(_region_name):
+                                            if _task['completed']:
+                                                regions[_region_name]["nbr_tasks_completed"] += 1
+                                            regions[_region_name]["nbr_tasks"] += 1
                             
             elif _type == "task":
                 # for _db in nsc.get_dbs():
