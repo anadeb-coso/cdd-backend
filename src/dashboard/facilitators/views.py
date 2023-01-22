@@ -72,10 +72,19 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
         tasks = self.facilitator_db.get_query_result({"type": "task"})
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
         total_tasks = 0
         for _ in tasks:
+            if _.get("completed"):
+                total_tasks_completed += 1
+            else:
+                total_tasks_uncompleted += 1
             total_tasks += 1
+        context['total_tasks_completed'] = total_tasks_completed
+        context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
+        context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
         return context
 
     def get_object(self, queryset=None):
@@ -90,8 +99,11 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         index = int(self.request.GET.get('index'))
         offset = int(self.request.GET.get('offset'))
         administrative_level_id = self.request.GET.get('administrative_level')
-        phase_id = self.request.GET.get('phase')
-        activity_id = self.request.GET.get('activity')
+        # phase_id = self.request.GET.get('phase')
+        # activity_id = self.request.GET.get('activity')
+        phase_name = self.request.GET.get('phase')
+        activity_name = self.request.GET.get('activity')
+        task_name = self.request.GET.get('task')
 
         selector = {
             "type": "task"
@@ -99,11 +111,36 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
-        if phase_id:
-            selector["phase_id"] = phase_id
-        if activity_id:
-            selector["activity_id"] = activity_id
+        if phase_name:
+            # selector["phase_id"] = phase_id
+            selector["phase_name"] = phase_name
+        if activity_name:
+            # selector["activity_id"] = activity_id
+            selector["activity_name"] = activity_name
+        if task_name:
+            selector["name"] = task_name
+
         return self.facilitator_db.get_query_result(selector)[index:index + offset]
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
+        total_tasks = 0
+
+        if context.get('object_list'):
+            for _ in context.get('object_list'):
+                if _.get("completed"):
+                    total_tasks_completed += 1
+                else:
+                    total_tasks_uncompleted += 1
+                total_tasks += 1
+
+        context['total_tasks_completed'] = total_tasks_completed
+        context['total_tasks_uncompleted'] = total_tasks_uncompleted
+        context['total_tasks'] = total_tasks
+        context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+        return context
 
 
 class CreateFacilitatorFormView(PageMixin, generic.FormView):
@@ -168,15 +205,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
-        # try:
-        self.facilitator = self.get_object()
-        self.facilitator_db_name = self.facilitator.no_sql_db_name
-        self.facilitator_db = nsc.get_db(self.facilitator_db_name)
-        query_result = self.facilitator_db.get_query_result({"type": "facilitator", "name": self.facilitator.username})[:]
-        self.doc = self.facilitator_db[query_result[0]['_id']]
-        # self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
-        # except Exception:
-        #     raise Http404
+        try:
+            self.facilitator = self.get_object()
+            self.facilitator_db_name = self.facilitator.no_sql_db_name
+            self.facilitator_db = nsc.get_db(self.facilitator_db_name)
+            query_result = self.facilitator_db.get_query_result({"type": "facilitator"})[:]
+            self.doc = self.facilitator_db[query_result[0]['_id']]
+        except Exception:
+            raise Http404
         return super().dispatch(request, *args, **kwargs)
 
 

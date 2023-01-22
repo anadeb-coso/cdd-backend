@@ -12,6 +12,7 @@ class FilterTaskForm(forms.Form):
     administrative_level = forms.ChoiceField()
     phase = forms.ChoiceField()
     activity = forms.ChoiceField()
+    task = forms.ChoiceField()
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
@@ -24,8 +25,11 @@ class FilterTaskForm(forms.Form):
         query_result = facilitator_db.get_query_result({"type": 'task'})
         self.fields['administrative_level'].widget.choices = get_choices(
             query_result, "administrative_level_id", "administrative_level_name")
-        self.fields['phase'].widget.choices = get_choices(query_result, "phase_id", "phase_name")
-        self.fields['activity'].widget.choices = get_choices(query_result, "activity_id", "activity_name")
+        # self.fields['phase'].widget.choices = get_choices(query_result, "phase_id", "phase_name")
+        # self.fields['activity'].widget.choices = get_choices(query_result, "activity_id", "activity_name")
+        self.fields['phase'].widget.choices = get_choices(query_result, "phase_name", "phase_name")
+        self.fields['activity'].widget.choices = get_choices(query_result, "activity_name", "activity_name")
+        self.fields['task'].widget.choices = get_choices(query_result, "name", "name")
 
 
 class FacilitatorForm(forms.Form):

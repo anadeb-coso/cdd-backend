@@ -1,0 +1,346 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+{% block extracss %}
+    <link href="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.css' %}" rel="stylesheet">
+    <style>
+        #map {
+            height: 1253px;
+        }
+
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card transparent">
+                <div class="card-header">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-2">
+                                        <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
+                                    </div>
+                                    {% for field in form %}
+                                    <div class="col-2">
+                                        {% bootstrap_field field %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="overlay-wrapper">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="card">
+                                    <div class="card-body" >
+                                        <div id="map" style="height: 600px !important;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="card">
+                                    <div class="card-body" >
+
+                                        <div class="card-body table-responsive">
+                                            <table id="table" class="table table-bordered">
+                                                <thead>
+                                                <tr>
+                                                    <th>{% translate 'Region' %}</th>
+                                                    <th>{% translate 'Task Completed' %}</th>
+                                                    <th>{% translate 'Percentage' %}</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+
+                                            <div id="_p"></div>
+                                            
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </div>
+                        <div class="overlay z-index1000" id="statistics-spin">
+                            <i class="fas fa-10x fa-sync-alt fa-spin">
+                            </i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <style>
+.marker {
+display: block;
+border: none;
+border-radius: 50%;
+cursor: pointer;
+padding: 0;
+}
+</style>
+
+{% endblock %}
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
+    <script>
+        let statistics_spin = $('#statistics-spin');
+        let markers = [];
+
+        mapboxgl.accessToken = '{{ access_token }}';
+        if (!mapboxgl.supported()) {
+            alert('Your browser does not support Mapbox GL');
+        }
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v11',
+            center: [{{ lng }}, {{ lat }}],
+            zoom: {{ zoom }}
+        });
+
+        const bounds = [
+            {{ ws_bound }}, // [west, south]
+            {{ en_bound }}  // [east, north]
+        ];
+        // Set the map's max bounds.
+        map.setMaxBounds(bounds);
+
+        const geojson = {
+            'type': 'FeatureCollection',
+            'features': [
+                {
+                    'type': 'Feature',
+                    'properties': {
+                        'message': 'Foo',
+                        'iconSize': [60, 60]
+                    },
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [0.496008, 10.417] //0.356008, 10.417
+                    },
+                    'id': "_savanes"
+                },
+                {
+                    'type': 'Feature',
+                    'properties': {
+                        'message': 'Bar',
+                        'iconSize': [60, 60]
+                    },
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [0.916667, 9.66667]
+                    },
+                    'id': "_kara"
+                },
+                {
+                    'type': 'Feature',
+                    'properties': {
+                        'message': 'Baz',
+                        'iconSize': [60, 60]
+                    },
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [1.0033, 8.4833] //1.1333 8.9833
+                    },
+                    'id': "_centrale"
+                }
+            ]
+        };
+
+        map.on('load', function () {
+
+
+
+
+            map.addLayer(
+                {
+                    'id': 'country-boundaries',
+                    'source': {
+                        'type': 'vector',
+                        'url': 'mapbox://mapbox.country-boundaries-v1',
+                    },
+                    'source-layer': 'country_boundaries',
+                    'type': 'fill',
+                    'paint': {
+                        'fill-color': '#00FFFF',
+                        'fill-opacity': 0.2,
+                    },
+                },
+                'country-label'
+            );
+
+
+            map.setFilter('country-boundaries', [
+                "in",
+                "iso_3166_1_alpha_3",
+                '{{ country_iso_code }}',
+            ]);
+
+
+            setTimeout(function () {
+                statistics_spin.hide();
+            }, 200);
+        });
+
+
+            {% comment %} let marker = new mapboxgl.Marker()
+                .setLngLat([0.356008, 10.417])
+                .setTitle("SAVANES")
+                .addTo(map);
+            markers.push(marker); {% endcomment %}
+            // Add markers to the map.
+            for (const marker of geojson.features) {
+                // Create a DOM element for each marker.
+                const el = document.createElement('div');
+                const width = marker.properties.iconSize[0];
+                const height = marker.properties.iconSize[1];
+                el.className = 'marker';
+                //el.style.backgroundImage = `url(https://placekitten.com/g/${width}/${height}/)`;
+                el.style.backgroundColor = "blue"
+                el.style.textAlign = `center`;
+                el.style.color = `white`;
+                el.style.paddingTop = `17px`;
+                el.style.width = `${width}px`;
+                el.style.height = `${height}px`;
+                el.style.backgroundSize = '100%';
+                el.setAttribute("id", marker.id);
+                {% comment %} el.style.display = `none`; {% endcomment %}
+                
+                el.addEventListener('click', () => {
+                    window.alert(marker.properties.message);
+                });
+                
+                // Add markers to the map.
+                new mapboxgl.Marker(el)
+                .setLngLat(marker.geometry.coordinates)
+                .addTo(map);
+            }
+
+
+
+    </script>
+{% endblock %}
+{% block select2 %}
+    <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
+    <script type="text/javascript">
+        {% for field in list_fields %}
+
+            $(document).on("change", ("."+"{{ field }}"), function (event) {
+                let r = "select2-id_"+"{{ field }}"+"-container";
+                selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
+
+                statistics_spin.show();
+
+                $.ajax({
+                    type: 'GET',
+                    url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
+                    data: {
+                        type: "{{ field }}",
+                        sql_id: this.value
+                    },
+                    success: function (data) {
+                        let table = document.getElementById("table");
+                        let p = document.getElementById("_p");
+                        if(data.search_by_locality){
+                            document.getElementById("_savanes").innerHTML = ``;
+                            document.getElementById("_kara").innerHTML = ``;
+                            document.getElementById("_centrale").innerHTML = ``;
+                            
+                            if(data.region){
+                                document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
+                            }
+                            table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>{% translate '`+data.type+`' %}</th>
+                                    <th>{% translate 'Task Completed' %}</th>
+                                    <th>{% translate 'Percentage' %}</th>
+                                </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr title="Facilitator(s) : `+data.nbr_facilitators+` ; Task(s) : `+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
+                                        <td>`+selected.toUpperCase()+`</td>
+                                        <td>`+data.nbr_tasks_completed+`</td>
+                                        <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                                    </tr>
+                                </tbody>
+                                <br />
+                            `;
+                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+data.nbr_tasks+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                        }else{
+                            table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>{% translate 'Region' %}</th>
+                                    <th>{% translate 'Task Completed' %}</th>
+                                    <th>{% translate 'Percentage' %}</th>
+                                </tr>
+                                </thead>
+
+                                <tbody>
+                            `;
+                            
+                            let nbr_tasks = 0;
+                            for (const [key, value] of Object.entries(data.regions)) {
+                                document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
+                                table.innerHTML += `
+                                <tr title="Task(s) : `+value.nbr_tasks+` ; Village(s) : `+value.nbr_tasks+`" style="cursor: pointer;" >
+                                    <td>`+key+`</td>
+                                    <td>`+value.nbr_tasks_completed+`</td>
+                                    <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
+                                </tr>
+                                `;
+                                nbr_tasks += value.nbr_tasks;
+                            }
+
+                            table.innerHTML += `
+                            </tbody>
+                            <br />
+                            `;
+                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+nbr_tasks+`</b> ; Village(s) : <b>`+nbr_tasks+`</b></p>`;
+                        }
+                        
+                         {% comment %} if (data.length > 0) {
+                            data = data.slice(1);
+                            data.push(administrative_levels);
+                        }   {% endcomment %}
+
+                        statistics_spin.hide();
+                    },
+                    error: function (data) {
+                        alert(error_server_message + "Error " + data.status);
+                        statistics_spin.hide();
+                    }
+                });
+            });
+
+            $(("#id_"+"{{ field }}")).select2({
+                placeholder: `{% translate field|title %}`,
+                allowClear: true
+            });
+        {% endfor %}
+
+
+        
+        {% comment %} $('b[role="presentation"]').hide(); {% endcomment %}
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

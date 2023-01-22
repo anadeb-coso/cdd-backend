@@ -31,6 +31,18 @@
                     </div>
                 </div>
             </div>
+            <div class="card">
+                <div class="card-body">
+                    <span class="text-bold-family fs17">{% translate 'Tasks completed' %}: &nbsp;</span>
+                    <span class="fs17 text-primary">{{ total_tasks_completed }}</span>
+                     &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
+                    <span class="text-bold-family fs17">{% translate 'Tasks uncompleted' %}: &nbsp;</span>
+                    <span class="fs17 text-primary">{{ total_tasks_uncompleted }}</span>
+                    <br /> 
+                    <span class="text-bold-family fs17">{% translate 'Percentage of the tasks uncompleted' %}: &nbsp;</span>
+                    <span class="fs17 text-primary">{{ percentage_tasks_completed|floatformat:"2" }} %</span>
+                </div>
+            </div>
         </div>
         <div class="col-md-5 display-flex flex-flow-column">
             <div class="card">
@@ -53,24 +65,27 @@
             <div class="card transparent">
                 <div class="card-body">
                     <div class="row tasks-filter">
-                        <div class="col-4 text-left">
+                        <div class="col-2 text-left">
                             <div class="fs28 lh35 text-primary text-bold-family mb-4">
                                 {% translate 'Task List' %}<br>
                             </div>
                         </div>
-                        <div class="col-8 border-left">
+                        <div class="col-10 border-left">
                             <div class="row">
-                                <div class="col-3">
+                                <div class="col-2">
                                     <label class="label-align">{% translate 'Filter by' %}</label>
                                 </div>
                                 <div class="col-3">
                                     {% bootstrap_field form.administrative_level show_label=False %}
                                 </div>
-                                <div class="col-3">
+                                <div class="col-2">
                                     {% bootstrap_field form.phase show_label=False %}
                                 </div>
-                                <div class="col-3">
+                                <div class="col-2">
                                     {% bootstrap_field form.activity show_label=False %}
+                                </div>
+                                <div class="col-3">
+                                    {% bootstrap_field form.task show_label=False %}
                                 </div>
                             </div>
                         </div>
@@ -118,6 +133,7 @@
         let administrative_level = $('#id_administrative_level');
         let phase = $('#id_phase');
         let activity = $('#id_activity');
+        let task = $('#id_task');
 
         function loadTasks() {
             spin.show();
@@ -130,6 +146,7 @@
                     administrative_level: administrative_level.val(),
                     phase: phase.val(),
                     activity: activity.val(),
+                    task: task.val()
                 },
                 success: function (response) {
                     spin.hide();
@@ -203,6 +220,10 @@
         });
         $("#id_activity").select2({
             placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+         $("#id_task").select2({
+            placeholder: "{% translate 'Task' %}",
             allowClear: true,
         });
 

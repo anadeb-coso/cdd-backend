@@ -20,10 +20,12 @@ class Project(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         data = {
             "name": self.name,
             "type": "project",
             "description": self.description,
+            "sql_id": self.id
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -34,7 +36,7 @@ class Project(models.Model):
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
 
-        return super().save(*args, **kwargs)
+        return self
 
 
 # The Phase object on couch looks like this
@@ -66,13 +68,15 @@ class Phase(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         data = {
             "name": self.name,
             "type": "phase",
             "description": self.description,
             "order": self.order,
             "capacity_attachments": [],
-            "project_id": self.project.couch_id
+            "project_id": self.project.couch_id,
+            "sql_id": self.id
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -82,7 +86,7 @@ class Phase(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
-        return super().save(*args, **kwargs)
+        return self
 
 
 #The activity object on couch looks like this
@@ -120,7 +124,7 @@ class Activity(models.Model):
 
 
     def save(self, *args, **kwargs):
-
+        super().save(*args, **kwargs)
         data = {
             "name": self.name,
             "type": "activity",
@@ -130,7 +134,8 @@ class Activity(models.Model):
             "project_id": self.project.couch_id,
             "phase_id": self.phase.couch_id,
             "total_tasks": self.total_tasks,
-            "completed_tasks": 0
+            "completed_tasks": 0,
+            "sql_id": self.id
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -140,7 +145,7 @@ class Activity(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
-        return super().save(*args, **kwargs)
+        return self
 
 
 # The task object on couch looks like this
@@ -177,6 +182,7 @@ class Task(models.Model):
         return self.phase.name + '-' + self.activity.name + '-' + self.name
 
     def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         form = []
         if self.form:
             form = self.form
@@ -195,7 +201,8 @@ class Task(models.Model):
             "capacity_attachments": [],
             "attachments": [],
             "form": form,
-            "form_response": []
+            "form_response": [],
+            "sql_id": self.id
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -205,4 +212,4 @@ class Task(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
-        return super().save(*args, **kwargs)
+        return self
