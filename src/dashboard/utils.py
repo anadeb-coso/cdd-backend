@@ -61,6 +61,21 @@ def get_administrative_levels_by_type(administrative_levels_db, level, empty_cho
     query_result = administrative_levels_db.get_query_result(filters)
     return query_result
 
+def get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, level, parent_id):
+    result = []
+    for doc in administrative_levels:
+        doc = doc.get('doc')
+        if doc.get('type') == 'administrative_level' and doc.get('administrative_level') == level and doc.get('parent_id') == parent_id:
+            result.append(doc)
+    return result
+
+def get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, level, administrative_id):
+    result = []
+    for doc in administrative_levels:
+        doc = doc.get('doc')
+        if doc.get('type') == 'administrative_level' and doc.get('administrative_level') == level and doc.get('administrative_id') == administrative_id:
+            result.append(doc)
+    return result
 
 def get_administrative_level_choices(administrative_levels_db, empty_choice=True):
     country_id = administrative_levels_db.get_query_result(

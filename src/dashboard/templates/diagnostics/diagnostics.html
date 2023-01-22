@@ -63,8 +63,10 @@
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                        </div>
 
+                                            <div id="_p"></div>
+                                            
+                                        </div>
 
                                     </div>
                                 </div>
@@ -253,11 +255,12 @@ padding: 0;
                     },
                     success: function (data) {
                         let table = document.getElementById("table");
+                        let p = document.getElementById("_p");
                         if(data.search_by_locality){
                             document.getElementById("_savanes").innerHTML = ``;
                             document.getElementById("_kara").innerHTML = ``;
                             document.getElementById("_centrale").innerHTML = ``;
-                            console.log(data.region)
+                            
                             if(data.region){
                                 document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
                             }
@@ -271,13 +274,15 @@ padding: 0;
                                 </thead>
 
                                 <tbody>
-                                    <tr>
+                                    <tr title="Facilitator(s) : `+data.nbr_facilitators+` ; Task(s) : `+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
                                         <td>`+selected.toUpperCase()+`</td>
                                         <td>`+data.nbr_tasks_completed+`</td>
                                         <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
                                     </tr>
                                 </tbody>
+                                <br />
                             `;
+                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+data.nbr_tasks+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
                         }else{
                             table.innerHTML = `
                             <thead>
@@ -290,22 +295,25 @@ padding: 0;
 
                                 <tbody>
                             `;
-                            console.log(data.regions)
                             
+                            let nbr_tasks = 0;
                             for (const [key, value] of Object.entries(data.regions)) {
                                 document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
                                 table.innerHTML += `
-                                <tr>
+                                <tr title="Task(s) : `+value.nbr_tasks+` ; Village(s) : `+value.nbr_tasks+`" style="cursor: pointer;" >
                                     <td>`+key+`</td>
                                     <td>`+value.nbr_tasks_completed+`</td>
                                     <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
                                 </tr>
                                 `;
+                                nbr_tasks += value.nbr_tasks;
                             }
 
                             table.innerHTML += `
                             </tbody>
+                            <br />
                             `;
+                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+nbr_tasks+`</b> ; Village(s) : <b>`+nbr_tasks+`</b></p>`;
                         }
                         
                          {% comment %} if (data.length > 0) {

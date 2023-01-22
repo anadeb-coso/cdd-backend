@@ -7,7 +7,8 @@ from dashboard.diagnostics.forms import DiagnosticsForm
 from dashboard.utils import (
     get_child_administrative_levels, get_parent_administrative_level, 
     get_documents_by_type, get_administrative_levels_by_type,
-    get_region_of_village_by_sql_id
+    get_region_of_village_by_sql_id, get_all_docs_administrative_levels_by_type_and_administrative_id,
+    get_all_docs_administrative_levels_by_type_and_parent_id
 )
 from no_sql_client import NoSQLClient
 from authentication.models import Facilitator
@@ -76,7 +77,10 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         nbr_tasks = 0
         nbr_tasks_completed = 0
         percentage_tasks_completed = 0
+        nbr_facilitators = 0
+        nbr_villages = 0
         search_by_locality = False
+        already_count_facilitator = False
         _region = None
         regions = {
             "SAVANES": {
@@ -101,60 +105,68 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             liste_prefectures = []
             liste_communes = []
             liste_cantons = []
+            administrative_levels = administrative_levels_db.all_docs(include_docs=True)['rows']
 
             if _type == "region":
-                region = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"administrative_id": sql_id})
+                region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), sql_id)
                 region = region[:][0]
                 _type = "prefecture"
-                liste_prefectures = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"parent_id": region['administrative_id']})[:]
+                liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
                     
             if _type == "prefecture":
                 if not liste_prefectures:
-                    liste_prefectures = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"administrative_id": sql_id})[:]
+                    liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), sql_id)[:]
                 _type = "commune"
                 for prefecture in liste_prefectures:
-                    [liste_communes.append(elt) for elt in get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"parent_id": prefecture['administrative_id']})[:]]
+                    [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
 
             if _type == "commune":
                 if not liste_communes:
-                    liste_communes = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"administrative_id": sql_id})[:]
+                    liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), sql_id)[:]
                 _type = "canton"
                 for commune in liste_communes:
-                    [liste_cantons.append(elt) for elt in get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"parent_id": commune['administrative_id']})[:]]
+                    [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
 
             if _type == "canton":
                 if not liste_cantons:
-                    liste_cantons = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"administrative_id": sql_id})[:]
+                    liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), sql_id)[:]
                 _type = "village"
                 for canton in liste_cantons:
-                    [liste_villages.append(elt) for elt in get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"parent_id": canton['administrative_id']})[:]]
+                    [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
             
             if _type == "village":
                 if not liste_villages:
-                    liste_villages = get_administrative_levels_by_type(administrative_levels_db, _type.title(), attrs={"administrative_id": sql_id})[:]
+                    liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), sql_id)[:]
         
             
-            # for _db in nsc.get_dbs():
             for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
-                # if "facilitator_" in _db:
-                    facilitator_db = nsc.get_db(f.no_sql_db_name)
-                    query_result = facilitator_db.get_query_result({
-                        "type": 'facilitator' #, "develop_mode": False, "training_mode": False
-                        })[:]
-                    if query_result:
-                        doc = query_result[0]
-                        for _village in doc['administrative_levels']:
+                already_count_facilitator = False
+                facilitator_db = nsc.get_db(f.no_sql_db_name)
+                query_result = facilitator_db.get_query_result({
+                    "type": 'facilitator' #, "develop_mode": False, "training_mode": False
+                    })[:]
+                if query_result:
+                    doc = query_result[0]
+                    for _village in doc['administrative_levels']:
+                        
+                        if str(_village['id']).isdigit(): #Verify if id contain only digit
+                                
                             for village in liste_villages:
-                                if _village['id'] == village['administrative_id']: #_village['name'] == village['name'] and 
-                                    # for _task in facilitator_db.get_query_result({"type": 'task', "administrative_level_id": _village['id']})[:]:
+                                if str(_village['id']) == str(village['administrative_id']): #_village['name'] == village['name'] and 
+                                    
+                                    if not already_count_facilitator:
+                                        nbr_facilitators += 1
+                                        already_count_facilitator = True
+                                        
                                     for _task in facilitator_db.all_docs(include_docs=True)['rows']:
                                         _task = _task.get('doc')
-                                        if _task.get('type') == 'task' and _task.get('administrative_level_id') == str(_village['id']):
+                                        if _task.get('type') == 'task' and str(_task.get('administrative_level_id')) == str(_village['id']):
                                             if _task['completed']:
                                                 nbr_tasks_completed += 1
                                             nbr_tasks += 1
-                                    
-            if len(liste_villages) > 0:
+
+            nbr_villages = len(liste_villages)      
+            if nbr_villages > 0:
                 _region = get_region_of_village_by_sql_id(administrative_levels_db, liste_villages[0]['administrative_id'])
                 
 
@@ -162,16 +174,20 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
 
         elif _type in ["phase", "activity", "task"]:
             if _type in ("phase", 'activity'):
-                # for _db in nsc.get_dbs():
                 for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
+                    already_count_facilitator = False
                     facilitator_db = nsc.get_db(f.no_sql_db_name)
                     query_result = facilitator_db.get_query_result({"type": _type, "sql_id": int(sql_id)})[:]
                     if query_result:
                         for _task in facilitator_db.all_docs(include_docs=True)['rows']:
-                        # for _task in facilitator_db.get_query_result({"type": 'task', (str(type_header)+"_id"): query_result[0]['_id']})[:]:
                             _task = _task.get('doc')
                             if _task.get('type') == 'task' and _task.get((str(type_header)+"_id")) == query_result[0]['_id']:
                                 if str(_task['administrative_level_id']).isdigit():
+                                    
+                                    if not already_count_facilitator:
+                                        nbr_facilitators += 1
+                                        already_count_facilitator = True
+
                                     _region = get_region_of_village_by_sql_id(administrative_levels_db, _task['administrative_level_id'])
                                     if _region:
                                         _region_name = _region['name']
@@ -181,12 +197,17 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                                             regions[_region_name]["nbr_tasks"] += 1
                             
             elif _type == "task":
-                # for _db in nsc.get_dbs():
                 for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
+                    already_count_facilitator = False
                     facilitator_db = nsc.get_db(f.no_sql_db_name)
-                    _tasks = facilitator_db.get_query_result({"type": 'task', "sql_id": sql_id})[:]
+                    _tasks = facilitator_db.get_query_result({"type": 'task', "sql_id": int(sql_id)})[:]
                     for _task in _tasks:
                         if str(_task['administrative_level_id']).isdigit():
+
+                            if not already_count_facilitator:
+                                nbr_facilitators += 1
+                                already_count_facilitator = True
+
                             _region = get_region_of_village_by_sql_id(administrative_levels_db, _task['administrative_level_id'])
                             if _region:
                                 _region_name = _region['name']
@@ -207,11 +228,14 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 "nbr_tasks_completed": nbr_tasks_completed,
                 "percentage_tasks_completed": percentage_tasks_completed,
                 "region": _region["name"] if _region else None,
-                "search_by_locality": search_by_locality
+                "search_by_locality": search_by_locality,
+                "nbr_facilitators": nbr_facilitators,
+                "nbr_villages": nbr_villages
             }, safe=False)
         
         return self.render_to_json_response({
             "type": type_header, 
             "regions": regions,
-            "search_by_locality": search_by_locality
+            "search_by_locality": search_by_locality,
+            "nbr_facilitators": nbr_facilitators
         }, safe=False)
