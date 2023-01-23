@@ -1,5 +1,21 @@
 {% load static i18n custom_tags %}
 
+
+<div class="card">
+    <div class="card-body">
+        <span class="text-bold-family fs17">{% translate 'Tasks completed' %}: &nbsp;</span>
+        <span class="fs17 text-primary">{{ total_tasks_completed }}</span>
+            &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
+        <span class="text-bold-family fs17">{% translate 'Tasks uncompleted' %}: &nbsp;</span>
+        <span class="fs17 text-primary">{{ total_tasks_uncompleted }}</span>
+            &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
+        <span class="text-bold-family fs17">{% translate 'Percentage of the tasks uncompleted' %}: &nbsp;</span>
+        <span class="fs17 text-primary">{{ percentage_tasks_completed|floatformat:"2" }} %</span>
+    </div>
+</div>
+
+
+
 {% for task in tasks %}
     <div class="card-item">
         <div class="row">
@@ -65,3 +81,11 @@
         {% translate 'No tasks found' %}
     </div>
 {% endfor %}
+<script>
+    try{
+        total_tasks = parseInt("{{ total_tasks }}");
+    }catch(e){
+        console.log(e);
+    }
+    
+</script>

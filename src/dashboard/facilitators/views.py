@@ -144,9 +144,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
     template_name = 'facilitators/task_list.html'
     context_object_name = 'tasks'
 
-    def get_queryset(self):
-        index = int(self.request.GET.get('index'))
-        offset = int(self.request.GET.get('offset'))
+    def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
         # phase_id = self.request.GET.get('phase')
         # activity_id = self.request.GET.get('activity')
@@ -169,16 +167,22 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         if task_name:
             selector["name"] = task_name
 
-        return self.facilitator_db.get_query_result(selector)[index:index + offset]
+        return self.facilitator_db.get_query_result(selector)
+
+    def get_queryset(self):
+        index = int(self.request.GET.get('index'))
+        offset = int(self.request.GET.get('offset'))
+
+        return self.get_results()[index:index + offset]
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks = 0
-
-        if context.get('object_list'):
-            for _ in context.get('object_list'):
+        object_list = self.get_results()
+        if object_list:
+            for _ in object_list:
                 if _.get("completed"):
                     total_tasks_completed += 1
                 else:
