@@ -71,20 +71,69 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
-        tasks = self.facilitator_db.get_query_result({"type": "task"})
+
+        facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+
+        # tasks = self.facilitator_db.get_query_result({"type": "task"})
+        dict_administrative_levels_with_infos = {}
+        tasks = []
+        administrative_levels = []
+        for doc in facilitator_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                administrative_levels = doc.get('administrative_levels')
+                break
+
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks = 0
-        for _ in tasks:
-            if _.get("completed"):
-                total_tasks_completed += 1
-            else:
-                total_tasks_uncompleted += 1
-            total_tasks += 1
+        for doc in facilitator_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "task":
+                tasks.append(doc)
+                if doc.get("completed"):
+                    total_tasks_completed += 1
+                else:
+                    total_tasks_uncompleted += 1
+                total_tasks += 1
+
+                for administrative_level in administrative_levels:
+                    if str(administrative_level.get("id")) == str(doc.get("administrative_level_id")):
+                        if dict_administrative_levels_with_infos.get(administrative_level.get("name")):
+                            if doc.get("completed"):
+                                dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_completed'] += 1
+                            else:
+                                dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_uncompleted'] += 1
+                            dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] += 1
+                        else:
+                            if doc.get("completed"):
+                                dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+                                    'total_tasks_completed': 1,
+                                    'total_tasks_uncompleted': 0
+                                }
+                            else:
+                                dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+                                    'total_tasks_completed': 0,
+                                    'total_tasks_uncompleted': 1
+                                }
+                            dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] = 1
+        
+        # for _ in tasks:
+        #     if _.get("completed"):
+        #         total_tasks_completed += 1
+        #     else:
+        #         total_tasks_uncompleted += 1
+        #     total_tasks += 1
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+
+        for key, value in dict_administrative_levels_with_infos.items():
+            dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
+            del dict_administrative_levels_with_infos[key]["total_tasks"]
+        context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
+        
         return context
 
     def get_object(self, queryset=None):

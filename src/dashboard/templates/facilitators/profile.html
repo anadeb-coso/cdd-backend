@@ -3,7 +3,7 @@
 
 {% block content %}
     <div class="row">
-        <div class="col-md-7">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
                     <div class="row">
@@ -32,19 +32,45 @@
                 </div>
             </div>
             <div class="card">
-                <div class="card-body">
-                    <span class="text-bold-family fs17">{% translate 'Tasks completed' %}: &nbsp;</span>
-                    <span class="fs17 text-primary">{{ total_tasks_completed }}</span>
-                     &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
-                    <span class="text-bold-family fs17">{% translate 'Tasks uncompleted' %}: &nbsp;</span>
-                    <span class="fs17 text-primary">{{ total_tasks_uncompleted }}</span>
-                    <br /> 
-                    <span class="text-bold-family fs17">{% translate 'Percentage of the tasks uncompleted' %}: &nbsp;</span>
-                    <span class="fs17 text-primary">{{ percentage_tasks_completed|floatformat:"2" }} %</span>
+                <div class="card-body table-responsive">
+                    <table id="table" class="table">
+                        <thead>
+                        <tr>
+                            <th>{% translate 'N°' %}</th>
+                            <th>{% translate 'Village' %}</th>
+                            <th>{% translate 'Completed' %}</th>
+                            <th>{% translate 'Uncompleted' %}</th>
+                            <th>{% translate 'Percentage' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {% for Village, infos in dict_administrative_levels_with_infos.items %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ Village }}</td>
+                                {% for key, value in infos.items %}
+                                    {% if key == "percentage_tasks_completed" %}
+                                    <td>{{ value|floatformat:"2"  }}%</td>
+                                    {% else %}
+                                    <td>{{ value }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                            {% if dict_administrative_levels_with_infos %}
+                            <tr>
+                                <td colspan="2"><b>Total</b></td>
+                                <td><b>{{ total_tasks_completed }}</b></td>
+                                <td><b>{{ total_tasks_uncompleted }}</b></td>
+                                <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-        <div class="col-md-5 display-flex flex-flow-column">
+        <div class="col-md-4 display-flex flex-flow-column">
             <div class="card">
                 <div class="card-body">
                     <span class="text-bold-family fs17">{% translate 'Last Activity' %}:</span>
