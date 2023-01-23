@@ -17,7 +17,7 @@
 
 
 {% for task in tasks %}
-    <div class="card-item">
+    <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ forloop.counter }}" style="cursor: pointer;" >
         <div class="row">
             <div class="col-sm-7">
                 <div class="phase-title">
@@ -76,6 +76,76 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Modal  modal-dialog-centered -->
+    <div class="modal fade" id="card-item-task-{{ forloop.counter }}" tabindex="-1" role="dialog"
+        aria-labelledby="UploadTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {{ task.name }} 
+                </h5>
+                <div class="col-sm-2 text-right">
+                {% if task.completed %}
+                    <div class="status-badge badge-completed">
+                        {% translate 'Completed' %}
+                    </div>
+                {% else %}
+                    <div class="status-badge badge-pending">
+                        {% translate 'Pending' %}
+                    </div>
+                {% endif %}
+            </div>
+
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    {% with task|structureTheFields as fields %}
+                    {% for field, value in fields.items %}
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">{{ field }}</label>
+                            <div class="col-sm-9">
+                                <input type="text" readonly value="{% if value %}{{ value }}{% else %}-{% endif %}" class="form-control" />
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    {% endfor %}
+                    {% endwith %}
+
+                    {% if task.attachments %}
+                    {% for attach in task.attachments %}
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">{{ attach.name }}</label>
+                            <div class="col-sm-9">
+                                {% if attach.attachment.uri %}
+                                    <a href="{{ attach.attachment.uri }}" class="btn btn-primary" target="_blank" >Voir</a>
+                                {% else %}
+                                    <p><i class="fas fa-paperclip mr-2"></i>Pas présent</p>
+                                {% endif %}
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+
+            
+            </div>
+        </div>
+    </div>
+    <!-- End Modal -->
+    
+
+
 {% empty %}
     <div class="text-center">
         {% translate 'No tasks found' %}
