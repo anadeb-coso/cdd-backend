@@ -187,7 +187,11 @@ def structure_the_fields_labels(task):
                                 else:
                                     item6 = {}
                                     for field7, value7 in value5.items():
-                                        item6[field7] = {'name': field7, 'value': value7}
+                                        try:
+                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else field5
+                                        except Exception as ex:
+                                            label2 = field7
+                                        item6[field7] = {'name': label2, 'value': value7}
                                     dict2[field5] = {'name': label1, 'value': item6}
                             else:
                                 dict2[field5] = {'name': label1, 'value': value5}
