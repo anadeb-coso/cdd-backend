@@ -273,7 +273,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super(UpdateFacilitatorView, self).get_context_data(**kwargs)
         form = ctx.get('form')
-        
+        ctx.setdefault('facilitator_doc', self.doc)
         if self.doc:
             if form:
                 for label, field in form.fields.items():
@@ -313,6 +313,8 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
 
         doc = {
             "phone": data['phone'],
+            "email": data['email'],
+            "name": data['name'],
             "administrative_levels": _administrative_levels
         }
         nsc = NoSQLClient()
