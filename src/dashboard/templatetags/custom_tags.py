@@ -1,7 +1,7 @@
 from datetime import datetime
-import re
-
 from django import template
+
+from dashboard.utils import structure_the_words as utils_structure_the_words
 
 register = template.Library()
 
@@ -145,9 +145,9 @@ def structure_the_fields_labels(task):
                                         for l_field in value1:
                                             item2 = {}
                                             for field2, value2 in l_field.items():
-                                                item2[field2] = {'name': field2, 'value': value2}
+                                                item2[field2] = {'name': utils_structure_the_words(field2), 'value': value2}
                                             _list2.append(item2)
-                                        item1[field1] = {'name': field1, 'value': _list2}
+                                        item1[field1] = {'name': utils_structure_the_words(field1), 'value': _list2}
                                     else:
                                         dict1 = {}
                                         for field3, value3 in value1.items():
@@ -156,49 +156,49 @@ def structure_the_fields_labels(task):
                                                 for l_field in value3:
                                                     item4 = {}
                                                     for field4, value4 in l_field.items():
-                                                        item4[field4] = {'name': field4, 'value': value4}
+                                                        item4[field4] = {'name': utils_structure_the_words(field4), 'value': value4}
                                                     _list3.append(item4)
-                                                dict1[field3] = {'name': field3, 'value': _list3}
+                                                dict1[field3] = {'name': utils_structure_the_words(field3), 'value': _list3}
                                             else:
-                                                dict1[field3] = {'name': field3, 'value': value3}
-                                        item1[field1] = {'name': field1, 'value': dict1}
+                                                dict1[field3] = {'name': utils_structure_the_words(field3), 'value': value3}
+                                        item1[field1] = {'name': utils_structure_the_words(field1), 'value': dict1}
                                 else:
-                                    item1[field1] = {'name': field1, 'value': value1}
+                                    item1[field1] = {'name': utils_structure_the_words(field1), 'value': value1}
                             _list1.append(item1)
-                        dict_values[field] = {'name': label if label else field, 'value': _list1}
+                        dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': _list1}
                     else:
                         dict2 = {}
                         ii = 0
                         for field5, value5 in value.items():
                             fields1 = fields_options.get(field).get('fields')
                             try:
-                                label1 = fields1[field5].get('label') if fields1[field5].get('label') else field5
+                                label1 = fields1[field5].get('label') if fields1[field5].get('label') else utils_structure_the_words(field5)
                             except Exception as ex:
-                                label1 = field5
+                                label1 = utils_structure_the_words(field5)
                             if type(value5) in (dict, list):
                                 if type(value5) == list:
                                     _list4 = []
                                     for l_field in value5:
                                         item5 = {}
                                         for field6, value6 in l_field.items():
-                                            item5[field6] = {'name': field6, 'value': value6}
+                                            item5[field6] = {'name': utils_structure_the_words(field6), 'value': value6}
                                         _list4.append(item5)
                                     dict2[field5] = {'name': label1, 'value': _list4}
                                 else:
                                     item6 = {}
                                     for field7, value7 in value5.items():
                                         try:
-                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else field5
+                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else utils_structure_the_words(field5)
                                         except Exception as ex:
-                                            label2 = field7
+                                            label2 = utils_structure_the_words(field7)
                                         item6[field7] = {'name': label2, 'value': value7}
                                     dict2[field5] = {'name': label1, 'value': item6}
                             else:
                                 dict2[field5] = {'name': label1, 'value': value5}
                             ii += 1
-                        dict_values[field] = {'name': label if label else field, 'value': dict2}
+                        dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': dict2}
                 else:
-                    dict_values[field] = {'name': label if label else field, 'value': value}
+                    dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': value}
             fields_values.append(dict_values)
             i += 1
     # print(fields_values)
@@ -211,6 +211,4 @@ def check_type(elt, _type):
 
 @register.filter(name="structureTheWords")
 def structure_the_words(word):
-    sentence = (" ").join(re.findall(r'[A-Z][a-z]*|[a-z]+', word)).lower().capitalize()
-    
-    return sentence
+    return utils_structure_the_words(word)
