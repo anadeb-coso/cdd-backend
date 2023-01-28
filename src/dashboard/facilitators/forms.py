@@ -113,9 +113,9 @@ class UpdateFacilitatorForm(forms.ModelForm):
         'administrative_level_required': _('At least one administrative level is required.'),
     }
     
-    # email = forms.EmailField(required=False)
+    email = forms.EmailField(required=False)
     phone = forms.CharField(required=False)
-    # username = forms.CharField()
+    name = forms.CharField(required=False)
     administrative_level = forms.ChoiceField(required=False)
     administrative_levels = forms.JSONField(label='', required=False)
 

@@ -24,17 +24,40 @@
                     </div>
                 {% endfor %}
             {% endif %}
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-8">
+                            {% translate 'Facilitator not assigned' as not_assigned %}
+                            <div class="profile-header">
+                                <span {% if not facilitator_doc %}class="text-warning"{% endif %} id="name">
+                                    {{ facilitator_doc.name|default:not_assigned }}
+                                </span>
+                            </div>
+                            <p class="mt-2 lh14 text-gray-light">
+                                {% translate 'Tel' %}: <span id="phone">{{ facilitator_doc.phone }}</span>
+                                <br>
+                                {% translate 'Email' %}: <span id="email">{{ facilitator_doc.email }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <form method="post">{% csrf_token %}
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6">
-                                {% bootstrap_field form.phone %}
+                                {% bootstrap_field form.name %}
+                                {% bootstrap_field form.email %}
                             </div>
                             <div class="col-6">
-                            
+                                {% bootstrap_field form.phone %}
                             </div>
                         </div>
+                        <hr />
                         <div class="row">
                             <div class="col-12">
                                 <label>{% trans "Add administrative levels" %}</label>
@@ -84,6 +107,10 @@
             selected_regions_json.push(_selected_region_json);
         {% endfor %}
         $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
+        
+        $("#id_phone").val("{{ facilitator_doc.phone }}");
+        $("#id_email").val("{{ facilitator_doc.email }}");
+        $("#id_name").val("{{ facilitator_doc.name }}");
     </script>
 
     <script type="text/javascript">

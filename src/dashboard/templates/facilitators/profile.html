@@ -2,6 +2,34 @@
 {% load bootstrap4 static i18n %}
 
 {% block content %}
+
+<style>
+.fieldset {
+    border: solid 2px gray;
+    margin-bottom: 10px !important;
+}
+.fieldset fieldset .content {
+    width: 95% !important;
+}
+.fieldset fieldset .content:last-of-type {
+    margin-left: auto;
+}
+fieldset {
+  background-color: #eeeeee;
+}
+
+legend {
+  background-color: gray;
+  color: white;
+  padding: 5px 10px;
+}
+
+input {
+  margin: 5px;
+}
+</style>
+
+
     <div class="row">
         <div class="col-md-8">
             <div class="card">

@@ -1,5 +1,6 @@
 from datetime import datetime
 from operator import itemgetter
+import re
 
 from django.template.defaultfilters import date as _date
 from django.contrib.auth.hashers import make_password
@@ -8,7 +9,9 @@ from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity, Project
 from cloudant.document import Document
 
-
+def structure_the_words(word):
+    return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
+    
 def sort_dictionary_list_by_field(list_to_be_sorted, field, reverse=False):
     return sorted(list_to_be_sorted, key=itemgetter(field), reverse=reverse)
 
