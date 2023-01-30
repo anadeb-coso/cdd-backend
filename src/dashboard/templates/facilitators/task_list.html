@@ -1,7 +1,7 @@
 {% load static i18n custom_tags %}
 
 
-<div class="card">
+{% comment %} <div class="card">
     <div class="card-body">
         <span class="text-bold-family fs17">{% translate 'Tasks completed' %}: &nbsp;</span>
         <span class="fs17 text-primary">{{ total_tasks_completed }}</span>
@@ -12,6 +12,44 @@
         <span class="text-bold-family fs17">{% translate 'Percentage of the tasks completed' %}: &nbsp;</span>
         <span class="fs17 text-primary">{{ percentage_tasks_completed|floatformat:"2" }} %</span>
     </div>
+</div> {% endcomment %}
+<div class="card">
+    <div class="card-body table-responsive">
+        <table id="table" class="table">
+            <thead>
+            <tr>
+                <th>{% translate 'N°' %}</th>
+                <th>{% translate 'Village' %}</th>
+                <th>{% translate 'Completed' %}</th>
+                <th>{% translate 'Uncompleted' %}</th>
+                <th>{% translate 'Percentage' %}</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for Village, infos in dict_administrative_levels_with_infos.items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ Village }}</td>
+                    {% for key, value in infos.items %}
+                        {% if key == "percentage_tasks_completed" %}
+                        <td>{{ value|floatformat:"2"  }}%</td>
+                        {% else %}
+                        <td>{{ value }}</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+                {% if dict_administrative_levels_with_infos|length > 1 %}
+                <tr>
+                    <td colspan="2"><b>Total</b></td>
+                    <td><b>{{ total_tasks_completed }}</b></td>
+                    <td><b>{{ total_tasks_uncompleted }}</b></td>
+                    <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 
@@ -21,7 +59,7 @@
         <div class="row">
             <div class="col-sm-7">
                 <div class="phase-title">
-                    {{ task.name }}
+                    <span class="btn btn-secondary">{{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}</span> {{ task.name }}
                 </div>
                 <div class="phase-title mt-3 mb-2">
                     {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
@@ -222,7 +260,11 @@
                             <label class="col-sm-3 col-form-label">{{ attach.name }}</label>
                             <div class="col-sm-9">
                                 {% if attach.attachment.uri %}
-                                    <a href="{{ attach.attachment.uri }}" class="btn btn-primary" target="_blank" >Voir</a>
+                                    <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                    <!-- class="btn btn-primary" data-toggle="modal" 
+                                    data-target="#item-attach-{{ forloop.counter }}" -->
+                                        <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
+                                    </a>
                                 {% else %}
                                     <p><i class="fas fa-paperclip mr-2"></i>Pas présent</p>
                                 {% endif %}
@@ -244,11 +286,33 @@
     
 
 
+    {% comment %} {% for attach in task.attachments %}{% if attach.attachment.uri %}
+    <!-- Modal -->
+    <div class="modal fade" id="item-attach-{{ forloop.counter }}" tabindex="-2" role="dialog"
+        aria-labelledby="attach" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+
+                <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" class="btn btn-primary" target="_blank" >
+                    <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="700" height="700" />
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- End Modal -->
+    {% endif %}{% endfor %} {% endcomment %}
+
 {% empty %}
     <div class="text-center">
         {% translate 'No tasks found' %}
     </div>
 {% endfor %}
+
+
+
 <script>
     try{
         total_tasks = parseInt("{{ total_tasks }}");
