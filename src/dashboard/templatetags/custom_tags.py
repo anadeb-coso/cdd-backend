@@ -212,3 +212,7 @@ def check_type(elt, _type):
 @register.filter(name="structureTheWords")
 def structure_the_words(word):
     return utils_structure_the_words(word)
+
+@register.filter(name="imgAWSS3Filter")
+def img_aws_s3_filter(uri):
+    return uri.split("?")[0]
