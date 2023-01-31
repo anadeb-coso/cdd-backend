@@ -171,13 +171,52 @@
                                             <legend>{{ v.name }}</legend>
                                             <div class="content">
                                                 {% for k1, v1 in v.value.items %}
-                                                <div class="form-group row">
-                                                    <label class="col-sm-3 col-form-label">{{ v1.name }}</label>
-                                                    <div class="col-sm-9">
-                                                        <input type="text" readonly value="{% if v1.value %}{{ v1.value }}{% else %}-{% endif %}" class="form-control" />
+                                                    {% if v1.value|checkType:'dict' %}
+                                                    <div><fieldset>
+                                                        <legend>{{ v1.name }}</legend>
+                                                        <div class="content">
+                                                        {% for k2, v2 in v1.value.items %}
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 col-form-label">{{ v2.name }}</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" readonly value="{% if v2.value %}{{ v2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                                </div>
+                                                                <div class="clearfix"></div>
+                                                            </div>
+                                                        {% endfor %}
+                                                        </div>
+                                                    </fieldset></div>
+                                                    {% elif v1.value|checkType:'list' %}
+                                                    <div class="fieldset"><fieldset>
+                                                        <legend>{{ v1.name }}</legend>
+                                                        <div class="content">
+                                                        {% for item2 in v1.value %}
+                                                        <div><fieldset>
+                                                            <legend>{{ forloop.counter }}</legend>
+                                                            <div class="content">
+                                                            {% for field2, dicts2 in item2.items %}
+                                                                <div class="form-group row">
+                                                                    <label class="col-sm-3 col-form-label">{{ dicts2.name|structureTheWords }}</label>
+                                                                    <div class="col-sm-9">
+                                                                        <input type="text" readonly value="{% if dicts2.value %}{{ dicts2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            {% endfor %}
+                                                            </div>
+                                                        </fieldset></div>
+                                                        {% endfor %}
+                                                        </div>
+                                                    </fieldset></div>
+                                                    {% else %}
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 col-form-label">{{ v1.name }}</label>
+                                                        <div class="col-sm-9">
+                                                            <input type="text" readonly value="{% if v1.value %}{{ v1.value }}{% else %}-{% endif %}" class="form-control" />
+                                                        </div>
+                                                        <div class="clearfix"></div>
                                                     </div>
-                                                    <div class="clearfix"></div>
-                                                </div>
+                                                    {% endif %}
                                                 {% endfor %}
                                             </div>
                                         </fieldset></div>
@@ -258,15 +297,23 @@
                     {% for attach in task.attachments %}
                         <div class="form-group row">
                             <label class="col-sm-3 col-form-label">{{ attach.name }}</label>
-                            <div class="col-sm-9">
+                            <div class="col-sm-9 attach-file">
                                 {% if attach.attachment.uri %}
-                                    <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                    <!-- class="btn btn-primary" data-toggle="modal" 
-                                    data-target="#item-attach-{{ forloop.counter }}" -->
-                                        <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
-                                    </a>
+                                    {% if "file:///data" in attach.attachment.uri %}
+                                        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
+                                    {% elif ".pdf" in attach.attachment.uri or ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <!-- class="btn btn-primary" data-toggle="modal" 
+                                        data-target="#item-attach-{{ forloop.counter }}" -->
+                                            <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
+                                        </a>
+                                    {% endif %}
                                 {% else %}
-                                    <p><i class="fas fa-paperclip mr-2"></i>Pas présent</p>
+                                    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
                                 {% endif %}
                             </div>
                             <div class="clearfix"></div>
