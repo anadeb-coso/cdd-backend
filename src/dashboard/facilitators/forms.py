@@ -35,6 +35,11 @@ class FilterTaskForm(forms.Form):
             elif doc.get('type') == "phase" and not self.check_name(query_result_phases, doc):
                 query_result_phases.append(doc)
             elif doc.get('type') == "activity" and not self.check_name(query_result_activities, doc):
+                doc["phase_order"] = 0
+                for phase_obj in query_result_phases:
+                    if phase_obj['_id'] == doc["phase_id"]:
+                        doc["phase_order"] = phase_obj['order']
+                        break
                 query_result_activities.append(doc)
             elif doc.get('type') == "task" and not self.check_name(query_result_tasks, doc):
                 doc["phase_order"] = 0
@@ -50,7 +55,7 @@ class FilterTaskForm(forms.Form):
                 query_result_tasks.append(doc)
         
         query_result_phases = sorted(query_result_phases, key=lambda obj: obj['order'])
-        query_result_activities = sorted(query_result_activities, key=lambda obj: obj['order'])
+        query_result_activities = sorted(query_result_activities, key=lambda obj: (str(obj["phase_order"])+str(obj["order"])))
         query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
         query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
         
