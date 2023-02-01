@@ -32,7 +32,9 @@ def unix_time_millis(dt):
 
 
 def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
-    choices = list({(i[id_key], i[text_key]) for i in query_result})
+    # choices = list({(i[id_key], i[text_key]) for i in query_result})
+    choices = []
+    [choices.append((i[id_key], i[text_key])) for i in query_result if i not in choices]
     if empty_choice:
         choices = [('', '')] + choices
     return choices
@@ -402,13 +404,13 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     if _fc_task.get('completed'):
                         _fc_task['last_updated'] = datetime_str #update doc by adding last_updated 
                     else:
-                        _fc_task['last_updated'] = None #update doc by adding last_updated 
+                        _fc_task['last_updated'] = "0000-00-00 00:00:00" #update doc by adding last_updated 
                 
                 if not _fc_task.get('completed_date'):
                     if _fc_task.get('completed'):
                         _fc_task['completed_date'] = datetime_str #update doc by adding completed_date 
                     else:
-                        _fc_task['completed_date'] = None #update doc by adding completed_date 
+                        _fc_task['completed_date'] = "0000-00-00 00:00:00" #update doc by adding completed_date 
                 
                 #End management of the dates of the last update and completed
 
@@ -430,8 +432,8 @@ def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
             for attr in attrs_to_add:
                 if attr == "sql_id":
                     doc[attr] = obj.id #update doc by adding sql_id 
-                else:
-                    doc[attr] = None
+                elif attr in ["completed_date", "last_updated"]:
+                    doc[attr] = "0000-00-00 00:00:00"
             nsc.update_cloudant_document(db,  doc["_id"], doc) # Update doc of process_design
 
 

@@ -22,15 +22,49 @@ class FilterTaskForm(forms.Form):
         nsc = NoSQLClient()
         facilitator_db = nsc.get_db(facilitator_db_name)
 
-        query_result = facilitator_db.get_query_result({"type": 'task'})
-        self.fields['administrative_level'].widget.choices = get_choices(
-            query_result, "administrative_level_id", "administrative_level_name")
-        # self.fields['phase'].widget.choices = get_choices(query_result, "phase_id", "phase_name")
-        # self.fields['activity'].widget.choices = get_choices(query_result, "activity_id", "activity_name")
-        self.fields['phase'].widget.choices = get_choices(query_result, "phase_name", "phase_name")
-        self.fields['activity'].widget.choices = get_choices(query_result, "activity_name", "activity_name")
-        self.fields['task'].widget.choices = get_choices(query_result, "name", "name")
+        facilitator_docs = facilitator_db.all_docs(include_docs=True)['rows']
 
+        query_result_phases = []
+        query_result_activities = []
+        query_result_tasks = []
+        query_result_administrativelevels = []
+        for doc in facilitator_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                query_result_administrativelevels = doc.get("administrative_levels")
+            elif doc.get('type') == "phase" and not self.check_name(query_result_phases, doc):
+                query_result_phases.append(doc)
+            elif doc.get('type') == "activity" and not self.check_name(query_result_activities, doc):
+                query_result_activities.append(doc)
+            elif doc.get('type') == "task" and not self.check_name(query_result_tasks, doc):
+                doc["phase_order"] = 0
+                doc["activity_order"] = 0
+                for phase_obj in query_result_phases:
+                    if phase_obj['name'] == doc["phase_name"]:
+                        doc["phase_order"] = phase_obj['order']
+                        break
+                for activity_obj in query_result_activities:
+                    if activity_obj['name'] == doc["activity_name"]:
+                        doc["activity_order"] = activity_obj['order']
+                        break
+                query_result_tasks.append(doc)
+        
+        query_result_phases = sorted(query_result_phases, key=lambda obj: obj['order'])
+        query_result_activities = sorted(query_result_activities, key=lambda obj: obj['order'])
+        query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
+        query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
+        
+        self.fields['administrative_level'].widget.choices = get_choices(
+            query_result_administrativelevels, "id", "name")
+        self.fields['phase'].widget.choices = get_choices(query_result_phases, "name", "name")
+        self.fields['activity'].widget.choices = get_choices(query_result_activities, "name", "name")
+        self.fields['task'].widget.choices = get_choices(query_result_tasks, "name", "name")
+    
+    def check_name(self, liste, obj):
+        for elt in liste:
+            if elt.get('name') == obj.get("name"):
+                return True
+        return False
 
 class FacilitatorForm(forms.Form):
     error_messages = {
@@ -143,3 +177,45 @@ class UpdateFacilitatorForm(forms.ModelForm):
     class Meta:
         model = Facilitator
         fields = [] # specify the fields to be displayed
+
+
+class FilterFacilitatorForm(forms.Form):
+    region = forms.ChoiceField()
+    prefecture = forms.ChoiceField()
+    commune = forms.ChoiceField()
+    canton = forms.ChoiceField()
+    village = forms.ChoiceField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        nsc = NoSQLClient()
+        db = nsc.get_db("administrative_levels")
+
+        administrativelevels_docs = db.all_docs(include_docs=True)['rows']
+
+        query_result_regions = []
+        query_result_prefectures = []
+        query_result_communes = []
+        query_result_cantons = []
+        query_result_villages = []
+        for doc in administrativelevels_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == 'administrative_level':
+                if doc.get('administrative_level') == "Region":
+                    query_result_regions.append(doc)
+                elif doc.get('administrative_level') == "Prefecture":
+                    query_result_prefectures.append(doc)
+                elif doc.get('administrative_level') == "Commune":
+                    query_result_communes.append(doc)
+                elif doc.get('administrative_level') == "Canton":
+                    query_result_cantons.append(doc)
+                elif doc.get('administrative_level') == "Village":
+                    query_result_villages.append(doc)
+        
+        self.fields['region'].widget.choices = get_choices(query_result_regions, "administrative_id", "name")
+        self.fields['prefecture'].widget.choices = get_choices(query_result_prefectures, "administrative_id", "name")
+        self.fields['commune'].widget.choices = get_choices(query_result_communes, "administrative_id", "name")
+        self.fields['canton'].widget.choices = get_choices(query_result_cantons, "administrative_id", "name")
+        self.fields['village'].widget.choices = get_choices(query_result_villages, "administrative_id", "name")
+    
