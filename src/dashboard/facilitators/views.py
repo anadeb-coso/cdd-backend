@@ -9,9 +9,13 @@ from django.views import generic
 
 from process_manager.models import Phase, Activity
 from authentication.models import Facilitator
-from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm
+from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin
 from no_sql_client import NoSQLClient
+from dashboard.utils import (
+    get_all_docs_administrative_levels_by_type_and_administrative_id,
+    get_all_docs_administrative_levels_by_type_and_parent_id
+)
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -31,6 +35,12 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         return super().get_queryset()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = FilterFacilitatorForm()
+
+        return context
+
 
 class FacilitatorMixin:
     doc = None
@@ -49,6 +59,103 @@ class FacilitatorMixin:
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
+
+
+
+class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
+    template_name = 'facilitators/facilitator_list.html'
+    context_object_name = 'facilitators'
+
+    def get_results(self):
+        id_region = self.request.GET.get('id_region')
+        id_prefecture = self.request.GET.get('id_prefecture')
+        id_commune = self.request.GET.get('id_commune')
+        id_canton = self.request.GET.get('id_canton')
+        id_village = self.request.GET.get('id_village')
+        type_field = self.request.GET.get('type_field')
+        facilitators = []
+        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
+            _type = None
+            if id_region and type_field == "region":
+                _type = "region"
+            elif id_prefecture and type_field == "prefecture":
+                _type = "prefecture"
+            elif id_commune and type_field == "commune":
+                _type = "commune"
+            elif id_canton and type_field == "canton":
+                _type = "canton"
+            elif id_village and type_field == "village":
+                _type = "village"
+                
+            nsc = NoSQLClient()
+
+            liste_prefectures = []
+            liste_communes = []
+            liste_cantons = []
+            liste_villages = []
+            administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
+
+            if _type == "region":
+                region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
+                region = region[:][0]
+                _type = "prefecture"
+                liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
+                    
+            if _type == "prefecture":
+                if not liste_prefectures:
+                    liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
+                _type = "commune"
+                for prefecture in liste_prefectures:
+                    [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
+
+            if _type == "commune":
+                if not liste_communes:
+                    liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
+                _type = "canton"
+                for commune in liste_communes:
+                    [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
+
+            if _type == "canton":
+                if not liste_cantons:
+                    liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
+                _type = "village"
+                for canton in liste_cantons:
+                    [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
+            
+            if _type == "village":
+                if not liste_villages:
+                    liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
+
+            for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
+                    already_count_facilitator = False
+                    facilitator_db = nsc.get_db(f.no_sql_db_name)
+                    query_result = facilitator_db.get_query_result({
+                        "type": 'facilitator'
+                        })[:]
+                    if query_result:
+                        doc = query_result[0]
+                        for _village in doc['administrative_levels']:
+                            
+                            if str(_village['id']).isdigit(): #Verify if id contain only digit
+                                    
+                                for village in liste_villages:
+                                    if str(_village['id']) == str(village['administrative_id']):
+                                        if not already_count_facilitator:
+                                            facilitators.append(f)
+                                            already_count_facilitator = True
+        else:
+            facilitators = list(Facilitator.objects.all())
+        return facilitators
+
+    def get_queryset(self):
+
+        return self.get_results()
+    
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     return context
+
+
 
 
 class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, generic.DetailView):

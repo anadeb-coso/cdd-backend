@@ -32,7 +32,9 @@ def unix_time_millis(dt):
 
 
 def get_choices(query_result, id_key="id", text_key="name", empty_choice=True):
-    choices = list({(i[id_key], i[text_key]) for i in query_result})
+    # choices = list({(i[id_key], i[text_key]) for i in query_result})
+    choices = []
+    [choices.append((i[id_key], i[text_key])) for i in query_result if i not in choices]
     if empty_choice:
         choices = [('', '')] + choices
     return choices
@@ -371,7 +373,9 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
             # Check if the task was found
             if len(fc_task) < 1:
-                # create the activity
+                # create the task
+                new_task['completed_date'] = None #Add completed_date 
+                new_task['last_updated'] = None #Add last_updated 
                 nsc.create_document(facilitator_database, new_task)
                 # Get activity
                 fc_task = facilitator_database.get_query_result(new_task)[0]
@@ -390,6 +394,25 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_task['attachments'] = new_task.get("attachments")
                 _fc_task['order'] = task_model.order
                 _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
+                
+                #Start management of the dates of the last update and completed
+
+                datetime_now = datetime.now()
+                datetime_str = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
+                
+                if not _fc_task.get('last_updated'):
+                    if _fc_task.get('completed'):
+                        _fc_task['last_updated'] = datetime_str #update doc by adding last_updated 
+                    else:
+                        _fc_task['last_updated'] = "0000-00-00 00:00:00" #update doc by adding last_updated 
+                
+                if not _fc_task.get('completed_date'):
+                    if _fc_task.get('completed'):
+                        _fc_task['completed_date'] = datetime_str #update doc by adding completed_date 
+                    else:
+                        _fc_task['completed_date'] = "0000-00-00 00:00:00" #update doc by adding completed_date 
+                
+                #End management of the dates of the last update and completed
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                     {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
@@ -409,6 +432,8 @@ def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
             for attr in attrs_to_add:
                 if attr == "sql_id":
                     doc[attr] = obj.id #update doc by adding sql_id 
+                elif attr in ["completed_date", "last_updated"]:
+                    doc[attr] = "0000-00-00 00:00:00"
             nsc.update_cloudant_document(db,  doc["_id"], doc) # Update doc of process_design
 
 
@@ -430,6 +455,19 @@ def over_documents(develop_mode=False, training_mode=False):
 
     print("Syncing: projects - process_design")
     add_news_attr_to_doc("process_design", projects)
+
+    for task in tasks:
+        print('syncing: ', task.phase.order, task.activity.order, task.order)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode)
+
+
+def over_documents_to_add_completed_date_and_last_updated_attrs(develop_mode=False, training_mode=False):
+    """Method to override the documents by adding 'completed_date' and 'last_updated' attributes"""
+
+    tasks = Task.objects.all().prefetch_related()
+
+    print("Syncing: tasks - process_design")
+    add_news_attr_to_doc("process_design", tasks, ["completed_date", "last_updated"])
 
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)

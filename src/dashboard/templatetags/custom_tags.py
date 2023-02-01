@@ -188,10 +188,33 @@ def structure_the_fields_labels(task):
                                     item6 = {}
                                     for field7, value7 in value5.items():
                                         try:
-                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else utils_structure_the_words(field5)
+                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else utils_structure_the_words(field7)
                                         except Exception as ex:
                                             label2 = utils_structure_the_words(field7)
-                                        item6[field7] = {'name': label2, 'value': value7}
+
+                                        if type(value7) in (dict, list):
+                                            if type(value7) == list:
+                                                _list5 = []
+                                                for l_field in value7:
+                                                    item7 = {}
+                                                    for field8, value8 in l_field.items():
+                                                        item7[field8] = {'name': utils_structure_the_words(field8), 'value': value8}
+                                                    _list5.append(item7)
+                                                dict2[field5] = {'name': label2, 'value': _list5}
+                                            else:
+                                                item8 = {}
+                                                for field9, value9 in value7.items():
+                                                    try:
+                                                        label3 = fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') if fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') else utils_structure_the_words(field9)
+                                                    except Exception as ex:
+                                                        label3 = utils_structure_the_words(field9)
+                                                    item6[field7] = {'name': label3, 'value': value9}
+                                                dict2[field5] = {'name': label2, 'value': item6}
+                                        else:
+                                            dict2[field7] = {'name': label2, 'value': value7}
+
+
+                                        # item6[field7] = {'name': label2, 'value': value7}
                                     dict2[field5] = {'name': label1, 'value': item6}
                             else:
                                 dict2[field5] = {'name': label1, 'value': value5}
