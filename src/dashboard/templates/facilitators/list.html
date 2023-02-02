@@ -154,9 +154,8 @@
                     facilitators.html(response);
                 },
                 error: function (data) {
-                    {% comment %} spin.hide();
-                    alert(error_server_message + "Error " + data.status); {% endcomment %}
-                    console.log(data)
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
                 }
             });
         }
