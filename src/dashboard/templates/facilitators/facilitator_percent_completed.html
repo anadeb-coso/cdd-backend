@@ -1,0 +1,18 @@
+<b
+    style="color:
+    {% if percentage_tasks_completed < 10 %}red
+    {% elif percentage_tasks_completed < 30 %}orange
+    {% elif percentage_tasks_completed < 50 %}purple
+    {% elif percentage_tasks_completed < 70 %}black
+    {% elif percentage_tasks_completed < 90 %}#04e1e1
+    {% elif percentage_tasks_completed < 100 %}blue
+    {% else %}green
+    {% endif %};
+    "
+>
+    {% if percentage_tasks_completed < 10 %}
+        0{{ percentage_tasks_completed|floatformat:"2" }}
+    {% else %}
+        {{ percentage_tasks_completed|floatformat:"2" }}
+    {% endif %}%
+</b>

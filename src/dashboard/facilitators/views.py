@@ -10,7 +10,7 @@ from django.views import generic
 from process_manager.models import Phase, Activity
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
-from dashboard.mixins import AJAXRequestMixin, PageMixin
+from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from dashboard.utils import (
     get_all_docs_administrative_levels_by_type_and_administrative_id,
@@ -156,6 +156,60 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
     #     return context
 
 
+
+class FacilitatorsPercentListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.ListView):
+    template_name = 'facilitators/facilitator_percent_completed.html'
+    context_object_name = 'facilitator_percent_completed'
+    def get_results(self):
+        return self.facilitator_db.get_query_result({"type": "task"})
+
+    def get_queryset(self):
+        return []
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
+        total_tasks = 0
+
+        object_list = self.get_results()
+
+        if object_list:
+            for _ in object_list:
+                if _.get("completed"):
+                    total_tasks_completed += 1
+                else:
+                    total_tasks_uncompleted += 1
+                total_tasks += 1
+
+        context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+
+        return context
+        
+class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def post(self, request, *args, **kwargs):
+        liste = request.POST.getlist('liste[]')
+        d = {}
+
+        nsc = NoSQLClient()
+        for f in liste:
+            facilitator_db = nsc.get_db(f)
+            docs = facilitator_db.get_query_result({"type": "task"})
+
+            total_tasks_completed = 0
+            total_tasks_uncompleted = 0
+            total_tasks = 0
+            if docs:
+                for _ in docs:
+                    if _.get("completed"):
+                        total_tasks_completed += 1
+                    else:
+                        total_tasks_uncompleted += 1
+                    total_tasks += 1
+
+            d[f] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+
+        return self.render_to_json_response(d, safe=False)
 
 
 class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, generic.DetailView):
@@ -335,9 +389,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
-        context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
-
-
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
 
         for key, value in dict_administrative_levels_with_infos.items():
