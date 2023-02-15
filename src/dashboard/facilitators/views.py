@@ -39,6 +39,9 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context = super().get_context_data(**kwargs)
         context['form'] = FilterFacilitatorForm()
 
+        context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
+        context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
+
         return context
 
 
@@ -144,7 +147,10 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                                             facilitators.append(f)
                                             already_count_facilitator = True
         else:
-            facilitators = list(Facilitator.objects.all())
+            # facilitators = list(Facilitator.objects.all())
+            is_training = bool(self.request.GET.get('is_training', "False") == "True")
+            is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
+            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training))
         return facilitators
 
     def get_queryset(self):

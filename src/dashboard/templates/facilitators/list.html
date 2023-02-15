@@ -146,7 +146,9 @@
                     id_commune: id_commune.val(),
                     id_canton: id_canton.val(),
                     id_village: id_village.val(),
-                    type_field: type_field
+                    type_field: type_field,
+                    is_training: "{{ is_training }}",
+                    is_develop: "{{ is_develop }}"
                 },
                 success: function (response) {
                     spin.hide();
