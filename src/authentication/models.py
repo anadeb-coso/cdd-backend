@@ -14,7 +14,7 @@ class Facilitator(models.Model):
     no_sql_db_name = models.CharField(max_length=150, unique=True)
     username = models.CharField(max_length=150, unique=True, verbose_name=_('username'))
     password = models.CharField(max_length=128, verbose_name=_('password'))
-    code = models.CharField(max_length=6, unique=False, verbose_name=_('code'))
+    code = models.CharField(max_length=6, unique=True, verbose_name=_('code'))
     active = models.BooleanField(default=False, verbose_name=_('active'))
     develop_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
@@ -155,7 +155,17 @@ class Facilitator(models.Model):
             )[:][0]['name']
         except Exception as e:
             return None
-    
+        
+    def get_name_with_sex(self):
+        try:
+            nsc = NoSQLClient()
+            facilitator_doc = nsc.get_db(self.no_sql_db_name).get_query_result(
+                {"type": "facilitator"}
+            )[:][0]
+            return f"{facilitator_doc['sex']} {facilitator_doc['name']}" if facilitator_doc.get('sex') else facilitator_doc['name']
+        except Exception as e:
+            return None
+        
     def get_email(self):
         try:
             nsc = NoSQLClient()

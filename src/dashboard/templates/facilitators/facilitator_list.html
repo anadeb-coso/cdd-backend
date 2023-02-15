@@ -16,7 +16,7 @@
             <tbody>
             {% for facilitator in facilitators %}
                 <tr>
-                    <td>{{ facilitator.get_name }}</td>
+                    <td>{{ facilitator.get_name_with_sex }}</td>
                     <td>{{ facilitator.username }}</td>
                     <td>{{ facilitator.get_type|upper }}</td>
                     <td><span id="facilitator-percent-{{ facilitator.no_sql_db_name }}" 

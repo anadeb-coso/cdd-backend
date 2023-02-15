@@ -433,6 +433,7 @@ class CreateFacilitatorFormView(PageMixin, generic.FormView):
             "name": data['name'],
             "email": data['email'],
             "phone": data['phone'],
+            "sex": data['sex'],
             "administrative_levels": data['administrative_levels'],
             "type": "facilitator"
         }
@@ -526,6 +527,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
             "phone": data['phone'],
             "email": data['email'],
             "name": data['name'],
+            "sex": data['sex'],
             "administrative_levels": _administrative_levels
         }
         nsc = NoSQLClient()
