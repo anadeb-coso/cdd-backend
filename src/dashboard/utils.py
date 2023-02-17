@@ -387,6 +387,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_task['description'] = task_model.description
                 _fc_task['phase_name'] = task_model.phase.name
                 _fc_task['activity_name'] = task_model.activity.name
+                _fc_task['administrative_level_name'] = administrative_level['name']
                 if task_model.form:
                     _fc_task['form'] = task_model.form
                 elif new_task.get("form"):
@@ -668,3 +669,35 @@ def clear_facilitator_database(develop_mode=False, training_mode=False):
         projects = nsc_database.get_query_result({"type": "project"})
         for project in projects:
             nsc.delete_document(nsc_database, project["_id"])
+
+def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, administrativelevels_ids=[]):
+    facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db)
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        print()
+        print(facilitator)
+        nsc_database = nsc.get_db(facilitator.no_sql_db_name)
+        facilitator_doc = nsc_database[nsc_database.get_query_result({"type": "facilitator"})[:][0]['_id']]
+        administrative_levels = facilitator_doc["administrative_levels"]
+        _administrative_levels = []
+        print(administrative_levels)
+        for adl_id in administrativelevels_ids:
+            phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
+            for phase in phases:
+                nsc.delete_document(nsc_database, phase["_id"])
+            activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
+            for activity in activities:
+                nsc.delete_document(nsc_database, activity["_id"])
+            tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
+            for task in tasks:
+                nsc.delete_document(nsc_database, task["_id"])
+        
+            for i in range(len(administrative_levels)):
+                if administrative_levels[i]["id"] == adl_id:
+                    continue
+                _administrative_levels.append(administrative_levels[i])
+        print(_administrative_levels)
+        doc = {
+            "administrative_levels": _administrative_levels
+        }
+        nsc.update_doc(nsc_database, facilitator_doc['_id'], doc)
