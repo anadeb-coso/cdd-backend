@@ -55,6 +55,7 @@
                             </div>
                             <div class="col-6">
                                 {% bootstrap_field form.phone %}
+                                {% bootstrap_field form.sex %}
                             </div>
                         </div>
                         <hr />
@@ -111,6 +112,7 @@
         $("#id_phone").val("{{ facilitator_doc.phone }}");
         $("#id_email").val("{{ facilitator_doc.email }}");
         $("#id_name").val("{{ facilitator_doc.name }}");
+        $("#id_sex").val("{{ facilitator_doc.sex }}");
     </script>
 
     <script type="text/javascript">
