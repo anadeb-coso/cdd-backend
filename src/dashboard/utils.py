@@ -395,6 +395,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 _fc_task['attachments'] = new_task.get("attachments")
                 _fc_task['order'] = task_model.order
                 _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
+                _fc_task['support_attachments'] = new_task.get("support_attachments")
                 
                 #Start management of the dates of the last update and completed
 
