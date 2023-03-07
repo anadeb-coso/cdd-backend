@@ -585,7 +585,40 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
         # else:
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
         create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db)
+
+
+
+def sync_tasks_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False):
+   
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        # fc_tasks = facilitator_database.get_query_result({"type": "task"})[:]
+        fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
         
+        for _task in fc_tasks:
+            task = _task.get('doc')
+            if task.get('type') == 'task' and task.get("completed") and task.get("support_attachments"):
+                attachments = task["attachments"]
+                all_attachs_filled = True
+
+                for att in attachments:
+                    if not att.get("attachment") or (att.get("attachment") and "file:///data" in att.get("attachment").get("uri")):
+                        all_attachs_filled = False
+
+                if not all_attachs_filled:
+                    task["completed"] = False
+                    nsc.update_cloudant_document(facilitator_database,  task["_id"], task)  # Update task for the facilitator
+                    print(task)
+
+
+
 # from dashboard.utils import reset_tasks
 def reset_tasks():
     projects = Project.objects.all()
