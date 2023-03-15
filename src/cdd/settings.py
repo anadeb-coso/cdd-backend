@@ -49,7 +49,8 @@ CREATED_APPS = [
     'authentication',
     'dashboard',
     'attachments',
-    'process_manager'
+    'process_manager',
+    'administrativelevels'
 ]
 
 THIRD_PARTY_APPS = [
@@ -94,8 +95,11 @@ WSGI_APPLICATION = 'cdd.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+EXTERNAL_DATABASE_NAME = 'mis'
+
 DATABASES = {
-    'default': env.db()
+    'default': env.db(),
+    EXTERNAL_DATABASE_NAME: env.db('LEGACY_DATABASE_URL')
 }
 
 
@@ -208,3 +212,4 @@ DIAGNOSTIC_MAP_WS_BOUND = env('DIAGNOSTIC_MAP_WS_BOUND')
 DIAGNOSTIC_MAP_EN_BOUND = env('DIAGNOSTIC_MAP_EN_BOUND')
 
 DIAGNOSTIC_MAP_ISO_CODE = env('DIAGNOSTIC_MAP_ISO_CODE')
+
