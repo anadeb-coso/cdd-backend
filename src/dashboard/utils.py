@@ -760,24 +760,14 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
             try:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrativelevel['id']))
                 if administrativelevel_obj.geographical_unit:
-                    if geographical_units:
-                        geographical_unit_id_exists = False
-                        for i in range(len(geographical_units)):
-                            if geographical_units[i] and geographical_units[i].get('sql_id') and str(geographical_units[i].get('sql_id')) == str(administrativelevel_obj.geographical_unit_id):
-                                geographical_unit_id_exists = True
-                        if not geographical_unit_id_exists:
-                            geographical_units.append(
-                                {
-                                    "sql_id": str(administrativelevel_obj.geographical_unit_id),
-                                    "name": administrativelevel_obj.geographical_unit.get_name(),
-                                    "villages": [], 
-                                    "cvd_groups": []
-                                }
-                            )
-                    else:
+                    geographical_unit_id_exists = False
+                    for i in range(len(geographical_units)):
+                        if geographical_units[i] and geographical_units[i].get('sql_id') and str(geographical_units[i].get('sql_id')) == str(administrativelevel_obj.geographical_unit_id):
+                            geographical_unit_id_exists = True
+                    if not geographical_unit_id_exists:
                         geographical_units.append(
                             {
-                                "sql_id": str(administrativelevel_obj.geographical_unit_id), 
+                                "sql_id": str(administrativelevel_obj.geographical_unit_id),
                                 "name": administrativelevel_obj.geographical_unit.get_name(),
                                 "villages": [], 
                                 "cvd_groups": []
