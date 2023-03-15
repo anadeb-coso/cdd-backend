@@ -9,6 +9,8 @@ from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity, Project
 from cloudant.document import Document
 
+from administrativelevels import models as administrativelevels_models
+
 def structure_the_words(word):
     return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
     
@@ -735,3 +737,88 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
             "administrative_levels": _administrative_levels
         }
         nsc.update_doc(nsc_database, facilitator_doc['_id'], doc)
+
+
+
+def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_mode=False, no_sql_db=False):
+    
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        doc_facilitator = facilitator_database.get_query_result(
+            {"type": "facilitator"}
+        )[:][0]
+
+        geographical_units = []
+        for administrativelevel in doc_facilitator['administrative_levels']:
+            try:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrativelevel['id']))
+                if administrativelevel_obj.geographical_unit:
+                    geographical_unit_id_exists = False
+                    for i in range(len(geographical_units)):
+                        if geographical_units[i] and geographical_units[i].get('sql_id') and str(geographical_units[i].get('sql_id')) == str(administrativelevel_obj.geographical_unit_id):
+                            geographical_unit_id_exists = True
+                    if not geographical_unit_id_exists:
+                        geographical_units.append(
+                            {
+                                "sql_id": str(administrativelevel_obj.geographical_unit_id),
+                                "name": administrativelevel_obj.geographical_unit.get_name(),
+                                "villages": [], 
+                                "cvd_groups": []
+                            }
+                        )
+
+                    
+
+                    for i in range(len(geographical_units)):
+                        if geographical_units[i] and geographical_units[i].get('sql_id') and str(geographical_units[i].get('sql_id')) == str(administrativelevel_obj.geographical_unit_id):
+                            villages = geographical_units[i].get('villages')
+                            villages.append(str(administrativelevel_obj.id))
+                            geographical_units[i]['villages'] = list(set(villages))
+
+
+
+                            #CVD
+                            if administrativelevel_obj.cvd:
+                                cvd_id_exists = False
+                                for a in range(len(geographical_units[i].get('cvd_groups'))):
+                                    if str(geographical_units[i].get('cvd_groups')[a].get('sql_id')) == str(administrativelevel_obj.cvd_id):
+                                        cvd_id_exists = True
+                                if not cvd_id_exists:
+                                    geographical_units[i].get('cvd_groups').append(
+                                        {
+                                            "sql_id": str(administrativelevel_obj.cvd_id),
+                                            "name": administrativelevel_obj.cvd.get_name(),
+                                            "villages": [str(administrativelevel_obj.id)]
+                                        }
+                                    )
+
+                                for a in range(len(geographical_units[i].get('cvd_groups'))):
+                                    if str(geographical_units[i].get('cvd_groups')[a].get('sql_id')) == str(administrativelevel_obj.cvd_id):
+                                        villages = geographical_units[i].get('cvd_groups')[a].get('villages')
+                                        villages.append(str(administrativelevel_obj.id))
+                                        geographical_units[i].get('cvd_groups')[a]['villages'] = list(set(villages))
+                                
+                            #End CVD
+                else:
+                    print("pass")
+            
+            except Exception as exc:
+                print()
+                print(administrativelevel['id'], administrativelevel['name'] , ': ', exc.__str__())
+                print()
+
+        doc_facilitator["geographical_units"] = geographical_units
+        
+        nsc.update_cloudant_document(facilitator_database, doc_facilitator['_id'], doc_facilitator)
+
+
+        print(geographical_units)
+        print()
+        print()
