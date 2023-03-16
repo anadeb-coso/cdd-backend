@@ -17,19 +17,40 @@ from django.conf import settings
 from django.conf.urls import include
 from django.contrib import admin
 from django.urls import path
+from django.conf.urls.i18n import i18n_patterns
+
+from .views import set_language
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
 handler404 = 'dashboard.authentication.views.handler404'
 handler500 = 'dashboard.authentication.views.handler500'
 
+
+
 urlpatterns = [
+    path('set-language/', 
+         set_language, 
+         name='set_language')
+]
+
+urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
     path('attachments/', include('attachments.urls')),
     path('i18n/', include('django.conf.urls.i18n')),
     path('authentication/', include('authentication.urls')),
     path('', include('dashboard.urls')),
-]
+)
+
+
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('attachments/', include('attachments.urls')),
+#     path('i18n/', include('django.conf.urls.i18n')),
+#     path('authentication/', include('authentication.urls')),
+#     path('', include('dashboard.urls')),
+#     path('api/', include('api.urls')),
+# ]
 
 
 if settings.DEBUG:

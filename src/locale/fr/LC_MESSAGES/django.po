@@ -1,0 +1,468 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-03-16 09:57+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: .\api\decorators.py:16
+msgid "You don't have access to this resource"
+msgstr "Vous n'avez pas accès à cette ressource"
+
+#: .\attachments\serializers.py:26
+msgid "Unauthorized access with the credentials provided."
+msgstr "Accès non autorisé avec les informations d'identification fournies."
+
+#: .\attachments\serializers.py:44 .\dashboard\forms\forms.py:11
+#, python-format
+msgid ""
+"Select a file size less than or equal to %(max_size)s. The selected file "
+"size is %(size)s."
+msgstr ""
+"Sélectionnez une taille de fichier inférieure ou égale à %(max_size)s. Le fichier sélectionné "
+"est %(size)s."
+
+#: .\authentication\admin.py:17
+msgid "Default value: ChangeItNow[code]"
+msgstr "Valeur par défaut : ChangeItNow[code]"
+
+#: .\authentication\models.py:15
+msgid "username"
+msgstr "nom d'utilisateur"
+
+#: .\authentication\models.py:16
+msgid "password"
+msgstr "mot de passe"
+
+#: .\authentication\models.py:17
+msgid "code"
+msgstr "code"
+
+#: .\authentication\models.py:18
+msgid "active"
+msgstr "active"
+
+#: .\authentication\models.py:19 .\authentication\models.py:20
+msgid "test mode"
+msgstr "mode test"
+
+#: .\authentication\models.py:190
+msgid "Facilitator"
+msgstr "Animateur communautaire"
+
+#: .\authentication\models.py:191 .\dashboard\facilitators\views.py:30
+#: .\dashboard\facilitators\views.py:234 .\dashboard\facilitators\views.py:423
+#: .\dashboard\facilitators\views.py:462
+#: .\dashboard\templates\layouts\sidebar.html:30
+msgid "Facilitators"
+msgstr "Animateurs communautaires"
+
+#: .\authentication\permissions.py:26 .\authentication\permissions.py:45
+#: .\authentication\permissions.py:69 .\authentication\permissions.py:90
+#: .\authentication\permissions.py:111
+msgid "Page not found"
+msgstr "Page non trouvée"
+
+#: .\authentication\serializers.py:17 .\dashboard\facilitators\forms.py:85
+msgid "Password"
+msgstr "Mot de passe"
+
+#: .\authentication\serializers.py:22
+#, python-brace-format
+msgid "Invalid data. Expected a dictionary, but got {datatype}."
+msgstr "Données non valides. Je m'attendais à un dictionnaire, mais j'ai obtenu {datatype}."
+
+#: .\authentication\serializers.py:23
+msgid "Unable to log in with provided credentials."
+msgstr "Impossible de se connecter avec les informations d'identification fournies."
+
+#: .\authentication\serializers.py:36
+msgid "Must include \"username\" and \"password\"."
+msgstr "Doit inclure \"nom d'utilisateur\" et \"mot de passe\"."
+
+#: .\authentication\views.py:72
+msgid "Your current password does not match. Please try again!!!"
+msgstr "Votre mot de passe actuel ne correspond pas. Veuillez réessayer !!!"
+
+#: .\authentication\views.py:76 .\authentication\views.py:107
+msgid "Both passwords must be the same."
+msgstr "Les deux mots de passe doivent être identiques."
+
+#: .\authentication\views.py:80 .\authentication\views.py:111
+msgid "Your password is successfully reset..."
+msgstr "Votre mot de passe a été réinitialisé avec succès..."
+
+#: .\cdd\settings.py:138
+msgid "English"
+msgstr "Anglais"
+
+#: .\cdd\settings.py:139
+msgid "French"
+msgstr "Français"
+
+#: .\dashboard\authentication\forms.py:11
+#: .\dashboard\templates\facilitators\profile.html:66
+#: .\dashboard\templates\facilitators\update.html:41
+msgid "Email"
+msgstr "E-mail"
+
+#: .\dashboard\diagnostics\views.py:22
+msgid "diagnostics"
+msgstr "diagnostics"
+
+#: .\dashboard\facilitators\forms.py:76
+msgid "The two password fields didn’t match."
+msgstr "Les deux champs du mot de passe ne correspondent pas."
+
+#: .\dashboard\facilitators\forms.py:77 .\dashboard\facilitators\forms.py:152
+msgid "A facilitator with that username is already registered."
+msgstr "Un animateur communautaire portant ce nom d'utilisateur est déjà enregistré."
+
+#: .\dashboard\facilitators\forms.py:78 .\dashboard\facilitators\forms.py:153
+msgid "At least one administrative level is required."
+msgstr "Au moins un niveau administratif est requis."
+
+#: .\dashboard\facilitators\forms.py:91
+msgid "Password confirmation"
+msgstr "Confirmation du mot de passe"
+
+#: .\dashboard\facilitators\forms.py:94
+msgid "Enter the same password as before, for verification."
+msgstr "Entrez le même mot de passe que précédemment, pour vérification."
+
+#: .\dashboard\facilitators\views.py:228
+msgid "Facilitator Profile"
+msgstr "Profil de l'Animateur"
+
+#: .\dashboard\facilitators\views.py:416
+#: .\dashboard\templates\facilitators\list.html:13
+msgid "Create Facilitator"
+msgstr "Créer un Animateur"
+
+#: .\dashboard\facilitators\views.py:455
+msgid "Edit Facilitator"
+msgstr "Editer l'Animateur"
+
+#: .\dashboard\forms\forms.py:8
+msgid "Allowed file size less than or equal to 2 MB"
+msgstr "Taille de fichier autorisée inférieure ou égale à 2 Mo"
+
+#: .\dashboard\templates\authentication\login.html:17
+#: .\dashboard\templates\authentication\login.html:54
+msgid "Log in"
+msgstr "Se connecter"
+
+#: .\dashboard\templates\authentication\login.html:45
+msgid "Log in to start your session"
+msgstr "Connectez-vous pour commencer votre session"
+
+#: .\dashboard\templates\common\400.html:10
+msgid "BAD REQUEST"
+msgstr "MAUVAISE DEMANDE"
+
+#: .\dashboard\templates\common\400.html:13
+msgid "The server could not understand the request due to invalid syntax."
+msgstr "Le serveur n'a pas pu comprendre la demande en raison d'une syntaxe non valide."
+
+#: .\dashboard\templates\common\403.html:10
+msgid "Access Denied"
+msgstr "Accès refusé"
+
+#: .\dashboard\templates\common\403.html:13
+msgid "Full authentication is required to access this resource."
+msgstr "Une authentification complète est requise pour accéder à cette ressource."
+
+#: .\dashboard\templates\common\404.html:10
+msgid "Sorry but we couldn't find this page"
+msgstr "Désolé, mais nous n'avons pas trouvé cette page"
+
+#: .\dashboard\templates\common\404.html:13
+msgid "This page you are looking for does not exist."
+msgstr "La page que vous recherchez n'existe pas."
+
+#: .\dashboard\templates\common\500.html:10
+msgid "Internal Server Error"
+msgstr "Erreur de serveur interne"
+
+#: .\dashboard\templates\common\500.html:13
+msgid ""
+"We track these errors automatically, but if the problem persists feel free "
+"to contact us. In the meantime, try refreshing."
+msgstr ""
+"Nous suivons ces erreurs automatiquement, mais si le problème persiste, n'hésitez pas à nous contacter."
+"En attendant, essayez d'actualiser."
+
+#: .\dashboard\templates\common\progress_bar.html:6
+#: .\dashboard\templates\facilitators\task_list.html:24
+#: .\dashboard\templates\facilitators\task_list.html:112
+#: .\dashboard\templates\facilitators\task_list.html:137
+msgid "Completed"
+msgstr "Achevée"
+
+#: .\dashboard\templates\common\under_construction.html:7
+#: .\dashboard\templates\common\under_construction_col.html:5
+msgid "Oops!"
+msgstr "Oups !"
+
+#: .\dashboard\templates\common\under_construction.html:9
+msgid "This section is under construction"
+msgstr "Cette section est en cours de réalisation"
+
+#: .\dashboard\templates\common\under_construction_col.html:6
+msgid "Under construction"
+msgstr "En cours de réalisation"
+
+#: .\dashboard\templates\diagnostics\diagnostics.html:22
+#: .\dashboard\templates\facilitators\profile.html:141
+msgid "Filter by"
+msgstr "Filtrer par"
+
+#: .\dashboard\templates\diagnostics\diagnostics.html:53
+#: .\dashboard\templates\diagnostics\diagnostics.html:292
+#: .\dashboard\templates\facilitators\list.html:206
+msgid "Region"
+msgstr "Région"
+
+#: .\dashboard\templates\diagnostics\diagnostics.html:54
+#: .\dashboard\templates\diagnostics\diagnostics.html:273
+#: .\dashboard\templates\diagnostics\diagnostics.html:293
+msgid "Task Completed"
+msgstr "Tâche achevée"
+
+#: .\dashboard\templates\diagnostics\diagnostics.html:55
+#: .\dashboard\templates\diagnostics\diagnostics.html:274
+#: .\dashboard\templates\diagnostics\diagnostics.html:294
+#: .\dashboard\templates\facilitators\task_list.html:26
+msgid "Percentage"
+msgstr "Pourcentage"
+
+#: .\dashboard\templates\diagnostics\diagnostics.html:272
+msgid "`+data.type+`"
+msgstr "`+data.type+`"
+
+#: .\dashboard\templates\facilitators\create.html:45
+#: .\dashboard\templates\facilitators\update.html:64
+msgid "Add administrative levels"
+msgstr "Ajouter des niveaux administratifs"
+
+#: .\dashboard\templates\facilitators\create.html:49
+#: .\dashboard\templates\facilitators\update.html:68
+msgid "ADD"
+msgstr "AJOUTER"
+
+#: .\dashboard\templates\facilitators\create.html:62
+#: .\dashboard\templates\facilitators\update.html:88
+msgid "SAVE"
+msgstr "ENREGISTRER"
+
+#: .\dashboard\templates\facilitators\create.html:78
+#: .\dashboard\templates\facilitators\create.html:88
+#: .\dashboard\templates\facilitators\update.html:121
+#: .\dashboard\templates\facilitators\update.html:131
+msgid "Click to select location"
+msgstr "Cliquez pour sélectionner un lieu"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:9
+msgid "Name"
+msgstr "Nom"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:10
+msgid "Username"
+msgstr "Nom d'utilisateur"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:11
+msgid "Type"
+msgstr "Type"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:12
+#: .\dashboard\templates\facilitators\facilitator_list.html:23
+#, python-format
+msgid "Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%"
+msgstr "Rouge : <10% ; Orange : <30% ; Violet : <50% ; Noir : <70% ; Bleu ciel : <90% ; Bleu : <100% ; Vert : 100%"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:12
+msgid "Percent"
+msgstr "Pourcentage"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:13
+msgid "Action"
+msgstr "Action"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:29
+#: .\dashboard\templates\facilitators\facilitator_list.html:30
+#: .\dashboard\templates\facilitators\facilitator_list.html:35
+msgid "See profile"
+msgstr "Voir le profil"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:36
+msgid "Edit profile"
+msgstr "Editer le profil"
+
+#: .\dashboard\templates\facilitators\list.html:38
+#: .\dashboard\templates\facilitators\profile.html:160
+msgid "Clear all filters"
+msgstr "Effacer tous les filtres"
+
+#: .\dashboard\templates\facilitators\list.html:47
+msgid "Search by name"
+msgstr "Recherche par nom"
+
+#: .\dashboard\templates\facilitators\list.html:210
+msgid "Prefecture"
+msgstr "Préfecture"
+
+#: .\dashboard\templates\facilitators\list.html:214
+msgid "Commune"
+msgstr "Commune"
+
+#: .\dashboard\templates\facilitators\list.html:218
+msgid "Canton"
+msgstr "Canton"
+
+#: .\dashboard\templates\facilitators\list.html:222
+#: .\dashboard\templates\facilitators\profile.html:279
+#: .\dashboard\templates\facilitators\task_list.html:23
+msgid "Village"
+msgstr "Village"
+
+#: .\dashboard\templates\facilitators\profile.html:48
+#: .\dashboard\templates\facilitators\update.html:32
+msgid "Facilitator not assigned"
+msgstr "Animateur non désigné"
+
+#: .\dashboard\templates\facilitators\profile.html:64
+#: .\dashboard\templates\facilitators\update.html:39
+msgid "Tel"
+msgstr "Tél"
+
+#: .\dashboard\templates\facilitators\profile.html:115
+msgid "Last Activity"
+msgstr "Dernière activité"
+
+#: .\dashboard\templates\facilitators\profile.html:121
+msgid "Facilitator Code"
+msgstr "Code de l'animateur"
+
+#: .\dashboard\templates\facilitators\profile.html:135
+msgid "Task List"
+msgstr "Liste des tâches"
+
+#: .\dashboard\templates\facilitators\profile.html:283
+#: .\dashboard\templates\facilitators\task_list.html:66
+msgid "Phase"
+msgstr "Phase"
+
+#: .\dashboard\templates\facilitators\profile.html:287
+#: .\dashboard\templates\facilitators\task_list.html:67
+msgid "Activity"
+msgstr "Activité"
+
+#: .\dashboard\templates\facilitators\profile.html:291
+msgid "Task"
+msgstr "Tâche"
+
+#: .\dashboard\templates\facilitators\task_list.html:22
+msgid "N°"
+msgstr "N°"
+
+#: .\dashboard\templates\facilitators\task_list.html:25
+msgid "Uncompleted"
+msgstr "Inachevée"
+
+#: .\dashboard\templates\facilitators\task_list.html:73
+msgid "Attachments"
+msgstr "Pièces jointes"
+
+#: .\dashboard\templates\facilitators\task_list.html:75
+msgid "No attachments"
+msgstr "Aucune pièce jointe"
+
+#: .\dashboard\templates\facilitators\task_list.html:95
+msgid "Completed on"
+msgstr "Achevée le"
+
+#: .\dashboard\templates\facilitators\task_list.html:106
+msgid "Proof of completion"
+msgstr "Preuve d'achèvement"
+
+#: .\dashboard\templates\facilitators\task_list.html:116
+#: .\dashboard\templates\facilitators\task_list.html:141
+msgid "Pending"
+msgstr "En attente"
+
+#: .\dashboard\templates\facilitators\task_list.html:309
+msgid "Not synchronized"
+msgstr "Non synchronisé(e)"
+
+#: .\dashboard\templates\facilitators\task_list.html:322
+msgid "Not present"
+msgstr "Non présent(e)"
+
+#: .\dashboard\templates\facilitators\task_list.html:364
+msgid "No tasks found"
+msgstr "Aucune tâche trouvée"
+
+#: .\dashboard\templates\layouts\base_error.html:14
+msgid "Error"
+msgstr "Erreur"
+
+#: .\dashboard\templates\layouts\footer.html:5
+msgid "Copyright"
+msgstr "Droit d'auteur"
+
+#: .\dashboard\templates\layouts\footer.html:7
+msgid "All rights reserved"
+msgstr "Tous droits réservés"
+
+#: .\dashboard\templates\layouts\footer.html:9
+msgid "Version"
+msgstr "Version"
+
+#: .\dashboard\templates\layouts\navbar.html:21
+msgid "Welcome"
+msgstr "Bienvenue"
+
+#: .\dashboard\templates\layouts\navbar.html:63
+msgid "Logout"
+msgstr "Se déconnecter"
+
+#: .\dashboard\templates\layouts\sidebar.html:42
+msgid "Diagnostics"
+msgstr "Diagnostics"
+
+#: .\dashboard\templates\layouts\sidebar.html:54
+msgid "Toggle Sidebar"
+msgstr "Barre latérale basculante"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Principal Administrator"
+msgstr "Administrateur principal"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Administrator"
+msgstr "Administrateur"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "CDD Specialist"
+msgstr "Spécialiste DCC"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Evaluator"
+msgstr "Évaluateur"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Accountant"
+msgstr "Comptable"

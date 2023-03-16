@@ -11,8 +11,9 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 import environ
+from django.utils.translation import gettext_lazy as _
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,6 +65,7 @@ INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware', #tries to determine user's language using URL language prefix
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -84,6 +86,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                'dashboard.context_processors.settings_vars' #Called the function which presents the globals variables
             ],
         },
     },
@@ -122,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 
 TIME_ZONE = 'UTC'
 
@@ -130,6 +134,15 @@ USE_I18N = True
 
 USE_TZ = True
 
+USE_L10N = True
+
+#Translation
+LOCALE_PATHS = [os.path.join(BASE_DIR, 'locale')]
+
+LANGUAGES = [
+    ('en', _('English')), 
+    ('fr', _('French')), 
+]
 
 # Format localization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/formatting/#format-localization
@@ -213,3 +226,6 @@ DIAGNOSTIC_MAP_EN_BOUND = env('DIAGNOSTIC_MAP_EN_BOUND')
 
 DIAGNOSTIC_MAP_ISO_CODE = env('DIAGNOSTIC_MAP_ISO_CODE')
 
+
+#Global variables
+OTHER_LANGUAGES = True

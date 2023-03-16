@@ -30,11 +30,13 @@
                             <span class="_web">{% translate 'See profile' %}</span>
                             <span class="_mobile"><i class="fa fa-user"></i></span>
                         </a>
+                        {% if user.is_superuser or user|has_group:"Admin" %}
                         <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}"
                             class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
                             <span class="_web">{% translate 'Edit profile' %}</span>
                             <span class="_mobile"><i class="fa fa-edit"></i></span>
                         </a>
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}

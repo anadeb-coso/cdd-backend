@@ -238,96 +238,116 @@ padding: 0;
 {% block select2 %}
     <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script type="text/javascript">
+        let table = document.getElementById("table");
+        let p = document.getElementById("_p");
         {% for field in list_fields %}
 
             $(document).on("change", ("."+"{{ field }}"), function (event) {
-                let r = "select2-id_"+"{{ field }}"+"-container";
-                selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
+                
+                if(this.value){
+                    let r = "select2-id_"+"{{ field }}"+"-container";
+                    selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
+                    statistics_spin.show();
 
-                statistics_spin.show();
-
-                $.ajax({
-                    type: 'GET',
-                    url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
-                    data: {
-                        type: "{{ field }}",
-                        sql_id: this.value
-                    },
-                    success: function (data) {
-                        let table = document.getElementById("table");
-                        let p = document.getElementById("_p");
-                        if(data.search_by_locality){
-                            document.getElementById("_savanes").innerHTML = ``;
-                            document.getElementById("_kara").innerHTML = ``;
-                            document.getElementById("_centrale").innerHTML = ``;
+                    $.ajax({
+                        type: 'GET',
+                        url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
+                        data: {
+                            type: "{{ field }}",
+                            sql_id: this.value
+                        },
+                        success: function (data) {
                             
-                            if(data.region){
-                                document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
-                            }
-                            table.innerHTML = `
-                            <thead>
-                                <tr>
-                                    <th>{% translate '`+data.type+`' %}</th>
-                                    <th>{% translate 'Task Completed' %}</th>
-                                    <th>{% translate 'Percentage' %}</th>
-                                </tr>
-                                </thead>
-
-                                <tbody>
-                                    <tr title="Facilitator(s) : `+data.nbr_facilitators+` ; Task(s) : `+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
-                                        <td>`+selected.toUpperCase()+`</td>
-                                        <td>`+data.nbr_tasks_completed+`</td>
-                                        <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                            if(data.search_by_locality){
+                                document.getElementById("_savanes").innerHTML = ``;
+                                document.getElementById("_kara").innerHTML = ``;
+                                document.getElementById("_centrale").innerHTML = ``;
+                                
+                                if(data.region){
+                                    document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
+                                }
+                                table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>{% translate '`+data.type+`' %}</th>
+                                        <th>{% translate 'Task Completed' %}</th>
+                                        <th>{% translate 'Percentage' %}</th>
                                     </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        <tr title="Facilitator(s) : `+data.nbr_facilitators+` ; Task(s) : `+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
+                                            <td>`+selected.toUpperCase()+`</td>
+                                            <td>`+data.nbr_tasks_completed+`</td>
+                                            <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                                        </tr>
+                                    </tbody>
+                                    <br />
+                                `;
+                                p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+data.nbr_tasks+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                            }else{
+                                table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>{% translate 'Region' %}</th>
+                                        <th>{% translate 'Task Completed' %}</th>
+                                        <th>{% translate 'Percentage' %}</th>
+                                    </tr>
+                                    </thead>
+
+                                    <tbody>
+                                `;
+                                
+                                let nbr_tasks = 0;
+                                for (const [key, value] of Object.entries(data.regions)) {
+                                    document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
+                                    table.innerHTML += `
+                                    <tr title="Task(s) : `+value.nbr_tasks+` ; Village(s) : `+value.nbr_tasks+`" style="cursor: pointer;" >
+                                        <td>`+key+`</td>
+                                        <td>`+value.nbr_tasks_completed+`</td>
+                                        <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
+                                    </tr>
+                                    `;
+                                    nbr_tasks += value.nbr_tasks;
+                                }
+
+                                table.innerHTML += `
                                 </tbody>
                                 <br />
-                            `;
-                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+data.nbr_tasks+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
-                        }else{
-                            table.innerHTML = `
-                            <thead>
-                                <tr>
-                                    <th>{% translate 'Region' %}</th>
-                                    <th>{% translate 'Task Completed' %}</th>
-                                    <th>{% translate 'Percentage' %}</th>
-                                </tr>
-                                </thead>
-
-                                <tbody>
-                            `;
-                            
-                            let nbr_tasks = 0;
-                            for (const [key, value] of Object.entries(data.regions)) {
-                                document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
-                                table.innerHTML += `
-                                <tr title="Task(s) : `+value.nbr_tasks+` ; Village(s) : `+value.nbr_tasks+`" style="cursor: pointer;" >
-                                    <td>`+key+`</td>
-                                    <td>`+value.nbr_tasks_completed+`</td>
-                                    <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
-                                </tr>
                                 `;
-                                nbr_tasks += value.nbr_tasks;
+                                p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+nbr_tasks+`</b> ; Village(s) : <b>`+nbr_tasks+`</b></p>`;
                             }
+                            
+                            {% comment %} if (data.length > 0) {
+                                data = data.slice(1);
+                                data.push(administrative_levels);
+                            }   {% endcomment %}
 
-                            table.innerHTML += `
-                            </tbody>
-                            <br />
-                            `;
-                            p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+nbr_tasks+`</b> ; Village(s) : <b>`+nbr_tasks+`</b></p>`;
+                            statistics_spin.hide();
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                            statistics_spin.hide();
                         }
-                        
-                         {% comment %} if (data.length > 0) {
-                            data = data.slice(1);
-                            data.push(administrative_levels);
-                        }   {% endcomment %}
+                    });
+                }else{
+                    document.getElementById("_savanes").innerHTML = ``;
+                    document.getElementById("_kara").innerHTML = ``;
+                    document.getElementById("_centrale").innerHTML = ``;
+                    table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>{% translate 'Region' %}</th>
+                            <th>{% translate 'Task Completed' %}</th>
+                            <th>{% translate 'Percentage' %}</th>
+                        </tr>
+                        </thead>
 
-                        statistics_spin.hide();
-                    },
-                    error: function (data) {
-                        alert(error_server_message + "Error " + data.status);
-                        statistics_spin.hide();
-                    }
-                });
+                        <tbody>
+                    `;
+                    p.innerHTML = '';
+                }
+                
             });
 
             $(("#id_"+"{{ field }}")).select2({

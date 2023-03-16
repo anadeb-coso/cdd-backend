@@ -16,6 +16,10 @@ from dashboard.utils import (
     get_all_docs_administrative_levels_by_type_and_administrative_id,
     get_all_docs_administrative_levels_by_type_and_parent_id
 )
+from authentication.permissions import (
+    CDDSpecialistPermissionRequiredMixin, SuperAdminPermissionRequiredMixin,
+    AdminPermissionRequiredMixin
+    )
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -407,7 +411,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         return context
 
 
-class CreateFacilitatorFormView(PageMixin, generic.FormView):
+class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.FormView):
     template_name = 'facilitators/create.html'
     title = gettext_lazy('Create Facilitator')
     active_level1 = 'facilitators'
@@ -445,7 +449,7 @@ class CreateFacilitatorFormView(PageMixin, generic.FormView):
 
 
 
-class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, generic.UpdateView):
+class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.UpdateView):
     model = Facilitator
     template_name = 'facilitators/update.html'
     title = gettext_lazy('Edit Facilitator')
