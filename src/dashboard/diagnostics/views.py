@@ -150,10 +150,10 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     for _village in doc['administrative_levels']:
                         
                         if str(_village['id']).isdigit(): #Verify if id contain only digit
-                                
+                            
                             for village in liste_villages:
                                 if str(_village['id']) == str(village['administrative_id']): #_village['name'] == village['name'] and 
-                                    
+                                    nbr_villages += 1
                                     if not already_count_facilitator:
                                         nbr_facilitators += 1
                                         already_count_facilitator = True
@@ -165,7 +165,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                                                 nbr_tasks_completed += 1
                                             nbr_tasks += 1
 
-            nbr_villages = len(liste_villages)      
+            # nbr_villages = len(liste_villages)      
             if nbr_villages > 0:
                 _region = get_region_of_village_by_sql_id(administrative_levels_db, liste_villages[0]['administrative_id'])
                 
