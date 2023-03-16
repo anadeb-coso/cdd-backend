@@ -111,7 +111,13 @@ input {
             <div class="card">
                 <div class="card-body">
                     <span class="text-bold-family fs17">{% translate 'Last Activity' %}:</span>
-                    <span class="text-muted fs17">{{ facilitator_doc.last_activity }}</span>
+                    <span class="text-bold-family fs17">
+                        {% if facilitator_doc.last_activity_date %}
+                            {{ facilitator_doc.last_activity_date }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </span>
                 </div>
             </div>
             <div class="card h-100">
