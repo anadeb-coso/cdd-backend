@@ -59,16 +59,22 @@
         <div class="row">
             <div class="col-sm-7">
                 <div class="phase-title">
-                    <span class="btn btn-secondary">{{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}</span> {{ task.name }}
+                    <span style="color: white;" class="btn {% if task.completed %}badge-completed{% else %}badge-pending{% endif %}">{{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}</span> {{ task.name }}
                 </div>
                 <div class="phase-title mt-3 mb-2">
                     {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
                     {% translate 'Activity' %}: {{ task.activity_name }}
                 </div>
                 <div class="border-separator"></div>
+                
                 <div class="text-bold-family mt-2 mb-2">
-                    {% translate "Attachments" %}
+                    {% if task.attachments|length != 0 %}
+                        {% translate "Attachments" %}
+                    {% else %}
+                        {% translate "No attachments" %}
+                    {% endif %}
                 </div>
+                
                 {% for attachment in task.attachments %}
                     {% if attachment.cloud_url %}
                         <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
@@ -80,8 +86,6 @@
                         <i class="fas fa-paperclip mr-2"></i>
                         {{ attachment.name }}
                     {% endif %}
-                {% empty %}
-                    {% translate "No attachments" %}
                 {% endfor %}
             </div>
             <div class="col-sm-3">

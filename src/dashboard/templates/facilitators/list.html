@@ -1,9 +1,11 @@
 {% extends 'layouts/base.html' %}
-{% load static i18n bootstrap4 %}
+{% load static i18n bootstrap4 custom_tags %}
 
 {% block content %}
     <div class="row">
         <div class="col-12">
+            
+            {% if user.is_superuser or user|has_group:"Admin" %}
             <div class="float-right mb-3">
                 <a href="{% url 'dashboard:facilitators:create' %}"
                 class="btn btn-primary btn-sm rounded-xl">
@@ -11,6 +13,8 @@
                     {% translate "Create Facilitator" %}
                 </a>
             </div>
+            {% endif %}
+
             <div class="clearfix"></div>
              <div class="row facilitators-filter">
                 <div class="col-2">
