@@ -31,14 +31,14 @@ handler500 = 'dashboard.authentication.views.handler500'
 urlpatterns = [
     path('set-language/', 
          set_language, 
-         name='set_language')
+         name='set_language'),
+    path('i18n/', include('django.conf.urls.i18n')),
+    path('attachments/', include('attachments.urls')),
+    path('authentication/', include('authentication.urls')),
 ]
 
 urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
-    path('attachments/', include('attachments.urls')),
-    path('i18n/', include('django.conf.urls.i18n')),
-    path('authentication/', include('authentication.urls')),
     path('', include('dashboard.urls')),
 )
 
