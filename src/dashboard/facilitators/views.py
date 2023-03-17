@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
+from datetime import datetime
 
 from process_manager.models import Phase, Activity
 from authentication.models import Facilitator
@@ -243,6 +244,19 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+
+        facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+        last_activity_date = "0000-00-00 00:00:00"
+        for doc in facilitator_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < doc.get('last_updated'):
+                last_activity_date = doc.get('last_updated')
+
+        if last_activity_date == "0000-00-00 00:00:00":
+            context['facilitator_doc']['last_activity_date'] = None
+        else:
+            context['facilitator_doc']['last_activity_date'] = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+
 
         # facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
 
