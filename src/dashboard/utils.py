@@ -856,11 +856,14 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop
         
         
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        _fc_tasks = fc_tasks.copy()
         for _task in fc_tasks:
             task = _task.get('doc')
             if task.get("completed") and task.get('type') == 'task':
                 attachments = task.get("attachments")
                 form_response = task.get("form_response")
+                completed_date = task.get("completed_date")
+                last_updated = task.get("last_updated")
 
                 villages = []
                 try:
@@ -872,13 +875,16 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop
 
                 for village in villages:
                     if village.id != int(task['administrative_level_id']):
-                        for _t in fc_tasks:
+                        for _t in _fc_tasks:
                             t = _t.get('doc')
                             if task['name'] == t['name'] and int(t['administrative_level_id']) == village.id and t.get('type') == 'task':
                                 if attachments:
                                     t["attachments"] = attachments
                                 if form_response:
                                     t["form_response"] = form_response
+
+                                t["completed_date"] = completed_date
+                                t["last_updated"] = last_updated
                                 t["completed"] = True
 
                                 nsc.update_cloudant_document(facilitator_database,  t["_id"], t)  # Update task for the facilitator
@@ -902,19 +908,25 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_
         
         
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        _fc_tasks = fc_tasks.copy()
         for _task in fc_tasks:
             task = _task.get('doc')
             if task.get("completed") and task.get('type') == 'task' and (str(task.get('sql_id')) in ['13', '14', '15', '16'] or task.get('activity_name') == "Réunion cantonale"):
                 attachments = task.get("attachments")
                 form_response = task.get("form_response")
+                completed_date = task.get("completed_date")
+                last_updated = task.get("last_updated")
 
-                for _t in fc_tasks:
+                for _t in _fc_tasks:
                     t = _t.get('doc')
                     if t.get('type') == 'task' and task['sql_id'] == t['sql_id'] and task['canton_sql_id'] == t['canton_sql_id'] and t['administrative_level_id'] != task['administrative_level_id']:
                         if attachments:
                             t["attachments"] = attachments
                         if form_response:
                             t["form_response"] = form_response
+
+                        t["completed_date"] = completed_date
+                        t["last_updated"] = last_updated
                         t["completed"] = True
 
                         nsc.update_cloudant_document(facilitator_database,  t["_id"], t)  # Update task for the facilitator
