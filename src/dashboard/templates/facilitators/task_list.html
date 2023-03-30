@@ -19,29 +19,52 @@
             <thead>
             <tr>
                 <th>{% translate 'N°' %}</th>
-                <th>{% translate 'Village' %}</th>
+                <th>{% translate 'CVD' %}</th>
+                <th>{% translate 'Village(s)' %}</th>
                 <th>{% translate 'Completed' %}</th>
                 <th>{% translate 'Uncompleted' %}</th>
                 <th>{% translate 'Percentage' %}</th>
             </tr>
             </thead>
             <tbody>
-                {% for Village, infos in dict_administrative_levels_with_infos.items %}
+                {% for cvd_name, infos in dict_administrative_levels_with_infos.items %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td>{{ Village }}</td>
-                    {% for key, value in infos.items %}
+                    <td align="left">{{ cvd_name }}</td>
+                    {% comment %} {% for key, value in infos.items %}
                         {% if key == "percentage_tasks_completed" %}
                         <td>{{ value|floatformat:"2"  }}%</td>
                         {% else %}
                         <td>{{ value }}</td>
                         {% endif %}
-                    {% endfor %}
+                    {% endfor %} {% endcomment %}
+                    <td align="left">
+                        {% with infos|get:"cvd" as cvd %}
+                            {% with cvd|get:"villages" as villages %}
+                                {% for Village in villages %}
+                                    {% if forloop.last %}
+                                        {{ forloop.counter }}- {{ Village|get:"name" }}
+                                    {% else %}
+                                        {{ forloop.counter }}- {{ Village|get:"name" }}<br />
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        {% endwith %}
+                        
+                    </td>
+                    <td>{{ infos|get:"total_tasks_completed" }}</td>
+                    <td>{{ infos|get:"total_tasks_uncompleted" }}</td>
+                    <td>
+                        {% with infos|get:"percentage_tasks_completed" as percentage_tasks_completed %}
+                            {{ percentage_tasks_completed|floatformat:"2"  }}%
+                        {% endwith %}
+                    </td>
                 </tr>
                 {% endfor %}
                 {% if dict_administrative_levels_with_infos|length > 1 %}
                 <tr>
                     <td colspan="2"><b>Total</b></td>
+                    <td align="left">{{ nbr_villages }}</td>
                     <td><b>{{ total_tasks_completed }}</b></td>
                     <td><b>{{ total_tasks_uncompleted }}</b></td>
                     <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
@@ -128,7 +151,7 @@
 
             <div class="modal-header">
                 <h5 class="modal-title">
-                    {{ task.name }} 
+                    {{ task.name }} (CVD : <b>{{ task.administrative_level_name }}</b>)
                 </h5>
                 <div class="col-sm-2 text-right">
                 {% if task.completed %}

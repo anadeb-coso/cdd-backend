@@ -139,7 +139,7 @@ input {
                                 {% translate 'Task List' %}<br>
                             </div>
                         </div>
-                        <div class="col-10 border-left">
+                        <div class="col-10 border-left filter_fields">
                             <div class="row">
                                 <div class="col-2">
                                     <label class="label-align">{% translate 'Filter by' %}</label>
@@ -260,27 +260,46 @@ input {
 
         $('.tasks-filter input').on('change keyup', function () {
             if (!$(this).val()) {
+                index = 0;
                 loadTasks();
             }
         });
 
         $('.tasks-filter select').on('change', function () {
+            index = 0;
             loadTasks();
         });
 
         $("#clear_all_filters").on("click", function () {
             $('.tasks-filter input').val('');
             $('.tasks-filter select').val(null).trigger('change.select2');
+            index = 0;
             loadTasks();
         });
 
     </script>
+
+
+
+    
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+            let cascade_url = "{% url 'dashboard:process_manager:get_choices_for_next_phases_activities_tasks' %}";
+            ajax_request_cascade(cascade_url, "id_phase");
+            ajax_request_cascade(cascade_url, "id_activity");
+            
+        }); 
+    </script>
+
 {% endblock %}
 
 {% block select2 %}
     <script type="text/javascript">
         $("#id_administrative_level").select2({
-            placeholder: "{% translate 'Village' %}",
+            placeholder: "{% translate 'CVD' %}",
             allowClear: true
         });
         $("#id_phase").select2({
