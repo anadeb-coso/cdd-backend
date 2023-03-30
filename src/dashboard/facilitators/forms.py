@@ -6,6 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from authentication.models import Facilitator
 from dashboard.utils import get_administrative_level_choices, get_administrative_levels_by_level, get_choices
 from no_sql_client import NoSQLClient
+from .functions import get_cvds
+from process_manager.models import Task, Phase, Activity
 
 
 class FilterTaskForm(forms.Form):
@@ -24,46 +26,57 @@ class FilterTaskForm(forms.Form):
 
         facilitator_docs = facilitator_db.all_docs(include_docs=True)['rows']
 
-        query_result_phases = []
-        query_result_activities = []
-        query_result_tasks = []
-        query_result_administrativelevels = []
+        query_result_phases = [('', '')]
+        query_result_activities = [('', '')]
+        query_result_tasks = [('', '')]
+        # query_result_administrativelevels = []
+        facilitator_doc = {}
         for doc in facilitator_docs:
             doc = doc.get('doc')
             if doc.get('type') == "facilitator":
-                query_result_administrativelevels = doc.get("administrative_levels")
-            elif doc.get('type') == "phase" and not self.check_name(query_result_phases, doc):
-                query_result_phases.append(doc)
-            elif doc.get('type') == "activity" and not self.check_name(query_result_activities, doc):
-                doc["phase_order"] = 0
-                for phase_obj in query_result_phases:
-                    if phase_obj['_id'] == doc["phase_id"]:
-                        doc["phase_order"] = phase_obj['order']
-                        break
-                query_result_activities.append(doc)
-            elif doc.get('type') == "task" and not self.check_name(query_result_tasks, doc):
-                doc["phase_order"] = 0
-                doc["activity_order"] = 0
-                for phase_obj in query_result_phases:
-                    if phase_obj['name'] == doc["phase_name"]:
-                        doc["phase_order"] = phase_obj['order']
-                        break
-                for activity_obj in query_result_activities:
-                    if activity_obj['name'] == doc["activity_name"]:
-                        doc["activity_order"] = activity_obj['order']
-                        break
-                query_result_tasks.append(doc)
+                # query_result_administrativelevels = doc.get("administrative_levels")
+                facilitator_doc = doc
+                break
+            # elif doc.get('type') == "phase" and not self.check_name(query_result_phases, doc):
+            #     query_result_phases.append(doc)
+            # elif doc.get('type') == "activity" and not self.check_name(query_result_activities, doc):
+            #     doc["phase_order"] = 0
+            #     for phase_obj in query_result_phases:
+            #         if phase_obj['_id'] == doc["phase_id"]:
+            #             doc["phase_order"] = phase_obj['order']
+            #             break
+            #     query_result_activities.append(doc)
+            # elif doc.get('type') == "task" and not self.check_name(query_result_tasks, doc):
+            #     doc["phase_order"] = 0
+            #     doc["activity_order"] = 0
+            #     for phase_obj in query_result_phases:
+            #         if phase_obj['name'] == doc["phase_name"]:
+            #             doc["phase_order"] = phase_obj['order']
+            #             break
+            #     for activity_obj in query_result_activities:
+            #         if activity_obj['name'] == doc["activity_name"]:
+            #             doc["activity_order"] = activity_obj['order']
+            #             break
+            #     query_result_tasks.append(doc)
         
-        query_result_phases = sorted(query_result_phases, key=lambda obj: obj['order'])
-        query_result_activities = sorted(query_result_activities, key=lambda obj: (str(obj["phase_order"])+str(obj["order"])))
-        query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
-        query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
-        
-        self.fields['administrative_level'].widget.choices = get_choices(
-            query_result_administrativelevels, "id", "name")
-        self.fields['phase'].widget.choices = get_choices(query_result_phases, "name", "name")
-        self.fields['activity'].widget.choices = get_choices(query_result_activities, "name", "name")
-        self.fields['task'].widget.choices = get_choices(query_result_tasks, "name", "name")
+        # query_result_phases = sorted(query_result_phases, key=lambda obj: obj['order'])
+        # query_result_activities = sorted(query_result_activities, key=lambda obj: (str(obj["phase_order"])+str(obj["order"])))
+        # query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
+        # query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
+        [query_result_phases.append((o.name, o.name)) for o in Phase.objects.all().order_by("order")]
+        [query_result_activities.append((o.name, o.name)) for o in Activity.objects.all().order_by("phase__order", "order")]
+        [query_result_tasks.append((o.name, o.name)) for o in Task.objects.all().order_by("phase__order", "activity__order", "order")]
+        cvds = sorted(get_cvds(facilitator_doc), key=lambda obj: obj.get('name'))
+
+        # self.fields['administrative_level'].widget.choices = get_choices(
+        #     query_result_administrativelevels, "id", "name")
+        self.fields['administrative_level'].widget.choices = get_choices(cvds, "village_id", "name")
+        # self.fields['phase'].widget.choices = get_choices(query_result_phases, "name", "name")
+        # self.fields['activity'].widget.choices = get_choices(query_result_activities, "name", "name")
+        # self.fields['task'].widget.choices = get_choices(query_result_tasks, "name", "name")
+        self.fields['phase'].widget.choices = query_result_phases
+        self.fields['activity'].widget.choices = query_result_activities
+        self.fields['task'].widget.choices = query_result_tasks
     
     def check_name(self, liste, obj):
         for elt in liste:
