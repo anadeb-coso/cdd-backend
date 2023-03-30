@@ -6,6 +6,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from no_sql_client import NoSQLClient
+from dashboard.facilitators.functions import get_cvds
 
 
 class Facilitator(models.Model):
@@ -185,7 +186,50 @@ class Facilitator(models.Model):
             return "training"
         else:
             return "deploy"
+    
+    def get_all_infos(self):
+        nsc = NoSQLClient()
+        facilitator_db = nsc.get_db(self.no_sql_db_name)
+        docs = facilitator_db.all_docs(include_docs=True)['rows']
+        name = None
+        email = None
+        phone = None
+        name_with_sex = None
+        cvds = []
 
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
+        total_tasks = 0
+
+        for doc in docs:
+            _ = doc.get('doc')
+            if _.get('type') == "facilitator":
+                name = _["name"]
+                email = _["email"]
+                phone = _["phone"]
+                name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
+                cvds = get_cvds(_)
+                break
+            
+            
+        for doc in docs:
+            _ = doc.get('doc')
+            if _.get('type') == "task":
+                for administrative_level_cvd in cvds:
+                    village = administrative_level_cvd['village']
+                    if village and str(village.get("id")) == str(_["administrative_level_id"]):
+                        if _.get("completed"):
+                            total_tasks_completed += 1
+                        else:
+                            total_tasks_uncompleted += 1
+                        total_tasks += 1
+            
+
+        percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
+
+        return {
+            "name_with_sex": name_with_sex, "username": self.username, "tel": phone, "percent": percent
+        }
     class Meta:
         verbose_name = _('Facilitator')
         verbose_name_plural = _('Facilitators')
