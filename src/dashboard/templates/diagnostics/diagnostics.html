@@ -21,11 +21,27 @@
                                     <div class="col-2">
                                         <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
                                     </div>
-                                    {% for field in form %}
+                                    {% comment %} {% for field in form %}
                                     <div class="col-2">
                                         {% bootstrap_field field %}
                                     </div>
-                                    {% endfor %}
+                                    {% endfor %} {% endcomment %}
+                                    <div class="col-2">
+                                        {% bootstrap_field form.region show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.prefecture show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.commune show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.canton show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.village show_label=False %}
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
@@ -234,6 +250,8 @@ padding: 0;
 
 
     </script>
+
+
 {% endblock %}
 {% block select2 %}
     <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
@@ -354,6 +372,32 @@ padding: 0;
                 placeholder: `{% translate field|title %}`,
                 allowClear: true
             });
+            {% comment %} $("#id_village").select2({
+                placeholder: "{% translate 'CVD' %}",
+                allowClear: true
+            }); {% endcomment %}
+            $("#id_phase").select2({
+                placeholder: "{% translate 'Phase' %}",
+                allowClear: true,
+            });
+            $("#id_activity").select2({
+                placeholder: "{% translate 'Activity' %}",
+                allowClear: true,
+            });
+            $("#id_task").select2({
+                placeholder: "{% translate 'Task' %}",
+                allowClear: true,
+            });
+            $("#id_region").select2({
+                placeholder: "{% translate 'Region' %}",
+                allowClear: true
+            });
+            $("#id_prefecture").select2({
+                placeholder: "{% translate 'Prefecture' %}",
+                allowClear: true,
+            });
+
+
         {% endfor %}
 
 
