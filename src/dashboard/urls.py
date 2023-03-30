@@ -7,4 +7,5 @@ urlpatterns = [
     path('facilitators/', include('dashboard.facilitators.urls')),
     path('administrative-levels/', include('dashboard.administrative_levels.urls')),
     path('diagnostics/', include('dashboard.diagnostics.urls')),
+    path('process-manager/', include('dashboard.process_manager.urls')),
 ]
