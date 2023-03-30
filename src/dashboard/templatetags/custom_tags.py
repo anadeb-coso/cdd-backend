@@ -269,3 +269,8 @@ def get_group_high(user):
 
 
     return gettext_lazy("User").__str__()
+
+@register.filter(name='get_to_percent_str') 
+def get_to_percent_str(number):
+    return str(number if number >= 10 else "0"+str(number)) + " %"
+
