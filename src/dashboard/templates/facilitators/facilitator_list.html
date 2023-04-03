@@ -40,6 +40,14 @@
                                     {% endif %}; font-weight: bold;
                                 "
                             >{{ value|get_to_percent_str }}</td>
+                        {% elif key == "last_activity_date" %}
+                            <td title="{{ value }}">
+                                {% if value %}
+                                    {{ value|date:"Y/m/d P" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                         {% else %}
                             <td>{{ value }}</td>
                         {% endif %}
