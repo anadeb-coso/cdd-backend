@@ -1,5 +1,6 @@
 import secrets
 import time
+from datetime import datetime
 
 from django.contrib.auth.hashers import make_password
 from django.db import models
@@ -200,6 +201,7 @@ class Facilitator(models.Model):
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks = 0
+        last_activity_date = "0000-00-00 00:00:00"
 
         for doc in docs:
             _ = doc.get('doc')
@@ -215,6 +217,9 @@ class Facilitator(models.Model):
         for doc in docs:
             _ = doc.get('doc')
             if _.get('type') == "task":
+                if _.get('last_updated') and last_activity_date < _.get('last_updated'):
+                    last_activity_date = _.get('last_updated')
+
                 for administrative_level_cvd in cvds:
                     village = administrative_level_cvd['village']
                     if village and str(village.get("id")) == str(_["administrative_level_id"]):
@@ -227,8 +232,14 @@ class Facilitator(models.Model):
 
         percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
 
+        if last_activity_date == "0000-00-00 00:00:00":
+            last_activity_date = None
+        else:
+            last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+            
         return {
-            "name_with_sex": name_with_sex, "username": self.username, "tel": phone, "percent": percent
+            "name_with_sex": name_with_sex, "username": self.username, "tel": phone, 
+            'last_activity_date': last_activity_date, "percent": percent
         }
     class Meta:
         verbose_name = _('Facilitator')
