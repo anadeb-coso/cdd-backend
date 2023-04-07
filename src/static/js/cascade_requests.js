@@ -31,7 +31,7 @@ function set_datas(element, data){
 
 
 
-function ajax_request_cascade(url, id){
+function ajax_request_cascade(url, id, by_id=null){
     let elment_id_phase = $("#id_phase");
     let elment_id_activity = $("#id_activity");
     let elment_id_task = $("#id_task");
@@ -44,7 +44,8 @@ function ajax_request_cascade(url, id){
             data: {
                 phase_name: elment_id_phase.val(),
                 activity_name: elment_id_activity.val(),
-                task_name: elment_id_task.val()
+                task_name: elment_id_task.val(),
+                by_id: by_id
             },
             success: function (data) {
                 if(id == "id_phase"){

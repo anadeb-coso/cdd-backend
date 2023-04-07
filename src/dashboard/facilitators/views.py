@@ -22,6 +22,8 @@ from authentication.permissions import (
     AdminPermissionRequiredMixin
     )
 from .functions import get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd
+from administrativelevels import models as administrativelevels_models
+from dashboard.administrative_levels.functions import get_administrative_levels_under_json, get_cascade_villages_by_administrative_level_id
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -84,19 +86,25 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         id_canton = self.request.GET.get('id_canton')
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
+        _id = 0
         facilitators = []
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
             if id_region and type_field == "region":
                 _type = "region"
+                _id = id_region
             elif id_prefecture and type_field == "prefecture":
                 _type = "prefecture"
+                _id = id_prefecture
             elif id_commune and type_field == "commune":
                 _type = "commune"
+                _id = id_commune
             elif id_canton and type_field == "canton":
                 _type = "canton"
+                _id = id_canton
             elif id_village and type_field == "village":
                 _type = "village"
+                _id = id_village
                 
             nsc = NoSQLClient()
 
@@ -104,38 +112,40 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             liste_communes = []
             liste_cantons = []
             liste_villages = []
-            administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
+            # administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
 
-            if _type == "region":
-                region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
-                region = region[:][0]
-                _type = "prefecture"
-                liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
+            # if _type == "region":
+            ##    region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
+            ##    region = region[:][0]
+            #     _type = "prefecture"
+            #     liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
                     
-            if _type == "prefecture":
-                if not liste_prefectures:
-                    liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
-                _type = "commune"
-                for prefecture in liste_prefectures:
-                    [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
+            # if _type == "prefecture":
+            #     if not liste_prefectures:
+            #         liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
+            #     _type = "commune"
+            #     for prefecture in liste_prefectures:
+            #         [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
 
-            if _type == "commune":
-                if not liste_communes:
-                    liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
-                _type = "canton"
-                for commune in liste_communes:
-                    [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
+            # if _type == "commune":
+            #     if not liste_communes:
+            #         liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
+            #     _type = "canton"
+            #     for commune in liste_communes:
+            #         [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
 
-            if _type == "canton":
-                if not liste_cantons:
-                    liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
-                _type = "village"
-                for canton in liste_cantons:
-                    [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
+            # if _type == "canton":
+            #     if not liste_cantons:
+            #         liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
+            #     _type = "village"
+            #     for canton in liste_cantons:
+            #         [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
             
-            if _type == "village":
-                if not liste_villages:
-                    liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
+            # if _type == "village":
+            #     if not liste_villages:
+            #         liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
+
+            liste_villages = get_cascade_villages_by_administrative_level_id(_id)
 
             for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
                     already_count_facilitator = False
@@ -517,7 +527,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "phone": data['phone'],
             "sex": data['sex'],
             "administrative_levels": data['administrative_levels'],
-            "type": "facilitator"
+            "type": "facilitator",
+            "develop_mode": facilitator.develop_mode,
+            "training_mode": facilitator.training_mode,
+            "sql_id": int(facilitator.pk)
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)

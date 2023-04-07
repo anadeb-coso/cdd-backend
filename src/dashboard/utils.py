@@ -725,7 +725,7 @@ def clear_facilitator_database(develop_mode=False, training_mode=False):
             nsc.delete_document(nsc_database, project["_id"])
 
 def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, administrativelevels_ids=[]):
-    facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db)
+    facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db) 
     nsc = NoSQLClient()
     for facilitator in facilitators:
         print()
@@ -734,22 +734,29 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
         facilitator_doc = nsc_database[nsc_database.get_query_result({"type": "facilitator"})[:][0]['_id']]
         administrative_levels = facilitator_doc["administrative_levels"]
         _administrative_levels = []
-        print(administrative_levels)
-        for adl_id in administrativelevels_ids:
-            phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
-            for phase in phases:
-                nsc.delete_document(nsc_database, phase["_id"])
-            activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
-            for activity in activities:
-                nsc.delete_document(nsc_database, activity["_id"])
-            tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
-            for task in tasks:
-                nsc.delete_document(nsc_database, task["_id"])
         
-            for i in range(len(administrative_levels)):
-                if administrative_levels[i]["id"] == adl_id:
-                    continue
-                _administrative_levels.append(administrative_levels[i])
+        print(administrative_levels)
+        for elt in administrative_levels:
+            if elt['id'] in administrativelevels_ids:
+                adl_id = elt['id']
+                # for adl_id in administrativelevels_ids:
+                phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
+                for phase in phases:
+                    nsc.delete_document(nsc_database, phase["_id"])
+                activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
+                for activity in activities:
+                    nsc.delete_document(nsc_database, activity["_id"])
+                tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
+                for task in tasks:
+                    nsc.delete_document(nsc_database, task["_id"])
+
+                # for i in range(len(administrative_levels)):
+                #     if administrative_levels[i]["id"] == adl_id:
+                #         continue
+                #     _administrative_levels.append(administrative_levels[i])
+            else:
+                _administrative_levels.append(elt)
+                
         print(_administrative_levels)
         doc = {
             "administrative_levels": _administrative_levels
@@ -879,7 +886,10 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop
                             t = _t.get('doc')
                             if task['name'] == t['name'] and int(t['administrative_level_id']) == village.id and t.get('type') == 'task':
                                 if attachments:
-                                    t["attachments"] = attachments
+                                    for i in range(len(attachments)):
+                                        att = attachments[i]
+                                        if att.get('attachment') and att.get('attachment').get("uri") and "https://" in att.get('attachment').get("uri") :
+                                            t["attachments"][i] = att
                                 if form_response:
                                     t["form_response"] = form_response
 
@@ -921,7 +931,10 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_
                     t = _t.get('doc')
                     if t.get('type') == 'task' and task['sql_id'] == t['sql_id'] and task['canton_sql_id'] == t['canton_sql_id'] and t['administrative_level_id'] != task['administrative_level_id']:
                         if attachments:
-                            t["attachments"] = attachments
+                            for i in range(len(attachments)):
+                                att = attachments[i]
+                                if att.get('attachment') and att.get('attachment').get("uri") and "https://" in att.get('attachment').get("uri") :
+                                    t["attachments"][i] = att
                         if form_response:
                             t["form_response"] = form_response
 
@@ -934,9 +947,6 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_
                         print()
                         print()
     
-
-
-
 
 
 

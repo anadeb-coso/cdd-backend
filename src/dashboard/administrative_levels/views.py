@@ -5,7 +5,7 @@ from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from dashboard.utils import get_child_administrative_levels, get_parent_administrative_level
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
-from .functions import get_administrative_level_under_json
+from .functions import get_administrative_levels_under_json
 
 class GetChoicesForNextAdministrativeLevelView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -102,10 +102,10 @@ class GetChoicesForNextAdministrativeLevelAllView(AJAXRequestMixin, LoginRequire
             for c in datas["cantons"]:
                 [datas["villages"].append(o) for o in c.administrativelevel_set.get_queryset()]
 
-            datas["prefectures"] = get_administrative_level_under_json(datas["prefectures"])
-            datas["communes"] = get_administrative_level_under_json(datas["communes"])
-            datas["cantons"] = get_administrative_level_under_json(datas["cantons"])
-            datas["villages"] = get_administrative_level_under_json(datas["villages"])
+            datas["prefectures"] = get_administrative_levels_under_json(datas["prefectures"])
+            datas["communes"] = get_administrative_levels_under_json(datas["communes"])
+            datas["cantons"] = get_administrative_levels_under_json(datas["cantons"])
+            datas["villages"] = get_administrative_levels_under_json(datas["villages"])
 
             return self.render_to_json_response(datas, safe=False)
     

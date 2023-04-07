@@ -2,30 +2,31 @@
 
 def get_cvds(facilitator):
     administrative_levels = facilitator['administrative_levels']
-    geographical_units = facilitator['geographical_units']
+    geographical_units = facilitator.get('geographical_units')
 
     CVDs = []
-    for index in range(len(geographical_units)) :
-        element = geographical_units[index]
-        for i in range(len(element["cvd_groups"])):
-            elt = element["cvd_groups"][i]
-            villages = []
-            for _index in range(len(administrative_levels)):
-                if elt.get('villages') and administrative_levels[_index]['id'] in elt['villages']:
-                    
-                    _in_list = False
-                    for v in villages:
-                        if administrative_levels[_index]['id'] == v['id']:
-                            _in_list = True
-                    if not _in_list:
-                        villages.append(administrative_levels[_index])
-            
-            elt['village'] = villages[0] if len(villages) != 0 else None
-            elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
-            
-            elt['villages'] = villages
-            elt['unit'] = element['name']
-            CVDs.append(elt)
+    if geographical_units:
+        for index in range(len(geographical_units)) :
+            element = geographical_units[index]
+            for i in range(len(element["cvd_groups"])):
+                elt = element["cvd_groups"][i]
+                villages = []
+                for _index in range(len(administrative_levels)):
+                    if elt.get('villages') and administrative_levels[_index]['id'] in elt['villages']:
+                        
+                        _in_list = False
+                        for v in villages:
+                            if administrative_levels[_index]['id'] == v['id']:
+                                _in_list = True
+                        if not _in_list:
+                            villages.append(administrative_levels[_index])
+                
+                elt['village'] = villages[0] if len(villages) != 0 else None
+                elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
+                
+                elt['villages'] = villages
+                elt['unit'] = element['name']
+                CVDs.append(elt)
 
     return CVDs
 
