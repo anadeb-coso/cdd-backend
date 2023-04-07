@@ -21,12 +21,12 @@
                                     <div class="col-2">
                                         <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
                                     </div>
-                                    {% comment %} {% for field in form %}
+                                    {% for field in form %}
                                     <div class="col-2">
                                         {% bootstrap_field field %}
                                     </div>
-                                    {% endfor %} {% endcomment %}
-                                    <div class="col-2">
+                                    {% endfor %}
+                                    {% comment %} <div class="col-2">
                                         {% bootstrap_field form.region show_label=False %}
                                     </div>
                                     <div class="col-2">
@@ -40,7 +40,7 @@
                                     </div>
                                     <div class="col-2">
                                         {% bootstrap_field form.village show_label=False %}
-                                    </div>
+                                    </div> {% endcomment %}
 
                                 </div>
                             </div>
@@ -115,6 +115,7 @@ padding: 0;
     {{ block.super }}
     <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
     <script>
+    
         let statistics_spin = $('#statistics-spin');
         let markers = [];
 
@@ -135,7 +136,7 @@ padding: 0;
         ];
         // Set the map's max bounds.
         map.setMaxBounds(bounds);
-
+        
         const geojson = {
             'type': 'FeatureCollection',
             'features': [
@@ -248,7 +249,6 @@ padding: 0;
             }
 
 
-
     </script>
 
 
@@ -259,8 +259,8 @@ padding: 0;
         let table = document.getElementById("table");
         let p = document.getElementById("_p");
         {% for field in list_fields %}
-
-            $(document).on("change", ("."+"{{ field }}"), function (event) {
+            console.log("{{ field }}");
+            $(document).on("change", ("#id_"+"{{ field }}"), function (event) {
                 
                 if(this.value){
                     let r = "select2-id_"+"{{ field }}"+"-container";
@@ -294,7 +294,7 @@ padding: 0;
                                     </thead>
 
                                     <tbody>
-                                        <tr title="Facilitator(s) : `+data.nbr_facilitators+` ; Task(s) : `+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
+                                        <tr title="{% translate 'Facilitators' %}: `+data.nbr_facilitators+` ; {% translate 'Task' %}s: `+data.nbr_tasks_completed+`/`+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
                                             <td>`+selected.toUpperCase()+`</td>
                                             <td>`+data.nbr_tasks_completed+`</td>
                                             <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
@@ -302,7 +302,7 @@ padding: 0;
                                     </tbody>
                                     <br />
                                 `;
-                                p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+data.nbr_tasks+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                                p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
                             }else{
                                 table.innerHTML = `
                                 <thead>
@@ -320,7 +320,7 @@ padding: 0;
                                 for (const [key, value] of Object.entries(data.regions)) {
                                     document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
                                     table.innerHTML += `
-                                    <tr title="Task(s) : `+value.nbr_tasks+` ; Village(s) : `+value.nbr_tasks+`" style="cursor: pointer;" >
+                                    <tr title="{% translate 'Task' %}s: `+value.nbr_tasks_completed+`/`+value.nbr_tasks+` ; CVD: `+value.nbr_cvds+` ; Village(s): `+value.nbr_villages+`" style="cursor: pointer;" >
                                         <td>`+key+`</td>
                                         <td>`+value.nbr_tasks_completed+`</td>
                                         <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
@@ -333,7 +333,7 @@ padding: 0;
                                 </tbody>
                                 <br />
                                 `;
-                                p.innerHTML = `<p>Facilitator(s) in activity : <b>`+data.nbr_facilitators+`</b> ; Task(s) in activity : <b>`+nbr_tasks+`</b> ; Village(s) : <b>`+nbr_tasks+`</b></p>`;
+                                p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
                             }
                             
                             {% comment %} if (data.length > 0) {
@@ -368,43 +368,51 @@ padding: 0;
                 
             });
 
-            $(("#id_"+"{{ field }}")).select2({
+           {% comment %} $(("#id_"+"{{ field }}")).select2({
                 placeholder: `{% translate field|title %}`,
                 allowClear: true
-            });
-            {% comment %} $("#id_village").select2({
-                placeholder: "{% translate 'CVD' %}",
-                allowClear: true
             }); {% endcomment %}
-            $("#id_phase").select2({
-                placeholder: "{% translate 'Phase' %}",
-                allowClear: true,
-            });
-            $("#id_activity").select2({
-                placeholder: "{% translate 'Activity' %}",
-                allowClear: true,
-            });
-            $("#id_task").select2({
-                placeholder: "{% translate 'Task' %}",
-                allowClear: true,
-            });
-            $("#id_region").select2({
-                placeholder: "{% translate 'Region' %}",
-                allowClear: true
-            });
-            $("#id_prefecture").select2({
-                placeholder: "{% translate 'Prefecture' %}",
-                allowClear: true,
-            });
 
 
         {% endfor %}
 
-
+        
+        $("#id_phase").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+        });
+        $("#id_activity").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+        $("#id_task").select2({
+            placeholder: "{% translate 'Task' %}",
+            allowClear: true,
+        });
+        $("#id_region").select2({
+            placeholder: "{% translate 'Region' %}",
+            allowClear: true
+        });
+        $("#id_prefecture").select2({
+            placeholder: "{% translate 'Prefecture' %}",
+            allowClear: true,
+        });
+        $("#id_commune").select2({
+            placeholder: "{% translate 'Commune' %}",
+            allowClear: true,
+        });
+        $("#id_canton").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true
+        });
+        $("#id_village").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true
+        });
         
         {% comment %} $('b[role="presentation"]').hide(); {% endcomment %}
         $('.select2-selection__arrow').append(
             '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
-
+        
     </script>
 {% endblock select2 %}
