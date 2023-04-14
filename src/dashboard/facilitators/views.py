@@ -24,7 +24,7 @@ from authentication.permissions import (
 from .functions import get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd
 from administrativelevels import models as administrativelevels_models
 from dashboard.administrative_levels.functions import get_administrative_levels_under_json, get_cascade_villages_by_administrative_level_id
-
+from cdd.functions import datetime_complet_str
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
@@ -263,8 +263,8 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         total_tasks = 0
         for doc in facilitator_docs:
             doc = doc.get('doc')
-            if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < doc.get('last_updated'):
-                last_activity_date = doc.get('last_updated')
+            if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
+                last_activity_date = datetime_complet_str(doc.get('last_updated'))
             total_tasks += 1
 
         if last_activity_date == "0000-00-00 00:00:00":
