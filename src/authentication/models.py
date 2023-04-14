@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from no_sql_client import NoSQLClient
 from dashboard.facilitators.functions import get_cvds
+from cdd.functions import datetime_complet_str
 
 
 class Facilitator(models.Model):
@@ -20,6 +21,13 @@ class Facilitator(models.Model):
     active = models.BooleanField(default=False, verbose_name=_('active'))
     develop_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+    
+    name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))
+    email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))
+    phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))
+    sex = models.CharField(max_length=5, null=True, blank=True, verbose_name=_('sex'))
+    total_tasks = models.IntegerField(default=0)
+    total_tasks_completed = models.IntegerField(default=0)
 
 
     __current_password = None
@@ -217,8 +225,9 @@ class Facilitator(models.Model):
         for doc in docs:
             _ = doc.get('doc')
             if _.get('type') == "task":
-                if _.get('last_updated') and last_activity_date < _.get('last_updated'):
-                    last_activity_date = _.get('last_updated')
+                last_updated = datetime_complet_str(_.get('last_updated'))
+                if last_updated and last_activity_date < last_updated:
+                    last_activity_date = last_updated
 
                 for administrative_level_cvd in cvds:
                     village = administrative_level_cvd['village']
