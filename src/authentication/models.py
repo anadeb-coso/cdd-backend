@@ -28,6 +28,7 @@ class Facilitator(models.Model):
     sex = models.CharField(max_length=5, null=True, blank=True, verbose_name=_('sex'))
     total_tasks = models.IntegerField(default=0)
     total_tasks_completed = models.IntegerField(default=0)
+    last_activity = models.DateTimeField(blank=True, null=True)
 
 
     __current_password = None

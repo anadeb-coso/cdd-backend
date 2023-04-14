@@ -1,12 +1,14 @@
 from __future__ import absolute_import, unicode_literals
 from cdd.celery import app
 from celery import shared_task
+from datetime import datetime
 
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
 from no_sql_client import NoSQLClient
 from process_manager.models import AggregatedStatus
 from administrativelevels.models import AdministrativeLevel
+from cdd.functions import datetime_complet_str
 
 
 def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, ad: AdministrativeLevel, _task: dict):
@@ -43,6 +45,7 @@ def sync_celery_tasks():
         count_facilitator += 1
         nbr_tasks_completed = 0
         nbr_tasks = 0
+        last_activity_date = "0000-00-00 00:00:00"
         facilitator_db = nsc.get_db(f.no_sql_db_name)
         docs = facilitator_db.all_docs(include_docs=True)['rows']
         facilitator_doc = None
@@ -64,6 +67,10 @@ def sync_celery_tasks():
                         if _task['completed']:
                             nbr_tasks_completed += 1
                         nbr_tasks += 1
+
+                        last_updated = datetime_complet_str(_task.get('last_updated'))
+                        if last_updated and last_activity_date < last_updated:
+                            last_activity_date = last_updated
 
                         #By village
                         for ad_id in cvd['villages']:
@@ -115,6 +122,13 @@ def sync_celery_tasks():
             f.sex = facilitator_doc.get('sex')
             f.total_tasks_completed = nbr_tasks_completed
             f.total_tasks = nbr_tasks
+
+            if last_activity_date == "0000-00-00 00:00:00":
+                last_activity_date = None
+            else:
+                last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+            f.last_activity = last_activity_date
+
             f.save()
 
 
