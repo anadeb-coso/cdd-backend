@@ -1,0 +1,213 @@
+{% load static i18n custom_tags %}
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+      <meta charset="utf-8" />
+        <title>{% translate "Facilitators" %}</title>
+        
+        <style type="text/css">
+            body {
+                font-weight: 100;
+                font-size: 12px;
+            }
+            .tablePrincipal tr th{
+                font-family: algerian;
+            }
+
+            .hrItem {
+                border: none;
+                height: 3px;
+                /* Set the hr color 
+                color: #333; old IE */
+                background-color: #e4ecf3; /* Modern Browsers */
+                color: #e4ecf3;
+            }
+            
+            .center{
+                text-align: center;
+            }
+            #content table tr, #content table td {
+                padding-top: 7px !important;
+            }
+            @page {
+                 size: a4 portrait;
+                 margin: 15px;
+                 margin-bottom: 86pt;
+                 @frame footer_frame {           /* Static Frame */
+                    -pdf-frame-content: footer_content;
+                    width: 100%; bottom: 0pt; height: 86pt;
+                }
+                  
+            }
+
+            
+            
+            
+        </style>
+    </head>
+    
+    <body bgcolor="#e4ecf3">
+                
+        <div id="footer_content">
+            {% include 'reports/pdf/footer.html' %}
+        </div>
+
+        <div id="content">
+            {% for facilitator in facilitators %}
+                <div id="header_content">
+                    {% include 'reports/pdf/entete.html' %}
+                </div>
+
+                <table>
+                    <tr width="100%" >
+                        <th align="center" style="font-size: 25px; ">
+                            {% translate "Details of the Facilitator's report" %}
+                        </th>
+                    </tr>
+                </table>
+
+                <p>
+                    {% translate "Report of" %} : {{ val_date_start }} {% translate "to" %} {{ val_date_end }}
+                </p>
+
+                <span>
+                    <b>{% translate "Name" %}</b> : {{ facilitator.facilitator.name }}
+                </span><br />
+                <span>
+                    <b>{% translate "Sex" %}</b> : {% if facilitator.facilitator.sex == 'M.' %}M{% elif facilitator.facilitator.sex == 'Mme' %}F{% else %}I{% endif %}
+                </span><br />
+                <span>
+                    <b>{% translate "Phone" %}</b> : {{ facilitator.facilitator.phone }}
+                </span><br />
+                <span>
+                    <b>{% translate "Email" %}</b> : {{ facilitator.facilitator.email }}
+                </span><br />
+                <span>
+                    <b>{% translate "Percentage of this period" %}</b> : {{ facilitator.percent_inter_date|floatformat:"2" }}%
+                </span><br />
+                <span>
+                    <b>{% translate "Total percentage" %}</b> : {{ facilitator.percent|floatformat:"2" }}%
+                </span><br />
+
+                <p>
+
+                    <h1>{% translate "Period" %}</h1>
+                    <table border="1" align="center">
+                        <thead>
+                        <tr>
+                            <th>{% translate 'N°' %}</th>
+                            <th>{% translate 'CVD' %}</th>
+                            <th>{% translate 'Village(s)' %}</th>
+                            <th>{% translate 'Completed' %}</th>
+                            <th>{% translate 'Uncompleted' %}</th>
+                            <th>{% translate 'Percentage' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {% for cvd_name, infos in facilitator.dict_administrative_levels_with_infos.items %}
+                            <tr>
+                                <td align="center">{{ forloop.counter }}</td>
+                                <td align="center">{{ cvd_name }}</td>
+                                <td align="center">
+                                    {% with infos|get:"cvd" as cvd %}
+                                        {% with cvd|get:"villages" as villages %}
+                                            {% for Village in villages %}
+                                                {% if forloop.last %}
+                                                    {{ forloop.counter }}- {{ Village|get:"name" }}
+                                                {% else %}
+                                                    {{ forloop.counter }}- {{ Village|get:"name" }}<br />
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                    {% endwith %}
+                                    
+                                </td>
+                                <td align="center">{{ infos|get:"total_tasks_completed_inter_date" }}</td>
+                                <td align="center">{{ infos|get:"total_tasks_uncompleted_inter_date" }}</td>
+                                <td align="center">
+                                    {% with infos|get:"percentage_tasks_completed_inter_date" as percentage_tasks_completed %}
+                                        {{ percentage_tasks_completed|floatformat:"2"  }}%
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if facilitator.dict_administrative_levels_with_infos|length > 1 %}
+                            <tr>
+                                <td colspan="2"><b>Total</b></td>
+                                <td align="center">{{ facilitator.nbr_villages }}</td>
+                                <td align="center"><b>{{ facilitator.total_tasks_completed_inter_date }}</b></td>
+                                <td align="center"><b>{{ facilitator.total_tasks_uncompleted_inter_date }}</b></td>
+                                <td align="center"><b>{{ facilitator.percent_inter_date|floatformat:"2" }}%</b></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    <br />
+                    <hr />
+
+
+
+                    <h1>{% translate "All" %}</h1>
+                    <table border="1" align="center">
+                        <thead>
+                        <tr>
+                            <th>{% translate 'N°' %}</th>
+                            <th>{% translate 'CVD' %}</th>
+                            <th>{% translate 'Village(s)' %}</th>
+                            <th>{% translate 'Completed' %}</th>
+                            <th>{% translate 'Uncompleted' %}</th>
+                            <th>{% translate 'Percentage' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                            {% for cvd_name, infos in facilitator.dict_administrative_levels_with_infos.items %}
+                            <tr>
+                                <td align="center">{{ forloop.counter }}</td>
+                                <td align="center">{{ cvd_name }}</td>
+                                <td align="center">
+                                    {% with infos|get:"cvd" as cvd %}
+                                        {% with cvd|get:"villages" as villages %}
+                                            {% for Village in villages %}
+                                                {% if forloop.last %}
+                                                    {{ forloop.counter }}- {{ Village|get:"name" }}
+                                                {% else %}
+                                                    {{ forloop.counter }}- {{ Village|get:"name" }}<br />
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                    {% endwith %}
+                                    
+                                </td>
+                                <td align="center">{{ infos|get:"total_tasks_completed" }}</td>
+                                <td align="center">{{ infos|get:"total_tasks_uncompleted" }}</td>
+                                <td align="center">
+                                    {% with infos|get:"percentage_tasks_completed" as percentage_tasks_completed %}
+                                        {{ percentage_tasks_completed|floatformat:"2"  }}%
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if facilitator.dict_administrative_levels_with_infos|length > 1 %}
+                            <tr>
+                                <td colspan="2"><b>Total</b></td>
+                                <td align="center">{{ facilitator.nbr_villages }}</td>
+                                <td align="center"><b>{{ facilitator.total_tasks_completed }}</b></td>
+                                <td align="center"><b>{{ facilitator.total_tasks_uncompleted }}</b></td>
+                                <td align="center"><b>{{ facilitator.percent|floatformat:"2" }}%</b></td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </p>
+
+                <div style="page-break-before:always"></div>
+
+            {% endfor %}
+
+        </div>
+      
+
+
+    </body>
+</html>

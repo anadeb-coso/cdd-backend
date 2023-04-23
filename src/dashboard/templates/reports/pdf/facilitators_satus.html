@@ -1,0 +1,119 @@
+{% load static i18n %}
+
+<!DOCTYPE  html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+
+    lang="en"
+
+    xmlns:pdf="http://htmltopdf.org/pdf">
+    <head>
+      <meta charset="utf-8" />
+        <title>{% translate "Facilitators" %}</title>
+        
+        <style type="text/css">
+            body {
+                font-weight: 100;
+                font-size: 12px;
+            }
+            #content table tr, #content table td {
+                padding-top: 7px !important;
+            }
+            @page {
+                 size: a4 portrait;
+                 margin: 15px;
+                 margin-bottom: 86pt;
+                 @frame footer_frame {           /* Static Frame */
+                    -pdf-frame-content: footer_content;
+                    width: 100%; bottom: 0pt; height: 86pt;
+                }
+            }
+            
+        </style>
+    </head>
+    
+    <body bgcolor="#e4ecf3">
+        <div id="header_content">
+            {% include 'reports/pdf/entete.html' %}
+        </div>
+        <div id="footer_content">
+            {% include 'reports/pdf/footer.html' %}
+        </div>
+
+        <div id="content">
+            <table>
+                <tr width="100%" >
+                    <th align="center" style="font-size: 25px; ">
+                        {% if facilitators|length == 1 %}
+                            {% translate "Report of one Facilitator" %}
+                        {% else %}
+                            {% translate "Report of Facilitators" %}
+                        {% endif %}
+                    </th>
+                </tr>
+            </table>
+
+
+            <p>
+                {% translate "Report of" %} : {{ val_date_start }} {% translate "to" %} {{ val_date_end }}
+            </p>
+                                        
+            <table border="1" align="center">
+                <thead>
+                    <tr>
+                        <th align="center" width="3%" rowspan="2">{% translate "N°" %}</th>
+                        <th align="center" width="36%" rowspan="2">{% translate "Name" %}</th>
+                        <th align="center" width="4%" rowspan="2">{% translate "Sex" %}</th>
+                        <th align="center" width="12%" rowspan="2">{% translate "Phone" %}</th>
+                        <th align="center" width="5%" rowspan="2">{% translate "CVD" %}<br/>{% translate "Vill." %}</th>
+                        <th align="center" width="20%" colspan="4">{% translate "Period" %}</th>
+                        <th align="center" width="20%" colspan="4">{% translate "All" %}</th>
+                    </tr>
+                    <tr>
+                        <th align="center" >N° A</th>
+                        <th align="center" >N° U</th>
+                        <th align="center" >N° T</th>
+                        <th align="center" >%</th>
+                        <th align="center" >N° A</th>
+                        <th align="center" >N° U</th>
+                        <th align="center" >N° T</th>
+                        <th align="center" >%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for facilitator in facilitators %}
+                    <tr>
+                        <td  align="center" >{{ forloop.counter }}</td>
+                        <td  align="left" >&nbsp;{{facilitator.name}}</td>
+                        <td  align="center" >{{facilitator.sex}}</td>
+                        <td  align="center" >{{facilitator.phone}}</td>
+                        <td  align="center" >{{facilitator.dict_administrative_levels_with_infos|length}}/{{facilitator.nbr_villages}}</td>
+                        <td  align="center" >{{facilitator.total_tasks_completed_inter_date}}</td>
+                        <td  align="center" >{{facilitator.total_tasks_uncompleted_inter_date}}</td>
+                        <td  align="center" >{{facilitator.total_tasks_inter_date}}</td>
+                        <td  align="center" >{{facilitator.percent_inter_date}}</td>
+                        <td  align="center" >{{facilitator.total_tasks_completed}}</td>
+                        <td  align="center" >{{facilitator.total_tasks_uncompleted}}</td>
+                        <td  align="center" >{{facilitator.total_tasks}}</td>
+                        <td  align="center" >{{facilitator.percent}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+
+            <div style="bottom: 0px !important">
+                <hr />
+                <p>
+                    <b>A :</b> {% translate "Completed" %}, 
+                    <b>U :</b> {% translate "Uncompleted" %}, 
+                    <b>T :</b> {% translate "Total" %}, 
+                    <b>% :</b> {% translate 'Percentage' %}.
+                </p>
+            </div>
+
+    
+
+        </div>
+        
+    </body>
+</html>
