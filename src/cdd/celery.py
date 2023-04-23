@@ -32,7 +32,7 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.conf.beat_schedule = { # scheduler configuration 
     'Sync_celery_tasks_schedule' : {  # whatever the name you want 
         'task': 'dashboard.tasks.sync_celery_tasks', # name of task with path
-        'schedule': 120, #crontab(), # crontab() runs the tasks every minute
+        'schedule': crontab(minute=0, hour=0), #120, #crontab(), # crontab() runs the tasks every minute
         # 'args' : {4, 8}
     }
 }
