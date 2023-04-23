@@ -114,6 +114,8 @@
 
     </div>
 
+<input type="hidden" name="type_field" id="id_type_field" value="" />
+
 {% endblock %}
 
 
@@ -194,6 +196,7 @@
             type_field = "";
             if($(this).attr('id') && $(this).val()){
                 type_field = $(this).attr('id').split('_')[1];
+                $('#id_type_field').val(type_field);
             }
             loadFacilitators(type_field);
             $('#pdf-display').html(``);
@@ -229,10 +232,12 @@
                 }else{
                     href = `{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}`;
                 }
+                
                 href += (`?id_region=` + id_region.val() +
                 `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
-                `&id_village=` + id_village.val() + `&type_field=` + type_field + `&is_training=` + "{{ is_training }}" + 
-                `&is_develop=` + "{{ is_develop }}" + `&id_in_details=`+ (id_in_details.checked ? 1 : 0) + 
+                `&id_village=` + id_village.val() + `&type_field=` + $('#id_type_field').val() + 
+                `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}" + 
+                `&id_in_details=`+ (id_in_details.checked ? 1 : 0) + 
                 `&val_date_start=` + val_date_start + `&val_date_end=` + val_date_end);
                 
                 
