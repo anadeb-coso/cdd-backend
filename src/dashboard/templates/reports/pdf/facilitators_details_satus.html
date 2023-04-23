@@ -96,20 +96,20 @@
                     <table border="1" align="center">
                         <thead>
                         <tr>
-                            <th>{% translate 'N°' %}</th>
-                            <th>{% translate 'CVD' %}</th>
-                            <th>{% translate 'Village(s)' %}</th>
-                            <th>{% translate 'Completed' %}</th>
-                            <th>{% translate 'Uncompleted' %}</th>
-                            <th>{% translate 'Percentage' %}</th>
+                            <th width="3%">{% translate 'N°' %}</th>
+                            <th width="52%">{% translate 'CVD' %}</th>
+                            <th width="30%">{% translate 'Village(s)' %}</th>
+                            <th width="5%" align="center" >N° A</th>
+                            <th width="5%" align="center" >N° U</th>
+                            <th width="5%" align="center" >%</th>
                         </tr>
                         </thead>
                         <tbody>
                             {% for cvd_name, infos in facilitator.dict_administrative_levels_with_infos.items %}
                             <tr>
                                 <td align="center">{{ forloop.counter }}</td>
-                                <td align="center">{{ cvd_name }}</td>
-                                <td align="center">
+                                <td align="left" >&nbsp;<span>{{ cvd_name }}</span></td>
+                                <td align="center"><span>
                                     {% with infos|get:"cvd" as cvd %}
                                         {% with cvd|get:"villages" as villages %}
                                             {% for Village in villages %}
@@ -122,7 +122,7 @@
                                         {% endwith %}
                                     {% endwith %}
                                     
-                                </td>
+                                </span></td>
                                 <td align="center">{{ infos|get:"total_tasks_completed_inter_date" }}</td>
                                 <td align="center">{{ infos|get:"total_tasks_uncompleted_inter_date" }}</td>
                                 <td align="center">
@@ -152,20 +152,21 @@
                     <table border="1" align="center">
                         <thead>
                         <tr>
-                            <th>{% translate 'N°' %}</th>
-                            <th>{% translate 'CVD' %}</th>
-                            <th>{% translate 'Village(s)' %}</th>
-                            <th>{% translate 'Completed' %}</th>
-                            <th>{% translate 'Uncompleted' %}</th>
-                            <th>{% translate 'Percentage' %}</th>
+                            <th width="3%">{% translate 'N°' %}</th>
+                            <th width="47%">{% translate 'CVD' %}</th>
+                            <th width="30%" >{% translate 'Village(s)' %}</th>
+                            <th width="5%" align="center" >N° A</th>
+                            <th width="5%" align="center" >N° U</th>
+                            <th width="5%" align="center" >N° T</th>
+                            <th width="5%" align="center" >%</th>
                         </tr>
                         </thead>
                         <tbody>
                             {% for cvd_name, infos in facilitator.dict_administrative_levels_with_infos.items %}
                             <tr>
                                 <td align="center">{{ forloop.counter }}</td>
-                                <td align="center">{{ cvd_name }}</td>
-                                <td align="center">
+                                <td align="left" >&nbsp;<span>{{ cvd_name }}</span></td>
+                                <td align="center"><span>
                                     {% with infos|get:"cvd" as cvd %}
                                         {% with cvd|get:"villages" as villages %}
                                             {% for Village in villages %}
@@ -178,9 +179,10 @@
                                         {% endwith %}
                                     {% endwith %}
                                     
-                                </td>
+                                </span></td>
                                 <td align="center">{{ infos|get:"total_tasks_completed" }}</td>
                                 <td align="center">{{ infos|get:"total_tasks_uncompleted" }}</td>
+                                <td align="center">{{ infos|get:"total_tasks" }}</td>
                                 <td align="center">
                                     {% with infos|get:"percentage_tasks_completed" as percentage_tasks_completed %}
                                         {{ percentage_tasks_completed|floatformat:"2"  }}%
@@ -194,12 +196,24 @@
                                 <td align="center">{{ facilitator.nbr_villages }}</td>
                                 <td align="center"><b>{{ facilitator.total_tasks_completed }}</b></td>
                                 <td align="center"><b>{{ facilitator.total_tasks_uncompleted }}</b></td>
+                                <td align="center"><b>{{ facilitator.total_tasks}}</b></td>
                                 <td align="center"><b>{{ facilitator.percent|floatformat:"2" }}%</b></td>
                             </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </p>
+
+
+                <div style="bottom: 0px !important">
+                    <hr />
+                    <p>
+                        <b>A :</b> {% translate "Completed" %}, 
+                        <b>U :</b> {% translate "Uncompleted" %}, 
+                        <b>T :</b> {% translate "Total" %}, 
+                        <b>% :</b> {% translate 'Percentage' %}.
+                    </p>
+                </div>
 
                 <div style="page-break-before:always"></div>
 

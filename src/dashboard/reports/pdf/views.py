@@ -151,7 +151,8 @@ class Generate(View):
                                         nbr_villages = 0
                                         for key, value in dict_administrative_levels_with_infos.items():
                                             dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
-                                            del dict_administrative_levels_with_infos[key]["total_tasks"]
+                                            dict_administrative_levels_with_infos[key]["percentage_tasks_completed_inter_date"] = ((value["total_tasks_completed_inter_date"]/value["total_tasks"])*100) if value["total_tasks"] else 0
+                                            dict_administrative_levels_with_infos[key]["total_tasks"]
 
                                             nbr_villages += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
 
@@ -273,7 +274,7 @@ class Generate(View):
                     for key, value in dict_administrative_levels_with_infos.items():
                         dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
                         dict_administrative_levels_with_infos[key]["percentage_tasks_completed_inter_date"] = ((value["total_tasks_completed_inter_date"]/value["total_tasks"])*100) if value["total_tasks"] else 0
-                        del dict_administrative_levels_with_infos[key]["total_tasks"]
+                        dict_administrative_levels_with_infos[key]["total_tasks"]
 
                         nbr_villages += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
 

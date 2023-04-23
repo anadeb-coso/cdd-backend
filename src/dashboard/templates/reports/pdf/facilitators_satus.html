@@ -83,7 +83,7 @@
                     {% for facilitator in facilitators %}
                     <tr>
                         <td  align="center" >{{ forloop.counter }}</td>
-                        <td  align="left" >&nbsp;{{facilitator.name}}</td>
+                        <td  align="left" >&nbsp;<span>{{facilitator.name}}</span></td>
                         <td  align="center" >{{facilitator.sex}}</td>
                         <td  align="center" >{{facilitator.phone}}</td>
                         <td  align="center" >{{facilitator.dict_administrative_levels_with_infos|length}}/{{facilitator.nbr_villages}}</td>
