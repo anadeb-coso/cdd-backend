@@ -466,3 +466,91 @@ msgstr "Évaluateur"
 #: .\dashboard\templatetags\custom_tags.py
 msgid "Accountant"
 msgstr "Comptable"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Regional Coordinator"
+msgstr "Coordonnateur Regional"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "National Coordinator"
+msgstr "Coordonnateur National"
+
+#: .\dashboard\report\pages\facilitators.py
+msgid "Reports"
+msgstr "Etats"
+
+#: .\dashboard\report\pages\facilitators.py
+msgid "reports"
+msgstr "états"
+
+#: .\dashboard\report\pages\facilitators.py
+msgid "Report of"
+msgstr "Etat de"
+
+#: .\dashboard\report\pages\facilitators.py
+msgid "to"
+msgstr "à"
+
+#: .\dashboard\report\pages\forms.py
+msgid "Start"
+msgstr "Début"
+
+#: .\dashboard\report\pages\forms.py
+msgid "End"
+msgstr "Fin"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Select dates"
+msgstr "Sélectionner les dates"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Generate"
+msgstr "Genérer"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Generate the link"
+msgstr "Générer le lien"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "You have to fill all the fields"
+msgstr "Vous devez remplir tous les champs"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Link generated. Click to generate the PDF"
+msgstr "Lien généré. Cliquez pour générer le PDF"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Details"
+msgstr "Détails"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Interval"
+msgstr "Intervalle"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "All"
+msgstr "Tout"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Period"
+msgstr "Période"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Report of Facilitators"
+msgstr "Etat des Animateurs communautaires"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Report of one Facilitator"
+msgstr "Etat d'un Animateur communautaire"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Details of the Facilitator's report"
+msgstr "Détails de l'état de l'Animateur Communautaire"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Percentage of this period"
+msgstr "Pourcentage de cette période"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "Total percentage"
+msgstr "Pourcentage total"
