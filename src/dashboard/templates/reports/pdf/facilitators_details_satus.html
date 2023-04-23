@@ -97,11 +97,11 @@
                         <thead>
                         <tr>
                             <th width="3%">{% translate 'N°' %}</th>
-                            <th width="52%">{% translate 'CVD' %}</th>
+                            <th width="50%">{% translate 'CVD' %}</th>
                             <th width="30%">{% translate 'Village(s)' %}</th>
                             <th width="5%" align="center" >N° A</th>
                             <th width="5%" align="center" >N° U</th>
-                            <th width="5%" align="center" >%</th>
+                            <th width="7%" align="center" >%</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -154,11 +154,11 @@
                         <tr>
                             <th width="3%">{% translate 'N°' %}</th>
                             <th width="47%">{% translate 'CVD' %}</th>
-                            <th width="30%" >{% translate 'Village(s)' %}</th>
+                            <th width="28%" >{% translate 'Village(s)' %}</th>
                             <th width="5%" align="center" >N° A</th>
                             <th width="5%" align="center" >N° U</th>
                             <th width="5%" align="center" >N° T</th>
-                            <th width="5%" align="center" >%</th>
+                            <th width="7%" align="center" >%</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -182,7 +182,7 @@
                                 </span></td>
                                 <td align="center">{{ infos|get:"total_tasks_completed" }}</td>
                                 <td align="center">{{ infos|get:"total_tasks_uncompleted" }}</td>
-                                <td align="center">{{ infos|get:"total_tasks" }}</td>
+                                <td align="center">-</td>
                                 <td align="center">
                                     {% with infos|get:"percentage_tasks_completed" as percentage_tasks_completed %}
                                         {{ percentage_tasks_completed|floatformat:"2"  }}%
