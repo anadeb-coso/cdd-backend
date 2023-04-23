@@ -126,7 +126,7 @@
         });
     </script> {% endcomment %}
 
-
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
     <script type="text/javascript">
         let ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"]
         var type_field = "";
@@ -139,8 +139,55 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
 
+
+
         function loadFacilitators(type_field="") {
-            spin.show();
+            if($("#id_"+type_field).val() || type_field == "all"){  
+                {% comment %} let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
+                ajax_request_cascade_administrative_level(cascade_url, "id_region");
+                ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
+                ajax_request_cascade_administrative_level(cascade_url, "id_commune");
+                ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
+
+                $(".facilitators-filter select").attr('disabled', true);
+                $.ajax({
+                    type: 'GET',
+                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                    data: {
+                        parent_id: $("#id_"+type_field).val()
+                    },
+                    success: function (data) {
+                        if(type_field == "region"){
+                            set_datas_administrative_level(id_prefecture, data.prefectures);
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "prefecture"){
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "commune"){
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "canton"){
+                            set_datas_administrative_level(id_village, data.villages);
+                        }
+                        
+                    },
+                    error: function (data) {
+                        alert(error_server_message + "Error " + data.status);
+                        $(".facilitators-filter select").attr('disabled', false);
+                    }
+                }).done(function () {
+                        $(".facilitators-filter select").attr('disabled', false);
+                    }
+                );
+
+
+
+
+
+                spin.show();
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:facilitators:facilitators_list' %}",
@@ -164,36 +211,64 @@
                     alert(error_server_message + "Error " + data.status);
                 }
             });
+
+            }
+            
+
+
+
+
+            
         }
 
-        loadFacilitators();
+        loadFacilitators("all");
 
-        $('.facilitators-filter input').on('change keyup', function () {
+        {% comment %} $('.facilitators-filter input').on('change keyup', function () {
             if (!$(this).val()) {
-                loadFacilitators();
+                loadFacilitators("all");
             }
-        });
+        }); {% endcomment %}
 
         $('.facilitators-filter select').on('change', function () {
             type_field = "";
             if($(this).attr('id') && $(this).val()){
                 type_field = $(this).attr('id').split('_')[1];
-                for(let i=0; i<ids.length; i++){
+                {% comment %} for(let i=0; i<ids.length; i++){
                     if(!(ids[i]==$(this).attr('id'))){
                         $("#"+ids[i]).val(null).trigger('change.select2');
                     }
-                }
+                } {% endcomment %}
             }
             loadFacilitators(type_field);
         });
+        {% comment %} function _change(id){
+            $('#'+id).on('change', function () {
+                type_field = "";
+                if($(this).attr('id') && $(this).val()){
+                    type_field = $(this).attr('id').split('_')[1];
+                    for(let i=0; i<ids.length; i++){
+                        if(!(ids[i]==$(this).attr('id'))){
+                            $("#"+ids[i]).val(null).trigger('change.select2');
+                        }
+                    }
+                }
+                loadFacilitators(type_field);
+            });
+        }
+        _change("id_region");
+        _change("id_prefecture");
+        _change("id_commune");
+        _change("id_canton");
+        _change("id_village"); {% endcomment %}
 
         $("#clear_all_filters").on("click", function () {
             $('.facilitators-filter input').val('');
             $('.facilitators-filter select').val(null).trigger('change.select2');
-            loadFacilitators();
+            loadFacilitators("all");
         });
 
     </script>
+    
 
 
 {% endblock %}

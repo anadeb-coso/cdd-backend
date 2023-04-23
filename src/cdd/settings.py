@@ -58,6 +58,7 @@ THIRD_PARTY_APPS = [
     'bootstrap4',
     'drf_spectacular',
     'rest_framework',
+    'django_celery_results',
 ]
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
@@ -228,3 +229,19 @@ DIAGNOSTIC_MAP_ISO_CODE = env('DIAGNOSTIC_MAP_ISO_CODE')
 
 #Global variables
 OTHER_LANGUAGES = True
+
+
+# # Celery Configuration Options
+# CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+
+CELERY_ACCEPT_CONTENT = ['json']
+
+CELERY_RESULT_BACKEND = 'django-db'
+
+CELERY_TASK_SERIALIZER = 'json'
+
+BROKER_TRANSPORT = "redis"
+
+# CELERY_TIMEZONE = "Australia/Tasmania"
+# CELERY_TASK_TRACK_STARTED = True
+# CELERY_TASK_TIME_LIMIT = 10

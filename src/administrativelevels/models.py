@@ -115,8 +115,11 @@ class CVD(BaseModel):
         return self.administrativelevel_set.get_queryset()
     
     def get_canton(self):
+        if self.headquarters_village:
+            return self.headquarters_village.parent
+            
         for obj in self.get_villages():
-            return obj
+            return obj.parent
         return None
     
     def get_list_subprojects(self):

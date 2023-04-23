@@ -7,31 +7,59 @@
             <thead>
             <tr>
                 <th width="27%">{% translate 'Name' %}</th>
-                <th width="27%">{% translate 'Username' %}</th>
-                <th width="10%">{% translate 'Type' %}</th>
+                <th width="20%">{% translate 'Username' %}</th>
+                <th width="10%">{% translate 'Tel' %}</th>
+                <th width="12%">{% translate 'Last Activity' %}</th>
                 <th width="6%" title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}" >{% translate 'Percent' %}</th>
-                <th  width="30%" >{% translate 'Action' %}</th>
+                <th  width="25%" >{% translate 'Action' %}</th>
             </tr>
             </thead>
             <tbody>
             {% for facilitator in facilitators %}
                 <tr>
-                    <td>{{ facilitator.get_name_with_sex }}</td>
+                    {% comment %} <td>{{ facilitator.get_name_with_sex }}</td>
                     <td>{{ facilitator.username }}</td>
                     <td>{{ facilitator.get_type|upper }}</td>
                     <td><span id="facilitator-percent-{{ facilitator.no_sql_db_name }}" 
                          title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}" >
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </span>
-                    </td>
+                    </td> {% endcomment %}
+                    {% for key, value in facilitator.get_all_infos.items %}
+                        {% if key == "percent" %}
+                            <td 
+                                title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                                style="color:
+                                    {% if value < 10 %}red
+                                    {% elif value < 30 %}orange
+                                    {% elif value < 50 %}purple
+                                    {% elif value < 70 %}black
+                                    {% elif value < 90 %}#04e1e1
+                                    {% elif value < 100 %}blue
+                                    {% else %}green
+                                    {% endif %}; font-weight: bold;
+                                "
+                            >{{ value|get_to_percent_str }}</td>
+                        {% elif key == "last_activity_date" %}
+                            <td title="{{ value }}">
+                                {% if value %}
+                                    {{ value|date:"Y/m/d P" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td>{{ value }}</td>
+                        {% endif %}
+                    {% endfor %}
                     <td>
-                        <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
+                        <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}" target="_blank" 
                             class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
                             <span class="_web">{% translate 'See profile' %}</span>
                             <span class="_mobile"><i class="fa fa-user"></i></span>
                         </a>
                         {% if user.is_superuser or user|has_group:"Admin" %}
-                        <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}"
+                        <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
                             class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
                             <span class="_web">{% translate 'Edit profile' %}</span>
                             <span class="_mobile"><i class="fa fa-edit"></i></span>
@@ -62,8 +90,8 @@
                         searchable: false,
                     }
                 ],
-                lengthMenu: [100, 200, 300],
-                pageLength: 100,
+                lengthMenu: [10, 20, 50, 100],
+                pageLength: 10,
                 order: [[0, 'desc']]
             });
             $('#search').on('keyup', function () {
@@ -110,7 +138,7 @@
             $('#table tr span').each(function () {
                 id = $(this).attr('id');
                 if(id && id.includes("facilitator-percent-")){
-                    loadFacilitatorPercent(id);
+                    {% comment %} loadFacilitatorPercent(id); {% endcomment %}
                     {% comment %} liste_ids_no_sql_db_name.push(id.split("-")[2]); {% endcomment %}
                 }
             });

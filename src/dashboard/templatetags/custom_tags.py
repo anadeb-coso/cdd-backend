@@ -249,11 +249,13 @@ def has_group(user, group_name):
 def get_group_high(user):
     """
     All Groups permissions
-        - SuperAdmin        : 
-        - CDD Specialist    : CDDSpecialist
-        - Admin             : Admin
-        - Evaluator         : Evaluator
-        - Accountant        : Accountant
+        - SuperAdmin            : 
+        - CDD Specialist        : CDDSpecialist
+        - Admin                 : Admin
+        - Evaluator             : Evaluator
+        - Accountant            : Accountant
+        - Regional Coordinator  : RegionalCoordinator
+        - National Coordinator  : NationalCoordinator
     """
     if user.is_superuser:
         return gettext_lazy("Principal Administrator").__str__()
@@ -266,6 +268,15 @@ def get_group_high(user):
         return gettext_lazy("Evaluator").__str__()
     if user.groups.filter(name="Accountant").exists():
         return gettext_lazy("Accountant").__str__()
+    if user.groups.filter(name="RegionalCoordinator").exists():
+        return gettext_lazy("Regional Coordinator").__str__()
+    if user.groups.filter(name="NationalCoordinator").exists():
+        return gettext_lazy("National Coordinator").__str__()
 
 
     return gettext_lazy("User").__str__()
+
+@register.filter(name='get_to_percent_str') 
+def get_to_percent_str(number):
+    return str(number if number >= 10 else "0"+str(number)) + " %"
+

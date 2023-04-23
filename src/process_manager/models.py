@@ -1,7 +1,18 @@
 from django.db import models
 from no_sql_client import NoSQLClient
+from administrativelevels.models import AdministrativeLevel
 
+class BaseModel(models.Model):
+    created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
+    updated_date = models.DateTimeField(auto_now = True, blank=True, null=True)
 
+    class Meta:
+        abstract = True
+    
+    def save_and_return_object(self):
+        super().save()
+        return self
+    
 # Create your models here.
 # The project object on couch looks like this
 # {
@@ -213,3 +224,22 @@ class Task(models.Model):
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
         return self
+
+
+
+class AggregatedStatus(BaseModel):
+    administrative_level_id = models.IntegerField()
+    task = models.ForeignKey("Task", on_delete=models.CASCADE)
+    total_tasks = models.IntegerField(default=0)
+    total_tasks_completed = models.IntegerField(default=0)
+
+
+    def administrative_level(self):
+        try:
+            return AdministrativeLevel.objects.using('mis').get(id=self.administrative_level_id)
+        except AdministrativeLevel.DoesNotExist as e:
+            return None
+        except Exception as exc:
+            print(exc)
+            return None
+        

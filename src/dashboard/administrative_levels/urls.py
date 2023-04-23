@@ -8,4 +8,6 @@ urlpatterns = [
          name='get_choices_for_next_administrative_level'),
     path('get-ancestor-administrative-levels', views.GetAncestorAdministrativeLevelsView.as_view(),
          name='get_ancestor_administrative_levels'),
+     path('get-choices-for-next-administrative-level-all', views.GetChoicesForNextAdministrativeLevelAllView.as_view(),
+         name='get_choices_for_next_administrative_level_all'),
 ]

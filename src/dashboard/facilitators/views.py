@@ -21,7 +21,10 @@ from authentication.permissions import (
     CDDSpecialistPermissionRequiredMixin, SuperAdminPermissionRequiredMixin,
     AdminPermissionRequiredMixin
     )
-
+from .functions import get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd
+from administrativelevels import models as administrativelevels_models
+from dashboard.administrative_levels.functions import get_administrative_levels_under_json, get_cascade_villages_by_administrative_level_id
+from cdd.functions import datetime_complet_str
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
@@ -55,6 +58,7 @@ class FacilitatorMixin:
     obj = None
     facilitator_db = None
     facilitator_db_name = None
+    cvds = None
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
@@ -64,6 +68,7 @@ class FacilitatorMixin:
             query_result = self.facilitator_db.get_query_result({"type": 'facilitator'})[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
+            self.cvds = get_cvds(self.doc)
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
@@ -81,19 +86,25 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         id_canton = self.request.GET.get('id_canton')
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
+        _id = 0
         facilitators = []
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
             if id_region and type_field == "region":
                 _type = "region"
+                _id = id_region
             elif id_prefecture and type_field == "prefecture":
                 _type = "prefecture"
+                _id = id_prefecture
             elif id_commune and type_field == "commune":
                 _type = "commune"
+                _id = id_commune
             elif id_canton and type_field == "canton":
                 _type = "canton"
+                _id = id_canton
             elif id_village and type_field == "village":
                 _type = "village"
+                _id = id_village
                 
             nsc = NoSQLClient()
 
@@ -101,38 +112,40 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             liste_communes = []
             liste_cantons = []
             liste_villages = []
-            administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
+            # administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
 
-            if _type == "region":
-                region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
-                region = region[:][0]
-                _type = "prefecture"
-                liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
+            # if _type == "region":
+            ##    region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
+            ##    region = region[:][0]
+            #     _type = "prefecture"
+            #     liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
                     
-            if _type == "prefecture":
-                if not liste_prefectures:
-                    liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
-                _type = "commune"
-                for prefecture in liste_prefectures:
-                    [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
+            # if _type == "prefecture":
+            #     if not liste_prefectures:
+            #         liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
+            #     _type = "commune"
+            #     for prefecture in liste_prefectures:
+            #         [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
 
-            if _type == "commune":
-                if not liste_communes:
-                    liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
-                _type = "canton"
-                for commune in liste_communes:
-                    [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
+            # if _type == "commune":
+            #     if not liste_communes:
+            #         liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
+            #     _type = "canton"
+            #     for commune in liste_communes:
+            #         [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
 
-            if _type == "canton":
-                if not liste_cantons:
-                    liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
-                _type = "village"
-                for canton in liste_cantons:
-                    [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
+            # if _type == "canton":
+            #     if not liste_cantons:
+            #         liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
+            #     _type = "village"
+            #     for canton in liste_cantons:
+            #         [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
             
-            if _type == "village":
-                if not liste_villages:
-                    liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
+            # if _type == "village":
+            #     if not liste_villages:
+            #         liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
+
+            liste_villages = get_cascade_villages_by_administrative_level_id(_id)
 
             for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
                     already_count_facilitator = False
@@ -247,16 +260,19 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
 
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
         last_activity_date = "0000-00-00 00:00:00"
+        total_tasks = 0
         for doc in facilitator_docs:
             doc = doc.get('doc')
-            if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < doc.get('last_updated'):
-                last_activity_date = doc.get('last_updated')
+            if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
+                last_activity_date = datetime_complet_str(doc.get('last_updated'))
+            total_tasks += 1
 
         if last_activity_date == "0000-00-00 00:00:00":
             context['facilitator_doc']['last_activity_date'] = None
         else:
             context['facilitator_doc']['last_activity_date'] = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
-
+        
+        context['total_tasks'] = total_tasks
 
         # facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
 
@@ -351,8 +367,9 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         offset = int(self.request.GET.get('offset'))
         phases = Phase.objects.all()
         activities = Activity.objects.all()
-        _list = []
-        object_list = self.get_results()
+
+        object_list = single_task_by_cvd(self.get_results(), self.cvds)
+        
         if object_list:
             for _ in object_list:
                 _["phase_order"] = 0
@@ -365,10 +382,64 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                     if activity_obj.name == _["activity_name"]:
                         _["activity_order"]=activity_obj.order
                         break
-                _list.append(_)
-
-        return sorted(_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))[index:index + offset]
+        
+        
+        return sorted(object_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))[index:index + offset]
     
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     total_tasks_completed = 0
+    #     total_tasks_uncompleted = 0
+    #     total_tasks = 0
+    #     dict_administrative_levels_with_infos = {}
+
+    #     object_list = self.get_results()
+    #     administrative_levels = self.facilitator_db.get_query_result({"type": "facilitator"})[:][0]['administrative_levels']
+
+    #     if object_list:
+    #         for _ in object_list:
+    #             if _.get("completed"):
+    #                 total_tasks_completed += 1
+    #             else:
+    #                 total_tasks_uncompleted += 1
+    #             total_tasks += 1
+
+
+    #             for administrative_level in administrative_levels:
+    #                 if str(administrative_level.get("id")) == str(_.get("administrative_level_id")):
+    #                     if dict_administrative_levels_with_infos.get(administrative_level.get("name")):
+    #                         if _.get("completed"):
+    #                             dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_completed'] += 1
+    #                         else:
+    #                             dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_uncompleted'] += 1
+    #                         dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] += 1
+    #                     else:
+    #                         if _.get("completed"):
+    #                             dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+    #                                 'total_tasks_completed': 1,
+    #                                 'total_tasks_uncompleted': 0
+    #                             }
+    #                         else:
+    #                             dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+    #                                 'total_tasks_completed': 0,
+    #                                 'total_tasks_uncompleted': 1
+    #                             }
+    #                         dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] = 1
+
+
+    #     context['total_tasks_completed'] = total_tasks_completed
+    #     context['total_tasks_uncompleted'] = total_tasks_uncompleted
+    #     context['total_tasks'] = total_tasks
+    #     context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+
+    #     for key, value in dict_administrative_levels_with_infos.items():
+    #         dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
+    #         del dict_administrative_levels_with_infos[key]["total_tasks"]
+    #     context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
+
+
+
+    #     return context
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         total_tasks_completed = 0
@@ -377,50 +448,53 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         dict_administrative_levels_with_infos = {}
 
         object_list = self.get_results()
-        administrative_levels = self.facilitator_db.get_query_result({"type": "facilitator"})[:][0]['administrative_levels']
 
         if object_list:
             for _ in object_list:
-                if _.get("completed"):
-                    total_tasks_completed += 1
-                else:
-                    total_tasks_uncompleted += 1
-                total_tasks += 1
 
+                for administrative_level_cvd in self.cvds:
+                    village = administrative_level_cvd['village']
+                    if village and str(village.get("id")) == str(_.get("administrative_level_id")):
+                        if _.get("completed"):
+                            total_tasks_completed += 1
+                        else:
+                            total_tasks_uncompleted += 1
+                        total_tasks += 1
 
-                for administrative_level in administrative_levels:
-                    if str(administrative_level.get("id")) == str(_.get("administrative_level_id")):
-                        if dict_administrative_levels_with_infos.get(administrative_level.get("name")):
+                        if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
                             if _.get("completed"):
-                                dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_completed'] += 1
+                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed'] += 1
                             else:
-                                dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_uncompleted'] += 1
-                            dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] += 1
+                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted'] += 1
+                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] += 1
                         else:
                             if _.get("completed"):
-                                dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
                                     'total_tasks_completed': 1,
                                     'total_tasks_uncompleted': 0
                                 }
                             else:
-                                dict_administrative_levels_with_infos[administrative_level.get("name")] = {
+                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
                                     'total_tasks_completed': 0,
                                     'total_tasks_uncompleted': 1
                                 }
-                            dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] = 1
-
-
+                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
+                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
+                
+                
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+        context['nbr_villages'] = 0
 
         for key, value in dict_administrative_levels_with_infos.items():
             dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
             del dict_administrative_levels_with_infos[key]["total_tasks"]
+
+            context['nbr_villages'] += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
+
         context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
-
-
 
         return context
 
@@ -453,7 +527,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "phone": data['phone'],
             "sex": data['sex'],
             "administrative_levels": data['administrative_levels'],
-            "type": "facilitator"
+            "type": "facilitator",
+            "develop_mode": facilitator.develop_mode,
+            "training_mode": facilitator.training_mode,
+            "sql_id": int(facilitator.pk)
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)

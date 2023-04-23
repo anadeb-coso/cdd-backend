@@ -373,11 +373,25 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     "type": new_task['type'], "order": new_task['order']
                 })[0]
 
+            canton_sql_id = None
+            try:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                canton_sql_id = str(administrativelevel_obj.parent.id)
+            except Exception as e:
+                print()
+                print(new_task.get('name'), ', ', administrative_level.get('name'),":", e)
+                print()
+
+
             # Check if the task was found
             if len(fc_task) < 1:
                 # create the task
                 new_task['completed_date'] = None #Add completed_date 
                 new_task['last_updated'] = None #Add last_updated 
+
+                if canton_sql_id:
+                    new_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
+
                 nsc.create_document(facilitator_database, new_task)
                 # Get activity
                 fc_task = facilitator_database.get_query_result(new_task)[0]
@@ -417,6 +431,10 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                         _fc_task['completed_date'] = "0000-00-00 00:00:00" #update doc by adding completed_date 
                 
                 #End management of the dates of the last update and completed
+
+                
+                if canton_sql_id:
+                    _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
 
                 nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                     {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
@@ -590,7 +608,7 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
 
 
 
-def sync_tasks_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False):
+def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False):
    
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
@@ -707,7 +725,7 @@ def clear_facilitator_database(develop_mode=False, training_mode=False):
             nsc.delete_document(nsc_database, project["_id"])
 
 def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, administrativelevels_ids=[]):
-    facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db)
+    facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db) 
     nsc = NoSQLClient()
     for facilitator in facilitators:
         print()
@@ -716,22 +734,29 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
         facilitator_doc = nsc_database[nsc_database.get_query_result({"type": "facilitator"})[:][0]['_id']]
         administrative_levels = facilitator_doc["administrative_levels"]
         _administrative_levels = []
-        print(administrative_levels)
-        for adl_id in administrativelevels_ids:
-            phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
-            for phase in phases:
-                nsc.delete_document(nsc_database, phase["_id"])
-            activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
-            for activity in activities:
-                nsc.delete_document(nsc_database, activity["_id"])
-            tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
-            for task in tasks:
-                nsc.delete_document(nsc_database, task["_id"])
         
-            for i in range(len(administrative_levels)):
-                if administrative_levels[i]["id"] == adl_id:
-                    continue
-                _administrative_levels.append(administrative_levels[i])
+        print(administrative_levels)
+        for elt in administrative_levels:
+            if elt['id'] in administrativelevels_ids:
+                adl_id = elt['id']
+                # for adl_id in administrativelevels_ids:
+                phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
+                for phase in phases:
+                    nsc.delete_document(nsc_database, phase["_id"])
+                activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
+                for activity in activities:
+                    nsc.delete_document(nsc_database, activity["_id"])
+                tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
+                for task in tasks:
+                    nsc.delete_document(nsc_database, task["_id"])
+
+                # for i in range(len(administrative_levels)):
+                #     if administrative_levels[i]["id"] == adl_id:
+                #         continue
+                #     _administrative_levels.append(administrative_levels[i])
+            else:
+                _administrative_levels.append(elt)
+                
         print(_administrative_levels)
         doc = {
             "administrative_levels": _administrative_levels
@@ -822,3 +847,109 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
         print(geographical_units)
         print()
         print()
+
+
+def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop_mode=False, training_mode=False, no_sql_db=False):
+    
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        
+        
+        fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        _fc_tasks = fc_tasks.copy()
+        for _task in fc_tasks:
+            task = _task.get('doc')
+            if task.get("completed") and task.get('type') == 'task':
+                attachments = task.get("attachments")
+                form_response = task.get("form_response")
+                completed_date = task.get("completed_date")
+                last_updated = task.get("last_updated")
+
+                villages = []
+                try:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(task['administrative_level_id']))
+                    if administrativelevel_obj.cvd:
+                        villages = administrativelevel_obj.cvd.get_villages()
+                except Exception as e:
+                    print(task.get('name'), ', ', task.get('administrative_level_name'),":", e)
+
+                for village in villages:
+                    if village.id != int(task['administrative_level_id']):
+                        for _t in _fc_tasks:
+                            t = _t.get('doc')
+                            if task['name'] == t['name'] and int(t['administrative_level_id']) == village.id and t.get('type') == 'task':
+                                if attachments:
+                                    for i in range(len(attachments)):
+                                        att = attachments[i]
+                                        if att.get('attachment') and att.get('attachment').get("uri") and "https://" in att.get('attachment').get("uri") :
+                                            t["attachments"][i] = att
+                                if form_response:
+                                    t["form_response"] = form_response
+
+                                t["completed_date"] = completed_date
+                                t["last_updated"] = last_updated
+                                t["completed"] = True
+
+                                nsc.update_cloudant_document(facilitator_database,  t["_id"], t)  # Update task for the facilitator
+                                print(t)
+                                print()
+                                print()
+    
+
+
+def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_only_canton_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
+    
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        
+        
+        fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        _fc_tasks = fc_tasks.copy()
+        for _task in fc_tasks:
+            task = _task.get('doc')
+            if task.get("completed") and task.get('type') == 'task' and (str(task.get('sql_id')) in ['13', '14', '15', '16'] or task.get('activity_name') == "Réunion cantonale"):
+                attachments = task.get("attachments")
+                form_response = task.get("form_response")
+                completed_date = task.get("completed_date")
+                last_updated = task.get("last_updated")
+
+                for _t in _fc_tasks:
+                    t = _t.get('doc')
+                    if t.get('type') == 'task' and task['sql_id'] == t['sql_id'] and task['canton_sql_id'] == t['canton_sql_id'] and t['administrative_level_id'] != task['administrative_level_id']:
+                        if attachments:
+                            for i in range(len(attachments)):
+                                att = attachments[i]
+                                if att.get('attachment') and att.get('attachment').get("uri") and "https://" in att.get('attachment').get("uri") :
+                                    t["attachments"][i] = att
+                        if form_response:
+                            t["form_response"] = form_response
+
+                        t["completed_date"] = completed_date
+                        t["last_updated"] = last_updated
+                        t["completed"] = True
+
+                        nsc.update_cloudant_document(facilitator_database,  t["_id"], t)  # Update task for the facilitator
+                        print(t)
+                        print()
+                        print()
+    
+
+
+
+
+
+
