@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy
 
 from authentication.models import Facilitator
 from dashboard.utils import get_administrative_levels_by_type, get_documents_by_type, get_choices
@@ -10,15 +11,15 @@ from administrativelevels.models import AdministrativeLevel
 
 class DiagnosticsForm(forms.Form):
     
-    phase = forms.ChoiceField(label='')
-    activity = forms.ChoiceField(label='')
-    task = forms.ChoiceField(label='')
+    phase = forms.ChoiceField(label=gettext_lazy("Phase"))
+    activity = forms.ChoiceField(label=gettext_lazy("Activity"))
+    task = forms.ChoiceField(label=gettext_lazy("Task"))
 
-    region = forms.ChoiceField(label='')
-    prefecture = forms.ChoiceField(label='')
-    commune = forms.ChoiceField(label='')
-    canton = forms.ChoiceField(label='')
-    village = forms.ChoiceField(label='')
+    region = forms.ChoiceField(label=gettext_lazy("Region"))
+    prefecture = forms.ChoiceField(label=gettext_lazy("Prefecture"))
+    commune = forms.ChoiceField(label=gettext_lazy("Commune"))
+    canton = forms.ChoiceField(label=gettext_lazy("Canton"))
+    village = forms.ChoiceField(label=gettext_lazy("Village"))
 
 
     def __init__(self, *args, **kwargs):

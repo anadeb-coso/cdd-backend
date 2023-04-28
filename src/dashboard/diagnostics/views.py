@@ -74,7 +74,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         if not sql_id:
             raise Exception("The value of the element must be not null!!!")
         nsc = NoSQLClient()
-        administrative_levels_db = nsc.get_db("administrative_levels")
+        # administrative_levels_db = nsc.get_db("administrative_levels")
         
         liste_villages = []
         nbr_tasks = 0
