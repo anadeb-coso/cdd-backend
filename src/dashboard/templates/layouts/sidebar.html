@@ -58,6 +58,18 @@
             </ul>
         </nav>
 
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:funnel:funnels' %}"
+                       class="nav-link {% if active_level1 == 'funnels' %}active{% endif %}">
+                        <i class="nav-icon fa fa-square"></i>
+                        <p>{% translate "Funnel" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
 
         <nav class="toogle-sidebar-button">
             <ul class="nav nav-pills nav-sidebar flex-column">

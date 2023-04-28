@@ -280,3 +280,6 @@ def get_group_high(user):
 def get_to_percent_str(number):
     return str(number if number >= 10 else "0"+str(number)) + " %"
 
+@register.filter
+def replace_comma_by_dot(value):
+    return str(value).replace(",",".")

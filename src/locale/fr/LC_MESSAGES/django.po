@@ -554,3 +554,7 @@ msgstr "Pourcentage de cette période"
 #: .\dashboard\templates\report\pdf\facilitators_satus.html
 msgid "Total percentage"
 msgstr "Pourcentage total"
+
+#: .\dashboard\templates\layouts\sidebar.html:30
+msgid "Funnel"
+msgstr "Entonnoir"
