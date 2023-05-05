@@ -321,15 +321,15 @@ class GeneratePDF(Generate):
         context = Generate.generate(self, request, facilitator_db_name)
        
         html = template.render(context)
-        pdf = render_to_pdf(template_page, context)
-        if pdf:
-            response = HttpResponse(pdf, content_type='application/pdf')
-            nom = '{}'.format('report_facilitators' if id_in_details == "0" else (context['facilitators'][0].get("facilitator").get('name') if len(context['facilitators']) == 1 else 'report_facilitator'))
-            filename = "%s_%s.pdf" %(nom.replace(" ", "_").replace("/", "_").replace("'", "_"), str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_"))
-            content = "inline; filename=%s" %(filename)
-            download = request.GET.get("download")
-            if download:
-                content = "attachment; filename=%s" %(filename)
-            response['Content-Disposition'] = content
-            return response
+        # pdf = render_to_pdf(template_page, context)
+        # if pdf:
+        #     response = HttpResponse(pdf, content_type='application/pdf')
+        #     nom = '{}'.format('report_facilitators' if id_in_details == "0" else (context['facilitators'][0].get("facilitator").get('name') if len(context['facilitators']) == 1 else 'report_facilitator'))
+        #     filename = "%s_%s.pdf" %(nom.replace(" ", "_").replace("/", "_").replace("'", "_"), str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_"))
+        #     content = "inline; filename=%s" %(filename)
+        #     download = request.GET.get("download")
+        #     if download:
+        #         content = "attachment; filename=%s" %(filename)
+        #     response['Content-Disposition'] = content
+        #     return response
         return HttpResponse(html)
