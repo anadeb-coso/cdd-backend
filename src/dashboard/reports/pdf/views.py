@@ -6,7 +6,7 @@ from django.conf import settings
 from django.shortcuts import redirect
 
 from no_sql_client import NoSQLClient
-from cdd.my_librairies.pdf.loader import render_to_pdf
+# from cdd.my_librairies.pdf.loader import render_to_pdf
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds

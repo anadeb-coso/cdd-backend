@@ -258,188 +258,190 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
         # Iterate every administrative level assigned to the facilitator
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+            if administrative_level.get('is_headquarters_village'):
+                # Get phase
+                new_phase = phase[0].copy()
+                del new_phase['_id']
+                del new_phase['_rev']
+                new_phase['administrative_level_id'] = administrative_level['id']
+                new_phase['project_id'] = project[0]['_id']
+                new_phase['sql_id'] = task_model.phase.id #Add sql_id 
+                # fc_phase = facilitator_database.get_query_result(new_phase)[0]
 
-            # Get phase
-            new_phase = phase[0].copy()
-            del new_phase['_id']
-            del new_phase['_rev']
-            new_phase['administrative_level_id'] = administrative_level['id']
-            new_phase['project_id'] = project[0]['_id']
-            new_phase['sql_id'] = task_model.phase.id #Add sql_id 
-            # fc_phase = facilitator_database.get_query_result(new_phase)[0]
-
-            #Search phase include id
-            fc_phase = facilitator_database.get_query_result({
-                "administrative_level_id": administrative_level['id'],
-                "project_id": project[0]['_id'],
-                "type": new_phase['type'], "sql_id": task_model.phase.id
-            })[0]
-            if len(fc_phase) < 1: #if any phase find by "Search phase include id"
-                #Search phase include order
+                #Search phase include id
                 fc_phase = facilitator_database.get_query_result({
                     "administrative_level_id": administrative_level['id'],
                     "project_id": project[0]['_id'],
-                    "type": new_phase['type'], "order": new_phase['order']
+                    "type": new_phase['type'], "sql_id": task_model.phase.id
                 })[0]
+                if len(fc_phase) < 1: #if any phase find by "Search phase include id"
+                    #Search phase include order
+                    fc_phase = facilitator_database.get_query_result({
+                        "administrative_level_id": administrative_level['id'],
+                        "project_id": project[0]['_id'],
+                        "type": new_phase['type'], "order": new_phase['order']
+                    })[0]
 
 
-            # Check if the phase was found
-            if len(fc_phase) < 1:
-                # create the phase
-                nsc.create_document(facilitator_database, new_phase)
-                # Get phase
-                fc_phase = facilitator_database.get_query_result(new_phase)[0]
-            else:
-                #Update phase if it exists
-                _fc_phase = fc_phase[0].copy()
-                _fc_phase['name'] = task_model.phase.name
-                _fc_phase['description'] = task_model.phase.description
-                _fc_phase['order'] = task_model.phase.order
-                _fc_phase['sql_id'] = task_model.phase.id #update doc by adding sql_id 
+                # Check if the phase was found
+                if len(fc_phase) < 1:
+                    # create the phase
+                    nsc.create_document(facilitator_database, new_phase)
+                    # Get phase
+                    fc_phase = facilitator_database.get_query_result(new_phase)[0]
+                else:
+                    #Update phase if it exists
+                    _fc_phase = fc_phase[0].copy()
+                    _fc_phase['name'] = task_model.phase.name
+                    _fc_phase['description'] = task_model.phase.description
+                    _fc_phase['order'] = task_model.phase.order
+                    _fc_phase['sql_id'] = task_model.phase.id #update doc by adding sql_id 
 
-                nsc.update_cloudant_document(facilitator_database,  _fc_phase["_id"], _fc_phase) # Update phase for the facilitator
+                    nsc.update_cloudant_document(facilitator_database,  _fc_phase["_id"], _fc_phase) # Update phase for the facilitator
 
+                
             
-        
 
-            # Get or create  activity
-            new_activity = activity[0].copy()
-            del new_activity['_id']
-            del new_activity['_rev']
-            new_activity['administrative_level_id'] = administrative_level['id']
-            new_activity['project_id'] = project[0]['_id']
-            new_activity['phase_id'] = fc_phase[0]['_id']
-            new_activity['sql_id'] = task_model.activity.id #Add sql_id 
+                # Get or create  activity
+                new_activity = activity[0].copy()
+                del new_activity['_id']
+                del new_activity['_rev']
+                new_activity['administrative_level_id'] = administrative_level['id']
+                new_activity['project_id'] = project[0]['_id']
+                new_activity['phase_id'] = fc_phase[0]['_id']
+                new_activity['sql_id'] = task_model.activity.id #Add sql_id 
 
-            # fc_activity = facilitator_database.get_query_result(new_activity)[0]
+                # fc_activity = facilitator_database.get_query_result(new_activity)[0]
 
-            #Search activity include id
-            fc_activity = facilitator_database.get_query_result({
-                "administrative_level_id": administrative_level['id'],
-                "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
-                "type": new_activity['type'], "sql_id": task_model.activity.id
-            })[0]
-            if len(fc_activity) < 1: #if any activity find by "Search activity include id"
-                #Search activity include order
+                #Search activity include id
                 fc_activity = facilitator_database.get_query_result({
                     "administrative_level_id": administrative_level['id'],
                     "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
-                    "type": new_activity['type'], "order": new_activity['order']
+                    "type": new_activity['type'], "sql_id": task_model.activity.id
                 })[0]
+                if len(fc_activity) < 1: #if any activity find by "Search activity include id"
+                    #Search activity include order
+                    fc_activity = facilitator_database.get_query_result({
+                        "administrative_level_id": administrative_level['id'],
+                        "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
+                        "type": new_activity['type'], "order": new_activity['order']
+                    })[0]
 
-            # Check if the activity was found
-            if len(fc_activity) < 1:
-                # create the activity
-                nsc.create_document(facilitator_database, new_activity)
-                # Get activity
-                fc_activity = facilitator_database.get_query_result(new_activity)[0]
-            else:
-                #Update activity if it exists
-                _fc_activity = fc_activity[0].copy()
-                _fc_activity['name'] = task_model.activity.name
-                _fc_activity['description'] = task_model.activity.description
-                _fc_activity['order'] = task_model.activity.order
-                _fc_activity['total_tasks'] = task_model.activity.total_tasks
-                _fc_activity['sql_id'] = task_model.activity.id #update doc by adding sql_id 
-                
-                nsc.update_cloudant_document(facilitator_database,  _fc_activity["_id"], _fc_activity) # Update activity for the facilitator
+                # Check if the activity was found
+                if len(fc_activity) < 1:
+                    # create the activity
+                    nsc.create_document(facilitator_database, new_activity)
+                    # Get activity
+                    fc_activity = facilitator_database.get_query_result(new_activity)[0]
+                else:
+                    #Update activity if it exists
+                    _fc_activity = fc_activity[0].copy()
+                    _fc_activity['name'] = task_model.activity.name
+                    _fc_activity['description'] = task_model.activity.description
+                    _fc_activity['order'] = task_model.activity.order
+                    _fc_activity['total_tasks'] = task_model.activity.total_tasks
+                    _fc_activity['sql_id'] = task_model.activity.id #update doc by adding sql_id 
+                    
+                    nsc.update_cloudant_document(facilitator_database,  _fc_activity["_id"], _fc_activity) # Update activity for the facilitator
 
-            # Get or create  task
-            new_task = task[0].copy()
-            del new_task['_id']
-            del new_task['_rev']
-            new_task['administrative_level_id'] = administrative_level['id']
-            new_task['administrative_level_name'] = administrative_level['name']
-            new_task['project_id'] = project[0]['_id']
-            new_task['phase_id'] = fc_phase[0]['_id']
-            new_task['activity_id'] = fc_activity[0]['_id']
-            new_task['sql_id'] = task_model.id #Add sql_id 
+                # Get or create  task
+                new_task = task[0].copy()
+                del new_task['_id']
+                del new_task['_rev']
+                new_task['administrative_level_id'] = administrative_level['id']
+                new_task['administrative_level_name'] = administrative_level['name']
+                new_task['project_id'] = project[0]['_id']
+                new_task['phase_id'] = fc_phase[0]['_id']
+                new_task['activity_id'] = fc_activity[0]['_id']
+                new_task['sql_id'] = task_model.id #Add sql_id 
 
-            # fc_task = facilitator_database.get_query_result(new_task)[0]
+                # fc_task = facilitator_database.get_query_result(new_task)[0]
 
-            #Search task include id
-            fc_task = facilitator_database.get_query_result({
-                "administrative_level_id": administrative_level['id'],
-                "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
-                "activity_id": fc_activity[0]['_id'],
-                "type": new_task['type'], "sql_id": task_model.id
-            })[0]
-            if len(fc_task) < 1: #if any task find by "Search task include id"
-                 #Search task include order
+                #Search task include id
                 fc_task = facilitator_database.get_query_result({
                     "administrative_level_id": administrative_level['id'],
                     "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
                     "activity_id": fc_activity[0]['_id'],
-                    "type": new_task['type'], "order": new_task['order']
+                    "type": new_task['type'], "sql_id": task_model.id
                 })[0]
+                if len(fc_task) < 1: #if any task find by "Search task include id"
+                    #Search task include order
+                    fc_task = facilitator_database.get_query_result({
+                        "administrative_level_id": administrative_level['id'],
+                        "project_id": project[0]['_id'], "phase_id": fc_phase[0]['_id'],
+                        "activity_id": fc_activity[0]['_id'],
+                        "type": new_task['type'], "order": new_task['order']
+                    })[0]
 
-            canton_sql_id = None
-            try:
-                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
-                canton_sql_id = str(administrativelevel_obj.parent.id)
-            except Exception as e:
-                print()
-                print(new_task.get('name'), ', ', administrative_level.get('name'),":", e)
-                print()
+                canton_sql_id = None
+                try:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                    canton_sql_id = str(administrativelevel_obj.parent.id)
+                except Exception as e:
+                    print()
+                    print(new_task.get('name'), ', ', administrative_level.get('name'),":", e)
+                    print()
 
 
-            # Check if the task was found
-            if len(fc_task) < 1:
-                # create the task
-                new_task['completed_date'] = None #Add completed_date 
-                new_task['last_updated'] = None #Add last_updated 
+                # Check if the task was found
+                if len(fc_task) < 1:
+                    # create the task
+                    new_task['completed_date'] = None #Add completed_date 
+                    new_task['last_updated'] = None #Add last_updated 
 
-                if canton_sql_id:
-                    new_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
+                    if canton_sql_id:
+                        new_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
 
-                nsc.create_document(facilitator_database, new_task)
-                # Get activity
-                fc_task = facilitator_database.get_query_result(new_task)[0]
-                print(fc_task)
-            else:
-                #Update task if it exists
-                _fc_task = fc_task[0].copy()
-                _fc_task['name'] = task_model.name
-                _fc_task['description'] = task_model.description
-                _fc_task['phase_name'] = task_model.phase.name
-                _fc_task['activity_name'] = task_model.activity.name
-                _fc_task['administrative_level_name'] = administrative_level['name']
-                if task_model.form:
-                    _fc_task['form'] = task_model.form
-                elif new_task.get("form"):
+                    nsc.create_document(facilitator_database, new_task)
+                    # Get activity
+                    fc_task = facilitator_database.get_query_result(new_task)[0]
+                    print(fc_task)
+                else:
+                    #Update task if it exists
+                    _fc_task = fc_task[0].copy()
+                    _fc_task['name'] = task_model.name
+                    _fc_task['description'] = task_model.description
+                    _fc_task['phase_name'] = task_model.phase.name
+                    _fc_task['activity_name'] = task_model.activity.name
+                    _fc_task['administrative_level_name'] = administrative_level['name']
+                    # if task_model.form:
+                    #     _fc_task['form'] = task_model.form
+                    # elif new_task.get("form"):
+                    #     _fc_task['form'] = new_task.get("form")
                     _fc_task['form'] = new_task.get("form")
-                _fc_task['attachments'] = new_task.get("attachments")
-                _fc_task['order'] = task_model.order
-                _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
-                _fc_task['support_attachments'] = new_task.get("support_attachments")
-                
-                #Start management of the dates of the last update and completed
 
-                datetime_now = datetime.now()
-                datetime_str = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
-                
-                if not _fc_task.get('last_updated'):
-                    if _fc_task.get('completed'):
-                        _fc_task['last_updated'] = datetime_str #update doc by adding last_updated 
-                    else:
-                        _fc_task['last_updated'] = "0000-00-00 00:00:00" #update doc by adding last_updated 
-                
-                if not _fc_task.get('completed_date'):
-                    if _fc_task.get('completed'):
-                        _fc_task['completed_date'] = datetime_str #update doc by adding completed_date 
-                    else:
-                        _fc_task['completed_date'] = "0000-00-00 00:00:00" #update doc by adding completed_date 
-                
-                #End management of the dates of the last update and completed
+                    _fc_task['attachments'] = new_task.get("attachments")
+                    _fc_task['order'] = task_model.order
+                    _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
+                    _fc_task['support_attachments'] = new_task.get("support_attachments")
+                    
+                    #Start management of the dates of the last update and completed
 
-                
-                if canton_sql_id:
-                    _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
+                    datetime_now = datetime.now()
+                    datetime_str = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
+                    
+                    if not _fc_task.get('last_updated'):
+                        if _fc_task.get('completed'):
+                            _fc_task['last_updated'] = datetime_str #update doc by adding last_updated 
+                        else:
+                            _fc_task['last_updated'] = "0000-00-00 00:00:00" #update doc by adding last_updated 
+                    
+                    if not _fc_task.get('completed_date'):
+                        if _fc_task.get('completed'):
+                            _fc_task['completed_date'] = datetime_str #update doc by adding completed_date 
+                        else:
+                            _fc_task['completed_date'] = "0000-00-00 00:00:00" #update doc by adding completed_date 
+                    
+                    #End management of the dates of the last update and completed
 
-                nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
-                    {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
-                print(_fc_task)
-            print(administrative_level)
+                    
+                    if canton_sql_id:
+                        _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
+
+                    nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
+                        {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
+                    print(_fc_task)
+                print(administrative_level)
 
 
 def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
@@ -724,7 +726,7 @@ def clear_facilitator_database(develop_mode=False, training_mode=False):
         for project in projects:
             nsc.delete_document(nsc_database, project["_id"])
 
-def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, administrativelevels_ids=[]):
+def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, administrativelevels_ids=[], to_delete=True):
     facilitators = Facilitator.objects.filter(no_sql_db_name=no_sql_db) 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -758,10 +760,11 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
                 _administrative_levels.append(elt)
                 
         print(_administrative_levels)
-        doc = {
-            "administrative_levels": _administrative_levels
-        }
-        nsc.update_doc(nsc_database, facilitator_doc['_id'], doc)
+        if to_delete:
+            doc = {
+                "administrative_levels": _administrative_levels
+            }
+            nsc.update_doc(nsc_database, facilitator_doc['_id'], doc)
 
 
 
@@ -781,7 +784,8 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
         )[:][0]
 
         geographical_units = []
-        for administrativelevel in doc_facilitator['administrative_levels']:
+        for i_range in range(len(doc_facilitator['administrative_levels'])):
+            administrativelevel = doc_facilitator['administrative_levels'][i_range]
             try:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrativelevel['id']))
                 if administrativelevel_obj.geographical_unit:
@@ -820,6 +824,7 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
                                         {
                                             "sql_id": str(administrativelevel_obj.cvd_id),
                                             "name": administrativelevel_obj.cvd.get_name(),
+                                            "village_cvd": administrativelevel_obj.cvd.headquarters_village.id if administrativelevel_obj.cvd.headquarters_village else None,
                                             "villages": [str(administrativelevel_obj.id)]
                                         }
                                     )
@@ -831,6 +836,9 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
                                         geographical_units[i].get('cvd_groups')[a]['villages'] = list(set(villages))
                                 
                             #End CVD
+                    if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == doc_facilitator['administrative_levels'][i_range]['id']:
+                        doc_facilitator['administrative_levels'][i_range]['is_headquarters_village'] = True
+                
                 else:
                     print("pass")
             
@@ -840,11 +848,13 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
                 print()
 
         doc_facilitator["geographical_units"] = geographical_units
+        doc_facilitator['total_number_of_tasks'] = Task.objects.all().count()
         
         nsc.update_cloudant_document(facilitator_database, doc_facilitator['_id'], doc_facilitator)
 
 
         print(geographical_units)
+        print(doc_facilitator['administrative_levels'])
         print()
         print()
 
@@ -949,7 +959,25 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_
     
 
 
+def clear_facilitators_documents_tasks_administrative_level_not_headquarters(develop_mode=False, training_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+    
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        doc_facilitator = facilitator_database.get_query_result(
+            {"type": "facilitator"}
+        )[:][0]
 
-
+        administrative_level_not_headquarters = []
+        for administrativelevel in doc_facilitator['administrative_levels']:
+            if not administrativelevel.get('is_headquarters_village'):
+                administrative_level_not_headquarters.append(administrativelevel['id'])
+        print(administrative_level_not_headquarters)
+        clear_facilitator_documents_tasks_by_administrativelevels(facilitator.no_sql_db_name, administrative_level_not_headquarters, False)
 
 
