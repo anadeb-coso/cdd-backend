@@ -737,21 +737,27 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
         facilitator_doc = nsc_database[nsc_database.get_query_result({"type": "facilitator"})[:][0]['_id']]
         administrative_levels = facilitator_doc["administrative_levels"]
         _administrative_levels = []
+        fc_docs = nsc_database.all_docs(include_docs=True)['rows']
         
         print(administrative_levels)
         for elt in administrative_levels:
             if elt['id'] in administrativelevels_ids:
                 adl_id = elt['id']
                 # for adl_id in administrativelevels_ids:
-                phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
-                for phase in phases:
-                    nsc.delete_document(nsc_database, phase["_id"])
-                activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
-                for activity in activities:
-                    nsc.delete_document(nsc_database, activity["_id"])
-                tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
-                for task in tasks:
-                    nsc.delete_document(nsc_database, task["_id"])
+        
+                for _doc in fc_docs:
+                    doc = _doc.get('doc')
+                    if doc.get('type') in ('task', 'activity', 'phase') and doc.get('administrative_level_id') == adl_id:
+                        nsc.delete_document(nsc_database, doc["_id"])
+                # phases = nsc_database.get_query_result({"type": "phase", "administrative_level_id": adl_id})
+                # for phase in phases:
+                #     nsc.delete_document(nsc_database, phase["_id"])
+                # activities = nsc_database.get_query_result({"type": "activity", "administrative_level_id": adl_id})
+                # for activity in activities:
+                #     nsc.delete_document(nsc_database, activity["_id"])
+                # tasks = nsc_database.get_query_result({"type": "task", "administrative_level_id": adl_id})
+                # for task in tasks:
+                #     nsc.delete_document(nsc_database, task["_id"])
 
                 # for i in range(len(administrative_levels)):
                 #     if administrative_levels[i]["id"] == adl_id:
