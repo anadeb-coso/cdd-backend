@@ -20,9 +20,13 @@ def get_cvds(facilitator):
                                 _in_list = True
                         if not _in_list:
                             villages.append(administrative_levels[_index])
+
+                            if administrative_levels[_index].get('is_headquarters_village'):
+                                elt['village'] = administrative_levels[_index]
+                                elt['village_id'] = administrative_levels[_index]['id']
                 
-                elt['village'] = villages[0] if len(villages) != 0 else None
-                elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
+                # elt['village'] = villages[0] if len(villages) != 0 else None
+                # elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
                 
                 elt['villages'] = villages
                 elt['unit'] = element['name']
