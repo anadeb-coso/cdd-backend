@@ -1,0 +1,58 @@
+{% load bootstrap4 static i18n %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
+    </div>
+    {% for field in form %}
+        {% if forloop.counter <= 3 %}
+        <div class="col-4">
+            {% bootstrap_field field %}
+        </div>
+        {% else %}
+        <div class="col-2">
+            {% bootstrap_field field %}
+        </div>
+        {% endif %}
+    {% endfor %}
+
+</div>
+
+<script type="text/javascript">
+    
+    $("#id_phase").select2({
+        placeholder: "{% translate 'Phase' %}",
+        allowClear: true,
+    });
+    $("#id_activity").select2({
+        placeholder: "{% translate 'Activity' %}",
+        allowClear: true,
+    });
+    $("#id_task").select2({
+        placeholder: "{% translate 'Task' %}",
+        allowClear: true,
+    });
+    $("#id_region").select2({
+        placeholder: "{% translate 'Region' %}",
+        allowClear: true
+    });
+    $("#id_prefecture").select2({
+        placeholder: "{% translate 'Prefecture' %}",
+        allowClear: true,
+    });
+    $("#id_commune").select2({
+        placeholder: "{% translate 'Commune' %}",
+        allowClear: true,
+    });
+    $("#id_canton").select2({
+        placeholder: "{% translate 'Canton' %}",
+        allowClear: true
+    });
+    $("#id_village").select2({
+        placeholder: "{% translate 'Village' %}",
+        allowClear: true
+    });
+    
+    $('.select2-selection__arrow').append(
+        '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+    
+</script>

@@ -10,4 +10,5 @@ urlpatterns = [
     path('process-manager/', include('dashboard.process_manager.urls')),
     path('reports/', include('dashboard.reports.urls')),
     path('funnels/', include('dashboard.funnel.urls')),
+    path('statistics/', include('dashboard.statistics.urls')),
 ]

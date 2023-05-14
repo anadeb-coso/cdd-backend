@@ -558,3 +558,15 @@ msgstr "Pourcentage total"
 #: .\dashboard\templates\layouts\sidebar.html:30
 msgid "Funnel"
 msgstr "Entonnoir"
+
+#: .\dashboard\templates\layouts\sidebar.html:30
+msgid "Statistic"
+msgstr "Statistique"
+
+#: .\dashboard\templates\layouts\sidebar.html:30
+msgid "Statistics"
+msgstr "Statistiques"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Link generated. Click to generate the EXCEL"
+msgstr "Lien généré. Cliquez pour générer l'EXCEL"

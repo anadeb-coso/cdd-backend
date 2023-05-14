@@ -1,0 +1,273 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+{% block extracss %}
+    <style>
+        
+
+    </style>
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card transparent">
+                <div class="card-header">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="overlay" id="spin">
+                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                            </div>
+                            <div class="card-body">
+                            
+                                <div class="clearfix"></div>
+                                <div class="row facilitators-filter">
+                                    <div class="col-2">
+                                        {% bootstrap_field form.region show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.prefecture show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.commune show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.canton show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        {% bootstrap_field form.village show_label=False %}
+                                    </div>
+                                    <div class="col-2">
+                                        <a class="btn fs12 text-bold-family text-primary pull-right p-0" style="margin-top: 8px;"
+                                        id="clear_all_filters">
+                                            {% translate "Clear all filters" %}
+                                        </a>
+                                    </div>
+                                </div>
+                                        
+                                <fieldset>
+                                    {% comment %} <legend  class="text-primary text-bold">{% translate "Select dates" %}</legend> {% endcomment %}
+
+                                    <div class="row">
+
+                                        <div class="col-5">
+                                            {% bootstrap_field form_f.facilitator %}
+                                        </div>
+
+                                        {% comment %} <div class="col-1">
+                                            <div class="form-group">
+                                                <label for="id_in_details">{% translate "Details" %}</label>
+                                                <input type="checkbox" name="in_details" class="form-control" 
+                                                    placeholder="{% translate 'End' %}" id="id_in_details" />
+                                            </div>
+                                        </div> {% endcomment %}
+
+                                        <div class="col-2">
+                                            <div class="form-group">
+                                                <input type="button" name="generate" class="btn btn-primary" 
+                                                    style="margin-top: 25px;"
+                                                    value="{% translate 'Generate' %}" required id="id_generate" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </fieldset>
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+               
+            </div>
+
+
+
+
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <div id="pdf-display">
+                        {% comment %} <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe> {% endcomment %}
+                    </div>
+                </div>
+                <div class="overlay" id="spin-pdf">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+
+<input type="hidden" name="type_field" id="id_type_field" value="" />
+
+{% endblock %}
+
+
+
+
+
+{% block javascript %}
+    {{ block.super }}
+
+
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script type="text/javascript">
+        let ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"]
+        var type_field = "";
+        let spin = $('#spin');
+        let administrative_level = $('#id_administrative_level');
+        let id_region = $('#id_region');
+        let id_prefecture = $('#id_prefecture');
+        let id_commune = $('#id_commune');
+        let id_canton = $('#id_canton');
+        let id_village = $('#id_village');
+        let spin_pdf = $('#spin-pdf');
+
+
+
+        function loadFacilitators(type_field="") {
+            if($("#id_"+type_field).val() || type_field == "all"){  
+                spin.show();
+                $(".facilitators-filter select").attr('disabled', true);
+                $.ajax({
+                    type: 'GET',
+                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                    data: {
+                        parent_id: $("#id_"+type_field).val()
+                    },
+                    success: function (data) {
+                        if(type_field == "region"){
+                            set_datas_administrative_level(id_prefecture, data.prefectures);
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "prefecture"){
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "commune"){
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        }else if(type_field == "canton"){
+                            set_datas_administrative_level(id_village, data.villages);
+                        }
+                        
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                        $(".facilitators-filter select").attr('disabled', false);
+                    }
+                }).done(function () {
+                        spin.hide();
+                        $(".facilitators-filter select").attr('disabled', false);
+                    }
+                );
+
+            }
+            
+
+
+
+
+            
+        }
+
+        loadFacilitators("all");
+
+
+        $('.facilitators-filter select').on('change', function () {
+            type_field = "";
+            if($(this).attr('id') && $(this).val()){
+                type_field = $(this).attr('id').split('_')[1];
+                $('#id_type_field').val(type_field);
+            }
+            loadFacilitators(type_field);
+            $('#pdf-display').html(``);
+        });
+
+        $("#clear_all_filters").on("click", function () {
+            $('.facilitators-filter input').val('');
+            $('.facilitators-filter select').val(null).trigger('change.select2');
+            loadFacilitators("all");
+        });
+
+
+        $('fieldset select').on('change', function () {
+            $('#pdf-display').html(``);
+        });
+        $('fieldset input').on('change', function () {
+            $('#pdf-display').html(``);
+        });
+
+
+        $("#id_generate").click(function(event){
+            event.preventDefault();
+            let val_facilitator = $("#id_facilitator").val();
+
+            spin_pdf.show();
+            let href = "";
+            if(val_facilitator){
+                href = `{% url 'dashboard:statistics:app_excel_statistics_vy_facilitator' '_var_' %}`;
+                href = href.replace('_var_', val_facilitator);
+            }else{
+                href = `{% url 'dashboard:statistics:app_excel_statistics' %}`;
+            }
+            
+            href += (`?id_region=` + id_region.val() +
+            `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
+            `&id_village=` + id_village.val() + `&type_field=` + $('#id_type_field').val() + 
+            `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}");
+            // + 
+            //`&id_in_details=`+ (id_in_details.checked ? 1 : 0));
+            
+            
+            $('#pdf-display').html(`
+            <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the EXCEL' %}</a>
+            `);
+            spin_pdf.hide();
+        
+            
+        });
+        spin_pdf.hide();
+    </script>
+    
+
+
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_region").select2({
+            placeholder: "{% translate 'Region' %}",
+            allowClear: true
+        });
+        $("#id_prefecture").select2({
+            placeholder: "{% translate 'Prefecture' %}",
+            allowClear: true,
+        });
+        $("#id_commune").select2({
+            placeholder: "{% translate 'Commune' %}",
+            allowClear: true,
+        });
+         $("#id_canton").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true,
+        });
+         $("#id_village").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true,
+        });
+
+         $("#id_facilitator").select2({
+            placeholder: "{% translate 'Facilitator' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+            
+    </script>
+{% endblock select2 %}

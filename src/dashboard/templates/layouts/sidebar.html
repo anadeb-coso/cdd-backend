@@ -61,6 +61,18 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
+                    <a href="{% url 'dashboard:statistics:statistic' %}"
+                       class="nav-link {% if active_level1 == 'statistics' %}active{% endif %}">
+                        <i class="nav-icon fa fa-file-pdf-o"></i>
+                        <p>{% translate "Statistics" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
                     <a href="{% url 'dashboard:funnel:funnels' %}"
                        class="nav-link {% if active_level1 == 'funnels' %}active{% endif %}">
                         <i class="nav-icon fa fa-square"></i>

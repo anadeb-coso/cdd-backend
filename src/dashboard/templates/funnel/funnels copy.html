@@ -1,0 +1,175 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+{% block extracss %}
+
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card transparent">
+                <div class="card-header">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
+                                    </div>
+                                    {% for field in form %}
+                                        {% if forloop.counter <= 3 %}
+                                        <div class="col-4">
+                                            {% bootstrap_field field %}
+                                        </div>
+                                        {% else %}
+                                        <div class="col-2">
+                                            {% bootstrap_field field %}
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="overlay-wrapper">
+                        <div class="row">
+                        
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body" id="funnels" >
+
+                                        
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overlay z-index1000" id="spin">
+                            <i class="fas fa-10x fa-sync-alt fa-spin">
+                            </i>
+                        </div>
+                        
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
+    <script>
+    
+    </script>
+
+
+{% endblock %}
+{% block select2 %}
+    <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
+    <script type="text/javascript">
+        let spin = $('#spin');
+        spin.hide();
+
+        let funnels = $("#funnels");
+        {% for field in list_fields %}
+            $(document).on("change", ("#id_"+"{{ field }}"), function (event) {
+                
+                if(this.value){
+                    spin.show();
+
+                    $.ajax({
+                        type: 'GET',
+                        url: `{% url 'dashboard:funnel:get_funnels_view' %}`,
+                        data: {
+                            type: "{{ field }}",
+                            sql_id: this.value
+                        },
+                        success: function (data) {
+                            funnels.html(data);
+                            spin.hide();
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                            spin.hide();
+                        }
+                    });
+                }else{
+                    funnels.html('');
+                }
+                
+            });
+
+
+        {% endfor %}
+
+
+
+
+
+
+
+
+        
+        $("#id_phase").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+        });
+        $("#id_activity").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+        $("#id_task").select2({
+            placeholder: "{% translate 'Task' %}",
+            allowClear: true,
+        });
+        $("#id_region").select2({
+            placeholder: "{% translate 'Region' %}",
+            allowClear: true
+        });
+        $("#id_prefecture").select2({
+            placeholder: "{% translate 'Prefecture' %}",
+            allowClear: true,
+        });
+        $("#id_commune").select2({
+            placeholder: "{% translate 'Commune' %}",
+            allowClear: true,
+        });
+        $("#id_canton").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true
+        });
+        $("#id_village").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true
+        });
+        
+        {% comment %} $('b[role="presentation"]').hide(); {% endcomment %}
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+        
+
+        $.ajax({
+            type: 'GET',
+            url: `{% url 'dashboard:funnel:get_funnels_view' %}`,
+            data: {
+                type: null,
+                sql_id: null
+            },
+            success: function (data) {
+                funnels.html(data);
+                spin.hide();
+            },
+            error: function (data) {
+                alert(error_server_message + "Error " + data.status);
+                spin.hide();
+            }
+        });
+
+
+    </script>
+{% endblock select2 %}

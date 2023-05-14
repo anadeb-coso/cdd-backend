@@ -1,0 +1,49 @@
+{% load static i18n custom_tags %}
+
+{% for key, value in funnels.data.items %}
+<div class="card">
+    <div class="card-body" >
+        <div class="row">
+            <div class="col-12">
+                <h6><b>{{ forloop.counter }}</b> &nbsp; &nbsp; {{ key }}</h6>
+                {% for k, v in value.items %}
+                    {% if v.id %}
+                        <div class="row">
+                            <div class="col-2">
+                                <p>{{ k }}</p>
+                            </div>
+                            <div class="col-8">
+                                <div class="progress">
+                                    {% with percent=v|get:"percentage_tasks_completed" %}
+                                    <div class="progress-bar" role="progressbar" style='width: {{ percent|replace_comma_by_dot }}%' 
+                                        aria-valuenow='{{ percent }}|replace_comma_by_dot' aria-valuemin="0" aria-valuemax="100"></div>
+                                    {% endwith %}
+                                </div>
+                            </div>
+                            <div class="col-1">
+                                <p>{{ v|get:"nbr_tasks_completed" }}/{{ v|get:"nbr_tasks" }}</p>
+                            </div>
+                            <div class="col-1">
+                                <p>{% with percent=v|get:"percentage_tasks_completed" %}{{ percent|get_to_percent_str }}{% endwith %}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                <div class="row">
+                    <div class="col-10">
+                        <b style="float: right;">{% translate 'Total' %}</b>
+                    </div>
+                    <div class="col-1">
+                        <p>{{ value|get:"nbr_tasks_completed" }}/{{ value|get:"nbr_tasks" }}</p>
+                    </div>
+                    <div class="col-1">
+                        <p>{% with percent=value|get:"percentage_tasks_completed" %}{{ percent|get_to_percent_str }}{% endwith %}</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endfor %}
