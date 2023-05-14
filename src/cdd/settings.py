@@ -103,7 +103,8 @@ WSGI_APPLICATION = 'cdd.wsgi.application'
 EXTERNAL_DATABASE_NAME = 'mis'
 
 DATABASES = {
-    'default': env.db()
+    'default': env.db(),
+    EXTERNAL_DATABASE_NAME: env.db('LEGACY_DATABASE_URL')
 }
 
 
