@@ -5,7 +5,7 @@ from django.db.models import Q
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity
-
+from .functions import get_cascade_phase_activity_task_by_their_id
 
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -74,39 +74,44 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         activity_id = int(request.GET.get('activity_name') if request.GET.get('activity_name') else 0)
         task_id = int(request.GET.get('task_name') if request.GET.get('task_name') else 0)
 
-        nsc = NoSQLClient()
+        # nsc = NoSQLClient()
         
         
-        if activity_id and phase_id:
-            phase = Phase.objects.get(id=phase_id)
-            activity = Activity.objects.get(id=activity_id)
-            phases = Phase.objects.all().order_by("order")
-            activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
-            tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
-        elif phase_id:
-            phase = Phase.objects.get(id=phase_id)
-            phases = Phase.objects.all().order_by("order")
-            activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
-            tasks = phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
-        elif activity_id:
-            activity = Activity.objects.get(id=activity_id)
-            phases = Phase.objects.all().order_by("order")
-            activies = Activity.objects.all().order_by("phase__order", "order")
-            tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
-        else:
-            phases = Phase.objects.all().order_by("order")
-            activies = Activity.objects.all().order_by("phase__order", "order")
-            tasks = Task.objects.all().order_by("phase__order", "activity__order", "order")
+        # if activity_id and phase_id:
+        #     phase = Phase.objects.get(id=phase_id)
+        #     activity = Activity.objects.get(id=activity_id)
+        #     phases = Phase.objects.all().order_by("order")
+        #     activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
+        #     tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
+        # elif phase_id:
+        #     phase = Phase.objects.get(id=phase_id)
+        #     phases = Phase.objects.all().order_by("order")
+        #     activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
+        #     tasks = phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
+        # elif activity_id:
+        #     activity = Activity.objects.get(id=activity_id)
+        #     phases = Phase.objects.all().order_by("order")
+        #     activies = Activity.objects.all().order_by("phase__order", "order")
+        #     tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
+        # else:
+        #     phases = Phase.objects.all().order_by("order")
+        #     activies = Activity.objects.all().order_by("phase__order", "order")
+        #     tasks = Task.objects.all().order_by("phase__order", "activity__order", "order")
 
-        datas = {'phases': [], 'activities': [], 'tasks': []}
+        # datas = {'phases': [], 'activities': [], 'tasks': []}
 
-        for p in phases:
-            datas['phases'].append((p.id, p.name))
+        # for p in phases:
+        #     datas['phases'].append((p.id, p.name))
         
-        for a in activies:
-            datas['activities'].append((a.id, a.name))
+        # for a in activies:
+        #     datas['activities'].append((a.id, a.name))
         
-        for t in tasks:
-            datas['tasks'].append((t.id, t.name))
+        # for t in tasks:
+        #     datas['tasks'].append((t.id, t.name))
 
-        return self.render_to_json_response(datas, safe=False)
+        # return self.render_to_json_response(datas, safe=False)
+
+        return self.render_to_json_response(
+            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id), 
+            safe=False
+        )

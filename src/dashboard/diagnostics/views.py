@@ -215,42 +215,45 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                         _village = cvd['village']
                         nbr_villages += len(cvd['villages'])
                         ad_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(_village['id']))
-                        _region = get_administrative_level_under_json(
-                            ad_obj.parent.parent.parent.parent
-                        )
-                        nbr_cvds += 1
-                        for _task in docs:
-                            _task = _task.get('doc')
-                            if _task.get('type') == 'task' and _task.get('sql_id') and cdd_functions.exists_id(tasks, int(_task.get('sql_id'))) and str(_village['id']) == str(_task['administrative_level_id']):
-                            
-                                if not already_count_facilitator:
-                                    nbr_facilitators += 1
-                                    already_count_facilitator = True
-
+                        print(ad_obj, _village['name'], ad_obj.id, _village['id'], f.no_sql_db_name)
+                        try:
+                            _region = get_administrative_level_under_json(
+                                ad_obj.parent.parent.parent.parent
+                            )
+                            nbr_cvds += 1
+                            for _task in docs:
+                                _task = _task.get('doc')
+                                if _task.get('type') == 'task' and _task.get('sql_id') and cdd_functions.exists_id(tasks, int(_task.get('sql_id'))) and str(_village['id']) == str(_task['administrative_level_id']):
                                 
-                                if _region:
-                                    _region_name = _region['name']
-                                    if regions.get(_region_name):
+                                    if not already_count_facilitator:
+                                        nbr_facilitators += 1
+                                        already_count_facilitator = True
+
+                                    
+                                    if _region:
+                                        _region_name = _region['name']
+                                        if regions.get(_region_name):
+                                            if _task['completed']:
+                                                regions[_region_name]["nbr_tasks_completed"] += 1
+                                            regions[_region_name]["nbr_tasks"] += 1
+                                        else:
+                                            regions[_region_name] = {
+                                                "nbr_tasks": 1,
+                                                "nbr_tasks_completed": 1 if _task['completed'] else 0,
+                                                "percentage_tasks_completed": 0,
+                                                "nbr_cvds": 0,
+                                                "nbr_villages": 0
+                                            }
                                         if _task['completed']:
-                                            regions[_region_name]["nbr_tasks_completed"] += 1
-                                        regions[_region_name]["nbr_tasks"] += 1
-                                    else:
-                                        regions[_region_name] = {
-                                            "nbr_tasks": 1,
-                                            "nbr_tasks_completed": 1 if _task['completed'] else 0,
-                                            "percentage_tasks_completed": 0,
-                                            "nbr_cvds": 0,
-                                            "nbr_villages": 0
-                                        }
-                                    if _task['completed']:
-                                        nbr_tasks_completed += 1
-                                    nbr_tasks += 1
-                        
-                        if _region:
-                            _region_name = _region['name']
-                            regions[_region_name]["nbr_villages"] += len(cvd['villages'])
-                            regions[_region_name]["nbr_cvds"] += 1
+                                            nbr_tasks_completed += 1
+                                        nbr_tasks += 1
                             
+                            if _region:
+                                _region_name = _region['name']
+                                regions[_region_name]["nbr_villages"] += len(cvd['villages'])
+                                regions[_region_name]["nbr_cvds"] += 1
+                        except Exception as exc:
+                            print(exc)
             # elif _type == "task":
             #     for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
             #         already_count_facilitator = False

@@ -10,7 +10,7 @@
                 <div class="card-header">
                     <div class="col-md-12">
                         <div class="card">
-                            <div class="card-body">
+                            <div class="card-body" id="filters">
                                 <div class="row">
                                     <div class="col-12">
                                         <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
@@ -74,18 +74,72 @@
     <script type="text/javascript">
         let spin = $('#spin');
         spin.hide();
+        let val_p_a_t = null;
+        let val_ad_level = null;
+        let type_p_a_t = null;
+        let type_ad_level = null;
 
         let funnels = $("#funnels");
         {% for field in list_fields %}
             $(document).on("change", ("#id_"+"{{ field }}"), function (event) {
-                
+                if(["phase", "activity", "task"].includes("{{ field }}")){
+                    type_p_a_t = "{{ field }}";
+                    if("{{ field }}" == "phase"){
+                        val_p_a_t = $('#id_phase').val();
+                    }else if("{{ field }}" == "activity"){
+                        val_p_a_t = $('#id_activity').val();
+                    }else if("{{ field }}" == "task"){
+                        val_p_a_t = $('#id_task').val();
+                    }else{
+                        val_p_a_t = null;
+                    }
+                }else if(["region", "prefecture", "commune", "canton", "village"].includes("{{ field }}")){
+                    type_ad_level = "{{ field }}";
+                    if("{{ field }}" == "region"){
+                        val_ad_level = $('#id_region').val();
+                    }else if("{{ field }}" == "prefecture"){
+                        val_ad_level = $('#id_prefecture').val();
+                    }else if("{{ field }}" == "commune"){
+                        val_ad_level = $('#id_commune').val();
+                    }else if("{{ field }}" == "canton"){
+                        val_ad_level = $('#id_canton').val();
+                    }else if("{{ field }}" == "village"){
+                        val_ad_level = $('#id_village').val();
+                    }else{
+                        val_ad_level = null;
+                    }
+                }
                 if(this.value){
                     spin.show();
 
                     $.ajax({
                         type: 'GET',
+                        url: `{% url 'dashboard:funnel:get_funnels_fields_view' %}`,
+                        data: {
+                            type_p_a_t: type_p_a_t,
+                            type_ad_level: type_ad_level,
+                            val_p_a_t: val_p_a_t,
+                            val_ad_level: val_ad_level,
+                            type: "{{ field }}",
+                            sql_id: this.value
+                        },
+                        success: function (data) {
+                            $("#filters").html(data);
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                        }
+                    });
+
+
+                    $.ajax({
+                        type: 'GET',
                         url: `{% url 'dashboard:funnel:get_funnels_view' %}`,
                         data: {
+                            type_p_a_t: type_p_a_t,
+                            type_ad_level: type_ad_level,
+                            val_p_a_t: val_p_a_t,
+                            val_ad_level: val_ad_level,
                             type: "{{ field }}",
                             sql_id: this.value
                         },

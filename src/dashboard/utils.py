@@ -988,3 +988,29 @@ def clear_facilitators_documents_tasks_administrative_level_not_headquarters(dev
         clear_facilitator_documents_tasks_by_administrativelevels(facilitator.no_sql_db_name, administrative_level_not_headquarters, False)
 
 
+def clear_facilitator_documents_tasks_not_sql_id():
+    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+    nsc = NoSQLClient()
+    count = 0
+    for facilitator in facilitators:
+        print()
+        print(facilitator)
+        nsc_database = nsc.get_db(facilitator.no_sql_db_name)
+        fc_docs = nsc_database.all_docs(include_docs=True)['rows']
+        
+
+        for _doc in fc_docs:
+            doc = _doc.get('doc')
+            if doc.get('type') == 'task':
+                try:
+                    sql_id = doc["sql_id"]
+                    task_order = doc["task_order"]
+                    last_updated = doc["last_updated"]
+                    canton_sql_id = doc["canton_sql_id"]
+                except Exception as exc:
+                    count += 1
+                    print(doc)
+                    nsc.delete_document(nsc_database, doc["_id"])
+    print() 
+    print(count)
+

@@ -8,7 +8,7 @@ from dashboard.mixins import PageMixin, AJAXRequestMixin, JSONResponseMixin
 from process_manager.models import Phase, AggregatedStatus, Activity, Task
 from administrativelevels.models import AdministrativeLevel
 from .functions import get_item_phase, get_region_id
-
+from .forms import CascadeForm
 
 class FunnelsView(PageMixin, LoginRequiredMixin, FormView):
     
@@ -35,6 +35,12 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
         _type = self.request.GET.get('type')
         type_header = _type
         sql_id = self.request.GET.get('sql_id')
+        
+        type_p_a_t = self.request.GET.get('type_p_a_t')
+        type_ad_level = self.request.GET.get('type_ad_level')
+        val_p_a_t = self.request.GET.get('val_p_a_t')
+        val_ad_level = self.request.GET.get('val_ad_level')
+
         if _type and not sql_id:
             raise Exception("The value of the element must be not null!!!")
         
@@ -62,6 +68,15 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
             status = AggregatedStatus.objects.filter(administrative_level_id=int(sql_id))
+            if val_p_a_t and type_p_a_t:
+                tasks = []
+                if type_p_a_t == "phase":
+                    tasks = Phase.objects.get(id=int(val_p_a_t)).task_set.get_queryset()
+                elif type_p_a_t == "activity":
+                    tasks = Activity.objects.get(id=int(val_p_a_t)).task_set.get_queryset()
+                else:
+                    tasks.append(Task.objects.get(id=int(val_p_a_t)))
+                status = status.filter(task_id__in=[o.id for o in tasks])
 
         elif _type in ["phase", "activity", "task"]:
             tasks = []
@@ -71,13 +86,17 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
                 tasks = Activity.objects.get(id=int(sql_id)).task_set.get_queryset()
             else:
                 tasks.append(Task.objects.get(id=int(sql_id)))
-                             
-            for t in tasks:
-                [status.append(o) for o in AggregatedStatus.objects.filter(task_id=t.id) if o.administrative_level_id in regions_id]
+
+            if val_ad_level:
+                for t in tasks:
+                    [status.append(o) for o in AggregatedStatus.objects.filter(task_id=t.id) if o.administrative_level_id == int(val_ad_level)]
+            else:
+                for t in tasks:
+                    [status.append(o) for o in AggregatedStatus.objects.filter(task_id=t.id) if o.administrative_level_id in regions_id]
         else:
             for r_id in regions_id:
                 [status.append(o) for o in AggregatedStatus.objects.filter(administrative_level_id=r_id)]
-        
+                
         # for key, value in dict_phases.items():
         #     if type(value) is dict:
         #         for k, v in value.items():
@@ -99,8 +118,6 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
                             dict_phases[_name][key]['nbr_tasks_completed'] += s.total_tasks_completed
                             dict_phases[_name][key]['nbr_tasks'] += s.total_tasks
                             break
-            
-
 
         for key, value in dict_phases.items():
             for k, v in value.items():
@@ -111,7 +128,7 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
                     dict_phases[key]['nbr_tasks'] += dict_phases[key][k]['nbr_tasks']
             dict_phases[key]['percentage_tasks_completed'] = float("%.2f" % ((dict_phases[key]['nbr_tasks_completed']/dict_phases[key]['nbr_tasks'])*100) if dict_phases[key]['nbr_tasks'] else 0)
 
-        print(dict_phases)
+
         if search_by_locality:
             return {
                 "type": type_header.title(),
@@ -122,3 +139,34 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
             "type": type_header,
             "data": dict_phases 
         }
+    
+
+
+class GetFunnelsFieldsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
+    template_name = 'funnel/filters.html'
+    context_object_name = 'form'
+
+    def get_queryset(self):
+        _type = self.request.GET.get('type')
+        sql_id = self.request.GET.get('sql_id')
+        
+        type_p_a_t = self.request.GET.get('type_p_a_t')
+        type_ad_level = self.request.GET.get('type_ad_level')
+        val_p_a_t = self.request.GET.get('val_p_a_t')
+        val_ad_level = self.request.GET.get('val_ad_level')
+
+        ad_id, phase_id, activity_id, task_id = None, None, None, None
+        if _type and not sql_id:
+            raise Exception("The value of the element must be not null!!!")
+        
+        if type_ad_level in ["region", "prefecture", "commune", "canton", "village"] and val_ad_level:
+            ad_id = int(val_ad_level)
+        if type_p_a_t in ["phase", "activity", "task"] and val_p_a_t:
+            if type_p_a_t == "phase":
+                phase_id = int(val_p_a_t)
+            elif type_p_a_t == "activity":
+                activity_id = int(val_p_a_t)
+            else:
+                task_id = int(val_p_a_t)
+        
+        return CascadeForm(ad_id, phase_id, activity_id, task_id)

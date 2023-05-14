@@ -521,12 +521,20 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         password = make_password(data['password1'], salt=None, hasher='default')
         facilitator = Facilitator(username=data['username'], password=password, active=True)
         facilitator.save(replicate_design=False)
+
+        _administrative_levels = []
+        for elt in data['administrative_levels']:
+            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
+            if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
+                elt['is_headquarters_village'] = True
+            _administrative_levels.append(elt)
+
         doc = {
             "name": data['name'],
             "email": data['email'],
             "phone": data['phone'],
             "sex": data['sex'],
-            "administrative_levels": data['administrative_levels'],
+            "administrative_levels": _administrative_levels,
             "type": "facilitator",
             "develop_mode": facilitator.develop_mode,
             "training_mode": facilitator.training_mode,
@@ -612,6 +620,10 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequir
         _administrative_levels = []
         for elt in data['administrative_levels']:
             exists = False
+            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
+            if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
+                elt['is_headquarters_village'] = True
+
             for _elt in _administrative_levels:
                 if _elt.get('id') == elt.get('id'):
                     exists = True

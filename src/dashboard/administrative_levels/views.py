@@ -5,7 +5,7 @@ from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from dashboard.utils import get_child_administrative_levels, get_parent_administrative_level
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
-from .functions import get_administrative_levels_under_json
+from .functions import get_administrative_levels_under_json, get_cascade_administrative_levels_by_administrative_level_id
 
 class GetChoicesForNextAdministrativeLevelView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -79,34 +79,39 @@ class GetChoicesForNextAdministrativeLevelAllView(AJAXRequestMixin, LoginRequire
         #     [datas["villages"].append(o) for o in get_child_administrative_levels(administrative_levels_db, c.get("administrative_id"))]
 
 
-        datas = {}
+        # datas = {}
 
-        _id = request.GET.get('parent_id')
-        if _id:
-            ad_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(_id))
+        # _id = request.GET.get('parent_id')
+        # if _id:
+        #     ad_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(_id))
 
-            ads = ad_obj.administrativelevel_set.get_queryset()
-            _type = ad_obj.type
-            datas = {
-                "prefectures": ads if _type == "Region" else [], 
-                "communes": ads if _type == "Prefecture" else [], 
-                "cantons": ads if _type == "Commune" else [], 
-                "villages": ads if _type == "Canton" else []
-            }
-            for p in datas["prefectures"]:
-                [datas["communes"].append(o) for o in p.administrativelevel_set.get_queryset()]
+        #     ads = ad_obj.administrativelevel_set.get_queryset()
+        #     _type = ad_obj.type
+        #     datas = {
+        #         "prefectures": ads if _type == "Region" else [], 
+        #         "communes": ads if _type == "Prefecture" else [], 
+        #         "cantons": ads if _type == "Commune" else [], 
+        #         "villages": ads if _type == "Canton" else []
+        #     }
+        #     for p in datas["prefectures"]:
+        #         [datas["communes"].append(o) for o in p.administrativelevel_set.get_queryset()]
 
-            for c in datas["communes"]:
-                [datas["cantons"].append(o) for o in c.administrativelevel_set.get_queryset()]
+        #     for c in datas["communes"]:
+        #         [datas["cantons"].append(o) for o in c.administrativelevel_set.get_queryset()]
             
-            for c in datas["cantons"]:
-                [datas["villages"].append(o) for o in c.administrativelevel_set.get_queryset()]
+        #     for c in datas["cantons"]:
+        #         [datas["villages"].append(o) for o in c.administrativelevel_set.get_queryset()]
 
-            datas["prefectures"] = get_administrative_levels_under_json(datas["prefectures"])
-            datas["communes"] = get_administrative_levels_under_json(datas["communes"])
-            datas["cantons"] = get_administrative_levels_under_json(datas["cantons"])
-            datas["villages"] = get_administrative_levels_under_json(datas["villages"])
+        #     datas["prefectures"] = get_administrative_levels_under_json(datas["prefectures"])
+        #     datas["communes"] = get_administrative_levels_under_json(datas["communes"])
+        #     datas["cantons"] = get_administrative_levels_under_json(datas["cantons"])
+        #     datas["villages"] = get_administrative_levels_under_json(datas["villages"])
 
-            return self.render_to_json_response(datas, safe=False)
+        #     return self.render_to_json_response(datas, safe=False)
     
-        return self.render_to_json_response(datas, safe=False)
+        # return self.render_to_json_response(datas, safe=False)
+
+        return self.render_to_json_response(
+            get_cascade_administrative_levels_by_administrative_level_id(request.GET.get('parent_id')), 
+            safe=False
+        )
