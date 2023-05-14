@@ -136,3 +136,12 @@ src/cdd/.env.production
 src/cdd/.env.develop
 
 *.env
+
+
+#media
+media/
+
+#Celery
+*.bak
+*.dat
+*.dir
