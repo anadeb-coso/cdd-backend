@@ -44,6 +44,18 @@ class NoSQLClient:
             print(exc)
             return {}
         return doc
+    
+    def update_doc_uncontrolled(self, db, id, doc_new: dict):
+        try:
+            doc = db.get(id)
+            for k, v in doc_new.items():
+                doc[k] = v
+            db[id] = doc
+            db[id].save()
+        except Exception as exc:
+            print(exc)
+            return {}
+        return doc
 
     def update_cloudant_document(self, db, doc_id, doc_new: dict, dict_of_list_values: dict = {}, attachments=[]):
         """

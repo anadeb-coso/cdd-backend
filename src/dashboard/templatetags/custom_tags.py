@@ -3,6 +3,7 @@ from django import template
 from django.utils.translation import gettext_lazy
 
 from dashboard.utils import structure_the_words as utils_structure_the_words
+from dashboard.functions import order_dict
 
 register = template.Library()
 
@@ -170,6 +171,7 @@ def structure_the_fields_labels(task):
                     else:
                         dict2 = {}
                         ii = 0
+                        value = order_dict(task.get('sql_id'), field, value)
                         for field5, value5 in value.items():
                             fields1 = fields_options.get(field).get('fields')
                             try:

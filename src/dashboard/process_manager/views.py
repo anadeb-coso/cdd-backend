@@ -1,6 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import generic
 from django.db.models import Q
+from datetime import datetime
+from django.utils.translation import gettext_lazy
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
@@ -115,3 +117,30 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
             get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id), 
             safe=False
         )
+
+
+class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def get(self, request, *args, **kwargs):
+        no_sql_db_name = request.GET.get('no_sql_db_name')
+        task_id = request.GET.get('task_id')
+        action_code = int(request.GET.get('action_code') if request.GET.get('action_code') else 0)
+        message = None
+        status = "ok"
+        try:
+            nsc = NoSQLClient()
+            db = nsc.get_db(no_sql_db_name)
+            task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+
+            datetime_now = datetime.now()
+            
+            nsc.update_doc_uncontrolled(db, task['_id'], {
+                "validated": bool(action_code),
+                "date_validated": f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}" if bool(action_code) else None
+                }
+            )
+            message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()
+        except Exception as exc:
+            message = gettext_lazy("An error has occurred...").__str__()
+            status = "error"
+
+        return self.render_to_json_response({"message": message, "status": status}, safe=False)

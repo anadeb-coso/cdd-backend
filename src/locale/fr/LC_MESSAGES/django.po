@@ -570,3 +570,19 @@ msgstr "Statistiques"
 #: .\dashboard\templates\report\pages\facilitators.html
 msgid "Link generated. Click to generate the EXCEL"
 msgstr "Lien généré. Cliquez pour générer l'EXCEL"
+
+#: .\dashboard\process_manager\views.py
+msgid "Task validated"
+msgstr "Tâche validée"
+
+#: .\dashboard\process_manager\views.py
+msgid "Task not validated"
+msgstr "Tâche non validée"
+
+#: .\dashboard\templates\facilitators\task_list.html
+msgid "Mark as invalidated"
+msgstr "Marquer comme invalidé"
+
+#: .\dashboard\templates\facilitators\task_list.html
+msgid "Mark as validated"
+msgstr "Marquer comme validé"

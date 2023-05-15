@@ -96,14 +96,14 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
                 
 
         file_path = ""
-        # try:
-        file_path = get_global_statistic_under_file_excel_or_csv(
-            facilitator_db_name=facilitator_db_name,
-            params={"type": _type, "id_administrativelevel": _id}
-        )
+        try:
+            file_path = get_global_statistic_under_file_excel_or_csv(
+                facilitator_db_name=facilitator_db_name,
+                params={"type": _type, "id_administrativelevel": _id}
+            )
 
-        # except Exception as exc:
-        #     messages.info(request, gettext_lazy("An error has occurred..."))
+        except Exception as exc:
+            messages.info(request, gettext_lazy("An error has occurred..."))
 
         if not file_path:
             return redirect('dashboard:facilitators:list')

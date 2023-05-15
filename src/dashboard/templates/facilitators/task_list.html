@@ -117,15 +117,25 @@
                     {% translate 'Completed on' %}:
                     {{ task.completed_date|default:'-' }}
                 </div>
-                <div class="badge-closed-at mt-1">
-                    {% if task.completed and task.attachments %}
+                <div class="badge-closed-at mt-1  text_{{ task|get:'_id' }}">
+                    {% comment %} {% if task.completed and task.attachments %}
                         <i class="fas fa-check success-color"></i>
                     {% elif task.completed and not task.attachments %}
                         <i class="fas fa-exclamation-triangle warning-color"></i>
                     {% else %}
                         <i class="fas fa-clock gray-color"></i>
                     {% endif %}
-                    {% translate 'Proof of completion' %}
+                    {% translate 'Proof of completion' %} {% endcomment %}
+                    {% if task.validated %}
+                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                    {% else %}
+                        {% if task.validated == False %}
+                            <i class="fas fa-times warning-color"></i> 
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle warning-color"></i> 
+                        {% endif %}
+                        {% translate 'Task not validated' %}
+                    {% endif %}
                 </div>
             </div>
             <div class="col-sm-2 text-right">
@@ -154,16 +164,34 @@
                     {{ task.name }} (CVD : <b>{{ task.administrative_level_name }}</b>)
                 </h5>
                 <div class="col-sm-2 text-right">
-                {% if task.completed %}
-                    <div class="status-badge badge-completed">
-                        {% translate 'Completed' %}
+                    {% if task.completed %}
+                        <div class="status-badge badge-completed">
+                            {% translate 'Completed' %}
+                        </div>
+                    {% else %}
+                        <div class="status-badge badge-pending">
+                            {% translate 'Pending' %}
+                        </div>
+                    {% endif %}
+
+                    <div class="modal_text_{{ task|get:'_id' }}" style="margin-top: 10px;">
+                        {% if task.validated %}
+                            <div class="status-badge success-color">
+                                <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                            </div>
+                        {% else %}
+                            <div class="status-badge warning-color">
+                                {% if task.validated == False %}
+                                    <i class="fas fa-times warning-color"></i> 
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle warning-color"></i> 
+                                {% endif %}
+                                {% translate 'Task not validated' %}
+                            </div>
+                        {% endif %}
                     </div>
-                {% else %}
-                    <div class="status-badge badge-pending">
-                        {% translate 'Pending' %}
-                    </div>
-                {% endif %}
-            </div>
+
+                </div>
 
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -349,6 +377,21 @@
                     {% endif %}
 
                 </div>
+                {% if task.completed %}
+                    <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
+                        name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
+                    <button type="button" name="invalidate_valide" class="btn btn-primary" 
+                        style="margin-top: 25px; width: 50%; margin: auto;" 
+                        required id="id_invalidate_valide_{{ task|get:'_id' }}">
+                        {% if task.validated %}
+                            {% translate 'Mark as invalidated' %}
+                        {% else %}
+                            {% translate 'Mark as validated' %}
+                        {% endif %}
+                    </button>
+                {% endif %}
+                
+                    
             </div>
 
 
@@ -393,5 +436,58 @@
     }catch(e){
         console.log(e);
     }
+
+    $(document).ready(function () {
+
+        $('button').click(function () {
+            if(this.id.includes("id_invalidate_valide_")){
+                let task__id = this.id.split("_")[this.id.split("_").length - 1];
+                let facilitator_db_name = "{{ facilitator_db_name }}";
+                let action_code = $(('#action_code_'+task__id)).val();
+                
+                $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:process_manager:validate_task_view' %}",
+                data: {
+                    no_sql_db_name: facilitator_db_name,
+                    task_id: task__id,
+                    action_code: action_code
+                },
+                success: function (response) {
+                    if(response.status == "ok"){
+                        if(action_code == "1" || action_code == 1){
+                            $(('#action_code_'+task__id)).val(0);
+                            $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as invalidated' %}`);
+                            $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
+                            $(('.modal_text_'+task__id)).html(`
+                                <div class="status-badge success-color">
+                                    <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                                </div>
+                            `);
+                        }else{
+                            $(('#action_code_'+task__id)).val(1);
+                            $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as validated' %}`);
+                            $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
+                            $(('.modal_text_'+task__id)).html(`
+                                <div class="status-badge warning-color">
+                                    <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
+                                </div>
+                            `);
+                        }
+                    }else{
+                        alert(response.message);
+                    }
+                    
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+            }
+        });
+
+    }); 
+
     
 </script>

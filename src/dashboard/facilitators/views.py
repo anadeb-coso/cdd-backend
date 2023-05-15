@@ -495,6 +495,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             context['nbr_villages'] += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
 
         context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
+        context['facilitator_db_name'] = self.facilitator_db_name
 
         return context
 
