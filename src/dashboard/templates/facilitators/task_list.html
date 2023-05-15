@@ -380,7 +380,7 @@
                 {% if task.completed %}
                     <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
                         name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
-                    <button type="button" name="invalidate_valide" class="btn btn-primary" 
+                    <button type="button" name="invalidate_valide" class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %}" 
                         style="margin-top: 25px; width: 50%; margin: auto;" 
                         required id="id_invalidate_valide_{{ task|get:'_id' }}">
                         {% if task.validated %}
@@ -458,6 +458,8 @@
                         if(action_code == "1" || action_code == 1){
                             $(('#action_code_'+task__id)).val(0);
                             $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as invalidated' %}`);
+                            $(("#id_invalidate_valide_"+task__id)).removeClass("btn-primary");
+                            $(("#id_invalidate_valide_"+task__id)).addClass("btn-warning");
                             $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
                             $(('.modal_text_'+task__id)).html(`
                                 <div class="status-badge success-color">
@@ -467,6 +469,8 @@
                         }else{
                             $(('#action_code_'+task__id)).val(1);
                             $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as validated' %}`);
+                            $(("#id_invalidate_valide_"+task__id)).removeClass("btn-warning");
+                            $(("#id_invalidate_valide_"+task__id)).addClass("btn-primary");
                             $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
                             $(('.modal_text_'+task__id)).html(`
                                 <div class="status-badge warning-color">
