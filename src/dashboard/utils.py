@@ -10,6 +10,7 @@ from process_manager.models import Task, Phase, Activity, Project
 from cloudant.document import Document
 
 from administrativelevels import models as administrativelevels_models
+from dashboard.facilitators.functions import get_cvds
 
 def structure_the_words(word):
     return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
@@ -1018,3 +1019,35 @@ def clear_facilitator_documents_tasks_not_sql_id():
     print() 
     print(count)
 
+
+
+def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+    nsc = NoSQLClient()
+    
+    for facilitator in facilitators:
+        print()
+        print(facilitator.no_sql_db_name, facilitator.username)
+        nsc_database = nsc.get_db(facilitator.no_sql_db_name)
+        fc_docs = nsc_database.all_docs(include_docs=True)['rows']
+        facilitator_doc = None
+        nbr_cvd = 0
+        for _doc in fc_docs:
+            doc = _doc.get('doc')
+            if doc.get('type') == 'facilitator':
+                for ad in doc.get('administrative_levels'):
+                    if ad.get('is_headquarters_village'):
+                        nbr_cvd += 1
+                break
+
+        nbr_tasks = 0
+        if facilitator_doc:
+            for _doc in fc_docs:
+                doc = _doc.get('doc')
+                if doc.get('type') == 'task':
+                    nbr_tasks += 1
+                    
+        print(f"CVD : {nbr_cvd} ; Tasks : {nbr_tasks} ; {nbr_tasks/nbr_cvd if nbr_cvd else 0}")
