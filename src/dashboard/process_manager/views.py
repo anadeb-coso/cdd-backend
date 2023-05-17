@@ -132,10 +132,24 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
 
             datetime_now = datetime.now()
-            
+            date_validated = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
+
+            #Get the info of the User who's validate the task
+            actions_by = task.get('actions_by') if task.get('actions_by') else []
+            action_by = {
+                'type': ("Validated" if bool(action_code) else "Invalidated"), 
+                'user_name': request.user.username, 'user_id': request.user.id,
+                'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
+                'user_email': request.user.email, 'action_date': date_validated
+            }
+            actions_by.append(action_by)
+            #End
+
             nsc.update_doc_uncontrolled(db, task['_id'], {
                 "validated": bool(action_code),
-                "date_validated": f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}" if bool(action_code) else None
+                "date_validated": date_validated if bool(action_code) else None,
+                "action_by": action_by,
+                "actions_by": actions_by
                 }
             )
             message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()

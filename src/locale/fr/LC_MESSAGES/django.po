@@ -586,3 +586,19 @@ msgstr "Marquer comme invalidé"
 #: .\dashboard\templates\facilitators\task_list.html
 msgid "Mark as validated"
 msgstr "Marquer comme validé"
+
+#: .\dashboard\templates\facilitators\profile.html
+msgid "Validated"
+msgstr "Validée"
+
+#: .\dashboard\templates\facilitators\profile.html
+msgid "Invalidated"
+msgstr "Non Validée"
+
+#: .\dashboard\templates\facilitators\profile.html
+msgid "Choice"
+msgstr "Choisir"
+
+#: .\dashboard\facilitators\views.html
+msgid "Untouched by Specialist"
+msgstr "Non touché par Spécialiste"

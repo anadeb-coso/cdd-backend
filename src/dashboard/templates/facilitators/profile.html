@@ -153,8 +153,11 @@ input {
                                 <div class="col-2">
                                     {% bootstrap_field form.activity show_label=False %}
                                 </div>
-                                <div class="col-3">
+                                <div class="col-2">
                                     {% bootstrap_field form.task show_label=False %}
+                                </div>
+                                <div class="col-1">
+                                    {% bootstrap_field form.is_validated show_label=False %}
                                 </div>
                             </div>
                         </div>
@@ -203,6 +206,7 @@ input {
         let phase = $('#id_phase');
         let activity = $('#id_activity');
         let task = $('#id_task');
+        let is_validated = $('#id_is_validated');
 
         function loadTasks() {
             spin.show();
@@ -215,7 +219,8 @@ input {
                     administrative_level: administrative_level.val(),
                     phase: phase.val(),
                     activity: activity.val(),
-                    task: task.val()
+                    task: task.val(),
+                    is_validated: is_validated.val()
                 },
                 success: function (response) {
                     spin.hide();
@@ -312,6 +317,10 @@ input {
         });
          $("#id_task").select2({
             placeholder: "{% translate 'Task' %}",
+            allowClear: true,
+        });
+         $("#id_is_validated").select2({
+            placeholder: "{% translate 'Choice' %}",
             allowClear: true,
         });
 

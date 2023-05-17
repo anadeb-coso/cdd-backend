@@ -15,6 +15,7 @@ class FilterTaskForm(forms.Form):
     phase = forms.ChoiceField()
     activity = forms.ChoiceField()
     task = forms.ChoiceField()
+    is_validated = forms.ChoiceField()
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
@@ -77,6 +78,10 @@ class FilterTaskForm(forms.Form):
         self.fields['phase'].widget.choices = query_result_phases
         self.fields['activity'].widget.choices = query_result_activities
         self.fields['task'].widget.choices = query_result_tasks
+        self.fields['is_validated'].widget.choices = [
+            ('', ''), ('Validated', _('Validated')), ('Invalidated',  _('Invalidated')),
+            ('Completed', _('Completed')), ('Pending',  _('Pending')), ('Untouched',  _('Untouched by Specialist'))
+        ]
     
     def check_name(self, liste, obj):
         for elt in liste:

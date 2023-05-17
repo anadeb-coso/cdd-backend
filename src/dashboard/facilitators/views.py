@@ -346,6 +346,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         phase_name = self.request.GET.get('phase')
         activity_name = self.request.GET.get('activity')
         task_name = self.request.GET.get('task')
+        is_validated = self.request.GET.get('is_validated', None)
 
         selector = {
             "type": "task"
@@ -359,6 +360,22 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             selector["activity_name"] = activity_name
         if task_name:
             selector["name"] = task_name
+        if is_validated not in (None, ''):
+            if is_validated == "Validated":
+                selector["validated"] = True
+            elif is_validated == "Invalidated":
+                selector["validated"] = False
+            elif is_validated == "Completed":
+                selector["completed"] = True
+            elif is_validated == "Pending":
+                selector["completed"] = False
+            elif is_validated == "Untouched":
+                q_r = self.facilitator_db.get_query_result(selector)
+                r = []
+                for task in q_r:
+                    if task.get('validated') == None:
+                        r.append(task)
+                return r
 
         return self.facilitator_db.get_query_result(selector)
 
