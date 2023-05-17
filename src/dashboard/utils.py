@@ -229,7 +229,7 @@ def get_documents_by_type(db, _type, empty_choice=True, attrs={}):
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_db=False):
+def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[]):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
     else:
@@ -258,7 +258,11 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
         # Iterate every administrative level assigned to the facilitator
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
-            if administrative_level.get('is_headquarters_village'):
+            if(
+                (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
+                or
+                (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+               ):
                 # Get phase
                 new_phase = phase[0].copy()
                 del new_phase['_id']
@@ -599,7 +603,7 @@ def create_task_one_facilitator(database, task_model, no_sql_db):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
+def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, administrativelevel_ids=[]):
     tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
@@ -607,7 +611,7 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False):
         #     create_task_one_facilitator("process_design", task, no_sql_db)
         # else:
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
-        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids)
 
 
 
