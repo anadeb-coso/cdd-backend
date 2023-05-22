@@ -4,13 +4,14 @@ from dashboard.mixins import PageMixin
 from django.utils.translation import gettext_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.http import Http404
 
 from dashboard.reports.pages.forms import ReportsFacilitatorsStatusForm
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FilterFacilitatorForm
-from cdd.my_librairies import download_file
-from .functions import get_global_statistic_under_file_excel_or_csv
-
+from cdd.my_librairies import download_file, convert_file_to_dict
+from .functions import get_global_statistic_under_file_excel_or_csv, save_csv_datas_in_db
+from authentication.permissions import AdminPermissionRequiredMixin
 
 
 class StatisticView(PageMixin, LoginRequiredMixin, FormView):
@@ -113,4 +114,33 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
                 file_path,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-    
+
+
+
+
+
+class UploadCSVView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, TemplateView):
+    """Class to upload and save the administrativelevels"""
+
+    template_name = 'upload.html'
+    context_object_name = 'Upload'
+    title = gettext_lazy("Upload")
+    active_level1 = 'statistics'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def post(self, request, *args, **kwargs):
+        _type = request.POST.get('_type')
+        if _type == "statistic_file":
+            message, file_path = save_csv_datas_in_db(
+                convert_file_to_dict.conversion_file_xlsx_to_dict(request.FILES.get('file'))
+            )
+            
+            return download_file.download(request, file_path, "text/plain")
+        
+
+        raise Http404

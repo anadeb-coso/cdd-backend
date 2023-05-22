@@ -1,5 +1,5 @@
 {% extends 'layouts/base.html' %}
-{% load bootstrap4 static i18n %}
+{% load bootstrap4 static i18n custom_tags %}
 {% block extracss %}
     <style>
         
@@ -67,6 +67,19 @@
                                                     value="{% translate 'Generate' %}" required id="id_generate" />
                                             </div>
                                         </div>
+
+                                        <div class="col-2">
+                                        </div>
+                                        <div class="col-2">
+                                            {% if user.is_superuser or user|has_group:"Admin" %}
+                                            <div class="btn-group pull-left" style="margin-top: 25px;">
+                                                {% include 'components/modal_upload_one_sheet.html' with type_object="statistic_file" upload_url="dashboard:statistics:app_excel_statistics_upload" %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+
+                                        
+
                                     </div>
 
                                 </fieldset>
@@ -209,7 +222,7 @@
             spin_pdf.show();
             let href = "";
             if(val_facilitator){
-                href = `{% url 'dashboard:statistics:app_excel_statistics_vy_facilitator' '_var_' %}`;
+                href = `{% url 'dashboard:statistics:app_excel_statistics_by_facilitator' '_var_' %}`;
                 href = href.replace('_var_', val_facilitator);
             }else{
                 href = `{% url 'dashboard:statistics:app_excel_statistics' %}`;
