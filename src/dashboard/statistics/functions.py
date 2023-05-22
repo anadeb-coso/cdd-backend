@@ -3,7 +3,7 @@ from no_sql_client import NoSQLClient
 from authentication.models import Facilitator
 import os
 from sys import platform
-from datetime import datetime
+from datetime import datetime, date as type_date
 import pandas as pd
 from dashboard.facilitators.functions import get_cvds
 from administrativelevels import models as administrativelevels_models
@@ -15,6 +15,13 @@ def get_datas_dict(reponses_datas, key, level: int = 1):
             for k,v in elt.items():
                 if k == key:
                     return v
+def get_index_with_datas_dict_by_one_key_name(reponses_datas, key):
+    for i in range(len(reponses_datas)):
+        elt = reponses_datas[i]
+        for k,v in elt.items():
+            if k == key:
+                return i, elt
+    return 0, {}
 
 def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
     nsc = NoSQLClient()
@@ -226,7 +233,8 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176"),
 
 
-        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")
     ]
     cols = pd.MultiIndex.from_tuples(d_cols)
     datas = {}
@@ -274,7 +282,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
                             
-                            total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0
+                            total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
                             
                             for doc in query_result_docs:
                                 _ = doc.get('doc')
@@ -1331,6 +1339,9 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                                 elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "F" and d_v.get(count):
                                     if d_v[count] > total_JEUNES_F:
                                         total_JEUNES_F = d_v[count]
+                                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "T" and d_v.get(count):
+                                    if d_v[count] > total_JEUNES:
+                                        total_JEUNES = d_v[count]
                                 elif d_k[4] == "Nombre total de ménage" and d_k[5] == "Nombre total de ménage" and d_v.get(count):
                                     if d_v[count] > total_MENAGES:
                                         total_MENAGES = d_v[count]
@@ -1340,7 +1351,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
 
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "H", "ind_169")][count] = total_JEUNES_H
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "F", "ind_170")][count] = total_JEUNES_F
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = total_JEUNES_H + total_JEUNES_F
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = (total_JEUNES_H + total_JEUNES_F) if (total_JEUNES_H+total_JEUNES_F) else total_JEUNES
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "H", "ind_172")][count] = total_H
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "F", "ind_173")][count] = total_F
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "T", "ind_174")][count] = total_H + total_F
@@ -1348,6 +1359,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
 
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = f.no_sql_db_name
 
 
 
@@ -1372,3 +1384,1592 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
         return file_path.replace("/", "\\\\")
     else:
         return file_path
+    
+
+
+
+
+def get_value(elt):
+    _elt  = elt if not pd.isna(elt) else None
+    if type(_elt) in (type_date, datetime, pd.Timestamp):
+        return _elt.strftime('%d/%m/%Y')
+    elif type(_elt) == float:
+        return int(_elt)
+    return _elt
+
+
+def save_csv_datas_in_db(datas_file: dict) -> str:
+    """Function to save the CSV datas in database"""
+    nsc = NoSQLClient()
+    list_error_found = []
+    
+    
+    if datas_file:
+        count = 0
+        long = len(list(datas_file.values())[0])
+        while count < long:
+            
+
+
+                
+            try:
+                canton = datas_file["ind_4"][count]
+                ad_canton = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(name=canton, type="Canton")
+                cvds = administrativelevels_models.CVD.objects.using('mis').filter(name=datas_file["ind_5"][count])
+                cvd = None
+                for _cvd in cvds:
+                    if _cvd.geographical_unit.canton.id == ad_canton.id:
+                        cvd = _cvd
+
+                facilitator_db = nsc.get_db(get_value(datas_file["ind_178"][count]))
+                if cvd:
+                    headquarters_village = cvd.headquarters_village
+                    # 20 Etablissement du profil du village
+                    try:
+                        populationTotaleDuVillage = get_value(datas_file["ind_9"][count])
+                    except Exception as exc:
+                        populationTotaleDuVillage = None
+                    
+                    try:
+                        totalHouseHolds = get_value(datas_file["ind_10"][count])
+                    except Exception as exc:
+                        totalHouseHolds = None
+                    
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 20}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        index, d = get_index_with_datas_dict_by_one_key_name(form_response, "population")
+                        if not d.get("population"):
+                            d["population"] = {}
+                        if populationTotaleDuVillage:
+                            d["population"]["populationTotaleDuVillage"] = populationTotaleDuVillage
+                        if totalHouseHolds:
+                            d["population"]["totalHouseHolds"] = totalHouseHolds
+                        form_response[index] = d
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 20
+
+
+                    # 13 Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_11"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_12"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_13"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_14"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_15"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_16"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_17"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 13}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 13
+
+
+                    # 17 Présentation et clarification de votre mission
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_18"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_19"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_20"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_21"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_22"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_23"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_24"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 17}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        
+                        index_date, d_date = get_index_with_datas_dict_by_one_key_name(form_response, "dateDeLaReunion")
+                        index, d = get_index_with_datas_dict_by_one_key_name(form_response, "totalPersonnes")
+                        if not d.get("totalPersonnes"):
+                            d["totalPersonnes"] = {}
+                        if dateDeLaReunion:
+                            form_response[index_date]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            d["totalPersonnes"]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            d["totalPersonnes"]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            d["totalPersonnes"]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            d["totalPersonnes"]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            d["totalPersonnes"]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            d["totalPersonnes"]["totalPlus35"] = totalPlus35
+
+                        form_response[index] = d
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 17
+
+
+                    # 22 Brève introduction de la réunion et de l'ANADEB
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_25"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_26"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_27"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_28"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_29"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_30"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_31"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_32"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_33"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 22}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 22
+
+
+                    # 27 Ouverture de la deuxième réunion et vérification du quorum des participants
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_34"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_35"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_36"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_37"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_38"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_39"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_40"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_41"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_42"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 27}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 27
+
+
+
+
+
+
+
+                    # 37 Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD
+                    try:
+                        DateDeLaFormation = get_value(datas_file["ind_43"][count])
+                    except Exception as exc:
+                        DateDeLaFormation = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_44"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_45"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_46"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_47"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_48"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_49"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_50"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_51"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 37}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if DateDeLaFormation:
+                            form_response[0]["DateDeLaFormation"] = DateDeLaFormation
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 37
+
+
+
+
+
+
+
+
+
+                    # 41 Présenter les activités de la journée
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_52"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_53"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_54"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_55"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_56"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_57"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_58"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_59"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_60"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 41}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 41
+
+
+                    # 45 Elaboration du plan d'action villageois (PAV)
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_61"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_62"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_63"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_64"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_65"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_66"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_67"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_68"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_69"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 45}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 45
+
+
+                    # 46 Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_70"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_71"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_72"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_73"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_74"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_75"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_76"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_77"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_78"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 46}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 46
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    # 47 Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_79"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_80"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_81"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_82"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_83"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_84"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_85"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_86"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_87"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 47}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 47
+
+
+                    # 48 Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_88"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_89"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_90"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_91"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_92"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_93"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_94"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_95"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_96"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 48}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 48
+
+
+
+                    # 49 Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement
+                    try:
+                        dateDeSeance = get_value(datas_file["ind_97"][count])
+                    except Exception as exc:
+                        dateDeSeance = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_98"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_99"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_100"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_101"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_102"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_103"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_104"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_105"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 49}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSeance:
+                            form_response[0]["dateDeSeance"] = dateDeSeance
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 49
+
+
+                    # 50 Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_106"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_107"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_108"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_109"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_110"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_111"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_112"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_113"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_114"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 50}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 50
+
+
+
+
+                    # 51 Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA
+                    try:
+                        dateDeSoumission = get_value(datas_file["ind_115"][count])
+                    except Exception as exc:
+                        dateDeSoumission = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_116"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_117"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_118"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_119"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_120"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_121"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_122"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_123"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 51}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSoumission:
+                            form_response[0]["dateDeSoumission"] = dateDeSoumission
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 51
+
+
+                    # 52 Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer
+                    try:
+                        dateDeSeance = get_value(datas_file["ind_124"][count])
+                    except Exception as exc:
+                        dateDeSeance = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_125"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_126"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_127"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_128"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_129"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_130"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_131"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_132"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 52}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSeance:
+                            form_response[0]["dateDeSeance"] = dateDeSeance
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 52
+
+
+                    # 53 Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux
+                    try:
+                        dateDeLaReunion = get_value(datas_file["ind_133"][count])
+                    except Exception as exc:
+                        dateDeLaReunion = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_134"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_135"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_136"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_137"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_138"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_139"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_140"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_141"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 53}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeLaReunion:
+                            form_response[0]["dateDeLaReunion"] = dateDeLaReunion
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 53
+
+
+                    # 54 Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet
+                    try:
+                        dateDeSeance = get_value(datas_file["ind_142"][count])
+                    except Exception as exc:
+                        dateDeSeance = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_143"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_144"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_145"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_146"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_147"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_148"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_149"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_150"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 54}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSeance:
+                            form_response[0]["dateDeSeance"] = dateDeSeance
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 54
+
+
+                    # 55 Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet
+                    try:
+                        dateDeSeance = get_value(datas_file["ind_151"][count])
+                    except Exception as exc:
+                        dateDeSeance = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_152"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_153"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_154"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_155"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_156"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_157"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_158"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_159"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 55}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSeance:
+                            form_response[0]["dateDeSeance"] = dateDeSeance
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 55
+
+
+                    # 56 Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage
+                    try:
+                        dateDeSensibilisation = get_value(datas_file["ind_160"][count])
+                    except Exception as exc:
+                        dateDeSensibilisation = None
+                    
+                    try:
+                        totalHommesMoins35 = get_value(datas_file["ind_161"][count])
+                    except Exception as exc:
+                        totalHommesMoins35 = None
+                    
+                    try:
+                        totalFemmesMoins35 = get_value(datas_file["ind_162"][count])
+                    except Exception as exc:
+                        totalFemmesMoins35 = None
+                    
+                    try:
+                        totalMoins35 = (totalHommesMoins35 if totalHommesMoins35 else 0) + (totalFemmesMoins35 if totalFemmesMoins35 else 0)
+                        if not totalMoins35:
+                            totalMoins35 = get_value(datas_file["ind_163"][count])
+                    except Exception as exc:
+                        totalMoins35 = None
+                    
+                    try:
+                        totalHommes = get_value(datas_file["ind_164"][count])
+                    except Exception as exc:
+                        totalHommes = None
+                    
+                    try:
+                        totalFemmes = get_value(datas_file["ind_165"][count])
+                    except Exception as exc:
+                        totalFemmes = None
+                    
+                    try:
+                        totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
+                        if totalPlus35:
+                            totalPlus35 = get_value(datas_file["ind_166"][count])
+                    except Exception as exc:
+                        totalPlus35 = None
+
+                    try:
+                        totalMenages = get_value(datas_file["ind_167"][count])
+                    except Exception as exc:
+                        totalMenages = None
+                    
+                    try:
+                        nombreEthniques = get_value(datas_file["ind_168"][count])
+                    except Exception as exc:
+                        nombreEthniques = None
+
+                    try:
+                        task = facilitator_db.get_query_result(
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 56}
+                        )[0][0]
+                        form_response = task.get("form_response")
+                        if not form_response:
+                            form_response.append({})
+                        if dateDeSensibilisation:
+                            form_response[0]["dateDeSensibilisation"] = dateDeSensibilisation
+                        if totalHommesMoins35:
+                            form_response[0]["totalHommesMoins35"] = totalHommesMoins35
+                        if totalFemmesMoins35:
+                            form_response[0]["totalFemmesMoins35"] = totalFemmesMoins35
+                        if totalMoins35:
+                            form_response[0]["totalMoins35"] = totalMoins35
+                        if totalHommes:
+                            form_response[0]["totalHommes"] = totalHommes
+                        if totalFemmes:
+                            form_response[0]["totalFemmes"] = totalFemmes
+                        if totalPlus35:
+                            form_response[0]["totalPlus35"] = totalPlus35
+                        if totalMenages:
+                            form_response[0]["totalMenages"] = totalMenages
+                        if nombreEthniques:
+                            form_response[0]["nombreEthniques"] = nombreEthniques
+
+                        task["form_response"] = form_response
+                        nsc.update_cloudant_document(facilitator_db,  task["_id"], task)
+                    except Exception as exc:
+                        pass
+                    # End 56
+
+            except Exception as exc:
+                list_error_found.append(f'\nLine N°{count} [{datas_file["ind_4"][count]}-{datas_file["ind_5"][count]}]: {exc.__str__()}')
+
+            count += 1
+            
+    
+
+    summary_errors = "##########################################################Summary###################################################################\n"
+    summary_errors += f'\nNumber errors found: {len(list_error_found)}'
+    for err in list_error_found:
+        summary_errors += err
+
+    if not os.path.exists("media/logs/errors"):
+        os.makedirs("media/logs/errors")
+    file_path = "logs/errors/ac_statistics_datas_logs_errors_" + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") + ".txt"
+    
+    f = open("media/"+file_path, "a")
+    f.write(summary_errors)
+    f.close()
+    
+
+
+    return ("ok", file_path.replace("/", "\\\\") if platform == "win32" else file_path)
+
