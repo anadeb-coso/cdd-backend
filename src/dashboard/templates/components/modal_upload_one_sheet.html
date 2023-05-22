@@ -1,0 +1,106 @@
+{% load i18n %}
+
+<!-- Button modal -->
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#upload-csv-file">
+    <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i> {% translate 'Load file' %}
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="upload-csv-file" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+
+            <form method="post" enctype="multipart/form-data"
+                action="{% url upload_url %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLongTitle">
+                        {% translate 'Upload CSV file' %}
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                    <input type="hidden" name="_type" value="{{ type_object }}" />
+                    
+                    <div class="form-group" id="sheet_name_content">
+                        <label for="sheet_name">{% translate 'Sheet Name' %}</label>
+                        <select class="form-control" id="sheet_name" name="sheet_name" style="width: 100%;">
+                        </select>
+                    </div>
+
+                    <div class="file-field big">
+                        <a class="btn-floating btn-lg amber darken-2 mt-0 float-left">
+                            <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                            <input type="file" name="file" required id="file" 
+                            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" />
+                        </a>
+                    </div>
+                    <br/><br/>
+                    
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" 
+                        style="display: inline-block !important;" onclick="window.location.reload();"><i class="fa fa-refresh"></i></button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal"
+                        style="display: inline-block !important;">{% translate 'Close' %}</button>
+                    <button type="submit" class="btn btn-primary" style="display: inline-block !important;" id="submit_btn_upload">
+                        {% translate 'Upload' %}
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+</div>
+<!-- End Modal -->
+
+<script>
+    var sheet_name_content = document.getElementById("sheet_name_content")
+    sheet_name_content.style.display = "none";
+    var file = document.getElementById("file");
+    file.onchange = function(event){
+        if(this.files.length != 0){   
+            datafile = this.files[0];
+            var data =  new FormData();
+            data.append("file", datafile);
+            data.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
+            fetch("{% url 'services:get_excel_sheets_names' %}", {
+                method: 'POST',
+                /*headers: {
+                'Content-Type': 'multipart/form-data'
+                },*/
+                body: data
+            }).then(
+                response => response.json() 
+            ).then(datas => {
+                sheet_name_content.style.display = "block";
+                var sheet_name = document.getElementById("sheet_name");
+                sheet_name.innerHTML = "";
+                names = datas["names"];
+                if(names){
+                    for(var i=0; i < names.length; i++){
+                        sheet_name.innerHTML += `<option value="${names[i]}">${names[i]}</option>`;
+                    }
+                }
+            }
+            ).catch(
+                error => console.log(error)
+            );
+
+        }
+    }
+
+    {% comment %} setInterval(function() {
+        if(document.getElementById('submit_btn_upload').disabled == true){
+            document.getElementById('submit_btn_upload').disabled = false;
+        }
+    }, 15 * 1000); {% endcomment %}
+</script>
