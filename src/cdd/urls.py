@@ -35,6 +35,7 @@ urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
     path('attachments/', include('attachments.urls')),
     path('authentication/', include('authentication.urls')),
+    path('services/', include('cdd.my_librairies.services.urls')),
 ]
 
 urlpatterns += i18n_patterns(
