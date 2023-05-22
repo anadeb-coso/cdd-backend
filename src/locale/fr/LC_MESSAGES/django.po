@@ -602,3 +602,23 @@ msgstr "Choisir"
 #: .\dashboard\facilitators\views.html
 msgid "Untouched by Specialist"
 msgstr "Non touché par Spécialiste"
+
+#: .dashboard\templates\components\upload.html
+msgid "Load file"
+msgstr "Charger Fichier"
+
+#: .dashboard\templates\components\upload.html
+msgid "Sheet Name"
+msgstr "Nom de la Feuille"
+
+#: .dashboard\templates\components\upload.html
+msgid "Upload"
+msgstr "Téléverser"
+
+#: .dashboard\templates\components\upload.html
+msgid "Close"
+msgstr "Fermer"
+
+#: .dashboard\templates\components\upload.html
+msgid "Upload CSV file"
+msgstr "Téléversez le fichier CSV"
