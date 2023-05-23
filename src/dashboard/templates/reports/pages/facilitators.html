@@ -227,10 +227,12 @@
                 spin_pdf.show();
                 let href = "";
                 if(val_facilitator){
-                    href = `{% url 'dashboard:reports:pdf:app_pdf_facilitator_status' '_var_' %}`;
+                    //href = `{% url 'dashboard:reports:pdf:app_pdf_facilitator_status' '_var_' %}`;
+                    href = `{% url 'dashboard:reports:excel_csv:app_excel_csv_facilitator_status' '_var_' %}`;
                     href = href.replace('_var_', val_facilitator);
                 }else{
-                    href = `{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}`;
+                    //href = `{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}`;
+                    href = `{% url 'dashboard:reports:excel_csv:app_excel_csv_facilitators_status' %}`;
                 }
                 
                 href += (`?id_region=` + id_region.val() +
@@ -241,13 +243,18 @@
                 `&val_date_start=` + val_date_start + `&val_date_end=` + val_date_end);
                 
                 
-                $('#pdf-display').html(`
+                {% comment %} $('#pdf-display').html(`
                 <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the PDF' %}</a>
+                `); {% endcomment %}
+                $('#pdf-display').html(`
+                <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the EXCEL' %}</a>
                 `);
+                
                 spin_pdf.hide();
                 {% comment %} $.ajax({
                     type: "GET",
-                    url: "{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}",
+                    //url: "{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}",
+                    url: "{% url 'dashboard:reports:pdf:app_excel_csv_facilitators_status' %}",
                     data: {
                         id_region: id_region.val(),
                         id_prefecture: id_prefecture.val(),
