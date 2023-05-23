@@ -622,3 +622,15 @@ msgstr "Fermer"
 #: .dashboard\templates\components\upload.html
 msgid "Upload CSV file"
 msgstr "Téléversez le fichier CSV"
+
+#: .\dashboard\templates\facilitators\task_list.html
+msgid "Link"
+msgstr "Lien"
+
+#: .\dashboard\templates\facilitators\task_list.html
+msgid "Download"
+msgstr "Télécharger"
+
+#: .\dashboard\templates\statistic\statistic.html
+msgid "Global"
+msgstr "Globale"

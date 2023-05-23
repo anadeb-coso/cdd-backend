@@ -356,9 +356,26 @@
                                 {% if attach.attachment.uri %}
                                     {% if "file:///data" in attach.attachment.uri %}
                                         <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
-                                    {% elif ".pdf" in attach.attachment.uri or ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+                                    {% elif ".pdf" in attach.attachment.uri %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Link" %}
+                                        </a><br />
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
+                                        </a>
+                                    {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Download" %}
+                                        </a><br />
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe style="float: left;"
+                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}' 
+                                                width="250" height="300" frameborder='0'>
+                                                    This is an embedded 
+                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a> 
+                                                    document, powered by 
+                                                    <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
+                                            </iframe>
                                         </a>
                                     {% else %}
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
