@@ -1490,7 +1490,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_17"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1559,7 +1559,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_24"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1632,7 +1632,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_31"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1714,7 +1714,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_40"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1802,7 +1802,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_49"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1892,7 +1892,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_58"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -1975,7 +1975,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_67"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2058,7 +2058,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_76"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2152,7 +2152,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_85"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2235,7 +2235,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_94"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2319,7 +2319,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_103"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2402,7 +2402,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_112"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2487,7 +2487,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_121"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2570,7 +2570,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_130"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2653,7 +2653,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_139"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2736,7 +2736,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_148"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2819,7 +2819,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_157"][count])
                     except Exception as exc:
                         totalPlus35 = None
@@ -2902,7 +2902,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         totalPlus35 = (totalHommes if totalHommes else 0) + (totalFemmes if totalFemmes else 0)
-                        if totalPlus35:
+                        if not totalPlus35:
                             totalPlus35 = get_value(datas_file["ind_166"][count])
                     except Exception as exc:
                         totalPlus35 = None
