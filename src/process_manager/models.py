@@ -1,6 +1,7 @@
 from django.db import models
 from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
+from authentication.models import Facilitator
 
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
@@ -243,3 +244,76 @@ class AggregatedStatus(BaseModel):
             print(exc)
             return None
         
+
+
+class Wave(BaseModel):
+    number = models.IntegerField(blank=False, null=False)
+    description = models.TextField(blank=False, null=False)
+
+    def __str__(self) -> str:
+        return f'{self.number} : {self.description}'
+        
+class Deployment(BaseModel):
+    number = models.IntegerField(blank=False, null=False)
+    description = models.TextField(blank=False, null=False)
+
+    def __str__(self) -> str:
+        return f'{self.number} : {self.description}'
+
+class AdministrativeLevelWave(BaseModel):
+    administrative_level_id = models.IntegerField()
+    wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    description = models.TextField(blank=True, null=True)
+
+    def administrative_level(self):
+        try:
+            return AdministrativeLevel.objects.using('mis').get(id=self.administrative_level_id)
+        except AdministrativeLevel.DoesNotExist as e:
+            return None
+        except Exception as exc:
+            print(exc)
+            return None
+    
+    def __str__(self) -> str:
+        administrative_level = self.administrative_level()
+        if self.description:
+            return f'V{self.wave.number} - {administrative_level.name} - {self.project.name} : {self.description}'
+        
+        if administrative_level:
+            return f'V{self.wave.number} - {administrative_level.name} - {self.project.name}'
+        
+        return f'V{self.wave.number} - {administrative_level} - {self.project.name}'
+    
+
+class FacilitatorWave(BaseModel):
+    facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
+    wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    description = models.TextField(blank=True, null=True)
+    
+    def __str__(self) -> str:
+        
+        _str = f'V{self.wave.number} - {self.facilitator.name} - {self.project.name}'
+
+        if self.description:
+            _str += f' : {self.description}'
+        
+        return _str
+    
+
+class FacilitatorDeployment(BaseModel):
+    administrative_level_wave = models.ForeignKey("AdministrativeLevelWave", on_delete=models.CASCADE)
+    facilitator_wave = models.ForeignKey("FacilitatorWave", on_delete=models.CASCADE)
+    deployment = models.ForeignKey("Deployment", on_delete=models.CASCADE)
+    description = models.TextField(blank=True, null=True)
+    
+    def __str__(self) -> str:
+        
+        _str =  f'{self.facilitator_wave.facilitator.name} (V{self.facilitator_wave.wave.number} D{self.deployment.number} D-C{self.administrative_level_wave.wave.number} - {self.administrative_level_wave.project.name}'
+        
+        if self.description:
+            _str += f' : {self.description}'
+        
+        return _str
+    
