@@ -252,6 +252,9 @@ class Wave(BaseModel):
 
     def __str__(self) -> str:
         return f'{self.number} : {self.description}'
+    
+    class Meta:
+        unique_together = ['number']
         
 class Deployment(BaseModel):
     number = models.IntegerField(blank=False, null=False)
@@ -259,13 +262,19 @@ class Deployment(BaseModel):
 
     def __str__(self) -> str:
         return f'{self.number} : {self.description}'
+    
+    class Meta:
+        unique_together = ['number']
 
 class AdministrativeLevelWave(BaseModel):
     administrative_level_id = models.IntegerField()
     wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     description = models.TextField(blank=True, null=True)
-
+    
+    class Meta:
+        unique_together = ['administrative_level_id', 'wave', 'project']
+    
     def administrative_level(self):
         try:
             return AdministrativeLevel.objects.using('mis').get(id=self.administrative_level_id)
@@ -274,7 +283,7 @@ class AdministrativeLevelWave(BaseModel):
         except Exception as exc:
             print(exc)
             return None
-    
+
     def __str__(self) -> str:
         administrative_level = self.administrative_level()
         if self.description:
@@ -292,6 +301,9 @@ class FacilitatorWave(BaseModel):
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     description = models.TextField(blank=True, null=True)
     
+    class Meta:
+        unique_together = ['facilitator', 'wave', 'project']
+    
     def __str__(self) -> str:
         
         _str = f'V{self.wave.number} - {self.facilitator.name} - {self.project.name}'
@@ -307,6 +319,9 @@ class FacilitatorDeployment(BaseModel):
     facilitator_wave = models.ForeignKey("FacilitatorWave", on_delete=models.CASCADE)
     deployment = models.ForeignKey("Deployment", on_delete=models.CASCADE)
     description = models.TextField(blank=True, null=True)
+        
+    class Meta:
+        unique_together = ['administrative_level_wave', 'facilitator_wave', 'deployment']
     
     def __str__(self) -> str:
         
