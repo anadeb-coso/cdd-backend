@@ -634,3 +634,23 @@ msgstr "Télécharger"
 #: .\dashboard\templates\statistic\statistic.html
 msgid "Global"
 msgstr "Globale"
+
+#: .\dashboard\templates\facilitators\profile.html
+msgid "The task isn't completed"
+msgstr "La tâche n'est pas achevée"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "General Manager"
+msgstr "Directeur(trice) Général(e)"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Director"
+msgstr "Directeur(trice)"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Advisor"
+msgstr "Conseillé"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Minister"
+msgstr "Ministre"
