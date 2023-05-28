@@ -130,29 +130,73 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             nsc = NoSQLClient()
             db = nsc.get_db(no_sql_db_name)
             task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+            if task.get('completed'):
+                datetime_now = datetime.now()
+                date_validated = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
+
+                #Get the info of the User who's validate the task
+                actions_by = task.get('actions_by') if task.get('actions_by') else []
+                action_by = {
+                    'type': ("Validated" if bool(action_code) else "Invalidated"), 
+                    'user_name': request.user.username, 'user_id': request.user.id,
+                    'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
+                    'user_email': request.user.email, 'action_date': date_validated
+                }
+                actions_by.append(action_by)
+                #End
+
+                nsc.update_doc_uncontrolled(db, task['_id'], {
+                    "validated": bool(action_code),
+                    "date_validated": date_validated if bool(action_code) else None,
+                    "action_by": action_by,
+                    "actions_by": actions_by
+                    }
+                )
+                message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()
+            else:
+                message = gettext_lazy("The task isn't completed").__str__()
+                status = "error"
+        except Exception as exc:
+            message = gettext_lazy("An error has occurred...").__str__()
+            status = "error"
+
+        return self.render_to_json_response({"message": message, "status": status}, safe=False)
+
+
+class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def get(self, request, *args, **kwargs):
+        no_sql_db_name = request.GET.get('no_sql_db_name')
+        task_id = request.GET.get('task_id')
+        action_code = int(request.GET.get('action_code') if request.GET.get('action_code') else 0)
+        message = None
+        status = "ok"
+        try:
+            nsc = NoSQLClient()
+            db = nsc.get_db(no_sql_db_name)
+            task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
 
             datetime_now = datetime.now()
-            date_validated = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
+            date_completed = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
 
-            #Get the info of the User who's validate the task
+            #Get the info of the User who's complete the task
             actions_by = task.get('actions_by') if task.get('actions_by') else []
-            action_by = {
-                'type': ("Validated" if bool(action_code) else "Invalidated"), 
+            action_complete_by = {
+                'type': ("Completed" if bool(action_code) else "Uncompleted"), 
                 'user_name': request.user.username, 'user_id': request.user.id,
                 'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
-                'user_email': request.user.email, 'action_date': date_validated
+                'user_email': request.user.email, 'action_date': date_completed
             }
-            actions_by.append(action_by)
+            actions_by.append(action_complete_by)
             #End
 
             nsc.update_doc_uncontrolled(db, task['_id'], {
-                "validated": bool(action_code),
-                "date_validated": date_validated if bool(action_code) else None,
-                "action_by": action_by,
+                "completed": bool(action_code),
+                "date_action_complete_by": date_completed if bool(action_code) else None,
+                "action_complete_by": action_complete_by,
                 "actions_by": actions_by
                 }
             )
-            message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()
+            message = gettext_lazy("Task completed").__str__() if bool(action_code) else gettext_lazy("Task not completed").__str__()
         except Exception as exc:
             message = gettext_lazy("An error has occurred...").__str__()
             status = "error"

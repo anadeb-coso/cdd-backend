@@ -1038,6 +1038,7 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
         for _doc in fc_docs:
             doc = _doc.get('doc')
             if doc.get('type') == 'facilitator':
+                facilitator_doc = doc
                 for ad in doc.get('administrative_levels'):
                     if ad.get('is_headquarters_village'):
                         nbr_cvd += 1
