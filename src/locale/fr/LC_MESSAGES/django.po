@@ -654,3 +654,11 @@ msgstr "Conseillé"
 #: .\dashboard\templatetags\custom_tags.py
 msgid "Minister"
 msgstr "Ministre"
+
+#: .\dashboard\templates\statistic\statistic.html
+msgid "Mark as uncompleted"
+msgstr "Marquer comme non achevée"
+
+#: .\dashboard\templates\statistic\statistic.html
+msgid "Mark as completed"
+msgstr "Marquer comme achevée"
