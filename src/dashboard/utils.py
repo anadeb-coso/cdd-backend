@@ -993,8 +993,11 @@ def clear_facilitators_documents_tasks_administrative_level_not_headquarters(dev
         clear_facilitator_documents_tasks_by_administrativelevels(facilitator.no_sql_db_name, administrative_level_not_headquarters, False)
 
 
-def clear_facilitator_documents_tasks_not_sql_id():
-    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
     nsc = NoSQLClient()
     count = 0
     for facilitator in facilitators:
