@@ -1,0 +1,111 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            
+            {% if user.is_superuser or user|has_group:"Admin" %}
+            <div class="float-right mb-3">
+                <a href="{% url 'dashboard:authentication:user_create' %}"
+                class="btn btn-primary btn-sm rounded-xl">
+                    <i class="fa fa-plus mr-2"></i>
+                    {% translate "Create User" %}
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="clearfix"></div>
+             
+            
+            <div class="input-group mb-3 search-bar">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+            </div>
+
+            <div class="card">
+                <div class="card-body table-responsive">
+
+
+
+
+
+
+                    
+                    <div class="card">
+                        <div class="card-body table-responsive">
+                            <table id="table" class="table">
+                                <thead>
+                                <tr>
+                                    <th >{% translate 'Name' %}</th>
+                                    <th >{% translate 'Username' %}</th>
+                                    <th >{% translate 'Email' %}</th>
+                                    <th >{% translate 'Groupe' %}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for user_obj in users %}
+                                    <tr>
+                                        <td>{{ user_obj.get_full_name }}</td>
+                                        <td>{{ user_obj.username }}</td>
+                                        <td>{{ user_obj.email }}</td>
+                                        <td>{{ user_obj|get_group_high }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+
+            let table = $('#table').DataTable({
+                language: {
+                    url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+                },
+                dom: "ltipr",
+                columnDefs: [
+                    {
+                        targets: 1,
+                        orderable: false,
+                        searchable: false,
+                    }
+                ],
+                lengthMenu: [10, 20, 50, 100],
+                pageLength: 10,
+                order: [[0, 'desc']]
+            });
+            $('#search').on('keyup', function () {
+                table.search($(this).val()).draw();
+            });
+        });
+    </script>
+    
+
+
+{% endblock %}
+
+{% block select2 %}
+    
+    
+{% endblock select2 %}

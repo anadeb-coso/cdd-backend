@@ -1,0 +1,70 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if form.errors %}
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <div class="alert alert-danger">
+                            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                                &times;
+                            </button>
+                            {{ error|escape }}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">
+                            &times;
+                        </button>
+                        {{ error|escape }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            <div class="card">
+                <form method="post">{% csrf_token %}
+                    <div class="card-body">
+                        <div class="row">
+                            {% for field in form %}
+                                <div class="col-6">
+                                    {% bootstrap_field field %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                    </div>
+                    <div class="card-footer">
+                        <button id="submit" type="submit" class="btn btn-primary btn-sm rounded-xl" >
+                            {% translate "SAVE" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+    </script>
+{% endblock javascript %}
+
+{% block select2 %}
+    {% comment %} <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
+    <script type="text/javascript">
+        $("#id_administrative_level").select2({
+            placeholder: "{% translate 'Click to select location' %}",
+            allowClear: true
+        });
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script> {% endcomment %}
+{% endblock select2 %}
