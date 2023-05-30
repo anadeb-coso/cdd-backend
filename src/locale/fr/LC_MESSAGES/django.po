@@ -662,3 +662,19 @@ msgstr "Marquer comme non achevée"
 #: .\dashboard\templates\statistic\statistic.html
 msgid "Mark as completed"
 msgstr "Marquer comme achevée"
+
+#: .\dashboard\authentication\views.py
+msgid "Create User"
+msgstr "Créer Utilisateur"
+
+#: .\dashboard\authentication\views.py
+msgid "Users"
+msgstr "Utilisateurs"
+
+#: .\dashboard\authentication\views.py
+msgid "User"
+msgstr "Utilisateur"
+
+#: .\dashboard\templates\authentication\users.html
+msgid "Group"
+msgstr "Groupe"
