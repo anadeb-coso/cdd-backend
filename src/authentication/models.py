@@ -9,7 +9,10 @@ from django.utils.translation import gettext_lazy as _
 from no_sql_client import NoSQLClient
 from dashboard.facilitators.functions import get_cvds
 from cdd.functions import datetime_complet_str
-
+# from django.db.models.signals import post_save
+# from django.contrib.auth.models import User
+# from django.db import IntegrityError
+# from django.forms.models import model_to_dict
 
 class Facilitator(models.Model):
     no_sql_user = models.CharField(max_length=150, unique=True)
@@ -254,3 +257,48 @@ class Facilitator(models.Model):
     class Meta:
         verbose_name = _('Facilitator')
         verbose_name_plural = _('Facilitators')
+
+
+
+
+# def create_user(sender, instance, **kwargs):
+#     print("test", instance.id, kwargs['created'], kwargs)
+#     if kwargs['created']:
+#         a_dict = model_to_dict(instance) #instance.__dict__
+        
+#         del a_dict['id']
+#         del a_dict['groups']
+#         del a_dict['user_permissions']
+        
+#         user = User.objects.using('mis').create(**a_dict)
+        
+#         for g in instance.groups:
+#             user.groups.add(g)
+#         for u_p in instance.user_permissions:
+#             user.user_permissions.add(u_p)
+#         user.save(using='mis')
+#         # if a_dict.get('_state'):
+#         #     del a_dict['_state']
+#         # if a_dict.get('backend'):
+#         #     del a_dict['backend']
+#         # if a_dict.get('_password'):
+#         #     del a_dict['_password']
+        
+#         # try:
+#         #     User.objects.using('mis').create(**a_dict)
+#         # except IntegrityError as exc:
+#         #     pass
+#         #     # a_dict['id'] = a_dict['id'] + 1
+#         #     # is_save = False
+#         #     # while not is_save:
+#         #     #     print(a_dict['id'])
+#         #     #     try:
+#         #     #         User.objects.using('mis').update_or_create(**a_dict)
+#         #     #         is_save = True
+#         #     #     except IntegrityError as exc:
+#         #     #         a_dict['id'] += 1
+#     else:
+#         print("passe 0")
+
+
+# post_save.connect(create_user, sender=User)
