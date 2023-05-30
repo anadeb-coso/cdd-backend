@@ -3,6 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.utils.translation import gettext as _
 
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
 
 
 class EmailAuthenticationForm(AuthenticationForm):
@@ -26,3 +27,16 @@ class EmailAuthenticationForm(AuthenticationForm):
                 self.confirm_login_allowed(self.user_cache)
 
         return self.cleaned_data
+
+
+class CreateUserForm(UserCreationForm):
+                
+    class Meta:
+        """docstring for Meta"""
+        model = User
+        fields = (
+            'username', 'password1', 'password2', 'last_name', 'first_name', 'email', 
+            'is_superuser', 'is_staff', 'is_active', 'groups', 'user_permissions'
+        )
+
+        
