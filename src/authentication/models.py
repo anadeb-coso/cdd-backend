@@ -9,8 +9,8 @@ from django.utils.translation import gettext_lazy as _
 from no_sql_client import NoSQLClient
 from dashboard.facilitators.functions import get_cvds
 from cdd.functions import datetime_complet_str
-# from django.db.models.signals import post_save
-# from django.contrib.auth.models import User
+from django.db.models.signals import post_save, post_delete
+from django.contrib.auth.models import User
 # from django.db import IntegrityError
 # from django.forms.models import model_to_dict
 
@@ -302,3 +302,13 @@ class Facilitator(models.Model):
 
 
 # post_save.connect(create_user, sender=User)
+
+
+def delete_user(sender, instance, **kwargs):
+    try:
+        user = User.objects.using('mis').get(username=instance.username)
+        user.delete(using="mis")
+    except Exception as exc:
+        pass
+
+post_delete.connect(delete_user, sender=User)
