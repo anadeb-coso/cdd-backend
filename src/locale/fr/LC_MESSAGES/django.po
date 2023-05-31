@@ -668,6 +668,14 @@ msgid "Create User"
 msgstr "Créer Utilisateur"
 
 #: .\dashboard\authentication\views.py
+msgid "Update User"
+msgstr "Modifier Utilisateur"
+
+#: .\dashboard\authentication\views.py
+msgid "Delete User"
+msgstr "Supprimer Utilisateur"
+
+#: .\dashboard\authentication\views.py
 msgid "Users"
 msgstr "Utilisateurs"
 
@@ -678,3 +686,11 @@ msgstr "Utilisateur"
 #: .\dashboard\templates\authentication\users.html
 msgid "Group"
 msgstr "Groupe"
+
+#: .\dashboard\templates\authentication\delete.html
+msgid "I'M SURE"
+msgstr "JE SUIS SÛR"
+
+#: .\dashboard\templates\authentication\delete.html
+msgid "YOU'RE SURE TO DELETE THIS USER?"
+msgstr "VOUS ÊTES SÛR DE SUPPRIMER CET UTILISATEUR ?"
