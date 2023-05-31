@@ -694,3 +694,7 @@ msgstr "JE SUIS SÛR"
 #: .\dashboard\templates\authentication\delete.html
 msgid "YOU'RE SURE TO DELETE THIS USER?"
 msgstr "VOUS ÊTES SÛR DE SUPPRIMER CET UTILISATEUR ?"
+
+#: .\dashboard\templates\authentication\login.html
+msgid "CDD"
+msgstr "DCC"
