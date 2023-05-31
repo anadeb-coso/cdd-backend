@@ -43,7 +43,9 @@
                                     <th >{% translate 'Username' %}</th>
                                     <th >{% translate 'Email' %}</th>
                                     <th >{% translate 'Group' %}</th>
-                                    <th >{% translate 'Action' %}</th>
+                                    {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                                        {% translate 'Action' %}</th>
+                                    {% endif %}
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -53,8 +55,8 @@
                                         <td>{{ user_obj.username }}</td>
                                         <td>{{ user_obj.email }}</td>
                                         <td>{{ user_obj|get_group_high }}</td>
+                                        {% if user.is_superuser or user|has_group:"Admin" %}
                                         <td>
-                                            {% if user.is_superuser or user|has_group:"Admin" %}
                                             <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                                 class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                                 <span class="_web">{% translate 'Edit profile' %}</span>
@@ -65,8 +67,8 @@
                                                 <span class="_web">{% translate 'Delete' %}</span>
                                                 <span class="_mobile"><i class="fa fa-trash"></i></span>
                                             </a>
-                                            {% endif %}
                                         </td>
+                                        {% endif %}
                                     </tr>
                                 {% endfor %}
                                 </tbody>
