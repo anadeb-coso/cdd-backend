@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.utils.translation import gettext as _
+from django import forms
 
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
@@ -36,6 +37,16 @@ class CreateUserForm(UserCreationForm):
         model = User
         fields = (
             'username', 'password1', 'password2', 'last_name', 'first_name', 'email', 
+            'is_superuser', 'is_staff', 'is_active', 'groups', 'user_permissions'
+        )
+
+class UpdateUserForm(forms.ModelForm):
+                
+    class Meta:
+        """docstring for Meta"""
+        model = User
+        fields = (
+            'username', 'last_name', 'first_name', 'email', 
             'is_superuser', 'is_staff', 'is_active', 'groups', 'user_permissions'
         )
 
