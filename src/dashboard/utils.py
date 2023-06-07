@@ -1055,3 +1055,25 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
                     nbr_tasks += 1
                     
         print(f"CVD : {nbr_cvd} ; Tasks : {nbr_tasks} ; {nbr_tasks/nbr_cvd if nbr_cvd else 0}")
+
+
+def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db("_users")
+    for facilitator in facilitators:
+        print()
+        print(facilitator.no_sql_db_name, facilitator.username)
+        user =  nsc_database.get_query_result({"type": 'user', "name": facilitator.no_sql_user})[:][0]
+        user["password"] = facilitator.no_sql_pass
+        nsc_database.bulk_docs([user])
+        facilitator_db = nsc.get_db(facilitator.no_sql_db_name)
+        nsc.add_member_to_database(facilitator_db, facilitator.no_sql_user)
+        print("updated")
+
+
+        print()
+        
