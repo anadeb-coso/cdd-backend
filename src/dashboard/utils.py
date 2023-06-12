@@ -1008,31 +1008,40 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
         
         facilitator_doc = None
         cvds = []
+        administrative_levels_id = []
         for _doc in fc_docs:
             doc = _doc.get('doc')
             if doc.get('type') == 'facilitator':
                 facilitator_doc = doc
                 cvds = get_cvds(facilitator_doc)
+                for a in facilitator_doc['administrative_levels']:
+                    administrative_levels_id.append(a['id'])
                 # for ad in doc.get('administrative_levels'):
                 #     if ad.get('is_headquarters_village'):
                 #         nbr_cvd += 1
                 break
-
+        print(administrative_levels_id)
         for _doc in fc_docs:
             doc = _doc.get('doc')
             if doc.get('type') == 'task':
                 try:
-                    for cvd in cvds:
-                        docs = nsc_database.get_query_result({"type": "task", "administrative_level_id": cvd["village_id"], "sql_id": doc["sql_id"]})
-                        print(len(docs[:]))
-                        if len(docs[:]) > 1:
-                            try:
-                                print(doc)
-                                d = nsc_database[docs[0][1]['_id']]
-                                d.delete()
-                                count += 1
-                            except Exception as exc:
-                                print(1, exc)
+                    # for cvd in cvds:
+                    #     docs = nsc_database.get_query_result({"type": "task", "administrative_level_id": cvd["village_id"], "sql_id": doc["sql_id"]})
+                    #     print(len(docs[:]))
+                    #     if len(docs[:]) > 1:
+                    #         try:
+                    #             print(doc)
+                    #             d = nsc_database[docs[0][1]['_id']]
+                    #             d.delete()
+                    #             count += 1
+                    #         except Exception as exc:
+                    #             print(1, exc)
+                    
+                    
+                    if doc.get('administrative_level_id') not in administrative_levels_id:
+                        nsc.delete_document(nsc_database, doc["_id"])
+                        count += 1
+                        print(doc)
                 except Exception as e:
                     print(2, e)
                 try:
@@ -1040,6 +1049,7 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
                     task_order = doc["task_order"]
                     last_updated = doc["last_updated"]
                     canton_sql_id = doc["canton_sql_id"]
+                    administrative_level_id = doc["administrative_level_id"]
                 except Exception as exc:
                     count += 1
                     print(doc)
