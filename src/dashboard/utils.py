@@ -1006,10 +1006,35 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
         nsc_database = nsc.get_db(facilitator.no_sql_db_name)
         fc_docs = nsc_database.all_docs(include_docs=True)['rows']
         
+        facilitator_doc = None
+        cvds = []
+        for _doc in fc_docs:
+            doc = _doc.get('doc')
+            if doc.get('type') == 'facilitator':
+                facilitator_doc = doc
+                cvds = get_cvds(facilitator_doc)
+                # for ad in doc.get('administrative_levels'):
+                #     if ad.get('is_headquarters_village'):
+                #         nbr_cvd += 1
+                break
 
         for _doc in fc_docs:
             doc = _doc.get('doc')
             if doc.get('type') == 'task':
+                try:
+                    for cvd in cvds:
+                        docs = nsc_database.get_query_result({"type": "task", "administrative_level_id": cvd["village_id"], "sql_id": doc["sql_id"]})
+                        print(len(docs[:]))
+                        if len(docs[:]) > 1:
+                            try:
+                                print(doc)
+                                d = nsc_database[docs[0][1]['_id']]
+                                d.delete()
+                                count += 1
+                            except Exception as exc:
+                                print(1, exc)
+                except Exception as e:
+                    print(2, e)
                 try:
                     sql_id = doc["sql_id"]
                     task_order = doc["task_order"]
