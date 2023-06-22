@@ -604,8 +604,11 @@ def create_task_one_facilitator(database, task_model, no_sql_db):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, administrativelevel_ids=[]):
-    tasks = Task.objects.all().prefetch_related()
+def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, administrativelevel_ids=[], tasks_ids=[]):
+    if tasks_ids:
+        tasks = Task.objects.filter(id__in=tasks_ids).prefetch_related()
+    else:
+        tasks = Task.objects.all().prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
         # if no_sql_db:
