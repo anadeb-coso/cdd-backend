@@ -247,6 +247,14 @@ def img_aws_s3_filter(uri):
 def has_group(user, group_name):
     return user.groups.filter(name=group_name).exists() 
 
+@register.filter(name='has_perm') 
+def has_perm(user, perm_name):
+    return user.user_permissions.filter(name=perm_name).exists() 
+
+@register.filter(name='has_per') 
+def has_per(user):
+    return user.user_permissions
+
 @register.filter(name='get_group_high') 
 def get_group_high(user):
     """

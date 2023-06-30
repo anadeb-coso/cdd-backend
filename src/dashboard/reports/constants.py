@@ -1,0 +1,1 @@
+IGNORES = ('Nean', 'Neant', 'Oo', 'X', 'Non', '-', '0', 'Pas De Minorite')

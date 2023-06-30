@@ -10,10 +10,17 @@ from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
 from cdd.functions import datetime_complet_str
 from administrativelevels import models as administrativelevels_models
+from dashboard.reports.constants import IGNORES
+from cdd.my_librairies.functions import strip_accents
 
 
-
-
+def get_datas_dict(reponses_datas, key, level: int = 1):
+    for i in range(len(reponses_datas)):
+        elt = reponses_datas[i]
+        if level == 1:
+            for k,v in elt.items():
+                if k == key:
+                    return v
 
 def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_name=None):
     nsc = NoSQLClient()
@@ -416,3 +423,210 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
     else:
         return file_path
     
+
+
+
+
+
+
+
+
+def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
+    nsc = NoSQLClient()
+
+    _type = params.get("type")
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
+    if facilitator_db_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
+    else:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+
+    d_cols = [ 
+        ("MONOGRAPHIE", "N°", "N°", "N°", "ind_0"),
+        ("MONOGRAPHIE", "LOCALITE", "Région", "Région", "ind_1"),
+        ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2"),
+        ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3"),
+        ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5"),
+        ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6"),
+        ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7"),
+        ("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8"),
+        ("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9"),
+        ("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10"),
+
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Lycée", "ind_11"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Collége", "ind_12"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "École primaire", "ind_13"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Préscolaire", "ind_14"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Autre", "ind_15"),
+        
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Dispensaire", "ind_16"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "USP", "ind_17"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "CMS", "ind_18"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Clinique", "ind_19"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Autre", "ind_20"),
+        
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Religieu", "Eglise", "ind_21"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Religieu", "Mosquée", "ind_22"),
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Religieu", "Autres", "ind_23"),
+        
+        ("MONOGRAPHIE", "Équipement et infrastructures", "infrastructures de marchés", "Hangar", "ind_24"),
+        
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Infrast routiéres/type", "Piste", "ind_25"),
+        
+        ("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26"),
+
+    ]
+    cols = pd.MultiIndex.from_tuples(d_cols)
+    datas = {}
+    for col in d_cols:
+        datas[col] = {}
+    count = 0
+    for f in fs.order_by("name", "username"):
+        dict_administrative_levels_with_infos = {}
+        already_count_facilitator = False
+        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        f_doc = None
+        cvds = []
+        for doc in query_result_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                f_doc = doc
+                cvds = get_cvds(f_doc)
+                break
+        
+        if f_doc:
+            for cvd in cvds:
+                administrative_level_cvd_village = cvd.get('village')
+                if administrative_level_cvd_village:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
+                    if administrativelevel_obj.cvd:
+                        _ok = True
+                        if liste_villages:
+                            _ok = False
+                            for village in liste_villages:
+                                if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
+                                    _ok = True
+                                    break
+                        if _ok:
+                            datas[("MONOGRAPHIE", "N°", "N°", "N°", "ind_0")][count] = count + 1
+                            datas[("MONOGRAPHIE", "LOCALITE", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
+                            villages = ""
+                            for o in administrativelevel_obj.cvd.get_villages():
+                                villages += f'{o.name} ; '
+                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = villages
+                            datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+                            datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                            
+                            for doc in query_result_docs:
+                                _ = doc.get('doc')
+                                if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
+                                    form_response = _.get("form_response")
+                                    if form_response:
+                                        value = None
+
+                                        if _.get('sql_id') == 20: #Etablissement du profil du village
+                                            try:
+                                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
+                                            
+                                            try:
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
+
+                                            try:
+                                                value = dict(get_datas_dict(form_response, "equipementEtInfrastructures", 1))
+
+                                                datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] = ""
+                                                if value.get('ecoles'):
+                                                    ecoles = value.get('ecoles')
+                                                    if ecoles.get('ecoleLycee'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Lycée", "ind_11")][count] = ecoles.get('ecoleLycee')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Lycée ; " if ecoles.get('ecoleLycee') == "Oui" else ""
+                                                    if ecoles.get('ecoleCollege'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Collége", "ind_12")][count] = ecoles.get('ecoleCollege')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Collége ; " if ecoles.get('ecoleCollege') == "Oui" else ""
+                                                    if ecoles.get('ecolePrimaire'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "École primaire", "ind_13")][count] = ecoles.get('ecolePrimaire')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "École primaire ; " if ecoles.get('ecolePrimaire') == "Oui" else ""
+                                                    if ecoles.get('ecoleprescolaire'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Préscolaire", "ind_14")][count] = ecoles.get('ecoleprescolaire')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "École primaire ; " if ecoles.get('ecoleprescolaire') == "Oui" else ""
+                                                    if ecoles.get('ecoleAutre') and (strip_accents(ecoles.get('ecoleAutre')).strip()).title().replace('-', ' ') not in IGNORES:
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Écoles", "Autre", "ind_15")][count] = ecoles.get('ecoleAutre')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += f'{ecoles.get("ecoleAutre")} ; '
+                                                
+                                                if value.get('sante'):
+                                                    santes = value.get('sante')
+                                                    if santes.get('santeDispensaire'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Dispensaire", "ind_16")][count] = santes.get('santeDispensaire')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Dispensaire ; " if santes.get('santeDispensaire') == "Oui" else ""
+                                                    if santes.get('santeUSP'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "USP", "ind_17")][count] = santes.get('santeUSP')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "USP ; " if santes.get('santeUSP') == "Oui" else ""
+                                                    if santes.get('santeCMS'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "CMS", "ind_18")][count] = santes.get('santeCMS')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "CMS ; " if santes.get('santeCMS') == "Oui" else ""
+                                                    if santes.get('santeClinique'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Clinique", "ind_19")][count] = santes.get('santeClinique')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Clinique ; " if santes.get('santeClinique') == "Oui" else ""
+                                                    if santes.get('santeAutre') and (strip_accents(santes.get('santeAutre')).strip()).title().replace('-', ' ') not in IGNORES:
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Santé", "Autre", "ind_20")][count] = santes.get('santeAutre')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += f'{santes.get("santeAutre")} ; '
+                                                
+                                                if value.get('religieu'):
+                                                    religieux = value.get('religieu')
+                                                    if religieux.get('religieuEglise'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Religieu", "Eglise", "ind_21")][count] = religieux.get('religieuEglise')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Eglise ; " if religieux.get('religieuEglise') == "Oui" else ""
+                                                    if religieux.get('religieuMosquee'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures",  "Religieu", "Mosquée", "ind_22")][count] = religieux.get('religieuMosquee')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Mosquée ; " if religieux.get('religieuMosquee') == "Oui" else ""
+                                                    if religieux.get('religeuAutres') and (strip_accents(religieux.get('religeuAutres')).strip()).title().replace('-', ' ') not in IGNORES:
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Religieu", "Autres", "ind_23")][count] = religieux.get('religeuAutres')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += f'{religieux.get("religeuAutres")} ; '
+                                                
+                                                if value.get('infrastDeMarches'):
+                                                    infrastDeMarches = value.get('infrastDeMarches')
+                                                    if infrastDeMarches.get('hangar'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "infrastructures de marchés", "Hangar", "ind_24")][count] = infrastDeMarches.get('hangar')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Hangar ; " if infrastDeMarches.get('hangar') == "Oui" else ""
+                                                
+                                                if value.get('infrastRoutieres'):
+                                                    infrastRoutieres = value.get('infrastRoutieres')
+                                                    if infrastRoutieres.get('piste'):
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Infrast routiéres/type", "Piste", "ind_25")][count] = infrastRoutieres.get('piste')
+                                                        datas[("MONOGRAPHIE", "Équipement et infrastructures", "Équipement et infrastructures", "Toutes", "ind_26")][count] += "Piste ; " if infrastRoutieres.get('piste') == "Oui" else ""
+
+                                            except:
+                                                pass
+
+                            count += 1
+
+
+    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
+        os.makedirs("media/"+file_type+"/reports/excel_csv")
+
+    file_name = "reports_monographie_" + _type.lower() + "_" + (("reports_monographie".lower() + "_") if "reports_monographie" else "")
+
+    if file_type == "csv":
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
+        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+    else:
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+
+    if platform == "win32":
+        # windows
+        return file_path.replace("/", "\\\\")
+    else:
+        return file_path
