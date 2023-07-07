@@ -224,6 +224,8 @@ class Task(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
+        # else:
+        #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)
         return self
 
 
@@ -270,6 +272,8 @@ class AdministrativeLevelWave(BaseModel):
     administrative_level_id = models.IntegerField()
     wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    begin = models.DateField(blank=True, null=True)
+    end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     
     class Meta:
@@ -299,6 +303,8 @@ class FacilitatorWave(BaseModel):
     facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
     wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    begin = models.DateField(blank=True, null=True)
+    end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     
     class Meta:
@@ -318,6 +324,8 @@ class FacilitatorDeployment(BaseModel):
     administrative_level_wave = models.ForeignKey("AdministrativeLevelWave", on_delete=models.CASCADE)
     facilitator_wave = models.ForeignKey("FacilitatorWave", on_delete=models.CASCADE)
     deployment = models.ForeignKey("Deployment", on_delete=models.CASCADE)
+    begin = models.DateField(blank=True, null=True)
+    end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
         
     class Meta:
