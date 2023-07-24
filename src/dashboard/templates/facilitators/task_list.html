@@ -435,22 +435,24 @@
                 {% else %}
                     {% if task.completed %}
                         {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
-                        {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
-                            name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
-                        <button type="button" name="invalidate_valide" 
-                            class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide" 
-                            style="margin-top: 25px; width: 50%; margin: auto;" 
-                            required id="id_invalidate_valide_{{ task|get:'_id' }}">
-                            {% if task.validated %}
-                                {% translate 'Mark as invalidated' %}
-                            {% else %}
-                                {% translate 'Mark as validated' %}
-                            {% endif %}
-                        </button> {% endcomment %}
+                        <div style="margin-top: 25px; width: 100%;">
+                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
+                                name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
+                            <button type="button" name="invalidate_valide" 
+                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide" 
+                                style="margin-top: 25px; width: 50%; margin: auto;" 
+                                required id="id_invalidate_valide_{{ task|get:'_id' }}">
+                                {% if task.validated %}
+                                    {% translate 'Mark as invalidated' %}
+                                {% else %}
+                                    {% translate 'Mark as validated' %}
+                                {% endif %}
+                            </button> {% endcomment %}
 
-                        {% comment %} Validation Invalidation {% endcomment %}
-                        {% include "facilitators/validation_invalidation.html" %}
-                        {% comment %} End Validation Invalidation {% endcomment %}
+                            {% comment %} Validation Invalidation {% endcomment %}
+                            {% include "facilitators/validation_invalidation.html" %}
+                            {% comment %} End Validation Invalidation {% endcomment %}
+                        </div>
                         {% endif %}
                     {% endif %}
                     
