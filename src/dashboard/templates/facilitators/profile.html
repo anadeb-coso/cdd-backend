@@ -223,6 +223,7 @@ input {
                     is_validated: is_validated.val()
                 },
                 success: function (response) {
+                    tasks.html(response);
                     spin.hide();
                     if (index - offset >= 0) {
                         previous.show();
@@ -234,7 +235,6 @@ input {
                     } else {
                         next.hide();
                     }
-                    tasks.html(response);
                     if (response.trim()) {
                         current_page.html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset));
                     } else {

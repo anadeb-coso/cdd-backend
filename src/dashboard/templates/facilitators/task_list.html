@@ -78,7 +78,7 @@
 
 
 {% for task in tasks %}
-    <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ forloop.counter }}" style="cursor: pointer;" >
+    <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
         <div class="row">
             <div class="col-sm-7">
                 <div class="phase-title">
@@ -135,10 +135,11 @@
                     {% else %}
                         {% if task.validated == False %}
                             <i class="fas fa-times warning-color"></i> 
+                            {% translate 'Task not validated' %}
                         {% else %}
                             <i class="fas fa-exclamation-triangle warning-color"></i> 
+                            {% translate 'Unseen task' %}
                         {% endif %}
-                        {% translate 'Task not validated' %}
                     {% endif %}
                 </div>
             </div>
@@ -158,7 +159,7 @@
 
 
     <!-- Modal  modal-dialog-centered -->
-    <div class="modal fade" id="card-item-task-{{ forloop.counter }}" tabindex="-1" role="dialog"
+    <div class="modal fade" id="card-item-task-{{ task|get:'_id' }}" tabindex="-1" role="dialog"
         aria-labelledby="UploadTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
@@ -188,10 +189,11 @@
                             <div class="status-badge warning-color">
                                 {% if task.validated == False %}
                                     <i class="fas fa-times warning-color"></i> 
+                                    {% translate 'Task not validated' %}
                                 {% else %}
                                     <i class="fas fa-exclamation-triangle warning-color"></i> 
+                                    {% translate 'Unseen task' %}
                                 {% endif %}
-                                {% translate 'Task not validated' %}
                             </div>
                         {% endif %}
                     </div>
@@ -403,22 +405,16 @@
                     <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}" 
                             name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
                     {% if task.completed %}
-                    <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
-                            name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
+
                     <div style="margin-top: 25px; width: 100%;">
-                        <div style="width: 30%; margin: auto; float: left;" >
-                            <button type="button" name="invalidate_valide" class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %}" 
-                                required id="id_invalidate_valide_{{ task|get:'_id' }}">
-                                {% if task.validated %}
-                                    {% translate 'Mark as invalidated' %}
-                                {% else %}
-                                    {% translate 'Mark as validated' %}
-                                {% endif %}
-                            </button>
-                        </div>
+
+                        {% comment %} Validation Invalidation {% endcomment %}
+                        {% include "facilitators/validation_invalidation.html" %}
+                        {% comment %} End Validation Invalidation {% endcomment %}
+
                         
                         <div style="width: 30%; margin: auto; float: right;" >
-                            <button type="button" name="uncomplete_complete" class="btn btn-warning" 
+                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete" 
                                 required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                                 {% translate 'Mark as uncompleted' %}
                             </button>
@@ -433,12 +429,16 @@
                         </button>
                     {% endif %}
 
-                {% else %}
 
+
+
+                {% else %}
                     {% if task.completed %}
-                        <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
+                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
+                        {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
                             name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
-                        <button type="button" name="invalidate_valide" class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %}" 
+                        <button type="button" name="invalidate_valide" 
+                            class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide" 
                             style="margin-top: 25px; width: 50%; margin: auto;" 
                             required id="id_invalidate_valide_{{ task|get:'_id' }}">
                             {% if task.validated %}
@@ -446,7 +446,12 @@
                             {% else %}
                                 {% translate 'Mark as validated' %}
                             {% endif %}
-                        </button>
+                        </button> {% endcomment %}
+
+                        {% comment %} Validation Invalidation {% endcomment %}
+                        {% include "facilitators/validation_invalidation.html" %}
+                        {% comment %} End Validation Invalidation {% endcomment %}
+                        {% endif %}
                     {% endif %}
                     
                 {% endif %}
@@ -490,6 +495,37 @@
 
 
 
+
+{% block modals %}
+
+    <div class="modal fade modal-confirmation" id="modal_comment">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="text-primary text-center fs17 lh19 text-bold mb-4"
+                         style="padding: 0 45px 0 45px;">
+                        {% translate "Please enter a comment" %}
+                    </div>
+                    <div class="form-group">
+                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control" 
+                            title="" required="" id="id_in_validation_comment" spellcheck="true" 
+                            placeholder="{% translate 'Add Comment' %}"></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button id="btn-send-comment" type="submit" class="btn btn-lg btn-primary text-right">
+                        {% translate "Send" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock modals %}
+
+
+
 <script>
     try{
         total_tasks = parseInt("{{ total_tasks }}");
@@ -498,45 +534,161 @@
     }
 
     $(document).ready(function () {
+        let facilitator_db_name = "{{ facilitator_db_name }}";
 
-        $('button').click(function () {
-            let facilitator_db_name = "{{ facilitator_db_name }}";
-            if(this.id.includes("id_invalidate_valide_")){
-                let task__id = this.id.split("_")[this.id.split("_").length - 1];
-                let action_code = $(('#action_code_'+task__id)).val();
-                
+        //Valide invalide
+        let task__id = null;
+        let action_code = null;
+        let id_invalidate_elt = null;
+        let btn_send_comment = $('#btn-send-comment');
+        $(document).on('click', '.invalidate_valide', function () {
+            task__id = this.id.split("_")[this.id.split("_").length - 1];
+            id_invalidate_elt = $(('#id_invalidate_'+task__id));
+            for(var i = 0; i < this.classList.length; i++){
+                if(this.classList[i].includes("action_code_")){
+                    action_code = this.classList[i].split("_")[2];
+                }
+            }
+
+            $('#card-item-task-'+task__id).modal('hide');
+            $('#modal_comment').modal('show');
+        });
+
+
+        btn_send_comment.click(function () {
+            let in_validation_comment = $('#id_in_validation_comment').val();
+            
+            if(["0", 0].includes(action_code) && (
+                    ["", null, undefined].includes(in_validation_comment) || (
+                        in_validation_comment && [""].includes(in_validation_comment.replace(/\s/g, ''))
+                    )
+                )
+                )
+            {
+                alert("{% translate 'Please add a comment' %}");
+            }else if(task__id != null && action_code != null){
+                btn_send_comment.prop("disabled", true);
+                btn_send_comment.text("{% translate 'Sending...' %}");
                 $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+                    data: {
+                        no_sql_db_name: facilitator_db_name,
+                        task_id: task__id,
+                        action_code: action_code,
+                        in_validation_comment: in_validation_comment
+                    },
+                    success: function (response) {
+                        if(response.status == "ok"){
+                            let id_invalidate_valide_task__id_elt = $(("#id_invalidate_valide_"+task__id));
+                            id_invalidate_valide_task__id_elt.removeClass(('action_code_'+action_code));
+
+                            if(action_code == "1" || action_code == 1){
+                                id_invalidate_valide_task__id_elt.addClass('action_code_0');
+
+                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
+                                id_invalidate_valide_task__id_elt.removeClass("btn-primary");
+                                id_invalidate_valide_task__id_elt.addClass("btn-warning");
+                                $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge success-color">
+                                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                                    </div>
+                                `);
+                            }else{
+                                id_invalidate_valide_task__id_elt.addClass('action_code_1');
+
+                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as validated' %}`);
+                                id_invalidate_valide_task__id_elt.removeClass("btn-warning");
+                                id_invalidate_valide_task__id_elt.addClass("btn-primary");
+                                $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge warning-color">
+                                        <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
+                                    </div>
+                                `);
+                            }
+                            $('#modal_comment').modal('hide');
+                            {% comment %} $('#card-item-task-'+task__id).modal('show'); {% endcomment %}
+                            task__id = null;
+                            action_code = null;
+                            if(id_invalidate_elt){
+                                id_invalidate_elt.hide();
+                            }
+                            $('#id_in_validation_comment').val("");
+                        }else{
+                            alert(response.message);
+                        }
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+                    }
+                });
+            }
+            
+        });
+        //End valide invalide
+
+
+
+
+        //Complet Uncomplet
+        $('.uncomplete_complete').click(function () {
+
+            //Completed Uncompleted
+            let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
+            let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
+            let elt_task_number = $(('#task_number_'+task_completed__id));
+            
+            $.ajax({
                 type: "GET",
-                url: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+                url: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
                 data: {
                     no_sql_db_name: facilitator_db_name,
-                    task_id: task__id,
-                    action_code: action_code
+                    task_id: task_completed__id,
+                    action_code: action_code_completed
                 },
                 success: function (response) {
                     if(response.status == "ok"){
-                        if(action_code == "1" || action_code == 1){
-                            $(('#action_code_'+task__id)).val(0);
-                            $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as invalidated' %}`);
-                            $(("#id_invalidate_valide_"+task__id)).removeClass("btn-primary");
-                            $(("#id_invalidate_valide_"+task__id)).addClass("btn-warning");
-                            $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
-                            $(('.modal_text_'+task__id)).html(`
-                                <div class="status-badge success-color">
-                                    <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                        if(action_code_completed == "1" || action_code_completed == 1){
+                            $(('#action_code_completed_'+task_completed__id)).val(0);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as uncompleted' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-primary");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-warning");
+                            $(('.text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-completed">
+                                    {% translate 'Completed' %}
                                 </div>
                             `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-completed">
+                                    {% translate 'Completed' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-pending");
+                            elt_task_number.addClass("badge-completed");
                         }else{
-                            $(('#action_code_'+task__id)).val(1);
-                            $(("#id_invalidate_valide_"+task__id)).text(`{% translate 'Mark as validated' %}`);
-                            $(("#id_invalidate_valide_"+task__id)).removeClass("btn-warning");
-                            $(("#id_invalidate_valide_"+task__id)).addClass("btn-primary");
-                            $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
-                            $(('.modal_text_'+task__id)).html(`
-                                <div class="status-badge warning-color">
-                                    <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
+                            $(('#action_code_completed_'+task_completed__id)).val(1);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as completed' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-warning");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-primary");
+                            $(('.text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-pending">
+                                    {% translate 'Pending' %}
                                 </div>
                             `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-pending">
+                                    {% translate 'Pending' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-completed");
+                            elt_task_number.addClass("badge-pending");
                         }
                     }else{
                         alert(response.message);
@@ -548,71 +700,9 @@
                     alert(error_server_message + "Error " + data.status);
                 }
             });
-            }else if(this.id.includes("id_uncomplete_complete_")){
-                //Completed Uncompleted
-                let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
-                let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
-                let elt_task_number = $(('#task_number_'+task_completed__id));
                 
-                $.ajax({
-                    type: "GET",
-                    url: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
-                    data: {
-                        no_sql_db_name: facilitator_db_name,
-                        task_id: task_completed__id,
-                        action_code: action_code_completed
-                    },
-                    success: function (response) {
-                        if(response.status == "ok"){
-                            if(action_code_completed == "1" || action_code_completed == 1){
-                                $(('#action_code_completed_'+task_completed__id)).val(0);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as uncompleted' %}`);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-primary");
-                                $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-warning");
-                                $(('.text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-completed">
-                                        {% translate 'Completed' %}
-                                    </div>
-                                `);
-                                $(('.modal_text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-completed">
-                                        {% translate 'Completed' %}
-                                    </div>
-                                `);
-                                elt_task_number.removeClass("badge-pending");
-                                elt_task_number.addClass("badge-completed");
-                            }else{
-                                $(('#action_code_completed_'+task_completed__id)).val(1);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as completed' %}`);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-warning");
-                                $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-primary");
-                                $(('.text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-pending">
-                                        {% translate 'Pending' %}
-                                    </div>
-                                `);
-                                $(('.modal_text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-pending">
-                                        {% translate 'Pending' %}
-                                    </div>
-                                `);
-                                elt_task_number.removeClass("badge-completed");
-                                elt_task_number.addClass("badge-pending");
-                            }
-                        }else{
-                            alert(response.message);
-                        }
-                        
-                    },
-                    error: function (data) {
-                        spin.hide();
-                        alert(error_server_message + "Error " + data.status);
-                    }
-                });
-
-
-            }
         });
+        //End complet Uncomplet
 
     }); 
 

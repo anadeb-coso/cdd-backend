@@ -1,0 +1,35 @@
+
+{% for k, v in user.items %}
+    <p>
+        <span style="font-weight: bold;">{{ k }}</span>: {{ v }}
+    </p>
+{% endfor %}
+
+<div style='width: 75% !important; margin: auto !important;border-style: double !important; padding-bottom: 50px !important;'>
+    <div style="margin-left: 17px;">
+        {% for k, v in datas.items %}
+            <p {% if forloop.counter == 1 %}style="font-weight: bold;"{% endif %}>
+                <span style="font-weight: bold;">{{ k }}</span>: {{ v }}
+            </p>
+        {% endfor %}
+    </div>
+    
+    <div style="text-align: center !important; margin: auto !important;">
+        <a href='{{ url }}' 
+        style='margin-bottom: 50px !important;'><button style='display: inline-block;
+        padding: 15px 25px;
+        font-size: 24px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 9px #999;'>
+            &#128065;
+        </button></a>
+    </div>
+
+</div>

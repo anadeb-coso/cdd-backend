@@ -3,11 +3,14 @@ from django.views import generic
 from django.db.models import Q
 from datetime import datetime
 from django.utils.translation import gettext_lazy
+from django.urls import reverse_lazy
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity
 from .functions import get_cascade_phase_activity_task_by_their_id
+from cdd.my_librairies.mail.send_mail import send_email
+from cdd.utils import get_administrative_region_name
 
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -123,6 +126,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
     def get(self, request, *args, **kwargs):
         no_sql_db_name = request.GET.get('no_sql_db_name')
         task_id = request.GET.get('task_id')
+        in_validation_comment = request.GET.get('in_validation_comment')
         action_code = int(request.GET.get('action_code') if request.GET.get('action_code') else 0)
         message = None
         status = "ok"
@@ -140,9 +144,10 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     'type': ("Validated" if bool(action_code) else "Invalidated"), 
                     'user_name': request.user.username, 'user_id': request.user.id,
                     'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
-                    'user_email': request.user.email, 'action_date': date_validated
+                    'user_email': request.user.email, 'action_date': date_validated,
+                    'comment': in_validation_comment
                 }
-                actions_by.append(action_by)
+                actions_by.insert(0, action_by)
                 #End
 
                 nsc.update_doc_uncontrolled(db, task['_id'], {
@@ -152,6 +157,35 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     "actions_by": actions_by
                     }
                 )
+
+                #Send Mail
+                if not bool(action_code):
+                    facilitator = db[db.get_query_result({"type": "facilitator"})[:][0]['_id']]
+                    subject = f'{gettext_lazy("Task Invalided")} : {task.get("name")}'
+                    msg = send_email(
+                        subject,
+                        "mail/send/comment",
+                        {
+                            "datas": {
+                                gettext_lazy("Title"): subject, 
+                                gettext_lazy("Phase"): task.get("phase_name"),
+                                gettext_lazy("Activity"): task.get("activity_name"),
+                                gettext_lazy("Location Name"): get_administrative_region_name(task.get("administrative_level_id")),
+                                gettext_lazy("Task"): task.get("name"),
+                                gettext_lazy("Comment"): in_validation_comment,
+                                gettext_lazy("Date"): date_validated,
+                            },
+                            "user": {
+                                gettext_lazy("Facilitator Name"): facilitator.get('name'),
+                                gettext_lazy("Phone"): facilitator.get('phone'),
+                            },
+                            "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
+                        },
+                        [facilitator.get('email')]
+                    )
+                #End Send Mail
+
+
                 message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()
             else:
                 message = gettext_lazy("The task isn't completed").__str__()
