@@ -15,7 +15,7 @@
 {% if task.validated == True or task.validated == False %}
 {% else %}
     <div style="width: 30%; margin: auto; float: left;" id="id_invalidate_{{ task|get:'_id' }}" >
-        <button type="button" name="invalidate_valide" 
+        <button type="button" name="invalidate_valide" id="_id_invalidate_{{ task|get:'_id' }}" 
             class="btn btn-warning  action_code_0 invalidate_valide" 
             required>
                 {% translate 'Mark as invalidated' %}

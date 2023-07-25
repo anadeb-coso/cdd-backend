@@ -4,12 +4,14 @@ from django.db.models import Q
 from datetime import datetime
 from django.utils.translation import gettext_lazy
 from django.urls import reverse_lazy
+from django.conf import settings
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity
 from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
+from cdd.my_librairies.sms.send_sms import send_sms
 from cdd.utils import get_administrative_region_name
 
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
@@ -130,6 +132,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         action_code = int(request.GET.get('action_code') if request.GET.get('action_code') else 0)
         message = None
         status = "ok"
+        mail_message, sms_message = None, None
         try:
             nsc = NoSQLClient()
             db = nsc.get_db(no_sql_db_name)
@@ -158,32 +161,57 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     }
                 )
 
-                #Send Mail
+                #Send Mail - SMS
                 if not bool(action_code):
                     facilitator = db[db.get_query_result({"type": "facilitator"})[:][0]['_id']]
                     subject = f'{gettext_lazy("Task Invalided")} : {task.get("name")}'
-                    msg = send_email(
-                        subject,
-                        "mail/send/comment",
-                        {
-                            "datas": {
-                                gettext_lazy("Title"): subject, 
-                                gettext_lazy("Phase"): task.get("phase_name"),
-                                gettext_lazy("Activity"): task.get("activity_name"),
-                                gettext_lazy("Location Name"): get_administrative_region_name(task.get("administrative_level_id")),
-                                gettext_lazy("Task"): task.get("name"),
-                                gettext_lazy("Comment"): in_validation_comment,
-                                gettext_lazy("Date"): date_validated,
+                    administrative_region_name = get_administrative_region_name(task.get("administrative_level_id"))
+                    
+                    try:
+                        msg = send_email(
+                            subject,
+                            "mail/send/comment",
+                            {
+                                "datas": {
+                                    gettext_lazy("Title"): gettext_lazy("Task Invalided"), 
+                                    gettext_lazy("Comment"): in_validation_comment,
+                                    gettext_lazy("Phase"): task.get("phase_name"),
+                                    gettext_lazy("Activity"): task.get("activity_name"),
+                                    gettext_lazy("Task"): task.get("name"),
+                                    gettext_lazy("Location Name"): administrative_region_name,
+                                    gettext_lazy("Date"): date_validated,
+                                },
+                                "user": {
+                                    gettext_lazy("Facilitator Name"): facilitator.get('name'),
+                                    gettext_lazy("Phone"): facilitator.get('phone'),
+                                    gettext_lazy("Sex"): facilitator.get('sex'),
+                                },
+                                "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                             },
-                            "user": {
-                                gettext_lazy("Facilitator Name"): facilitator.get('name'),
-                                gettext_lazy("Phone"): facilitator.get('phone'),
-                            },
-                            "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
-                        },
-                        [facilitator.get('email')]
-                    )
-                #End Send Mail
+                            [facilitator.get('email')]
+                        )
+                        mail_message = gettext_lazy("Mail sent successfully")
+                    except:
+                        mail_message = gettext_lazy("An error occurred while sending the email")
+
+                    try:
+                        TWILIO_REGION = str(settings.TWILIO_REGION)
+                        send_sms(
+                            f"+{(facilitator.get('phone') if (facilitator.get('phone') and TWILIO_REGION in facilitator.get('phone') and TWILIO_REGION == facilitator.get('phone')[0:len(TWILIO_REGION)]) else (TWILIO_REGION+facilitator.get('phone')))}", 
+                            body=f'{subject}\n\
+                                {gettext_lazy("Comment")}: {in_validation_comment}\n\
+                                {gettext_lazy("Phase")}: {task.get("phase_name")}\n\
+                                {gettext_lazy("Activity")}: {task.get("activity_name")}\n\
+                                {gettext_lazy("Task")}: {task.get("name")}\n\
+                                {gettext_lazy("Location Name")}: {administrative_region_name}\n\
+                                {gettext_lazy("Date")}: {date_validated}\n\
+                            '
+                        )
+                        sms_message = gettext_lazy("SMS sent successfully")
+                    except Exception as exc:
+                        print(exc)
+                        sms_message = gettext_lazy("An error occurred while sending the sms")
+                #End Send Mail - SMS
 
 
                 message = gettext_lazy("Task validated").__str__() if bool(action_code) else gettext_lazy("Task not validated").__str__()
@@ -194,7 +222,12 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             message = gettext_lazy("An error has occurred...").__str__()
             status = "error"
 
-        return self.render_to_json_response({"message": message, "status": status}, safe=False)
+        return self.render_to_json_response(
+            {
+                "message": message, "status": status, 
+                "sms_message": sms_message, "mail_message": mail_message
+            }, safe=False
+        )
 
 
 class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):

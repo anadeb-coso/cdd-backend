@@ -422,7 +422,7 @@
                     </div>
                     <div style="clear: both;"></div>
                     {% else %}
-                        <button type="button" name="uncomplete_complete" class="btn btn-primary" 
+                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete" 
                             style="margin-top: 25px; width: 50%; margin: auto;" 
                             required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                             {% translate 'Mark as completed' %}
@@ -623,6 +623,14 @@
                         }
                         btn_send_comment.prop("disabled", false);
                         btn_send_comment.text("{% translate 'Send' %}");
+
+                        if(response.mail_message && response.sms_message){
+                            alert(response.mail_message+"\n"+response.sms_message);
+                        }else if(response.mail_message){
+                            alert(response.mail_message);
+                        }else if(response.sms_message){
+                            alert(response.sms_message);
+                        }
                     },
                     error: function (data) {
                         spin.hide();
