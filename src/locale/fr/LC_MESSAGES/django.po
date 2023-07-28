@@ -607,6 +607,10 @@ msgstr "Choisir"
 msgid "Untouched by Specialist"
 msgstr "Non touché par Spécialiste"
 
+#: .\dashboard\facilitators\views.html
+msgid "Unsee"
+msgstr "Non vue"
+
 #: .dashboard\templates\components\upload.html
 msgid "Load file"
 msgstr "Charger Fichier"

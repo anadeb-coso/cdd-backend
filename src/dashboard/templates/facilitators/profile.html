@@ -122,8 +122,9 @@ input {
             </div>
             <div class="card h-100">
                 <div class="card-body">
-                    <div class="text-bold-family fs17">{% translate 'Facilitator Code' %}</div>
-                    <div class="facilitator-code mt-3" id="facilitator_code">{{ facilitator.code }}</div>
+                    <div class="text-bold-family fs17">{% translate 'Facilitator Code' %}: 
+                    <span class="text-primary" id="facilitator_code">{{ facilitator.code }}</span></div>
+                    {% comment %} <div class="facilitator-code mt-3" id="facilitator_code">{{ facilitator.code }}</div> {% endcomment %}
                 </div>
             </div>
         </div>
@@ -134,15 +135,18 @@ input {
             <div class="card transparent">
                 <div class="card-body">
                     <div class="row tasks-filter">
-                        <div class="col-2 text-left">
+                        {% comment %} <div class="col-2 text-left">
                             <div class="fs28 lh35 text-primary text-bold-family mb-4" style="font-size: 16px !important;">
                                 {% translate 'Task List' %}<br>
                             </div>
-                        </div>
-                        <div class="col-10 border-left filter_fields">
+                        </div> {% endcomment %}
+                        <div class="col-12 border-left filter_fields">
                             <div class="row">
-                                <div class="col-2">
+                                {% comment %} <div class="col-2">
                                     <label class="label-align">{% translate 'Filter by' %}</label>
+                                </div> {% endcomment %}
+                                <div class="col-1 align-items-center" style="margin: auto !important;">
+                                    <label class="label-align ml-4"><i class="fas fa-filter" style="font-size: 25px;"></i></label>
                                 </div>
                                 <div class="col-3">
                                     {% bootstrap_field form.administrative_level show_label=False %}
@@ -156,7 +160,7 @@ input {
                                 <div class="col-2">
                                     {% bootstrap_field form.task show_label=False %}
                                 </div>
-                                <div class="col-1">
+                                <div class="col-2">
                                     {% bootstrap_field form.is_validated show_label=False %}
                                 </div>
                             </div>

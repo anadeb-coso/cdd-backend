@@ -80,7 +80,7 @@ class FilterTaskForm(forms.Form):
         self.fields['task'].widget.choices = query_result_tasks
         self.fields['is_validated'].widget.choices = [
             ('', ''), ('Validated', _('Validated')), ('Invalidated',  _('Invalidated')),
-            ('Completed', _('Completed')), ('Pending',  _('Pending')), ('Untouched',  _('Untouched by Specialist'))
+            ('Completed', _('Completed')), ('Pending',  _('Uncompleted')), ('Untouched',  _('Unsee'))
         ]
     
     def check_name(self, liste, obj):
