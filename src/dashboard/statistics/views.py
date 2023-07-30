@@ -8,7 +8,7 @@ from django.http import Http404
 
 from dashboard.reports.pages.forms import ReportsFacilitatorsStatusForm
 from authentication.models import Facilitator
-from dashboard.facilitators.forms import FilterFacilitatorForm
+from dashboard.facilitators.forms import FilterFacilitatorFormMultiChoices
 from cdd.my_librairies import download_file, convert_file_to_dict
 from .functions import get_global_statistic_under_file_excel_or_csv, save_csv_datas_in_db
 from authentication.permissions import AdminPermissionRequiredMixin
@@ -20,7 +20,7 @@ class StatisticView(PageMixin, LoginRequiredMixin, FormView):
     context_object_name = 'statistic'
     title = gettext_lazy('statistic')
     active_level1 = 'statistics'
-    form_class = FilterFacilitatorForm
+    form_class = FilterFacilitatorFormMultiChoices
     breadcrumb = [
         {
             'url': '',
@@ -67,40 +67,43 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
         },
     ]
 
+    def _get_ids_list(self, elt: str):
+        if type(elt) is str:
+            return [_elt for _elt in elt.split(',') if _elt]
+        return []
+
     def get(self, request, facilitator_db_name=None, *args, **kwargs):
 
-        id_region = request.GET.get('id_region')
-        id_prefecture = request.GET.get('id_prefecture')
-        id_commune = request.GET.get('id_commune')
-        id_canton = request.GET.get('id_canton')
-        id_village = request.GET.get('id_village')
+        ids_region = self._get_ids_list(request.GET.get('id_region'))
+        ids_prefecture = self._get_ids_list(request.GET.get('id_prefecture'))
+        ids_commune = self._get_ids_list(request.GET.get('id_commune'))
+        ids_canton = self._get_ids_list(request.GET.get('id_canton'))
+        ids_village = self._get_ids_list(request.GET.get('id_village'))
         type_field = request.GET.get('type_field')
-        
-        _id = 0
+        _ids = []
         _type = "All"
-        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
-            if id_region and type_field == "region":
-                _type = "region"
-                _id = id_region
-            elif id_prefecture and type_field == "prefecture":
-                _type = "prefecture"
-                _id = id_prefecture
-            elif id_commune and type_field == "commune":
-                _type = "commune"
-                _id = id_commune
-            elif id_canton and type_field == "canton":
-                _type = "canton"
-                _id = id_canton
-            elif id_village and type_field == "village":
+        if (ids_region or ids_prefecture or ids_commune or ids_canton or ids_village) and type_field:
+            if ids_village:
                 _type = "village"
-                _id = id_village
+                _ids = ids_village
+            elif ids_canton:
+                _type = "canton"
+                _ids = ids_canton
+            elif ids_commune:
+                _type = "commune"
+                _ids = ids_commune
+            elif ids_prefecture:
+                _type = "prefecture"
+                _ids = ids_prefecture
+            elif ids_region:
+                _type = "region"
+                _ids = ids_region
                 
-
         file_path = ""
         try:
             file_path = get_global_statistic_under_file_excel_or_csv(
                 facilitator_db_name=facilitator_db_name,
-                params={"type": _type, "id_administrativelevel": _id}
+                params={"type": _type, "ids_administrativelevel": _ids}
             )
 
         except Exception as exc:

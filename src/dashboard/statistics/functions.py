@@ -23,11 +23,19 @@ def get_index_with_datas_dict_by_one_key_name(reponses_datas, key):
                 return i, elt
     return 0, {}
 
-def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
+def sum_dict_value(d: dict):
+    _sum = 0
+    for k, v in d.items():
+        if v and str(v).replace('.','',1).replace(',','',1).isdigit():
+            _sum += float(v)
+    return _sum
+
+
+def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "ids_administrativelevel":""}):
     nsc = NoSQLClient()
 
     _type = params.get("type")
-    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
     if facilitator_db_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
     else:
@@ -1366,18 +1374,44 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                             count += 1
 
 
+    # All sum
+    datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0")][count] = "Total"
+    columns_skip = [
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")
+    ]
+    for k_data in datas.keys():
+        _sum = 0
+        if k_data not in columns_skip:
+            _sum = sum_dict_value(datas[k_data])
+        if _sum:
+            datas[k_data][count] = _sum
+    # End All sum
 
     if not os.path.exists("media/"+file_type+"/statistics"):
         os.makedirs("media/"+file_type+"/statistics")
 
     file_name = "statistics_" + _type.lower() + "_" + (("statistics".lower() + "_") if "statistics" else "")
+    df = pd.DataFrame(datas, columns=cols)
+    
+    #Sort Datas
+    # df.sort_values([
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1"),
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture","Préfecture", "ind_2"),
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3"),
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4"),
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5"),
+    #     ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")
+    # ])
+    #End Sort Datas
+
 
     if file_type == "csv":
         file_path = file_type+"/statistics/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+        df.to_csv("media/"+file_path)
     else:
         file_path = file_type+"/statistics/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+        df.to_excel("media/"+file_path)
 
     if platform == "win32":
         # windows
