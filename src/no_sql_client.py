@@ -86,8 +86,11 @@ class NoSQLClient:
 
                     _p.field_set(_p, k, attr)
                     continue
-
-                _p.field_set(_p, k, v)
+                
+                try:
+                    _p.field_set(_p, k, v)
+                except:
+                    pass
                 
             _p.save()
         except Exception as exc:

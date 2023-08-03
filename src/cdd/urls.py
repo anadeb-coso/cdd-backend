@@ -36,6 +36,7 @@ urlpatterns = [
     path('attachments/', include('attachments.urls')),
     path('authentication/', include('authentication.urls')),
     path('services/', include('cdd.my_librairies.services.urls')),
+    path('process_manager/', include('process_manager.urls')),
 ]
 
 urlpatterns += i18n_patterns(
