@@ -259,10 +259,19 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
 
         # Iterate every administrative level assigned to the facilitator
         for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+            canton_sql_id = None
+            try:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                canton_sql_id = str(administrativelevel_obj.parent.id)
+            except Exception as e:
+                pass
+
             if(
                 (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
                 or
                 (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+                or
+                (administrative_level.get('is_headquarters_village') and administrativelevel_ids and canton_sql_id and canton_sql_id in administrativelevel_ids)
                ):
                 # Get phase
                 new_phase = phase[0].copy()
@@ -377,15 +386,6 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                         "activity_id": fc_activity[0]['_id'],
                         "type": new_task['type'], "order": new_task['order']
                     })[0]
-
-                canton_sql_id = None
-                try:
-                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
-                    canton_sql_id = str(administrativelevel_obj.parent.id)
-                except Exception as e:
-                    print()
-                    print(new_task.get('name'), ', ', administrative_level.get('name'),":", e)
-                    print()
 
 
                 # Check if the task was found
