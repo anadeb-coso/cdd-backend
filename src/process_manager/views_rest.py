@@ -41,9 +41,10 @@ class SaveFormDatas(APIView):
                 t = fc_task[0]
                 t["attachments"] = task['attachments']
                 t["form_response"] = task['form_response']
-                t["completed_date"] = task['completed_date']
-                t["completed"] = task['completed']
                 t["last_updated"] = task['last_updated']
+                if not t["completed"]:
+                    t["completed_date"] = task['completed_date']
+                    t["completed"] = task['completed']
 
                 nsc.update_cloudant_document(facilitator_database,  t["_id"], t)
             except Exception as exc:
