@@ -440,7 +440,7 @@
 
                 {% else %}
                     {% if task.completed %}
-                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
+                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" %}
                         <div style="margin-top: 25px; width: 100%;">
                             {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
                                 name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
