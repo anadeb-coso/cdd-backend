@@ -30,24 +30,26 @@ function changeRegionTrigger(url, placeholder) {
 $(document).on("click", "#add", function () {
     let selected_region = $("select.region:last");
     let administrative_id = selected_region.val();
-    selected_regions.push(administrative_id);
-    let region_name = $('#' + selected_region[0].id + ' option:selected').text();
-    let selected_region_json = {
-        "name": region_name,
-        "id": administrative_id
-    };
-    selected_regions_json.push(selected_region_json);
-    $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
-    $(this).addClass('disabled');
-    $('#' + administrative_id).prop('disabled', true);
-    let region_long_name = $("select.region").map(function () {
-        return this.options[this.selectedIndex].text;
-    }).get().reverse().join(", ");
-    let region_html = "<a class='tag mt-2' >" +
-        "<i value='" + administrative_id + "' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>" +
-        region_long_name + "</a>";
-    $("#selected_regions").append(region_html);
-    toggleSubmitButton();
+    if(administrative_id && administrative_id !== "0" && administrative_id !== 0){
+        selected_regions.push(administrative_id);
+        let region_name = $('#' + selected_region[0].id + ' option:selected').text();
+        let selected_region_json = {
+            "name": region_name,
+            "id": administrative_id
+        };
+        selected_regions_json.push(selected_region_json);
+        $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
+        $(this).addClass('disabled');
+        $('#' + administrative_id).prop('disabled', true);
+        let region_long_name = $("select.region").map(function () {
+            return this.options[this.selectedIndex].text;
+        }).get().reverse().join(", ");
+        let region_html = "<a class='tag mt-2' >" +
+            "<i value='" + administrative_id + "' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>" +
+            region_long_name + "</a>";
+        $("#selected_regions").append(region_html);
+        toggleSubmitButton();
+    }
 });
 
 $(document).on("click", ".remove-region", function () {
