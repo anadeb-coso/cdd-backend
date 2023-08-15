@@ -11,10 +11,11 @@ class GetChoicesForNextAdministrativeLevelView(AJAXRequestMixin, LoginRequiredMi
     def get(self, request, *args, **kwargs):
         parent_id = request.GET.get('parent_id')
         exclude_lower_level = request.GET.get('exclude_lower_level', None)
+        project_id = request.GET.get('project_id', 1)
 
         nsc = NoSQLClient()
         administrative_levels_db = nsc.get_db("administrative_levels")
-        data = get_child_administrative_levels(administrative_levels_db, parent_id)
+        data = get_child_administrative_levels(administrative_levels_db, parent_id, project_id)
 
         if data and exclude_lower_level and not get_child_administrative_levels(
                 administrative_levels_db, data[0]['administrative_id']):
