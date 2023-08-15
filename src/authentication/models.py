@@ -54,6 +54,10 @@ class Facilitator(models.Model):
 
     def simple_save(self, *args, **kwargs):
         return super().save(*args, **kwargs)
+    
+    def save_and_return_object(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        return self
 
     def save(self, *args, **kwargs):
         replicate_design = True
