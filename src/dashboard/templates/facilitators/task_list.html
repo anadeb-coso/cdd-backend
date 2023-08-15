@@ -30,7 +30,7 @@
                 {% for cvd_name, infos in dict_administrative_levels_with_infos.items %}
                 <tr>
                     <td>{{ forloop.counter }}</td>
-                    <td align="left">{{ cvd_name }}</td>
+                    <td align="left">{% with infos|get:"cvd" as cvd %}{{ cvd|get:"cvd_name" }}{% endwith %}</td>
                     {% comment %} {% for key, value in infos.items %}
                         {% if key == "percentage_tasks_completed" %}
                         <td>{{ value|floatformat:"2"  }}%</td>
