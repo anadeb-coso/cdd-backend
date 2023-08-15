@@ -14,17 +14,20 @@ from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, Update
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from dashboard.utils import (
-    get_all_docs_administrative_levels_by_type_and_administrative_id,
-    get_all_docs_administrative_levels_by_type_and_parent_id
+    sync_geographicalunits_with_cvd_on_facilittor, sync_tasks
 )
 from authentication.permissions import (
     CDDSpecialistPermissionRequiredMixin, SuperAdminPermissionRequiredMixin,
     AdminPermissionRequiredMixin
     )
-from .functions import get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd
+from .functions import (
+    get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd,
+    clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db)
 from administrativelevels import models as administrativelevels_models
+from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_administrative_levels_under_json, get_cascade_villages_by_administrative_level_id
-from cdd.functions import datetime_complet_str
+from cdd.functions import datetime_complet_str, exists_id_in_a_dict
+
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
@@ -547,6 +550,21 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
                 elt['is_headquarters_village'] = True
             _administrative_levels.append(elt)
 
+        #Assign ADL
+        for adl in _administrative_levels:
+            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            print(_assign)
+            if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
+                    try:
+                        assign = AssignAdministrativeLevelToFacilitator()
+                        assign.administrative_level_id = int(adl['id'])
+                        assign.facilitator_id = facilitator.id
+                        assign.project_id = 1
+                        assign.save(using='mis')
+                    except Exception as exc:
+                        print(exc)
+        #End Assign ADL
+
         doc = {
             "name": data['name'],
             "email": data['email'],
@@ -561,6 +579,23 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         nsc.create_document(facilitator_database, doc)
+
+        
+        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+            "backup_db_facilitators_docs", facilitator.no_sql_db_name, 
+            [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
+        ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
+
+        sync_geographicalunits_with_cvd_on_facilittor(
+            facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name
+        ) #Rebuild Unit and CVD infos on facilitator doc
+
+        sync_tasks(
+            facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name,
+            administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
+        ) #Sync the tasks for the new villages
+
+
         return super().form_valid(form)
 
 
@@ -616,7 +651,12 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequir
                         pass
                     
                 ctx.setdefault('form', form)
-            ctx.setdefault('facilitator_administrative_levels', self.doc["administrative_levels"])
+            adls = self.doc["administrative_levels"]
+            for i in range(len(adls)):
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(adls[i]['id'])).first()
+                if administrativelevel_obj and administrativelevel_obj.cvd:
+                    adls[i]['cvd_name'] = administrativelevel_obj.cvd.name
+            ctx.setdefault('facilitator_administrative_levels', adls)
 
         return ctx
 
@@ -633,20 +673,51 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequir
     def form_valid(self, form):
         data = form.cleaned_data
         facilitator = form.save(commit=False)
-        facilitator = facilitator.simple_save()
-
+        facilitator = facilitator.save_and_return_object()
+        administrative_levels_old = self.doc.get('administrative_levels')
+        administrative_levels_remove = []
         _administrative_levels = []
+        administrative_levels_new = []
         for elt in data['administrative_levels']:
-            exists = False
-            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
-            if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
-                elt['is_headquarters_village'] = True
+            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
+            if administrativelevel_obj:
+                if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
+                    elt['is_headquarters_village'] = True
 
-            for _elt in _administrative_levels:
-                if _elt.get('id') == elt.get('id'):
-                    exists = True
-            if not exists:
-                _administrative_levels.append(elt)
+                if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
+                    _administrative_levels.append(elt)
+                
+                if not exists_id_in_a_dict(administrative_levels_old, elt.get('id')):
+                    administrative_levels_new.append(elt)
+                
+        for ad in administrative_levels_old:
+            if ad.get('id') and not exists_id_in_a_dict(_administrative_levels, ad.get('id')):
+                administrative_levels_remove.append(ad)
+        
+        #Assign ADL
+        for adl in administrative_levels_new:
+            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
+                    try:
+                        assign = AssignAdministrativeLevelToFacilitator()
+                        assign.administrative_level_id = int(adl['id'])
+                        assign.facilitator_id = facilitator.id
+                        assign.project_id = 1
+                        assign.save(using='mis')
+                    except Exception as exc:
+                        print(exc)
+        #End Assign ADL
+
+        #Unassign ADL
+        for adl in administrative_levels_remove:
+            assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            if adl.get('id') and str(adl.get('id')).isdigit() and assign:
+                    try:
+                        assign.activated = False
+                        assign.save(using='mis')
+                    except Exception as exc:
+                        print(exc)
+        #End Unassign ADL
 
         doc = {
             "phone": data['phone'],
@@ -657,4 +728,29 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequir
         }
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
+        
+        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+            "backup_db_facilitators_docs", self.facilitator_db_name, 
+            [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
+        
+        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+            self.facilitator_db_name, "backup_db_facilitators_docs",
+            [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
+        ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
+        
+        sync_geographicalunits_with_cvd_on_facilittor(
+            facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name
+        ) #Rebuild Unit and CVD infos on facilitator doc
+
+        if not administrative_levels_new:
+            administrative_levels_new.append({
+                "is_headquarters_village": True,
+                "id": "0"
+            })
+        sync_tasks(
+            facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
+            administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        ) #Sync the tasks for the new villages
+
         return redirect('dashboard:facilitators:list')
