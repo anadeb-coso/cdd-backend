@@ -601,7 +601,7 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
 
 
 
-class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.UpdateView):
+class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissionRequiredMixin, generic.UpdateView):
     model = Facilitator
     template_name = 'facilitators/update.html'
     title = gettext_lazy('Edit Facilitator')

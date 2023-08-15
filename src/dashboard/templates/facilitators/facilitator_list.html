@@ -58,7 +58,7 @@
                             <span class="_web">{% translate 'See profile' %}</span>
                             <span class="_mobile"><i class="fa fa-user"></i></span>
                         </a>
-                        {% if user.is_superuser or user|has_group:"Admin" %}
+                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator"%}
                         <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
                             class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
                             <span class="_web">{% translate 'Edit profile' %}</span>

@@ -62,6 +62,8 @@ class CDDSpecialistPermissionRequiredMixin(UserPassesTestMixin):
         return True if(self.request.user.is_authenticated and (
             self.request.user.groups.filter(name="CDDSpecialist").exists()
             or 
+            self.request.user.groups.filter(name="Evaluator").exists()
+            or 
             self.request.user.groups.filter(name="Admin").exists()
             or 
             bool(self.request.user.is_superuser)
