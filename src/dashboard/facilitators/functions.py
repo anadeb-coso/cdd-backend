@@ -1,4 +1,5 @@
-
+from no_sql_client import NoSQLClient
+from administrativelevels import models as administrativelevels_models
 
 def get_cvds(facilitator):
     administrative_levels = facilitator['administrative_levels']
@@ -10,27 +11,35 @@ def get_cvds(facilitator):
             element = geographical_units[index]
             for i in range(len(element["cvd_groups"])):
                 elt = element["cvd_groups"][i]
+                
+                cvd_obj = administrativelevels_models.CVD.objects.using('mis').filter(id=int(elt['sql_id'])).first()
+                if cvd_obj and not '(' in cvd_obj.name:
+                    elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
+                else:
+                    elt['cvd_name'] = {cvd_obj.name}
+                
                 villages = []
                 for _index in range(len(administrative_levels)):
-                    if elt.get('villages') and administrative_levels[_index]['id'] in elt['villages']:
+                    adl = administrative_levels[_index]
+                    if elt.get('villages') and adl['id'] in elt['villages']:
                         
                         _in_list = False
                         for v in villages:
-                            if administrative_levels[_index]['id'] == v['id']:
+                            if adl['id'] == v['id']:
                                 _in_list = True
                         if not _in_list:
-                            villages.append(administrative_levels[_index])
+                            villages.append(adl)
 
-                            if administrative_levels[_index].get('is_headquarters_village'):
-                                elt['village'] = administrative_levels[_index]
-                                elt['village_id'] = administrative_levels[_index]['id']
+                            if adl.get('is_headquarters_village'):
+                                elt['village'] = adl
+                                elt['village_id'] = adl['id']
                 
                 # elt['village'] = villages[0] if len(villages) != 0 else None
                 # elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
-                
-                elt['villages'] = villages
-                elt['unit'] = element['name']
-                CVDs.append(elt)
+                if elt.get('village_id'):
+                    elt['villages'] = villages
+                    elt['unit'] = element['name']
+                    CVDs.append(elt)
 
     return CVDs
 
@@ -59,3 +68,32 @@ def single_task_by_cvd(tasks, cvds):
         _tasks.append(_)
 
     return _tasks
+
+
+def clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(no_sql_db_name, backup_db_name, administrativelevels_ids):
+
+    nsc = NoSQLClient()
+    backup_db = nsc.get_db(backup_db_name)
+    
+    nsc_database = nsc.get_db(no_sql_db_name)
+    fc_docs = nsc_database.all_docs(include_docs=True)['rows']
+    
+    for adl_id in administrativelevels_ids:
+        for _doc in fc_docs:
+            doc = _doc.get('doc')
+            if doc.get('type') in ('task', 'activity', 'phase') and doc.get('administrative_level_id') == adl_id:
+                print(doc)
+                try:
+                    nsc.delete_document(backup_db, doc["_id"])
+                except:
+                    pass
+
+                try:
+                    if no_sql_db_name == "backup_db_facilitators_docs":
+                        nsc.delete_document(nsc_database, doc["_id"])
+                except Exception as exc:
+                    print(exc)
+                nsc.create_document(backup_db, doc)
+                
+        
+            
