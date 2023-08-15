@@ -6,6 +6,12 @@ def exists_id(liste, id):
             return True
     return False
 
+def exists_id_in_a_dict(liste, id):
+    for o in liste:
+        if o.get('id') == id:
+            return True
+    return False
+
 def get_number_under_two_letter(n: str):
     if n.isdigit() and len(n) < 2:
         return "0"+n
