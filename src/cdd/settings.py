@@ -51,7 +51,8 @@ CREATED_APPS = [
     'dashboard',
     'attachments',
     'process_manager',
-    'administrativelevels'
+    'administrativelevels',
+    'assignments',
 ]
 
 THIRD_PARTY_APPS = [
