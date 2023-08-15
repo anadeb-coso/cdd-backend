@@ -76,7 +76,7 @@
                                 {% for elt in facilitator_administrative_levels %}
                                     <a class='tag mt-2' >
                                         <i value='{{ elt.id }}' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>
-                                        {{ elt.name }}
+                                        {{ elt.name }} {% if elt.cvd_name and elt.cvd_name != elt.name %}(CVD : {{ elt.cvd_name }}){% endif %}
                                     </a>
                                 {% endfor %}
                             </div>
@@ -84,7 +84,7 @@
                         {% bootstrap_field form.administrative_levels %}
                     </div>
                     <div class="card-footer">
-                        <button  type="submit" class="btn btn-primary btn-sm rounded-xl" >
+                        <button  type="submit" class="btn btn-primary btn-sm rounded-xl" data-toggle="modal" data-target="#static-modal">
                             {% translate "SAVE" %}
                         </button>
                     </div>
@@ -94,6 +94,39 @@
     </div>
 
 {% endblock content %}
+
+{% block modals %}
+    <div id="static-modal" class="modal" role="dialog" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-confirmation">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title mx-auto">
+                        <div class="fs29 text-bold-family text-primary">
+                            
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="overlay-wrapper">
+                        <div class="card">
+                            <div class="card-body table-responsive">
+                                {% translate "synchronization in progress..." %}
+                            </div>
+                            <div class="overlay" id="spin">
+                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                    
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+
 
 
 {% block javascript %}
