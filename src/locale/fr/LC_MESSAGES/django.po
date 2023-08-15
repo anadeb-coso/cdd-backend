@@ -750,3 +750,7 @@ msgstr "Date"
 #: .\dashboard\templates\facilitators\task_list.html
 msgid "Facilitator Name"
 msgstr "Nom de l'AC"
+
+#: .\dashboard\templates\facilitators\task_list.html
+msgid "synchronization in progress..."
+msgstr "Synchronisation en cours..."
