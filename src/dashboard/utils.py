@@ -11,6 +11,7 @@ from cloudant.document import Document
 
 from administrativelevels import models as administrativelevels_models
 from dashboard.facilitators.functions import get_cvds
+from assignments.models import AssignAdministrativeLevelToFacilitator
 
 def structure_the_words(word):
     return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
@@ -101,14 +102,29 @@ def get_administrative_level_choices(administrative_levels_db, empty_choice=True
     return get_choices(query_result, 'administrative_id', "name", empty_choice)
 
 
-def get_child_administrative_levels(administrative_levels_db, parent_id):
+def get_child_administrative_levels(administrative_levels_db, parent_id, project_id=0):
     data = administrative_levels_db.get_query_result(
         {
             "type": 'administrative_level',
             "parent_id": parent_id,
         }
     )
-    data = [doc for doc in data]
+    data = [doc for doc in data if (project_id == 0) or (doc.get('administrative_level') != 'Village') or \
+        (
+        doc.get('administrative_id') and not AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+            administrative_level_id=int(doc.get('administrative_id')), project_id=project_id, activated=True
+        ))
+    ] 
+    obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(parent_id)).first()
+    if not data and obj and obj.type != "Village":
+        data.append({
+            "administrative_id": "0",
+            "name": "",
+            "administrative_level": "-",
+            "type": "administrative_level",
+            "parent_id": "1",
+        })
+                
     return data
 
 
