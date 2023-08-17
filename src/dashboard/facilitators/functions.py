@@ -16,7 +16,7 @@ def get_cvds(facilitator):
                 if cvd_obj and not '(' in cvd_obj.name:
                     elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
                 else:
-                    elt['cvd_name'] = {cvd_obj.name}
+                    elt['cvd_name'] = cvd_obj.name
                 
                 villages = []
                 for _index in range(len(administrative_levels)):
