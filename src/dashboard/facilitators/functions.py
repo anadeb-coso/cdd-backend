@@ -87,13 +87,21 @@ def clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(no_sql_
                     nsc.delete_document(backup_db, doc["_id"])
                 except:
                     pass
+                
+                nsc.create_document(backup_db, doc)
 
                 try:
-                    if no_sql_db_name == "backup_db_facilitators_docs":
-                        nsc.delete_document(nsc_database, doc["_id"])
-                except Exception as exc:
-                    print(exc)
-                nsc.create_document(backup_db, doc)
+                    fc_task = backup_db.get_query_result({
+                        "_id": doc["_id"],
+                        "administrative_level_id": doc["administrative_level_id"]
+                    })[0]
+                    if len(fc_task) != 0:
+                        try:
+                            nsc.delete_document(nsc_database, doc["_id"])
+                        except Exception as exc:
+                            print(exc)
+                except:
+                    pass
                 
         
             
