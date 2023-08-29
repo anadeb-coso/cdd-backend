@@ -74,6 +74,18 @@
 </div>
 
 
+<!-- DataTables export files -->
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/jszip/3.10.1/jszip.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/pdfmake.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/vfs_fonts.js' %}"></script>
+
+
+
 <script type="text/javascript">
         $(document).ready(function () {
             {% get_current_language as lang %}
@@ -82,17 +94,19 @@
                 language: {
                     url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                 },
-                dom: "ltipr",
+                {% comment %} dom: "ltipr",
                 columnDefs: [
                     {
                         targets: 1,
                         orderable: false,
                         searchable: false,
                     }
-                ],
-                lengthMenu: [10, 20, 50, 100],
+                ], {% endcomment %}
+                dom: 'Blrtip',
+                buttons: [ 'copy', 'excel', 'pdf', 'colvis' ],
+                lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
                 pageLength: 10,
-                order: [[0, 'desc']]
+                order: []
             });
             $('#search').on('keyup', function () {
                 table.search($(this).val()).draw();
