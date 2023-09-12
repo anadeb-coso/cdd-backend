@@ -131,10 +131,16 @@ def structure_the_fields_labels(task):
         i = 0
         form = task.get("form")
         for fields in task.get("form_response"):
-            fields_options = form[i].get('options').get('fields')
+            try:
+                fields_options = form[i].get('options').get('fields')
+            except:
+                fields_options = {}
             dict_values = {}
             for field, value in fields.items():
-                label = fields_options.get(field).get('label')
+                try:
+                    label = fields_options.get(field).get('label')
+                except:
+                    label = utils_structure_the_words(field)
                 if type(value) in (dict, list):
                     if type(value) == list:
                         _list1 = []
