@@ -1130,4 +1130,61 @@ def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=Fal
 
 
         print()
-        
+
+
+
+def sync_clear_reponse_data_set_task_on_uncomplete(develop_mode, training_mode, administrativelevel_ids, tasks_ids, no_sql_db=False):
+    if tasks_ids:
+        tasks = Task.objects.filter(id__in=tasks_ids).prefetch_related()
+    else:
+        tasks = Task.objects.all().prefetch_related()
+    for task in tasks:
+        print('syncing: ', task.phase.order, task.activity.order, task.order)
+        clear_reponse_data_set_task_on_uncomplete(task, develop_mode, training_mode, no_sql_db, administrativelevel_ids)
+
+def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[]):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        facilitator_administrative_levels = facilitator_database.get_query_result(
+            {"type": "facilitator"}
+        )[0]
+
+        # Iterate every administrative level assigned to the facilitator
+        for administrative_level in facilitator_administrative_levels[0]['administrative_levels']:
+            canton_sql_id = None
+            try:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                canton_sql_id = str(administrativelevel_obj.parent.id)
+            except Exception as e:
+                pass
+
+            if(
+                (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
+                or
+                (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+                or
+                (administrative_level.get('is_headquarters_village') and administrativelevel_ids and canton_sql_id and canton_sql_id in administrativelevel_ids)
+               ):
+                
+                fc_task = facilitator_database.get_query_result({
+                    "administrative_level_id": administrative_level['id'],
+                    "sql_id": task_model.id
+                })[0]
+                
+                if len(fc_task) > 0:
+                    _fc_task = fc_task[0].copy()
+                    _fc_task['completed'] = False
+                    _fc_task["form_response"] = []
+
+                    nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task)
+                    print(_fc_task)
+
+
+                    
