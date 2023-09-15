@@ -1180,11 +1180,12 @@ def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, tr
                 
                 if len(fc_task) > 0:
                     _fc_task = fc_task[0].copy()
-                    _fc_task['completed'] = False
-                    _fc_task["form_response"] = []
+                    if _fc_task['form'][0]['options']['fields']['generalitiesSurVillage']['label'] != "Section 1: caractéristiques générales du quartier/village":
+                        _fc_task['completed'] = False
+                        _fc_task["form_response"] = []
 
-                    nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task)
-                    print(_fc_task)
+                        nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task)
+                        print(_fc_task)
 
 
                     
