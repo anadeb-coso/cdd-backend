@@ -1180,7 +1180,9 @@ def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, tr
                 
                 if len(fc_task) > 0:
                     _fc_task = fc_task[0].copy()
-                    if _fc_task['form'][0]['options']['fields']['generalitiesSurVillage']['label'] != "Section 1: caractéristiques générales du quartier/village":
+                    if (_fc_task['form'][0]['options']['fields']['generalitiesSurVillage']['label'] != "Section 1: caractéristiques générales du quartier/village") or (
+                        _fc_task['form_response'] and _fc_task['form_response'][0] and _fc_task['form_response'][0].get('generalitiesSurVillage') and _fc_task['form_response'][0]['generalitiesSurVillage'].get('pisteRurale') != None
+                    ):
                         _fc_task['completed'] = False
                         _fc_task["form_response"] = []
 
