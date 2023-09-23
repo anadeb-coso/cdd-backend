@@ -121,7 +121,7 @@
                 <div class="badge-closed-at">
                     <i class="far fa-calendar-alt text-warning"></i>
                     {% translate 'Completed on' %}:
-                    {% if task.completed_date != "0000-00-00 00:00:00" %}
+                    {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
                         {{ task.completed_date|default:'-' }}
                     {% else %}
                         {{ task.date_action_complete_by|default:'-' }}
