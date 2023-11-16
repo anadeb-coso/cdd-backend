@@ -100,7 +100,8 @@
                 language: {
                     url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                 },
-                dom: "ltipr",
+                dom: "Blrtip",
+                buttons: [ 'copy', 'excel', 'pdf', 'colvis' ],
                 columnDefs: [
                     {
                         targets: 1,
