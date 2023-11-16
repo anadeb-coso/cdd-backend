@@ -92,6 +92,10 @@
 
 {% block javascript %}
     {{ block.super }}
+
+    <!-- DataTables export files -->
+    {% include 'layouts/datatable-js.html' %}
+
     <script type="text/javascript">
         $(document).ready(function () {
             {% get_current_language as lang %}
@@ -101,14 +105,14 @@
                     url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                 },
                 dom: "Blrtip",
-                buttons: [ 'copy', 'excel', 'pdf', 'colvis' ],
-                columnDefs: [
+                buttons: [ 'copy', 'excel', 'colvis' ],
+                {% comment %} columnDefs: [
                     {
                         targets: 1,
                         orderable: false,
                         searchable: false,
                     }
-                ],
+                ], {% endcomment %}
                 lengthMenu: [10, 20, 50, 100],
                 pageLength: 10,
                 order: [[0, 'desc']]
