@@ -1,0 +1,17 @@
+{
+    "_id": "_design/tasks_number",
+    "views": {
+      "tasks_completed": {
+        "map": "function(doc) { if (doc.type == 'task' && doc.completed) { emit(doc._id, doc); } }",
+        "reduce": "_count"
+      },
+      "tasks_total": {
+        "map": "function(doc) { if (doc.type == 'task') { emit(doc._id, doc); } }",
+        "reduce": "_count"
+      },
+      "last_activities": {
+        "map": "function (doc) { if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { emit(doc._id, doc.last_updated); }}"
+      }
+    },
+    "language": "javascript"
+  }

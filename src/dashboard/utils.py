@@ -12,6 +12,7 @@ from cloudant.document import Document
 from administrativelevels import models as administrativelevels_models
 from dashboard.facilitators.functions import get_cvds
 from assignments.models import AssignAdministrativeLevelToFacilitator
+from cdd.functions import datetime_complet_str
 
 def structure_the_words(word):
     return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
@@ -1191,3 +1192,55 @@ def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, tr
 
 
                     
+
+def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=False):
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode)
+
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db("process_design")
+    doc_design = nsc_database.get_design_document('_design/tasks_number')
+
+    del doc_design['_rev']
+    
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+
+        _f_design = facilitator_database.get_design_document('_design/tasks_number')
+
+        if not _f_design.get('_rev'):
+            nsc.create_document(facilitator_database, doc_design)
+        else:
+            #Update phase if it exists
+            _doc_design = doc_design.copy()
+            del _doc_design['_id']
+
+            nsc.update_doc_uncontrolled(facilitator_database,  _f_design["_id"], _doc_design) # Update phase for the facilitator
+
+def format_datestr_to_dateobject(doc, attr):
+    _ = datetime_complet_str(doc.get(attr))
+    if _ == "0000-00-00 00:00:00":
+        _d = None
+    else:
+        _d = datetime.strptime(_, '%Y-%m-%d %H:%M:%S')
+    return _d
+
+
+def format_date():
+    nsc = NoSQLClient()
+    for f in Facilitator.objects.all():
+        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        docs = facilitator_db.all_docs(include_docs=True)['rows']
+
+        for _doc in docs:
+            doc = _doc.get('doc')
+            if doc.get('type') == "task":
+                _task = {}
+                    
+                _task['last_updated'] = format_datestr_to_dateobject(datetime_complet_str(doc.get('last_updated')))
+                _task['last_updated'] = format_datestr_to_dateobject(datetime_complet_str(doc.get('last_updated')))
+                    
+                nsc.update_cloudant_document(facilitator_db,  doc["_id"], _task)

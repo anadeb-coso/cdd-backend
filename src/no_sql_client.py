@@ -35,6 +35,8 @@ class NoSQLClient:
     def update_doc(self, db, id, doc_new: dict):
         try:
             doc = db.get(id)
+            if not doc:
+                doc = db.get_design_document(id)
             for k, v in doc_new.items():
                 if v:
                     doc[k] = v
@@ -48,6 +50,8 @@ class NoSQLClient:
     def update_doc_uncontrolled(self, db, id, doc_new: dict):
         try:
             doc = db.get(id)
+            if not doc:
+                doc = db.get_design_document(id)
             for k, v in doc_new.items():
                 doc[k] = v
             db[id] = doc

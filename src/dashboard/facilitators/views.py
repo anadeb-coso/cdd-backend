@@ -149,10 +149,25 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             #         liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
 
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
+            
+            if type(_id) is not list:
+                assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                    administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                    project_id=1,
+                    activated=True
+                )
+                
+                _facilitators = Facilitator.objects.filter(
+                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                    develop_mode=False, training_mode=False
+                )
+            else:
+                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
 
-            for f in Facilitator.objects.filter(develop_mode=False, training_mode=False):
+            for f in _facilitators:
                     already_count_facilitator = False
                     facilitator_db = nsc.get_db(f.no_sql_db_name)
+                    
                     query_result = facilitator_db.get_query_result({
                         "type": 'facilitator'
                         })[:]
@@ -743,14 +758,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name
         ) #Rebuild Unit and CVD infos on facilitator doc
 
-        if not administrative_levels_new:
-            administrative_levels_new.append({
-                "is_headquarters_village": True,
-                "id": "0"
-            })
-        sync_tasks(
-            facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
-            administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-        ) #Sync the tasks for the new villages
+        # if not administrative_levels_new:
+        #     administrative_levels_new.append({
+        #         "is_headquarters_village": True,
+        #         "id": "0"
+        #     })
+        # sync_tasks(
+        #     facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
+        #     administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        # ) #Sync the tasks for the new villages
 
         return redirect('dashboard:facilitators:list')

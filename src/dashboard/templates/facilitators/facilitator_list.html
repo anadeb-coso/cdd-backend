@@ -3,14 +3,16 @@
 
 <div class="card">
     <div class="card-body table-responsive">
-        <table id="table" class="table">
+        <table id="table" class="table-bordered">
             <thead>
             <tr>
-                <th width="27%">{% translate 'Name' %}</th>
-                <th width="20%">{% translate 'Username' %}</th>
+                <th width="24%">{% translate 'Name' %}</th>
+                <th width="2%">{% translate 'Sex' %}</th>
+                <th width="19%">{% translate 'Username' %}</th>
                 <th width="10%">{% translate 'Tel' %}</th>
-                <th width="12%">{% translate 'Last Activity' %}</th>
+                <th width="10%">{% translate 'Last Activity' %}</th>
                 <th width="6%" title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}" >{% translate 'Percent' %}</th>
+                <th width="4%">{% translate 'CVD' %}</th>
                 <th  width="25%" >{% translate 'Action' %}</th>
             </tr>
             </thead>
@@ -49,7 +51,7 @@
                                 {% endif %}
                             </td>
                         {% else %}
-                            <td>{{ value }}</td>
+                            <td {% if forloop.counter == 1 %}align="left"{% endif %}>{{ value }}</td>
                         {% endif %}
                     {% endfor %}
                     <td>
