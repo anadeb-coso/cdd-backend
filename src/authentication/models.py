@@ -35,6 +35,7 @@ class Facilitator(models.Model):
 
 
     __current_password = None
+    show_last_activity = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -226,20 +227,23 @@ class Facilitator(models.Model):
         except:
             total_tasks_completed = 0
         
-        # try:
-        total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
-        # except:
+        try:
+            total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
+        # print(facilitator_db.get_view_result('tasks_number', 'last_activities_on_numbers')[:][0]['value'])
+        except:
+            total_tasks = 0
         #     ok = False
 
-        try:
-            last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
-            for _d in last_activities_date:
-                _last_updated = datetime_complet_str(_d['value'])
-                if _last_updated and last_activity_date < _last_updated:
-                    last_activity_date = _last_updated
-        except:
-            pass
-
+        # if self.show_last_activity:
+        #     try:
+        #         last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
+        #         for _d in last_activities_date:
+        #             _last_updated = datetime_complet_str(_d['value'])
+        #             if _last_updated and last_activity_date < _last_updated:
+        #                 last_activity_date = _last_updated
+        #     except:
+        #         pass
+        #     print(last_activities_date)
 
         if ok:
             query_result = facilitator_db.get_query_result({
@@ -295,6 +299,72 @@ class Facilitator(models.Model):
             "name": name, "sex": "F" if sex == "Mme" else "M", "username": self.username, "tel": phone, 
             'last_activity_date': last_activity_date, "percent": percent, "cvd": f"{len(cvds)}/{sum([len(cvd['villages']) for cvd in cvds])}"
         }
+    
+    def get_all_infos_with_last_activity(self):
+        nsc = NoSQLClient()
+        facilitator_db = nsc.get_db(self.no_sql_db_name)
+
+        name = None
+        email = None
+        sex = None
+        phone = None
+        name_with_sex = None
+        cvds = []
+
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
+        total_tasks = 0
+        last_activity_date = "0000-00-00 00:00:00"
+        
+        ok = True
+        try:
+            total_tasks_completed = facilitator_db.get_view_result('tasks_number', 'tasks_completed')[:][0]['value']
+        except:
+            total_tasks_completed = 0
+        
+        try:
+            total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
+        except:
+            total_tasks = 0
+
+        try:
+            last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
+            for _d in last_activities_date:
+                _last_updated = datetime_complet_str(_d['value'])
+                if _last_updated and last_activity_date < _last_updated:
+                    last_activity_date = _last_updated
+        except:
+            pass
+
+        if ok:
+            query_result = facilitator_db.get_query_result({
+                "type": 'facilitator'
+                })[:]
+            if query_result:
+                _ = query_result[0]
+                name = _["name"]
+                sex = _["sex"]
+                email = _["email"]
+                phone = _["phone"]
+                name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
+                cvds = get_cvds(_)
+        else:
+            pass
+            
+            
+
+        percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
+
+        if last_activity_date == "0000-00-00 00:00:00":
+            last_activity_date = None
+        else:
+            last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+            
+        return {
+            "name": name, "sex": "F" if sex == "Mme" else "M", "username": self.username, "tel": phone, 
+            'last_activity_date': last_activity_date, "percent": percent, "cvd": f"{len(cvds)}/{sum([len(cvd['villages']) for cvd in cvds])}"
+        }
+    
     class Meta:
         verbose_name = _('Facilitator')
         verbose_name_plural = _('Facilitators')

@@ -27,33 +27,66 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </span>
                     </td> {% endcomment %}
-                    {% for key, value in facilitator.get_all_infos.items %}
-                        {% if key == "percent" %}
-                            <td 
-                                title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
-                                style="color:
-                                    {% if value < 10 %}red
-                                    {% elif value < 30 %}orange
-                                    {% elif value < 50 %}purple
-                                    {% elif value < 70 %}black
-                                    {% elif value < 90 %}#04e1e1
-                                    {% elif value < 100 %}blue
-                                    {% else %}green
-                                    {% endif %}; font-weight: bold;
-                                "
-                            >{{ value|get_to_percent_str }}</td>
-                        {% elif key == "last_activity_date" %}
-                            <td title="{{ value }}">
-                                {% if value %}
-                                    {{ value|date:"Y/m/d P" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                        {% else %}
-                            <td {% if forloop.counter == 1 %}align="left"{% endif %}>{{ value }}</td>
-                        {% endif %}
-                    {% endfor %}
+                    {% if facilitator.show_last_activity == True %}
+                        {% for key, value in facilitator.get_all_infos_with_last_activity.items %}
+                            {% if key == "percent" %}
+                                <td 
+                                    title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                                    style="color:
+                                        {% if value < 10 %}red
+                                        {% elif value < 30 %}orange
+                                        {% elif value < 50 %}purple
+                                        {% elif value < 70 %}black
+                                        {% elif value < 90 %}#04e1e1
+                                        {% elif value < 100 %}blue
+                                        {% else %}green
+                                        {% endif %}; font-weight: bold;
+                                    "
+                                >{{ value|get_to_percent_str }}</td>
+                            {% elif key == "last_activity_date" %}
+                                <td title="{{ value }}">
+                                    {% if value %}
+                                        {{ value|date:"Y/m/d P" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td {% if forloop.counter == 1 %}align="left"{% endif %}>{{ value }}</td>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% for key, value in facilitator.get_all_infos.items %}
+                            {% if key == "percent" %}
+                                <td 
+                                    title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                                    style="color:
+                                        {% if value < 10 %}red
+                                        {% elif value < 30 %}orange
+                                        {% elif value < 50 %}purple
+                                        {% elif value < 70 %}black
+                                        {% elif value < 90 %}#04e1e1
+                                        {% elif value < 100 %}blue
+                                        {% else %}green
+                                        {% endif %}; font-weight: bold;
+                                    "
+                                >{{ value|get_to_percent_str }}</td>
+                            {% elif key == "last_activity_date" %}
+                                <td title="{{ value }}">
+                                    {% if value %}
+                                        {{ value|date:"Y/m/d P" }}
+                                    {% else %}
+                                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td {% if forloop.counter == 1 %}align="left"{% endif %}>{{ value }}</td>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+
+
                     <td>
                         <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}" target="_blank" 
                             class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">

@@ -11,7 +11,24 @@
       },
       "last_activities": {
         "map": "function (doc) { if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { emit(doc._id, doc.last_updated); }}"
-      }
+      },
+      // "last_activities_on_numbers": {
+      //   "map": "function (doc) { 
+      //     if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { 
+      //         function get_number_under_two_letter(n){
+      //           if(n.length < 2) return '0'+n;
+      //           else return n;
+      //         }
+
+      //         let datetime_complet_list = doc.last_updated.split(' ');
+      //         let y_m_d = datetime_complet_list[0].split('-');
+      //         let h_m_s = datetime_complet_list[1].split(':');
+      //         emit(doc._id, y_m_d[0], get_number_under_two_letter(y_m_d[1]), get_number_under_two_letter(y_m_d[2]), 
+      //       get_number_under_two_letter(h_m_s[0]), get_number_under_two_letter(h_m_s[1]), 
+      //       get_number_under_two_letter(h_m_s[2])); 
+      //     }
+      // }"
+      // }
     },
     "language": "javascript"
   }

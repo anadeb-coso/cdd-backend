@@ -139,6 +139,31 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
 
+        function show_facilitators_table(url){
+            $.ajax({
+                type: "GET",
+                url: url,
+                data: {
+                    id_region: id_region.val(),
+                    id_prefecture: id_prefecture.val(),
+                    id_commune: id_commune.val(),
+                    id_canton: id_canton.val(),
+                    id_village: id_village.val(),
+                    type_field: type_field,
+                    is_training: "{{ is_training }}",
+                    is_develop: "{{ is_develop }}"
+                },
+                success: function (response) {
+                    spin.hide();
+                    facilitators.html('');
+                    facilitators.html(response);
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+        }
 
 
         function loadFacilitators(type_field="") {
@@ -188,29 +213,31 @@
 
 
                 spin.show();
-            $.ajax({
-                type: "GET",
-                url: "{% url 'dashboard:facilitators:facilitators_list' %}",
-                data: {
-                    id_region: id_region.val(),
-                    id_prefecture: id_prefecture.val(),
-                    id_commune: id_commune.val(),
-                    id_canton: id_canton.val(),
-                    id_village: id_village.val(),
-                    type_field: type_field,
-                    is_training: "{{ is_training }}",
-                    is_develop: "{{ is_develop }}"
-                },
-                success: function (response) {
-                    spin.hide();
-                    
-                    facilitators.html(response);
-                },
-                error: function (data) {
-                    spin.hide();
-                    alert(error_server_message + "Error " + data.status);
-                }
-            });
+                facilitators.html('');
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:facilitators:facilitators_list' %}",
+                    data: {
+                        id_region: id_region.val(),
+                        id_prefecture: id_prefecture.val(),
+                        id_commune: id_commune.val(),
+                        id_canton: id_canton.val(),
+                        id_village: id_village.val(),
+                        type_field: type_field,
+                        is_training: "{{ is_training }}",
+                        is_develop: "{{ is_develop }}"
+                    },
+                    success: function (response) {
+                        spin.hide();
+                        
+                        facilitators.html(response);
+                        show_facilitators_table("{% url 'dashboard:facilitators:facilitators_list_with_last_activity' %}");
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                });
 
             }
             

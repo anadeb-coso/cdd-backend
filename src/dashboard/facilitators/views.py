@@ -198,6 +198,91 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
     #     return context
 
 
+class FacilitatorListWithLastActivityTableView(LoginRequiredMixin, generic.ListView):
+    template_name = 'facilitators/facilitator_list.html'
+    context_object_name = 'facilitators'
+
+    def get_results(self):
+        id_region = self.request.GET.get('id_region')
+        id_prefecture = self.request.GET.get('id_prefecture')
+        id_commune = self.request.GET.get('id_commune')
+        id_canton = self.request.GET.get('id_canton')
+        id_village = self.request.GET.get('id_village')
+        type_field = self.request.GET.get('type_field')
+        _id = 0
+        facilitators = []
+        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
+            if id_region and type_field == "region":
+                _id = id_region
+            elif id_prefecture and type_field == "prefecture":
+                _id = id_prefecture
+            elif id_commune and type_field == "commune":
+                _id = id_commune
+            elif id_canton and type_field == "canton":
+                _id = id_canton
+            elif id_village and type_field == "village":
+                _id = id_village
+                
+            nsc = NoSQLClient()
+
+            liste_villages = []
+            
+            liste_villages = get_cascade_villages_by_administrative_level_id(_id)
+            
+            if type(_id) is not list:
+                assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                    administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                    project_id=1,
+                    activated=True
+                )
+                
+                _facilitators = Facilitator.objects.filter(
+                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                    develop_mode=False, training_mode=False
+                )
+            else:
+                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+
+            for f in _facilitators:
+                already_count_facilitator = False
+                facilitator_db = nsc.get_db(f.no_sql_db_name)
+                
+                query_result = facilitator_db.get_query_result({
+                    "type": 'facilitator'
+                    })[:]
+                if query_result:
+                    doc = query_result[0]
+                    for _village in doc['administrative_levels']:
+                        
+                        if str(_village['id']).isdigit(): #Verify if id contain only digit
+                                
+                            for village in liste_villages:
+                                if str(_village['id']) == str(village['administrative_id']):
+                                    if not already_count_facilitator:
+                                        facilitators.append(f)
+                                        already_count_facilitator = True
+        else:
+            # facilitators = list(Facilitator.objects.all())
+            is_training = bool(self.request.GET.get('is_training', "False") == "True")
+            is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
+            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training))
+        
+        _facilitators = []
+        for f in facilitators:
+            f.show_last_activity = True
+            _facilitators.append(f)
+
+        return _facilitators
+
+    def get_queryset(self):
+
+        return self.get_results()
+    
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     return context
+
+
 
 class FacilitatorsPercentListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.ListView):
     template_name = 'facilitators/facilitator_percent_completed.html'
