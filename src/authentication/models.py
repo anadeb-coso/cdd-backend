@@ -35,11 +35,14 @@ class Facilitator(models.Model):
 
 
     __current_password = None
-    show_last_activity = False
+    cvds_number = 0
+    villages_number = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__current_password = self.password
+        self.cvds_number = 0
+        self.villages_number = 0
 
     def __str__(self):
         return self.username
@@ -204,166 +207,142 @@ class Facilitator(models.Model):
             return "training"
         else:
             return "deploy"
+        
     
     def get_all_infos(self):
+        import json
         nsc = NoSQLClient()
         facilitator_db = nsc.get_db(self.no_sql_db_name)
 
-        name = None
-        email = None
-        sex = None
-        phone = None
-        name_with_sex = None
-        cvds = []
 
-        total_tasks_completed = 0
-        total_tasks_uncompleted = 0
-        total_tasks = 0
+        _percent = 0
         last_activity_date = "0000-00-00 00:00:00"
         
-        ok = True
         try:
-            total_tasks_completed = facilitator_db.get_view_result('tasks_number', 'tasks_completed')[:][0]['value']
+            tasks_infos = json.loads(facilitator_db.get_list_function_result("_design/tasks_number", "completed_to_total_ratio", "tasks"))
+
+            _percent = tasks_infos.get('percent')
+            _last_activity_date = tasks_infos.get('last_activity_date')
         except:
-            total_tasks_completed = 0
+            _percent = 0
+            _last_activity_date = "0000-00-00 00:00:00"
         
-        try:
-            total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
-        # print(facilitator_db.get_view_result('tasks_number', 'last_activities_on_numbers')[:][0]['value'])
-        except:
-            total_tasks = 0
-        #     ok = False
-
-        # if self.show_last_activity:
-        #     try:
-        #         last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
-        #         for _d in last_activities_date:
-        #             _last_updated = datetime_complet_str(_d['value'])
-        #             if _last_updated and last_activity_date < _last_updated:
-        #                 last_activity_date = _last_updated
-        #     except:
-        #         pass
-        #     print(last_activities_date)
-
-        if ok:
-            query_result = facilitator_db.get_query_result({
-                "type": 'facilitator'
-                })[:]
-            if query_result:
-                _ = query_result[0]
-                name = _["name"]
-                sex = _["sex"]
-                email = _["email"]
-                phone = _["phone"]
-                name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
-                cvds = get_cvds(_)
+        if _last_activity_date and _last_activity_date != "0000-00-00 00:00:00":
+            last_activity_date = datetime.strptime(_last_activity_date, '%Y-%m-%d %H:%M:%S')
         else:
-            # docs = facilitator_db.all_docs(include_docs=True)['rows']
-            # for doc in docs:
-            #     _ = doc.get('doc')
-            #     if _.get('type') == "facilitator":
-            #         name = _["name"]
-            #         email = _["email"]
-            #         phone = _["phone"]
-            #         name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
-            #         cvds = get_cvds(_)
-            #         break
-
-            # for doc in docs:
-            #     _ = doc.get('doc')
-            #     if _.get('type') == "task":
-            #         last_updated = datetime_complet_str(_.get('last_updated'))
-            #         if last_updated and last_activity_date < last_updated:
-            #             last_activity_date = last_updated
-
-            #         for administrative_level_cvd in cvds:
-            #             village = administrative_level_cvd['village']
-            #             if village and str(village.get("id")) == str(_["administrative_level_id"]):
-            #                 if _.get("completed"):
-            #                     total_tasks_completed += 1
-            #                 else:
-            #                     total_tasks_uncompleted += 1
-            #                 total_tasks += 1
-            pass
-            
-            
-
-        percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
-
-        if last_activity_date == "0000-00-00 00:00:00":
             last_activity_date = None
-        else:
-            last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
             
+
+        percent = float("%.2f" % ((_percent if _percent else 0)*100))
+
         return {
-            "name": name, "sex": "F" if sex == "Mme" else "M", "username": self.username, "tel": phone, 
-            'last_activity_date': last_activity_date, "percent": percent, "cvd": f"{len(cvds)}/{sum([len(cvd['villages']) for cvd in cvds])}"
+            "name": self.name, "sex": "F" if self.sex == "Mme" else "M", "username": self.username, "tel": self.phone, 
+            'last_activity_date': last_activity_date, "percent": percent, 
+            "cvd": f"{self.cvds_number}/{self.villages_number}"
         }
     
-    def get_all_infos_with_last_activity(self):
-        nsc = NoSQLClient()
-        facilitator_db = nsc.get_db(self.no_sql_db_name)
+    # def get_all_infos(self):
+    #     nsc = NoSQLClient()
+    #     facilitator_db = nsc.get_db(self.no_sql_db_name)
 
-        name = None
-        email = None
-        sex = None
-        phone = None
-        name_with_sex = None
-        cvds = []
+    #     name = None
+    #     email = None
+    #     sex = None
+    #     phone = None
+    #     name_with_sex = None
+    #     cvds = []
 
-        total_tasks_completed = 0
-        total_tasks_uncompleted = 0
-        total_tasks = 0
-        last_activity_date = "0000-00-00 00:00:00"
+    #     total_tasks_completed = 0
+    #     total_tasks_uncompleted = 0
+    #     total_tasks = 0
+    #     last_activity_date = "0000-00-00 00:00:00"
         
-        ok = True
-        try:
-            total_tasks_completed = facilitator_db.get_view_result('tasks_number', 'tasks_completed')[:][0]['value']
-        except:
-            total_tasks_completed = 0
+    #     ok = True
+    #     try:
+    #         total_tasks_completed = facilitator_db.get_view_result('tasks_number', 'tasks_completed')[:][0]['value']
+    #     except:
+    #         total_tasks_completed = 0
         
-        try:
-            total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
-        except:
-            total_tasks = 0
+    #     try:
+    #         total_tasks = facilitator_db.get_view_result('tasks_number', 'tasks_total')[:][0]['value']
+    #     # print(facilitator_db.get_view_result('tasks_number', 'last_activities_on_numbers')[:][0]['value'])
+    #     except:
+    #         total_tasks = 0
+    #     #     ok = False
 
-        try:
-            last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
-            for _d in last_activities_date:
-                _last_updated = datetime_complet_str(_d['value'])
-                if _last_updated and last_activity_date < _last_updated:
-                    last_activity_date = _last_updated
-        except:
-            pass
+    #     # if self.show_last_activity:
+    #     #     try:
+    #     #         last_activities_date = facilitator_db.get_view_result('tasks_number', 'last_activities')[:]
+    #     #         for _d in last_activities_date:
+    #     #             _last_updated = datetime_complet_str(_d['value'])
+    #     #             if _last_updated and last_activity_date < _last_updated:
+    #     #                 last_activity_date = _last_updated
+    #     #     except:
+    #     #         pass
+    #     #     print(last_activities_date)
 
-        if ok:
-            query_result = facilitator_db.get_query_result({
-                "type": 'facilitator'
-                })[:]
-            if query_result:
-                _ = query_result[0]
-                name = _["name"]
-                sex = _["sex"]
-                email = _["email"]
-                phone = _["phone"]
-                name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
-                cvds = get_cvds(_)
-        else:
-            pass
+    #     if ok:
+    #         # query_result = facilitator_db.get_query_result({
+    #         #     "type": 'facilitator'
+    #         #     })[:]
+    #         # if query_result:
+    #         #     _ = query_result[0]
+    #         #     name = _["name"]
+    #         #     sex = _["sex"]
+    #         #     email = _["email"]
+    #         #     phone = _["phone"]
+    #         #     name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
+    #         #     cvds = get_cvds(_)
+    #         # for assign in get_assign_adl_by_facilitatr(self.id, project_id=1, activated=True):
+    #         #     adl = mis_objects_call.filter_objects(AdministrativeLevel, id=assign.administrative_level_id).first()
+    #         #     if adl and adl.cvd:
+    #         #         cvds.append(adl.cvd)
+    #         pass
+    #     else:
+    #         # docs = facilitator_db.all_docs(include_docs=True)['rows']
+    #         # for doc in docs:
+    #         #     _ = doc.get('doc')
+    #         #     if _.get('type') == "facilitator":
+    #         #         name = _["name"]
+    #         #         email = _["email"]
+    #         #         phone = _["phone"]
+    #         #         name_with_sex = f"{_['sex']} {_['name']}" if _.get('sex') else _['name']
+    #         #         cvds = get_cvds(_)
+    #         #         break
+
+    #         # for doc in docs:
+    #         #     _ = doc.get('doc')
+    #         #     if _.get('type') == "task":
+    #         #         last_updated = datetime_complet_str(_.get('last_updated'))
+    #         #         if last_updated and last_activity_date < last_updated:
+    #         #             last_activity_date = last_updated
+
+    #         #         for administrative_level_cvd in cvds:
+    #         #             village = administrative_level_cvd['village']
+    #         #             if village and str(village.get("id")) == str(_["administrative_level_id"]):
+    #         #                 if _.get("completed"):
+    #         #                     total_tasks_completed += 1
+    #         #                 else:
+    #         #                     total_tasks_uncompleted += 1
+    #         #                 total_tasks += 1
+    #         pass
             
             
 
-        percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
+    #     percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
 
-        if last_activity_date == "0000-00-00 00:00:00":
-            last_activity_date = None
-        else:
-            last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
-            
-        return {
-            "name": name, "sex": "F" if sex == "Mme" else "M", "username": self.username, "tel": phone, 
-            'last_activity_date': last_activity_date, "percent": percent, "cvd": f"{len(cvds)}/{sum([len(cvd['villages']) for cvd in cvds])}"
-        }
+    #     if last_activity_date == "0000-00-00 00:00:00":
+    #         last_activity_date = None
+    #     else:
+    #         last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+        
+    #     return {
+    #         "name": self.name, "sex": "F" if self.sex == "Mme" else "M", "username": self.username, "tel": self.phone, 
+    #         'last_activity_date': last_activity_date, "percent": percent, 
+    #         # "cvd": f"{len(cvds)}/{sum([len(cvd['villages']) for cvd in cvds])}"
+    #         # "cvd": "11"
+    #     }
+
     
     class Meta:
         verbose_name = _('Facilitator')

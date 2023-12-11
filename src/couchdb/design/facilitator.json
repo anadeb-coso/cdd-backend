@@ -1,34 +1,27 @@
 {
-    "_id": "_design/tasks_number",
-    "views": {
-      "tasks_completed": {
-        "map": "function(doc) { if (doc.type == 'task' && doc.completed) { emit(doc._id, doc); } }",
-        "reduce": "_count"
-      },
-      "tasks_total": {
-        "map": "function(doc) { if (doc.type == 'task') { emit(doc._id, doc); } }",
-        "reduce": "_count"
-      },
-      "last_activities": {
-        "map": "function (doc) { if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { emit(doc._id, doc.last_updated); }}"
-      },
-      // "last_activities_on_numbers": {
-      //   "map": "function (doc) { 
-      //     if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { 
-      //         function get_number_under_two_letter(n){
-      //           if(n.length < 2) return '0'+n;
-      //           else return n;
-      //         }
-
-      //         let datetime_complet_list = doc.last_updated.split(' ');
-      //         let y_m_d = datetime_complet_list[0].split('-');
-      //         let h_m_s = datetime_complet_list[1].split(':');
-      //         emit(doc._id, y_m_d[0], get_number_under_two_letter(y_m_d[1]), get_number_under_two_letter(y_m_d[2]), 
-      //       get_number_under_two_letter(h_m_s[0]), get_number_under_two_letter(h_m_s[1]), 
-      //       get_number_under_two_letter(h_m_s[2])); 
-      //     }
-      // }"
-      // }
+  "_id": "_design/tasks_number",
+  "_rev": "28-8cb034fc2788290d1aa99c890a874062",
+  "views": {
+    "tasks": {
+      "map": "function(doc) { if (doc.type == 'task') { emit(doc._id, doc); } }"
     },
-    "language": "javascript"
-  }
+    "tasks_completed": {
+      "map": "function(doc) { if (doc.type == 'task' && doc.completed) { emit(doc._id, doc); } }",
+      "reduce": "_count"
+    },
+    "tasks_total": {
+      "map": "function(doc) { if (doc.type == 'task') { emit(doc._id, doc); } }",
+      "reduce": "_count"
+    },
+    "last_activities": {
+      "map": "function (doc) { if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { emit(doc._id, doc.last_updated); }}"
+    },
+    "last_activities_on_numbers": {
+      "map": "function (doc) { if(doc.type == 'task' && doc.last_updated && doc.last_updated != '0000-00-00 00:00:00') { let datetime_complet_list = doc.last_updated.split(' '); let y_m_d = datetime_complet_list[0].split('-'); let h_m_s = datetime_complet_list[1].split(':'); emit(doc._id, (y_m_d.reduce((a, b) => Number(a) + Number(b), 0) + h_m_s.reduce((a, b) => Number(a) + Number(b), 0))); } }"
+    }
+  },
+  "lists": {
+    "completed_to_total_ratio": "function(head, req) { var completed = 0, total = 0; var last_activity_date = '0000-00-00 00:00:00'; var row; function getNumberUnderTwoLetters(n) { if (!isNaN(n) && n.length < 2) { return '0' + n; } return n; } function datetimeCompletStr(dStr) { if (dStr) { const datetimeCompletList = dStr.split(' '); const ymd = datetimeCompletList[0].split('-'); const hms = datetimeCompletList[1].split(':'); return `${ymd[0]}-${getNumberUnderTwoLetters(ymd[1])}-${getNumberUnderTwoLetters(ymd[2])} ${getNumberUnderTwoLetters(hms[0])}:${getNumberUnderTwoLetters(hms[1])}:${getNumberUnderTwoLetters(hms[2])}`; } return dStr; } while (row = getRow()) { total++; if(row.value.completed){ completed++; } var _last_updated = datetimeCompletStr(row.value.last_updated); if(_last_updated && last_activity_date < _last_updated){ last_activity_date = _last_updated; } } var result = { percent: total != 0 ? completed/total : 0, completed: completed, uncompleted: total - completed, total: total, last_activity_date: last_activity_date }; send(JSON.stringify(result)); }"
+  },
+  "language": "javascript"
+}
