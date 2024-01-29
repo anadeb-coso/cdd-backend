@@ -34,7 +34,10 @@ class AuthenticateAPIView(APIView):
         credentials = {
             'no_sql_user': serializer.validated_data['no_sql_user'],
             'no_sql_pass': serializer.validated_data['no_sql_pass'],
-            'no_sql_db_name': serializer.validated_data['no_sql_db_name']
+            'no_sql_db_name': serializer.validated_data['no_sql_db_name'],
+            'first_name': serializer.validated_data['first_name'],
+            'last_name': serializer.validated_data['last_name'],
+            'email': serializer.validated_data['email']
         }
         credential_serializer = CredentialSerializer(data=credentials)
         credential_serializer.is_valid(raise_exception=True)
