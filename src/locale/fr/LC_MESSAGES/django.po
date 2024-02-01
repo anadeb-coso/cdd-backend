@@ -754,3 +754,39 @@ msgstr "Nom de l'AC"
 #: .\dashboard\templates\facilitators\task_list.html
 msgid "synchronization in progress..."
 msgstr "Synchronisation en cours..."
+
+#: .\storeapp
+msgid "Project Name"
+msgstr "Nom du projet"
+
+#: .\storeapp
+msgid "Project Package"
+msgstr "Package du projet"
+
+#: .\storeapp
+msgid "Project Description"
+msgstr "Description du projet"
+
+#: .\storeapp
+msgid "Project"
+msgstr "Projet"
+
+#: .\storeapp
+msgid "Version Code"
+msgstr "Code de version"
+
+#: .\storeapp
+msgid "APK"
+msgstr "APK"
+
+#: .\storeapp
+msgid "App Code"
+msgstr "Code de l'application"
+
+#: .\storeapp
+msgid "App Description"
+msgstr "Description de l'application"
+
+#: .\storeapp
+msgid "APK AWS S3 Url"
+msgstr "Url de l'APK AWS S3"

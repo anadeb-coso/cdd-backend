@@ -53,6 +53,7 @@ CREATED_APPS = [
     'process_manager',
     'administrativelevels',
     'assignments',
+    'storeapp',
 ]
 
 THIRD_PARTY_APPS = [

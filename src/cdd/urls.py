@@ -37,6 +37,8 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     path('services/', include('cdd.my_librairies.services.urls')),
     path('process_manager/', include('process_manager.urls')),
+    
+    path('api/', include('cdd.urls_api')),
 ]
 
 urlpatterns += i18n_patterns(
@@ -57,6 +59,8 @@ urlpatterns += i18n_patterns(
 
 if settings.DEBUG:
     from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+    from django.conf import settings
+    from django.conf.urls.static import static
 
     urlpatterns += [
         # YOUR PATTERNS
@@ -64,3 +68,5 @@ if settings.DEBUG:
         # Optional UI:
         path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     ]
+
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
