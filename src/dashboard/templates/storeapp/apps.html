@@ -1,0 +1,178 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block content %}
+    <div class="row _web">
+        <div class="col-12">
+            
+            {% if user.is_superuser or user|has_group:"Admin" %}
+            <div class="float-right mb-3">
+                <a href="{% url 'admin:index' %}"
+                class="btn btn-primary btn-sm rounded-xl">
+                    <i class="fa fa-plus mr-2"></i>
+                    {% translate "Administrator" %}
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="clearfix"></div>
+             
+            
+            {% comment %} <div class="input-group mb-3 search-bar">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+            </div> {% endcomment %}
+
+            <div class="card">
+                <div class="card-body">
+
+
+                    {% for app in storeapps %}
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div>
+                                <div style="display: inline-block; width: 20%; float: left;">
+                                    <img src="{{ app.image.url|imgAWSS3Filter }}" width="100%" />
+                                </div>
+                                <div style="display: inline-block; width: 80%;float: right;">
+                                    <div>
+                                        <h5>{{ app.name }} ({{ app.package }})</h5>
+                                    </div>
+                                    <div >
+                                        <p style="">{{ app.description }}</p>
+                                    </div>
+
+                                    {% with app.last_version as last_version %}
+                                        {% if last_version %}
+                                        <div>
+                                            <div style="float: left;width: 70%;">
+                                                <p>
+                                                    <b>{% translate "Version" %}: </b> {{ last_version.version_code }} ({{ last_version.app_version }})
+                                                </p>
+                                                <p style="">
+                                                    <b>{% translate "Description" %}: </b> {{ last_version.description }}
+                                                </p>
+                                            </div>
+                                            <div style="float: right;width: 20%;">
+                                                <a 
+                                                    href="{{ last_version.apk_aws_s3_url|imgAWSS3Filter }}"
+                                                    style="" 
+                                                    class="btn btn-primary" >
+                                                    <i class="fas fa-download"></i>
+                                                    {% translate "Download" %}
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    {% endfor %}
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+
+
+    
+    <div class="row _mobile">
+        <div class="col-12">
+
+            <div class="clearfix"></div>
+             
+            
+
+            <div class="card">
+                <div class="card-body">
+
+
+                    {% for app in storeapps %}
+                    <div class="card">
+                        <div class="card-body">
+
+                            <div>
+                                <div style="display: inline-block; width: 40%; float: left;">
+                                    <img src="{{ app.image.url|imgAWSS3Filter }}" width="100%" />
+                                </div>
+                                <div style="display: inline-block; width: 60%;float: right;">
+                                    <div>
+                                        <h5>{{ app.name }}</h5>
+                                    </div>
+                                    <div>
+                                        <h5>{{ app.package }}</h5>
+                                    </div>
+
+                                </div>
+                                <div class="clearfix"></div>
+
+
+                                
+                                <div style="">
+                                    <div >
+                                        <p style="">{{ app.description }}</p>
+                                    </div>
+
+                                    {% with app.last_version as last_version %}
+                                        {% if last_version %}
+                                        <div style="">
+                                            <p>
+                                                <b>{% translate "Version" %}: </b> {{ last_version.version_code }} ({{ last_version.app_version }})
+                                            </p>
+                                            <p style="">
+                                                <b>{% translate "Description" %}: </b> {{ last_version.description }}
+                                            </p>
+                                        </div>
+                                        <div style="width: 100%; margin: auto;">
+                                            <a 
+                                                href="{{ last_version.apk_aws_s3_url|imgAWSS3Filter }}"
+                                                style="width: 100%; margin: auto;"
+                                                class="btn btn-primary" >
+                                                <i class="fas fa-download"></i>
+                                                {% translate "Download" %}
+                                            </a>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                    {% endfor %}
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+
+
+{% endblock %}
+
+{% block select2 %}
+    
+    
+{% endblock select2 %}

@@ -87,8 +87,20 @@
                 <li class="nav-item">
                     <a href="{% url 'dashboard:authentication:users' %}"
                        class="nav-link {% if active_level1 == 'users' %}active{% endif %}">
-                        <i class="nav-icon fa fa-square"></i>
+                        <i class="nav-icon fa fa-users"></i>
                         <p>{% translate "Users" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:storeapp:store_apps' %}"
+                       class="nav-link {% if active_level1 == 'storeapp' %}active{% endif %}">
+                        <i class="nav-icon fa fa-download"></i>
+                        <p>{% translate "COSO Store" %}</p>
                     </a>
                 </li>
             </ul>

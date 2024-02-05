@@ -31,6 +31,9 @@ class StoreProject(BaseModel):
     package = models.CharField(max_length=100,unique=True, verbose_name=_('Project Package'))
     description = models.TextField(verbose_name=_('Project Description'))
     
+    def last_version(self):
+        return self.storeapp_set.get_queryset().order_by('-created_date').first()
+    
     def __str__(self):
         return self.name
     
