@@ -630,3 +630,131 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
         return file_path.replace("/", "\\\\")
     else:
         return file_path
+    
+    
+
+
+
+def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
+    nsc = NoSQLClient()
+
+    _type = params.get("type")
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
+    if facilitator_db_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
+    else:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+
+    d_cols = [ 
+        ("MONOGRAPHIE", "N°", "N°", "N°", "ind_0"),
+        ("MONOGRAPHIE", "LOCALITE", "Région", "Région", "ind_1"),
+        ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2"),
+        ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3"),
+        ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5"),
+        ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6"),
+        ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7"),
+        ("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8"),
+        ("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9"),
+        ("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10"),
+
+        ("MONOGRAPHIE", "Existence CVD", "Existence CVD", "Existence CVD", "ind_11"),
+
+    ]
+    cols = pd.MultiIndex.from_tuples(d_cols)
+    datas = {}
+    for col in d_cols:
+        datas[col] = {}
+    count = 0
+    for f in fs.order_by("name", "username"):
+        dict_administrative_levels_with_infos = {}
+        already_count_facilitator = False
+        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        f_doc = None
+        cvds = []
+        for doc in query_result_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                f_doc = doc
+                cvds = get_cvds(f_doc)
+                break
+        
+        if f_doc:
+            for cvd in cvds:
+                administrative_level_cvd_village = cvd.get('village')
+                if administrative_level_cvd_village:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
+                    if administrativelevel_obj.cvd:
+                        _ok = True
+                        if liste_villages:
+                            _ok = False
+                            for village in liste_villages:
+                                if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
+                                    _ok = True
+                                    break
+                        if _ok:
+                            datas[("MONOGRAPHIE", "N°", "N°", "N°", "ind_0")][count] = count + 1
+                            datas[("MONOGRAPHIE", "LOCALITE", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
+                            villages = ""
+                            for o in administrativelevel_obj.cvd.get_villages():
+                                villages += f'{o.name} ; '
+                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = villages
+                            datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+                            datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                            
+                            for doc in query_result_docs:
+                                _ = doc.get('doc')
+                                if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
+                                    form_response = _.get("form_response")
+                                    if form_response:
+                                        value = None
+
+                                        if _.get('sql_id') == 20: #Etablissement du profil du village
+                                            try:
+                                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
+                                            
+                                            try:
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
+
+                                        
+                                        if _.get('sql_id') == 19: #Vérification de l'existence du CVD et de ses organes
+                                            value = "N/A"
+                                            try:
+                                                value = get_datas_dict(form_response, "structuration", 1)["existenCVD"]
+                                                value = value if value in ("Non", "Oui") else "N/A"
+                                            except Exception as exc:
+                                                pass
+                                            
+                                            datas[("MONOGRAPHIE", "Existence CVD", "Existence CVD", "Existence CVD", "ind_11")][count] = value
+
+                            count += 1
+
+
+    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
+        os.makedirs("media/"+file_type+"/reports/excel_csv")
+
+    file_name = "reports_existence_cvd_" + _type.lower() + "_" + (("reports_existence_cvd".lower() + "_") if "reports_existence_cvd" else "")
+
+    if file_type == "csv":
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
+        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+    else:
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+
+    if platform == "win32":
+        # windows
+        return file_path.replace("/", "\\\\")
+    else:
+        return file_path
