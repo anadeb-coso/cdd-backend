@@ -54,6 +54,7 @@ CREATED_APPS = [
     'administrativelevels',
     'assignments',
     'storeapp',
+    'supportmaterial',
 ]
 
 THIRD_PARTY_APPS = [

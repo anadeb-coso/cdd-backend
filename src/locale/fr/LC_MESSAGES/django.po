@@ -790,3 +790,51 @@ msgstr "Description de l'application"
 #: .\storeapp
 msgid "APK AWS S3 Url"
 msgstr "Url de l'APK AWS S3"
+
+#: .\supportmaterial
+msgid "Subject Name"
+msgstr "Nom du sujet"
+
+#: .\supportmaterial
+msgid "Rank"
+msgstr "Rang"
+
+#: .\supportmaterial
+msgid "Illustration Image"
+msgstr "Image d'illustration"
+
+#: .\supportmaterial
+msgid "Subject Description"
+msgstr "Description du sujet"
+
+#: .\supportmaterial
+msgid "Subject"
+msgstr "Sujet"
+
+#: .\supportmaterial
+msgid "Lesson Name"
+msgstr "Nom de la leçon"
+
+#: .\supportmaterial
+msgid "Lesson Description"
+msgstr "Description de la leçon"
+
+#: .\supportmaterial
+msgid "Lesson"
+msgstr "Leçon"
+
+#: .\supportmaterial
+msgid "Name of resource"
+msgstr "Nom de la ressource"
+
+#: .\supportmaterial
+msgid "File"
+msgstr "Fichier"
+
+#: .\supportmaterial
+msgid "File AWS S3 Url"
+msgstr "Fichier AWS S3 Url"
+
+#: .\supportmaterial
+msgid "Supporting Material Description"
+msgstr "Description du matériel de soutien"

@@ -23,6 +23,10 @@ def app_path(instance, filename):
     #     print(file_url)
     #     return file_url
     # raise Exception('error')
+    if 'cdd' in filename.lower() or 'dcc' in filename.lower():
+        return f'apk/cdd/{filename}'
+    elif 'grm' in filename.lower() or 'mgp' in filename.lower():
+        return f'apk/grm/{filename}'
     return f'proof_of_work/{filename}'
 
 class StoreProject(BaseModel):
@@ -55,6 +59,7 @@ class StoreApp(BaseModel):
         return self.__str__()
     
     def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
         if self.apk:
             self.apk_aws_s3_url = self.apk.url
         return super().save(*args, **kwargs)

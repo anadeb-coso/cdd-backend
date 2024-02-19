@@ -733,8 +733,14 @@ def delete_training_facilitators():
     return True
 
 
-def clear_facilitator_database(develop_mode=False, training_mode=False):
-    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+def clear_facilitator_database(develop_mode=False, training_mode=False, no_sql_db=False):
+    # facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+
     nsc = NoSQLClient()
     for facilitator in facilitators:
         print(facilitator)
