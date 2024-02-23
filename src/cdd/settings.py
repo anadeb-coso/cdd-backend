@@ -167,15 +167,13 @@ STATICFILES_DIRS = [
     BASE_DIR / "static"
     ]
 
-MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
-
 
 MEDIA_ROOT = BASE_DIR / 'media/'
 
 MEDIA_URL = '/media/'
 
 
-MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
+MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 100MB
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field

@@ -778,14 +778,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name
         ) #Rebuild Unit and CVD infos on facilitator doc
 
-        # if not administrative_levels_new:
-        #     administrative_levels_new.append({
-        #         "is_headquarters_village": True,
-        #         "id": "0"
-        #     })
-        # sync_tasks(
-        #     facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
-        #     administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-        # ) #Sync the tasks for the new villages
+        if not administrative_levels_new:
+            administrative_levels_new.append({
+                "is_headquarters_village": True,
+                "id": "0"
+            })
+        sync_tasks(
+            facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
+            administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        ) #Sync the tasks for the new villages
 
         return redirect('dashboard:facilitators:list')
