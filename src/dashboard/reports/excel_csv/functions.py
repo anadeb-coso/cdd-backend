@@ -516,10 +516,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
-                            villages = ""
-                            for o in administrativelevel_obj.cvd.get_villages():
-                                villages += f'{o.name} ; '
-                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = villages
+                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
                             datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
                             
@@ -700,10 +697,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                             datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
-                            villages = ""
-                            for o in administrativelevel_obj.cvd.get_villages():
-                                villages += f'{o.name} ; '
-                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = villages
+                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
                             datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
                             
@@ -745,6 +739,313 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
         os.makedirs("media/"+file_type+"/reports/excel_csv")
 
     file_name = "reports_existence_cvd_" + _type.lower() + "_" + (("reports_existence_cvd".lower() + "_") if "reports_existence_cvd" else "")
+
+    if file_type == "csv":
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
+        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+    else:
+        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+
+    if platform == "win32":
+        # windows
+        return file_path.replace("/", "\\\\")
+    else:
+        return file_path
+    
+    
+    
+
+
+def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
+    nsc = NoSQLClient()
+    priorities_1_1, priorities_1_2_a, priorities_1_2_b, priorities_1_3 = [], {}, {}, []
+    p_g_farmers_breeders_1_1, p_g_women_1_1, p_g_young_1_1, p_g_ethnic_minorities_1_1 = [], [], [], []
+    p_g_farmers_breeders_vision_obstacles, p_g_women_vision_obstacles, p_g_young_vision_obstacles, p_g_ethnic_minorities_vision_obstacles = {}, {}, {}, {}
+    priorites_village = []
+    p_g_farmers_breeders_1_2_a, p_g_women_1_2_a, p_g_young_1_2_a, p_g_ethnic_minorities_1_2_a = {}, {}, {}, {}
+    p_g_farmers_breeders_1_2_b, p_g_women_1_2_b, p_g_young_1_2_b, p_g_ethnic_minorities_1_2_b = {}, {}, {}, {}
+    
+
+    _type = params.get("type")
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
+    if facilitator_db_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
+    else:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+
+    d_cols = [ 
+        ("MONOGRAPHIE", "N°", "N°", "N°", "N°"),
+        ("MONOGRAPHIE", "LOCALITE", "Région", "Région", "Région"),
+        ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "Préfecture"),
+        ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "Commune"),
+        ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "Canton"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "CVD"),
+        ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "Villages"),
+        ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique"),
+        ("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC"),
+        ("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "Eff. Population"),
+        ("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village"),
+
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 1", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 1", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 1", "Proposé par"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 2", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 2", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 2", "Proposé par"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 3", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 3", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Priorité 3", "Proposé par"),
+        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des agriculteurs et eleveurs"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des femmes"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des jeunes"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe ethnique minoritaires"),
+        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Nom du marché le plus important du canton pour le village"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Lieu du marché le plus important du canton pour le village"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Quels types d'infrastructure/équipement la communauté souhaiterait-elle voir dans ce marché ?"),
+        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des agriculteurs et eleveurs (Nom et lieu du marché et types d'infrastructures)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des femmes (Nom et lieu du marché et types d'infrastructures)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des jeunes (Nom et lieu du marché et types d'infrastructures)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe ethnique minoritaires (Nom et lieu du marché et types d'infrastructures)"),
+        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Les principaux groupements /coopératives du village qui sont liées au marche identifié en 1.2a"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?"),
+        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)"),        
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)"),      
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)"),
+
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 1", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 1", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 1", "Proposé par"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 2", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 2", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 2", "Proposé par"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 3", "Priorité"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 3", "Cout estimé"),
+        ("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", "Priorité 3", "Proposé par"),
+    ]
+    cols = pd.MultiIndex.from_tuples(d_cols)
+    datas = {}
+    for col in d_cols:
+        datas[col] = {}
+    count = 0
+    for f in fs.order_by("name", "username"):
+        dict_administrative_levels_with_infos = {}
+        already_count_facilitator = False
+        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        f_doc = None
+        cvds = []
+        for doc in query_result_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                f_doc = doc
+                cvds = get_cvds(f_doc)
+                break
+        
+        if f_doc:
+            for cvd in cvds:
+                administrative_level_cvd_village = cvd.get('village')
+                if administrative_level_cvd_village:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
+                    if administrativelevel_obj.cvd:
+                        _ok = True
+                        if liste_villages:
+                            _ok = False
+                            for village in liste_villages:
+                                if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
+                                    _ok = True
+                                    break
+                        if _ok:
+                            datas[("MONOGRAPHIE", "N°", "N°", "N°", "N°")][count] = count + 1
+                            datas[("MONOGRAPHIE", "LOCALITE", "Région", "Région", "Région")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "Préfecture")][count] = administrativelevel_obj.parent.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "Commune")][count] = administrativelevel_obj.parent.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "Canton")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "CVD")][count] = administrativelevel_obj.cvd.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "Villages")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
+                            datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+                            datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC")][count] = f.name
+                            
+                            for doc in query_result_docs:
+                                _ = doc.get('doc')
+                                if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
+                                    form_response = _.get("form_response")
+                                    if form_response:
+                                        value = None
+
+                                        if _.get('sql_id') == 20: #Etablissement du profil du village
+                                            try:
+                                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "Eff. Population")][count] = value
+                                            
+                                            try:
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                            except Exception as exc:
+                                                value = None
+                                            datas[("MONOGRAPHIE", "LOCALITE", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village")][count] = value
+
+                                        if _.get('sql_id') == 60: #Aidez les groupes du village à identifier la liste des obstacles et leur vision du développement pour leur village
+                                            try:
+                                                p_g_farmers_breeders_vision_obstacles = dict(get_datas_dict(form_response, "agriculteursEtEleveurs", 1))
+                                            except:
+                                                pass
+                                            try:
+                                                p_g_women_vision_obstacles = dict(get_datas_dict(form_response, "groupeDesFemmes", 1))
+                                            except:
+                                                pass
+                                            try:
+                                                p_g_young_vision_obstacles = dict(get_datas_dict(form_response, "groupeDesJeunes", 1))
+                                            except:
+                                                pass
+                                            try:
+                                                p_g_ethnic_minorities_vision_obstacles = dict(get_datas_dict(form_response, "groupeEthniqueMinoritaires", 1))
+                                            except:
+                                                pass
+
+                                        if _.get('sql_id') == 44: #Identification et établissement de la liste des besoins prioritaires pour la composante 1.1  par groupe
+                                            try:
+                                                p_g_farmers_breeders_1_1 = list(get_datas_dict(form_response, "agriculteursEtEleveurs", 1)["besoinsPrioritairesDuGroupe"])
+                                            except:
+                                                p_g_farmers_breeders_1_1 = []
+                                            try:
+                                                p_g_women_1_1 = list(get_datas_dict(form_response, "groupeDesFemmes", 1)["besoinsPrioritairesDuGroupe"])
+                                            except:
+                                                p_g_women_1_1 = []
+                                            try:
+                                                p_g_young_1_1 = list(get_datas_dict(form_response, "groupeDesJeunes", 1)["besoinsPrioritairesDuGroupe"])
+                                            except:
+                                                p_g_young_1_1 = []
+                                            try:
+                                                p_g_ethnic_minorities_1_1 = list(get_datas_dict(form_response, "groupeEthniqueMinoritaires", 1)["besoinsPrioritairesDuGroupe"])
+                                            except:
+                                                p_g_ethnic_minorities_1_1 = []
+                                            
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des agriculteurs et eleveurs")][count] = ";".join([elt.get("besoinSelectionne") if elt.get("besoinSelectionne") != "Autre" else f'{elt.get("besoinSelectionne")} ({elt.get("siAutreVeuillezDecrire")})' for elt in p_g_farmers_breeders_1_1])
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des femmes")][count] =  ";".join([elt.get("besoinSelectionne") if elt.get("besoinSelectionne") != "Autre" else f'{elt.get("besoinSelectionne")} ({elt.get("siAutreVeuillezDecrire")})' for elt in p_g_women_1_1])
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe des jeunes")][count] =  ";".join([elt.get("besoinSelectionne") if elt.get("besoinSelectionne") != "Autre" else f'{elt.get("besoinSelectionne")} ({elt.get("siAutreVeuillezDecrire")})' for elt in p_g_young_1_1])
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", "Groupes", "Groupe ethnique minoritaires")][count] =  ";".join([elt.get("besoinSelectionne") if elt.get("besoinSelectionne") != "Autre" else f'{elt.get("besoinSelectionne")} ({elt.get("siAutreVeuillezDecrire")})' for elt in p_g_ethnic_minorities_1_1])
+        
+                                        if _.get('sql_id') == 57: #Identification et établissement de la liste des besoins prioritaires pour la sous - composante 1.2a  par groupe
+                                            try:
+                                                p_g_farmers_breeders_1_2_a = dict(get_datas_dict(form_response, "agriculteursEtEleveurs", 1))
+                                            except:
+                                                p_g_farmers_breeders_1_2_a = {}
+                                            try:
+                                                p_g_women_1_2_a = dict(get_datas_dict(form_response, "groupeDesFemmes", 1))
+                                            except:
+                                                p_g_women_1_2_a = {}
+                                            try:
+                                                p_g_young_1_2_a = dict(get_datas_dict(form_response, "groupeDesJeunes", 1))
+                                            except:
+                                                p_g_young_1_2_a = {}
+                                            try:
+                                                p_g_ethnic_minorities_1_2_a = dict(get_datas_dict(form_response, "groupeEthniqueMinoritaires", 1))
+                                            except:
+                                                p_g_ethnic_minorities_1_2_a = {}
+                                            
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des agriculteurs et eleveurs (Nom et lieu du marché et types d'infrastructures)")][count] = f"{p_g_farmers_breeders_1_2_a.get('nomDuMarcheLePlusImportant')};{p_g_farmers_breeders_1_2_a.get('lieuDuMarcheLePlusImportant')};{';'.join([elt.get('typeDeDeveloppement') for elt in p_g_farmers_breeders_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements')]) if p_g_farmers_breeders_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements') else ''}"
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des femmes (Nom et lieu du marché et types d'infrastructures)")][count] = f"{p_g_women_1_2_a.get('nomDuMarcheLePlusImportant')};{p_g_women_1_2_a.get('lieuDuMarcheLePlusImportant')};{';'.join([elt.get('typeDeDeveloppement') for elt in p_g_women_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements')]) if p_g_women_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements') else ''}"
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe des jeunes (Nom et lieu du marché et types d'infrastructures)")][count] = f"{p_g_young_1_2_a.get('nomDuMarcheLePlusImportant')};{p_g_young_1_2_a.get('lieuDuMarcheLePlusImportant')};{';'.join([elt.get('typeDeDeveloppement') for elt in p_g_young_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements')]) if p_g_young_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements') else ''}"
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Groupes", "Groupe ethnique minoritaires (Nom et lieu du marché et types d'infrastructures)")][count] = f"{p_g_ethnic_minorities_1_2_a.get('nomDuMarcheLePlusImportant')};{p_g_ethnic_minorities_1_2_a.get('lieuDuMarcheLePlusImportant')};{';'.join([elt.get('typeDeDeveloppement') for elt in p_g_ethnic_minorities_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements')]) if p_g_ethnic_minorities_1_2_a.get('typesDeDeveloppementsInfrastructuresEtEquipements') else ''}"
+        
+                                        if _.get('sql_id') == 58: #Identification et établissement de la liste des besoins prioritaires pour la composante 1.2b  par groupe
+                                            try:
+                                                p_g_farmers_breeders_1_2_b = dict(get_datas_dict(form_response, "agriculteursEtEleveurs", 1))
+                                            except:
+                                                p_g_farmers_breeders_1_2_b = {}
+                                            try:
+                                                p_g_women_1_2_b = dict(get_datas_dict(form_response, "groupeDesFemmes", 1))
+                                            except:
+                                                p_g_women_1_2_b = {}
+                                            try:
+                                                p_g_young_1_2_b = dict(get_datas_dict(form_response, "groupeDesJeunes", 1))
+                                            except:
+                                                p_g_young_1_2_b = {}
+                                            try:
+                                                p_g_ethnic_minorities_1_2_b = dict(get_datas_dict(form_response, "groupeEthniqueMinoritaires", 1))
+                                            except:
+                                                p_g_ethnic_minorities_1_2_b = {}
+                                            
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)")][count] = ';'.join([elt.get('principalGroupeSocioeconomique') for elt in p_g_farmers_breeders_1_2_b.get('principauxGroupesSocioeconomiques')]) if p_g_farmers_breeders_1_2_b.get('principauxGroupesSocioeconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_farmers_breeders_1_2_b.get('principauxbesoinsSociauxEconomiques')]) if p_g_farmers_breeders_1_2_b.get('principauxbesoinsSociauxEconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des agriculteurs et eleveurs (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_farmers_breeders_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites')]) if p_g_farmers_breeders_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)")][count] = ';'.join([elt.get('principalGroupeSocioeconomique') for elt in p_g_women_1_2_b.get('principauxGroupesSocioeconomiques')]) if p_g_women_1_2_b.get('principauxGroupesSocioeconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_women_1_2_b.get('principauxbesoinsSociauxEconomiques')]) if p_g_women_1_2_b.get('principauxbesoinsSociauxEconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des femmes (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_women_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites')]) if p_g_women_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)")][count] = ';'.join([elt.get('principalGroupeSocioeconomique') for elt in p_g_young_1_2_b.get('principauxGroupesSocioeconomiques')]) if p_g_young_1_2_b.get('principauxGroupesSocioeconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_young_1_2_b.get('principauxbesoinsSociauxEconomiques')]) if p_g_young_1_2_b.get('principauxbesoinsSociauxEconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe des jeunes (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_young_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites')]) if p_g_young_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Les principaux groupes socioéconomiques du village qui sont liées au marche identifiée en 1.2a ?)")][count] = ';'.join([elt.get('principalGroupeSocioeconomique') for elt in p_g_ethnic_minorities_1_2_b.get('principauxGroupesSocioeconomiques')]) if p_g_ethnic_minorities_1_2_b.get('principauxGroupesSocioeconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_ethnic_minorities_1_2_b.get('principauxbesoinsSociauxEconomiques')]) if p_g_ethnic_minorities_1_2_b.get('principauxbesoinsSociauxEconomiques') else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Groupes", "Groupe ethnique minoritaires (Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?)")][count] = ';'.join([elt.get('besoin') for elt in p_g_ethnic_minorities_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites')]) if p_g_ethnic_minorities_1_2_b.get('principauxBesoinsEnRenforcementDeCapacites') else ''
+                                            
+                                        if _.get('sql_id') == 59: #Soutenir la communauté dans la sélection des priorités par sous-composante (1.1, 1.2 et 1.3) à soumettre à la discussion du CCD lors de la réunion cantonale d'arbitrage
+                                            try:
+                                                priorites_village = list(get_datas_dict(form_response, "sousComposante11", 1)["prioritesDuVillage"])
+                                            except:
+                                                priorites_village = []
+                                            _i = 1
+                                            for p in priorites_village:
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", f"Priorité {_i}", "Priorité")][count] = p.get("priorite") if p.get("priorite") != "Autre" else f'{p.get("priorite")} ({p.get("siAutreVeuillezDecrire")})'
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", f"Priorité {_i}", "Cout estimé")][count] = p.get("coutEstime")
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.1", "Les priorités du village", f"Priorité {_i}", "Proposé par")][count] = p.get("proposePar")
+                                                _i += 1
+                                                if _i >= 4:
+                                                    break
+                                                                         
+                                            try:
+                                                priorities_1_2_a = dict(get_datas_dict(form_response, "sousComposante12a", 1))
+                                            except:
+                                                priorities_1_2_a = {}
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Nom du marché le plus important du canton pour le village")][count] = priorities_1_2_a.get("nomDuMarcheLePlusImportant")
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Lieu du marché le plus important du canton pour le village")][count] = priorities_1_2_a.get("lieuDuMarcheLePlusImportant")
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "SOUS-COMPOSANTE 1.2a", "Quels types d'infrastructure/équipement la communauté souhaiterait-elle voir dans ce marché ?")][count] = ";".join([elt.get("typeDeDeveloppement") for elt in priorities_1_2_a.get("typesInfrastructuresEtEquipements")]) if priorities_1_2_a.get("typesInfrastructuresEtEquipements") else ''
+        
+                                            try:
+                                                priorities_1_2_b = dict(get_datas_dict(form_response, "sousComposante12b", 1))
+                                            except:
+                                                priorities_1_2_b = {}
+                                            
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Les principaux groupements /coopératives du village qui sont liées au marche identifié en 1.2a")][count] = ";".join([elt.get("principalGroupeSocioeconomique") for elt in priorities_1_2_b.get("principauxGroupesSocioeconomiques")]) if priorities_1_2_b.get("principauxGroupesSocioeconomiques") else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Quels sont les principaux besoins de ces groupes sociaux économiques (SE) du village ?")][count] = ";".join([elt.get("besoin") for elt in priorities_1_2_b.get("principauxbesoinsSociauxEconomiques")]) if priorities_1_2_b.get("principauxbesoinsSociauxEconomiques") else ''
+                                            datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "SOUS-COMPOSANTE 1.2b", "Quels sont leurs principaux besoins en renforcement de capacités et appuis à le restructuration (RCAR) ?")][count] = ";".join([elt.get("besoin") for elt in priorities_1_2_b.get("principauxBesoinsEnRenforcementDeCapacites")]) if priorities_1_2_b.get("principauxBesoinsEnRenforcementDeCapacites") else ''
+                                            
+                                            try:
+                                                priorities_1_3 = list(get_datas_dict(form_response, "sousComposante13", 1)["classement"])
+                                            except:
+                                                priorities_1_3 = []
+                                            _i = 1
+                                            for p in priorities_1_3:
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", f"Priorité {_i}", "Priorité")][count] =  p.get("priorite") if p.get("priorite") != "Autre" else f'{p.get("priorite")} ({p.get("siAutreVeuillezDecrire")})'
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", f"Priorité {_i}", "Cout estimé")][count] = p.get("coutEstime")
+                                                datas[("MONOGRAPHIE", "SOUS-COMPOSANTE 1.3", "Les priorités des jeunes du village", f"Priorité {_i}", "Proposé par")][count] = p.get("proposePar")
+                                                _i += 1
+                                                if _i >= 4:
+                                                    break
+                            count += 1
+
+
+    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
+        os.makedirs("media/"+file_type+"/reports/excel_csv")
+
+    file_name = "reports_villages_priorities_" + _type.lower() + "_" + (("reports_villages_priorities".lower() + "_") if "reports_villages_priorities" else "")
 
     if file_type == "csv":
         file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
