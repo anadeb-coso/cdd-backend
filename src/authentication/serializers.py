@@ -91,6 +91,7 @@ class UserAuthSerializer(serializers.Serializer):
             attrs['no_sql_user'] = user.no_sql_user
             attrs['no_sql_pass'] = user.no_sql_pass
             attrs['no_sql_db_name'] = user.no_sql_db_name
+            attrs['email'] = user.email
         else:
             attrs['first_name'] = user.first_name
             attrs['last_name'] = user.last_name
