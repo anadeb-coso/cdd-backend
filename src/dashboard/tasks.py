@@ -152,6 +152,26 @@ def sync_celery_tasks():
     print("End")
 
 
+@app.task
+def test_one():
+
+    data = {
+        "type": "test",
+        "date": datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    }
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db("process_design")
+    
+    new_document = nsc.create_document(nsc_database, data)
+
+    print(new_document)
+
+
+# @app.task(bind=True)
+# def debug_task(self):
+#     print('Request: {0!r}'.format(self.request))
+
+
 # @app.on_after_configure.connect
 # def setup_periodic_tasks(sender, **kwargs):
 #     # Calls test every 10 seconds.

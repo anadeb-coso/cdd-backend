@@ -144,8 +144,8 @@ class FacilitatorForm(forms.Form):
 
     def clean(self):
         administrative_levels = self.cleaned_data['administrative_levels']
-        if not administrative_levels:
-            raise forms.ValidationError(self.error_messages['administrative_level_required'])
+        # if not administrative_levels:
+        #     raise forms.ValidationError(self.error_messages['administrative_level_required'])
         return super().clean()
 
     def __init__(self, *args, **kwargs):
@@ -180,8 +180,8 @@ class UpdateFacilitatorForm(forms.ModelForm):
 
     def clean(self):
         administrative_levels = self.cleaned_data['administrative_levels']
-        if not administrative_levels:
-            raise forms.ValidationError(self.error_messages['administrative_level_required'])
+        # if not administrative_levels:
+        #     raise forms.ValidationError(self.error_messages['administrative_level_required'])
         return super().clean()
 
     def __init__(self, *args, **kwargs):
