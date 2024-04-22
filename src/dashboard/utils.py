@@ -634,6 +634,7 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, adminis
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
         create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids)
 
+    add_facilitator_design(develop_mode=False, trainning_mode=False)
 
 
 def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False):
@@ -1135,7 +1136,7 @@ def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=Fal
         nsc.add_member_to_database(facilitator_db, facilitator.no_sql_user)
         print("updated")
 
-
+        #nsc_database.create_document({'_id': f'org.couchdb.user:1670846715',"name": "1670846715","type": "user","roles": [],"password": "HztsITGzOvlhPD6KzQ"})
         print()
 
 
@@ -1207,25 +1208,41 @@ def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=F
 
     nsc = NoSQLClient()
     nsc_database = nsc.get_db("process_design")
-    doc_design = nsc_database.get_design_document('_design/tasks_number')
-
-    del doc_design['_rev']
     
-    for facilitator in facilitators:
-        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
-        print(facilitator.no_sql_db_name, facilitator.username)
+    doc_designs = [
+        nsc_database.get_design_document('_design/tasks_number'),
+        nsc_database.get_query_result({"type": "geolocation"})[:][0]
+    ]
+    will_be_delete = [False, True]
 
-        _f_design = facilitator_database.get_design_document('_design/tasks_number')
+    count = 0
+    for doc_design in doc_designs:
+        if will_be_delete[count]:
+            del doc_design['_id']
+        del doc_design['_rev']
+        
+        for facilitator in facilitators:
+            facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+            print(facilitator.no_sql_db_name, facilitator.username)
 
-        if not _f_design.get('_rev'):
-            nsc.create_document(facilitator_database, doc_design)
-        else:
-            #Update phase if it exists
-            _doc_design = doc_design.copy()
-            del _doc_design['_id']
+            if doc_design.get('type') == "geolocation":
+                _f_design = facilitator_database.get_query_result({"type": "geolocation"})[:]
+            else:
+                _f_design = facilitator_database.get_design_document('_design/tasks_number')
+                print(_f_design)
+                print(_f_design.get('_rev'))
 
-            nsc.update_doc_uncontrolled(facilitator_database,  _f_design["_id"], _doc_design) # Update phase for the facilitator
+            if not _f_design or (_f_design and type(_f_design) is not list and not _f_design.get('_rev')):
+                nsc.create_document(facilitator_database, doc_design)
+            elif '_id' in doc_design and doc_design['_id'] == '_design/tasks_number' and _f_design and _f_design.get('_rev'):
+                #Update phase if it exists
+                _doc_design = doc_design.copy()
+                del _doc_design['_id']
 
+                nsc.update_doc_uncontrolled(facilitator_database,  _f_design["_id"], _doc_design) # Update phase for the facilitator
+        count += 1
+        
+        
 def format_datestr_to_dateobject(doc, attr):
     _ = datetime_complet_str(doc.get(attr))
     if _ == "0000-00-00 00:00:00":
@@ -1250,3 +1267,16 @@ def format_date():
                 _task['last_updated'] = format_datestr_to_dateobject(datetime_complet_str(doc.get('last_updated')))
                     
                 nsc.update_cloudant_document(facilitator_db,  doc["_id"], _task)
+                
+                
+                
+                
+                
+def test():
+    nsc = NoSQLClient()
+    eadls = nsc.get_db('eadls')
+    
+    liste_A = ["4597"]
+    resultats = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=liste_A)
+    
+    print(len(resultats[:]))
