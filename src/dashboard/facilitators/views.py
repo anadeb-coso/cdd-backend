@@ -575,11 +575,12 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.save(replicate_design=False)
 
         _administrative_levels = []
-        for elt in data['administrative_levels']:
-            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
-            if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
-                elt['is_headquarters_village'] = True
-            _administrative_levels.append(elt)
+        if 'administrative_levels' in data:
+            for elt in data['administrative_levels']:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
+                if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
+                    elt['is_headquarters_village'] = True
+                _administrative_levels.append(elt)
 
         #Assign ADL
         for adl in _administrative_levels:
@@ -713,18 +714,19 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         administrative_levels_remove = []
         _administrative_levels = []
         administrative_levels_new = []
-        for elt in data['administrative_levels']:
-            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
-            if administrativelevel_obj:
-                if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
-                    elt['is_headquarters_village'] = True
+        if 'administrative_levels' in data:
+            for elt in data['administrative_levels']:
+                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
+                if administrativelevel_obj:
+                    if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
+                        elt['is_headquarters_village'] = True
 
-                if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
-                    _administrative_levels.append(elt)
-                
-                if not exists_id_in_a_dict(administrative_levels_old, elt.get('id')):
-                    administrative_levels_new.append(elt)
-                
+                    if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
+                        _administrative_levels.append(elt)
+                    
+                    if not exists_id_in_a_dict(administrative_levels_old, elt.get('id')):
+                        administrative_levels_new.append(elt)
+                    
         for ad in administrative_levels_old:
             if ad.get('id') and not exists_id_in_a_dict(_administrative_levels, ad.get('id')):
                 administrative_levels_remove.append(ad)

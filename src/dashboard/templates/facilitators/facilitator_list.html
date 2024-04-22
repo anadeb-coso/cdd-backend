@@ -18,7 +18,7 @@
             </thead>
             <tbody>
             {% for facilitator in facilitators %}
-                <tr>
+                <tr {% if not facilitator.active %} style="color: red;" {% endif %}>
                     {% comment %} <td>{{ facilitator.get_name_with_sex }}</td>
                     <td>{{ facilitator.username }}</td>
                     <td>{{ facilitator.get_type|upper }}</td>
