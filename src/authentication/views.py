@@ -2,6 +2,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import parsers, renderers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.conf import settings
 
 from authentication.serializers import CredentialSerializer, UserAuthSerializer
 
@@ -35,6 +36,8 @@ class AuthenticateAPIView(APIView):
             'no_sql_user': serializer.validated_data['no_sql_user'],
             'no_sql_pass': serializer.validated_data['no_sql_pass'],
             'no_sql_db_name': serializer.validated_data['no_sql_db_name'],
+            'username': settings.NO_SQL_USER, 
+            'password': settings.NO_SQL_PASS,
             'first_name': serializer.validated_data['first_name'],
             'last_name': serializer.validated_data['last_name'],
             'email': serializer.validated_data['email']
