@@ -48,6 +48,8 @@ class CredentialSerializer(serializers.Serializer):
     no_sql_user = serializers.CharField(allow_blank=True, allow_null=True)
     no_sql_pass = serializers.CharField(allow_blank=True, allow_null=True)
     no_sql_db_name = serializers.CharField(allow_blank=True, allow_null=True)
+    username = serializers.CharField(allow_blank=True, allow_null=True)
+    password = serializers.CharField(allow_blank=True, allow_null=True)
     first_name = serializers.CharField(allow_blank=True, allow_null=True)
     last_name = serializers.CharField(allow_blank=True, allow_null=True)
     email = serializers.CharField(allow_blank=True, allow_null=True)
