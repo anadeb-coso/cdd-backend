@@ -51,3 +51,30 @@ class SaveFormDatas(APIView):
                 has_error = True
         
         return Response({'status': 'ok', 'has_error': has_error}, status=status.HTTP_200_OK)
+
+
+class SaveGeolocationFormDatas(APIView):
+    throttle_classes = ()
+    permission_classes = ()
+    serializer_class = SaveFormDatasSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        has_error = False
+        nsc = NoSQLClient()
+        facilitator_database = nsc.get_db(serializer.validated_data['no_sql_db_name'])
+        for task in serializer.validated_data['tasks']:
+            try:
+                fc_task = facilitator_database.get_query_result({"type": "geolocation", "_id": task['_id']})[0]
+                t = fc_task[0]
+                t["administrativelevels"] = task['administrativelevels']
+                t["others"] = task['others']
+                t["synced"] = True
+
+                nsc.update_cloudant_document(facilitator_database,  t["_id"], t)
+            except Exception as exc:
+                has_error = True
+        
+        return Response({'status': 'ok', 'has_error': has_error}, status=status.HTTP_200_OK)
