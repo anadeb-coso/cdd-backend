@@ -1,0 +1,25 @@
+{
+    "type": "geolocation", //Type of document
+    "administrativelevels": [ //list of village coordinates
+      {
+        "id": "1955", //Village Id
+        "name": "KETAO", //Village Name
+        "latitude": 6.1850111, //Village Latitude
+        "longitude": 1.1942625, //Village Longitude
+        "coords_updated": "2024-04-25T09:44:22.754Z",
+        "coords_created": "2024-04-25T09:44:22.754Z"
+      }
+    ],
+    "others": [ //list of location coordinates
+      {
+        "id": "2024-04-25T09:44:03.864Z", //Location Id present by datetime
+        "name": "Siège anadeb", //Location Name
+        "description": "Siège anadeb ...", //Location description (optional)
+        "latitude": 6.1850111, //Location Latitude
+        "longitude": 1.1942625, //Location Longitude
+        "coords_updated": "2024-04-25T09:44:03.864Z",
+        "coords_created": "2024-04-25T09:44:03.864Z"
+      }
+    ],
+    "synced": true //attribute indicating whether the document has been manually synchronized
+  }

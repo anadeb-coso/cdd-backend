@@ -1,5 +1,6 @@
 {
     "type": "geolocation",
     "administrativelevels": [],
-    "others": []
+    "others": [],
+    "synced": true
 }
