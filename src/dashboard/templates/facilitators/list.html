@@ -1,50 +1,158 @@
 {% extends 'layouts/base.html' %}
 {% load static i18n bootstrap4 custom_tags %}
 
+{% block extracss %}
+    {{ block.super }}
+    <style>
+        #table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0;
+            border-radius: 10px 0 0 0 !important;
+
+            & thead th {
+                border: 1px solid #f2f2f2 !important;
+
+                font-weight: bolder !important;;
+                height: 36px;
+                padding: 0 25px 0 10px;
+
+                &:not([class^="bg-"]) {
+                    background-color: #f2f2f2 !important;
+                }
+
+                &:after, &:before {
+                    top: 30%;
+                }
+
+                &:last-of-type {
+
+                    border-radius: 0 10px 0 0 !important;
+                }
+
+                &:not(&:last-child) {
+                    border-right-color: #c1c1c1 !important;
+                }
+
+                &:last-child {
+                    border-right-color: transparent !important;
+                }
+
+                &:first-child {
+                    border-left-color: transparent !important;
+                }
+            }
+
+
+            & thead th:first-of-type {
+
+                border-radius: 10px 0 0 0 !important;
+            }
+
+            & tbody td {
+                border-bottom-width: 1px !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+
+            & tbody tr:last-of-type {
+                border-radius: 0 10px 0 0 !important;
+            }
+
+            & tbody td:first-of-type {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:last-of-type td {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:not(:first-of-type) {
+                border-left: 0;
+
+            }
+
+            & tbody td:not(:last-of-type) {
+                padding: 0 25px 0 10px;
+                border-right: 0;
+            }
+
+            & tbody tr {
+                border-bottom: 1px solid #e2e1e1 !important;
+                border-right: 1px solid #e2e1e1 !important;
+                border-left: 1px solid #e2e1e1 !important;
+
+                &:last-of-type td:first-of-type {
+                    border-radius: 0 0 0 10px !important;
+
+                }
+
+                &:last-of-type td:last-of-type {
+                    border-radius: 0 0 10px 0 !important;
+
+                }
+            }
+
+        }
+
+        .search-bar {
+            height: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+            margin-top: 1px;
+        }
+
+    </style>
+{% endblock %}
+
 {% block content %}
     <div class="row">
         <div class="col-12">
-            
+
             {% if user.is_superuser or user|has_group:"Admin" %}
-            <div class="float-right mb-3">
-                <a href="{% url 'dashboard:facilitators:create' %}"
-                class="btn btn-primary btn-sm rounded-xl">
-                    <i class="fa fa-plus mr-2"></i>
-                    {% translate "Create Facilitator" %}
-                </a>
-            </div>
+                <div class="float-right mb-3">
+                    <a href="{% url 'dashboard:facilitators:create' %}"
+                       class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-plus mr-2"></i>
+                        {% translate "Create Facilitator" %}
+                    </a>
+                </div>
             {% endif %}
 
             <div class="clearfix"></div>
-             <div class="row facilitators-filter">
-                <div class="col-2">
-                    {% bootstrap_field form.region show_label=False %}
+            <div class="card">
+                <div class="p-2 row facilitators-filter">
+                    <div class="col-12 col-lg input-group search-bar mb-2 mb-lg-0">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.region show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.prefecture show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.commune show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.canton show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.village show_label=False %}
+                    </div>
+                    <div class="col-lg-1 col-6 mb-2 mb-lg-0">
+                        <a class="btn fs12 text-bold-family text-primary pull-right pr-0 p-lg-0"
+                           id="clear_all_filters">
+                            {% translate "Clear all filters" %}
+                        </a>
+                    </div>
                 </div>
-                <div class="col-2">
-                    {% bootstrap_field form.prefecture show_label=False %}
-                </div>
-                <div class="col-2">
-                    {% bootstrap_field form.commune show_label=False %}
-                </div>
-                <div class="col-2">
-                    {% bootstrap_field form.canton show_label=False %}
-                </div>
-                <div class="col-2">
-                    {% bootstrap_field form.village show_label=False %}
-                </div>
-                <div class="col-2">
-                    <a class="btn fs12 text-bold-family text-primary pull-right p-0" style="margin-top: 8px;"
-                       id="clear_all_filters">
-                        {% translate "Clear all filters" %}
-                    </a>
-                </div>
-            </div>
-            
-            <div class="input-group mb-3 search-bar">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                </div>
-                <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
             </div>
 
             <div class="card">
@@ -56,41 +164,42 @@
                 </div>
             </div>
 
-            {% comment %} <div class="card">
-                <div class="card-body table-responsive">
-                    <table id="table" class="table">
-                        <thead>
-                        <tr>
-                            <th width="30%">{% translate 'Name' %}</th>
-                            <th width="30%">{% translate 'Username' %}</th>
-                            <th width="10%">{% translate 'Type' %}</th>
-                            <th  width="30%" >{% translate 'Action' %}</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {% for facilitator in facilitators %}
+            {% comment %}
+                <div class="card">
+                    <div class="card-body table-responsive">
+                        <table id="table" class="table">
+                            <thead>
                             <tr>
-                                <td>{{ facilitator.get_name }}</td>
-                                <td>{{ facilitator.username }}</td>
-                                <td>{{ facilitator.get_type|upper }}</td>
-                                <td>
-                                    <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
-                                       class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
-                                        <span class="_web">{% translate 'See profile' %}</span>
-                                        <span class="_mobile"><i class="fa fa-user"></i></span>
-                                    </a>
-                                    <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}"
-                                       class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
-                                        <span class="_web">{% translate 'Edit profile' %}</span>
-                                        <span class="_mobile"><i class="fa fa-edit"></i></span>
-                                    </a>
-                                </td>
+                                <th width="30%">{% translate 'Name' %}</th>
+                                <th width="30%">{% translate 'Username' %}</th>
+                                <th width="10%">{% translate 'Type' %}</th>
+                                <th width="30%">{% translate 'Action' %}</th>
                             </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div> {% endcomment %}
+                            </thead>
+                            <tbody>
+                            {% for facilitator in facilitators %}
+                                <tr>
+                                    <td>{{ facilitator.get_name }}</td>
+                                    <td>{{ facilitator.username }}</td>
+                                    <td>{{ facilitator.get_type|upper }}</td>
+                                    <td>
+                                        <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
+                                           class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
+                                            <span class="_web">{% translate 'See profile' %}</span>
+                                            <span class="_mobile"><i class="fa fa-user"></i></span>
+                                        </a>
+                                        <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}"
+                                           class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
+                                            <span class="_web">{% translate 'Edit profile' %}</span>
+                                            <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div> {% endcomment %}
 
 
         </div>
@@ -100,31 +209,32 @@
 {% block javascript %}
     {{ block.super }}
 
-    {% comment %} <script type="text/javascript">
-        $(document).ready(function () {
-            {% get_current_language as lang %}
+    {% comment %}
+        <script type="text/javascript">
+            $(document).ready(function () {
+                {% get_current_language as lang %}
 
-            let table = $('#table').DataTable({
-                language: {
-                    url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
-                },
-                dom: "ltipr",
-                columnDefs: [
-                    {
-                        targets: 1,
-                        orderable: false,
-                        searchable: false,
-                    }
-                ],
-                lengthMenu: [10, 50, 100],
-                pageLength: 10,
-                order: [[0, 'desc']]
+                let table = $('#table').DataTable({
+                    language: {
+                        url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+                    },
+                    dom: "ltipr",
+                    columnDefs: [
+                        {
+                            targets: 1,
+                            orderable: false,
+                            searchable: false,
+                        }
+                    ],
+                    lengthMenu: [10, 50, 100],
+                    pageLength: 10,
+                    order: [[0, 'desc']]
+                });
+                $('#search').on('keyup', function () {
+                    table.search($(this).val()).draw();
+                });
             });
-            $('#search').on('keyup', function () {
-                table.search($(this).val()).draw();
-            });
-        });
-    </script> {% endcomment %}
+        </script> {% endcomment %}
 
     <script src="{% static 'js/cascade_requests.js' %}"></script>
     <script type="text/javascript">
@@ -139,7 +249,7 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
 
-        function show_facilitators_table(url){
+        function show_facilitators_table(url) {
             $.ajax({
                 type: "GET",
                 url: url,
@@ -166,38 +276,39 @@
         }
 
 
-        function loadFacilitators(type_field="") {
-            if($("#id_"+type_field).val() || type_field == "all"){  
-                {% comment %} let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
-                ajax_request_cascade_administrative_level(cascade_url, "id_region");
-                ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
-                ajax_request_cascade_administrative_level(cascade_url, "id_commune");
-                ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
+        function loadFacilitators(type_field = "") {
+            if ($("#id_" + type_field).val() || type_field == "all") {
+                {% comment %}
+                    let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
+                    ajax_request_cascade_administrative_level(cascade_url, "id_region");
+                    ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
+                    ajax_request_cascade_administrative_level(cascade_url, "id_commune");
+                    ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
 
                 $(".facilitators-filter select").attr('disabled', true);
                 $.ajax({
                     type: 'GET',
                     url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
                     data: {
-                        parent_id: $("#id_"+type_field).val()
+                        parent_id: $("#id_" + type_field).val()
                     },
                     success: function (data) {
-                        if(type_field == "region"){
+                        if (type_field == "region") {
                             set_datas_administrative_level(id_prefecture, data.prefectures);
                             set_datas_administrative_level(id_commune, data.communes);
                             set_datas_administrative_level(id_canton, data.cantons);
                             set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "prefecture"){
+                        } else if (type_field == "prefecture") {
                             set_datas_administrative_level(id_commune, data.communes);
                             set_datas_administrative_level(id_canton, data.cantons);
                             set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "commune"){
+                        } else if (type_field == "commune") {
                             set_datas_administrative_level(id_canton, data.cantons);
                             set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "canton"){
+                        } else if (type_field == "canton") {
                             set_datas_administrative_level(id_village, data.villages);
                         }
-                        
+
                     },
                     error: function (data) {
                         alert(error_server_message + "Error " + data.status);
@@ -207,9 +318,6 @@
                         $(".facilitators-filter select").attr('disabled', false);
                     }
                 );
-
-
-
 
 
                 spin.show();
@@ -229,7 +337,7 @@
                     },
                     success: function (response) {
                         spin.hide();
-                        
+
                         facilitators.html(response);
                     },
                     error: function (data) {
@@ -239,12 +347,8 @@
                 });
 
             }
-            
 
 
-
-
-            
         }
 
         loadFacilitators("all");
@@ -257,35 +361,35 @@
 
         $('.facilitators-filter select').on('change', function () {
             type_field = "";
-            if($(this).attr('id') && $(this).val()){
+            if ($(this).attr('id') && $(this).val()) {
                 type_field = $(this).attr('id').split('_')[1];
-                {% comment %} for(let i=0; i<ids.length; i++){
-                    if(!(ids[i]==$(this).attr('id'))){
-                        $("#"+ids[i]).val(null).trigger('change.select2');
+                {% comment %} for (let i = 0; i < ids.length; i++) {
+                    if (!(ids[i] == $(this).attr('id'))) {
+                        $("#" + ids[i]).val(null).trigger('change.select2');
                     }
                 } {% endcomment %}
             }
             loadFacilitators(type_field);
         });
-        {% comment %} function _change(id){
-            $('#'+id).on('change', function () {
+        {% comment %} function _change(id) {
+            $('#' + id).on('change', function () {
                 type_field = "";
-                if($(this).attr('id') && $(this).val()){
+                if ($(this).attr('id') && $(this).val()) {
                     type_field = $(this).attr('id').split('_')[1];
-                    for(let i=0; i<ids.length; i++){
-                        if(!(ids[i]==$(this).attr('id'))){
-                            $("#"+ids[i]).val(null).trigger('change.select2');
+                    for (let i = 0; i < ids.length; i++) {
+                        if (!(ids[i] == $(this).attr('id'))) {
+                            $("#" + ids[i]).val(null).trigger('change.select2');
                         }
                     }
                 }
                 loadFacilitators(type_field);
             });
         }
-        _change("id_region");
-        _change("id_prefecture");
-        _change("id_commune");
-        _change("id_canton");
-        _change("id_village"); {% endcomment %}
+            _change("id_region");
+            _change("id_prefecture");
+            _change("id_commune");
+            _change("id_canton");
+            _change("id_village"); {% endcomment %}
 
         $("#clear_all_filters").on("click", function () {
             $('.facilitators-filter input').val('');
@@ -294,7 +398,7 @@
         });
 
     </script>
-    
+
 
 
 {% endblock %}
@@ -313,11 +417,11 @@
             placeholder: "{% translate 'Commune' %}",
             allowClear: true,
         });
-         $("#id_canton").select2({
+        $("#id_canton").select2({
             placeholder: "{% translate 'Canton' %}",
             allowClear: true,
         });
-         $("#id_village").select2({
+        $("#id_village").select2({
             placeholder: "{% translate 'Village' %}",
             allowClear: true,
         });
