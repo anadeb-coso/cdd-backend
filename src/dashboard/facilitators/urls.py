@@ -12,4 +12,5 @@ urlpatterns = [
     path('<int:pk>/update/', views.UpdateFacilitatorView.as_view(), name='update'),
     path('<slug:id>/', views.FacilitatorDetailView.as_view(), name='detail'),
     path('task-list/<slug:id>/', views.FacilitatorTaskListView.as_view(), name='task_list'),
+    path('facilitator-detail-list/<slug:id>/', views.FacilitatorDetailForListView.as_view(), name='facilitator_detail_for_list'),
 ]
