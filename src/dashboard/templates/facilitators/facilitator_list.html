@@ -6,41 +6,43 @@
         <table id="table" class="table-bordered">
             <thead>
             <tr>
-                <th width="24%">{% translate 'Name' %}</th>
+                <th width="29%">{% translate 'Name' %}</th>
                 <th width="2%">{% translate 'Sex' %}</th>
-                <th width="19%">{% translate 'Username' %}</th>
+                <th width="24%">{% translate 'Username' %}</th>
                 <th width="10%">{% translate 'Tel' %}</th>
-                <th width="10%">{% translate 'Last Activity' %}</th>
-                <th width="6%" title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}" >{% translate 'Percent' %}</th>
+                <th width="15%">{% translate 'Last Activity' %}</th>
+                <th width="6%"
+                    title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">{% translate 'Percent' %}</th>
                 <th width="4%">{% translate 'CVD' %}</th>
-                <th  width="25%" >{% translate 'Action' %}</th>
+                <th width="5%" class="no-sort"></th>
             </tr>
             </thead>
             <tbody>
             {% for facilitator in facilitators %}
                 <tr {% if not facilitator.active %} style="color: red;" {% endif %}>
-                    {% comment %} <td>{{ facilitator.get_name_with_sex }}</td>
-                    <td>{{ facilitator.username }}</td>
-                    <td>{{ facilitator.get_type|upper }}</td>
-                    <td><span id="facilitator-percent-{{ facilitator.no_sql_db_name }}" 
-                         title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}" >
+                    {% comment %}
+                        <td>{{ facilitator.get_name_with_sex }}</td>
+                        <td>{{ facilitator.username }}</td>
+                        <td>{{ facilitator.get_type|upper }}</td>
+                        <td><span id="facilitator-percent-{{ facilitator.no_sql_db_name }}"
+                                  title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </span>
-                    </td> {% endcomment %}
+                        </td> {% endcomment %}
                     {% for key, value in facilitator.get_all_infos.items %}
                         {% if key == "percent" %}
-                            <td 
-                                title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
-                                style="color:
-                                    {% if value < 10 %}red
-                                    {% elif value < 30 %}orange
-                                    {% elif value < 50 %}purple
-                                    {% elif value < 70 %}black
-                                    {% elif value < 90 %}#04e1e1
-                                    {% elif value < 100 %}blue
-                                    {% else %}green
-                                    {% endif %}; font-weight: bold;
-                                "
+                            <td
+                                    title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                                    style="color:
+                                            {% if value < 10 %}red
+                                            {% elif value < 30 %}orange
+                                            {% elif value < 50 %}purple
+                                            {% elif value < 70 %}black
+                                            {% elif value < 90 %}#04e1e1
+                                            {% elif value < 100 %}blue
+                                            {% else %}green
+                                            {% endif %}; font-weight: bold;
+                                            "
                             >{{ value|get_to_percent_str }}</td>
                         {% elif key == "last_activity_date" %}
                             <td title="{{ value }}">
@@ -50,26 +52,24 @@
                                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                 {% endif %}
                             </td>
+                        {% elif forloop.counter == 1 %}
+                            <td align="left" }>
+
+                                <a class="pointer-event"
+                                   href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
+                                   target="_blank" title="{% translate 'See profile' %}">
+                                    <span>{{ value }}</span>
+                                </a>
+                            </td>
+
                         {% else %}
-                            <td {% if forloop.counter == 1 %}align="left"{% endif %}>{{ value }}</td>
+                            <td>{{ value }}</td>
                         {% endif %}
                     {% endfor %}
-
-
-                    <td>
-                        <a href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}" target="_blank" 
-                            class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
-                            <span class="_web">{% translate 'See profile' %}</span>
-                            <span class="_mobile"><i class="fa fa-user"></i></span>
-                        </a>
-                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator"%}
-                        <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
-                            class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
-                            <span class="_web">{% translate 'Edit profile' %}</span>
-                            <span class="_mobile"><i class="fa fa-edit"></i></span>
-                        </a>
-                        {% endif %}
+                    <td class=" pointer-event ">
+                        <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
                     </td>
+
                 </tr>
             {% endfor %}
             </tbody>
@@ -89,81 +89,108 @@
 <script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/vfs_fonts.js' %}"></script>
 
 
-
 <script type="text/javascript">
-        $(document).ready(function () {
-            {% get_current_language as lang %}
+    $(document).ready(function () {
+        {% get_current_language as lang %}
 
-            let table = $('#table').DataTable({
-                language: {
-                    url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
-                },
-                {% comment %} dom: "ltipr",
+        function format(d) {
+            console.log(d)
+            return (
+                '<span>More information comming soon</span>'
+            );
+        }
+
+        let table = $('#table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            {% comment %} dom: "ltipr",
                 columnDefs: [
                     {
                         targets: 1,
                         orderable: false,
                         searchable: false,
-                    }
+                    },
+
+                    {
+                        targets: 'no-sort', orderable: false
+                    },
                 ], {% endcomment %}
-                dom: 'Blrtip',
-                buttons: [ 'copy', 'excel', 'pdf', 'colvis' ],
-                lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
-                pageLength: 10,
-                order: []
-            });
-            $('#search').on('keyup', function () {
-                table.search($(this).val()).draw();
-            });
-            
-            var id = 0
-            var liste_ids_no_sql_db_name = [];
-            
-            async function loadFacilitatorPercent(id){
-                await $.ajax({
-                    type: "GET",
-                    url: "{% url 'dashboard:facilitators:facilitator_percent' 'no_sql_db_name' %}".replace('no_sql_db_name', id.split("-")[2]),
-                    data: {
-                    },
-                    success: function (response) {
-                        $('#'+id).html(response);
-                    },
-                    error: function (data) {
-                        console.log(error_server_message + "Error " + data.status); 
-                    }
-                });
-                return true;
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
+        });
+        $('#search').on('keyup', function () {
+            table.search($(this).val()).draw();
+        });
+
+        table.on('click', '.expand-icon', function (e) {
+            console.log('chanfles')
+            let target = e.target;
+            let tr = target.closest('tr');
+            let row = table.row(tr);
+
+            if (row.child.isShown()) {
+
+                target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                row.child.hide();
+            } else {
+                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child(format(row.data())).show();
             }
-            function loadFacilitatorsPercent(liste){
-                $.ajax({
-                    type: "POST",
-                    url: "{% url 'dashboard:facilitators:facilitators_percent' %}",
-                    data: {
-                        csrfmiddlewaretoken: "{{ csrf_token }}",
-                        liste: liste
-                    },
-                    success: function (data) {
-                        for (const [key, value] of Object.entries(data)) {
-                            $('#facilitator-percent-'+key).html(value.toFixed(2));
-                        }
-                    },
-                    error: function (data) {
-                        console.log(error_server_message + "Error " + data.status); 
-                    }
-                });
-                return true;
-            }
-            $('#table tr span').each(function () {
-                id = $(this).attr('id');
-                if(id && id.includes("facilitator-percent-")){
-                    {% comment %} loadFacilitatorPercent(id); {% endcomment %}
-                    {% comment %} liste_ids_no_sql_db_name.push(id.split("-")[2]); {% endcomment %}
+        });
+
+        var id = 0
+        var liste_ids_no_sql_db_name = [];
+
+        async function loadFacilitatorPercent(id) {
+            await $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:facilitator_percent' 'no_sql_db_name' %}".replace('no_sql_db_name', id.split("-")[2]),
+                data: {},
+                success: function (response) {
+                    $('#' + id).html(response);
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
                 }
             });
-            {% comment %} loadFacilitatorsPercent(liste_ids_no_sql_db_name) {% endcomment %}
+            return true;
+        }
 
+        function loadFacilitatorsPercent(liste) {
+            $.ajax({
+                type: "POST",
+                url: "{% url 'dashboard:facilitators:facilitators_percent' %}",
+                data: {
+                    csrfmiddlewaretoken: "{{ csrf_token }}",
+                    liste: liste
+                },
+                success: function (data) {
+                    for (const [key, value] of Object.entries(data)) {
+                        $('#facilitator-percent-' + key).html(value.toFixed(2));
+                    }
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
+                }
+            });
+            return true;
+        }
+
+        $('#table tr span').each(function () {
+            id = $(this).attr('id');
+            if (id && id.includes("facilitator-percent-")) {
+                {% comment %} loadFacilitatorPercent(id); {% endcomment %}
+                {% comment %} liste_ids_no_sql_db_name.push(id.split("-")[2]); {% endcomment %}
+            }
         });
-        
+        {% comment %} loadFacilitatorsPercent(liste_ids_no_sql_db_name) {% endcomment %}
 
-    </script>
+    });
+
+
+</script>
 
