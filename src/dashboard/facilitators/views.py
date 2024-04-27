@@ -54,7 +54,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
-
+        context['region_id'] = self.request.GET.get('region_id')
         return context
 
 
