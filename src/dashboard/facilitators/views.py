@@ -870,6 +870,13 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                 dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                     'total_tasks'] = 1
 
+                            if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
+                                form_response =  _.get('form_response')
+                                if form_response:
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = form_response[0]['generalitiesSurVillage']['populationVillage']
+                                else:
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                        'populationVillage'] = 0
 
                             dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                 'percentage_tasks_completed'] = ((dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[

@@ -38,6 +38,7 @@
     .information__progress {
         display: inline-flex;
         gap: 2px;
+        padding-left: 10px;
     }
 
 
@@ -67,8 +68,18 @@
         text-align: left;
     }
 
+    .information__population, .header__population {
+        text-align: center;
+        width: 70px;
+    }
+
     .header__name {
         padding: 10px 0 10px 20px;
+        border-right: 1px solid;
+    }
+
+    .header__population {
+        padding: 10px 5px 10px 5px;
         border-right: 1px solid;
     }
 
@@ -85,6 +96,9 @@
                 <div class="header__name">
                     {% translate 'Villages' %}
                 </div>
+                <div class="header__population">
+                    {% translate 'Pop.' %}
+                </div>
                 <div class="header__progress">
                     {% translate 'Progress' %}
                 </div>
@@ -93,6 +107,9 @@
                 <div class="information">
                     <div class="information__name">
                         {{ Village }}
+                    </div>
+                    <div class="information__population">
+                        {{ villages|get:Village|get:'populationVillage'  }}
                     </div>
                     <div class="information__progress">
 
