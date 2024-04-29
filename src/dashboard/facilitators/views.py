@@ -93,7 +93,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         type_field = self.request.GET.get('type_field')
         _id = 0
         facilitators = []
-        
+
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
             if id_region and type_field == "region":
@@ -111,7 +111,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             elif id_village and type_field == "village":
                 _type = "village"
                 _id = id_village
-                
+
             nsc = NoSQLClient()
             liste_prefectures = []
             liste_communes = []
@@ -124,7 +124,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             ##    region = region[:][0]
             #     _type = "prefecture"
             #     liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
-                    
+
             # if _type == "prefecture":
             #     if not liste_prefectures:
             #         liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
@@ -145,7 +145,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             #     _type = "village"
             #     for canton in liste_cantons:
             #         [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
-            
+
             # if _type == "village":
             #     if not liste_villages:
             #         liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
@@ -158,7 +158,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                     project_id=1,
                     activated=True
                 )
-                
+
                 _facilitators = Facilitator.objects.filter(
                     id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
                     develop_mode=False, training_mode=False
@@ -169,16 +169,16 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             for f in _facilitators:
                     already_count_facilitator = False
                     facilitator_db = nsc.get_db(f.no_sql_db_name)
-                    
+
                     query_result = facilitator_db.get_query_result({
                         "type": 'facilitator'
                         })[:]
                     if query_result:
                         doc = query_result[0]
                         for _village in doc['administrative_levels']:
-                            
+
                             if str(_village['id']).isdigit(): #Verify if id contain only digit
-                                    
+
                                 for village in liste_villages:
                                     if str(_village['id']) == str(village['administrative_id']):
                                         if not already_count_facilitator:
@@ -204,7 +204,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
 
         return self.get_results()
-    
+
     # def get_context_data(self, **kwargs):
     #     context = super().get_context_data(**kwargs)
     #     return context
@@ -239,7 +239,7 @@ class FacilitatorsPercentListView(FacilitatorMixin, AJAXRequestMixin, LoginRequi
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
 
         return context
-        
+
 class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def post(self, request, *args, **kwargs):
         liste = request.POST.getlist('liste[]')
@@ -301,7 +301,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             context['facilitator_doc']['last_activity_date'] = None
         else:
             context['facilitator_doc']['last_activity_date'] = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
-        
+
         context['total_tasks'] = total_tasks
 
         # facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
@@ -348,7 +348,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         #                             'total_tasks_uncompleted': 1
         #                         }
         #                     dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] = 1
-        
+
         # context['total_tasks_completed'] = total_tasks_completed
         # context['total_tasks_uncompleted'] = total_tasks_uncompleted
         # context['total_tasks'] = total_tasks
@@ -358,7 +358,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         #     dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
         #     del dict_administrative_levels_with_infos[key]["total_tasks"]
         # context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
-        
+
         return context
 
     def get_object(self, queryset=None):
@@ -416,7 +416,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         activities = Activity.objects.all()
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
-        
+
         if object_list:
             for _ in object_list:
                 _["phase_order"] = 0
@@ -429,10 +429,10 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                     if activity_obj.name == _["activity_name"]:
                         _["activity_order"]=activity_obj.order
                         break
-        
-        
+
+
         return sorted(object_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))[index:index + offset]
-    
+
     # def get_context_data(self, **kwargs):
     #     context = super().get_context_data(**kwargs)
     #     total_tasks_completed = 0
@@ -527,8 +527,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                                 }
                             dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
                         dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
-                
-                
+
+
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
@@ -612,9 +612,9 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         nsc.create_document(facilitator_database, doc)
 
-        
+
         clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-            "backup_db_facilitators_docs", facilitator.no_sql_db_name, 
+            "backup_db_facilitators_docs", facilitator.no_sql_db_name,
             [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
         ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
 
@@ -650,7 +650,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             'title': title
         }
     ]
-    
+
     facilitator_db = None
     facilitator = None
     doc = None
@@ -681,7 +681,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                         form.fields[label].value = self.doc[label]
                     except Exception as exc:
                         pass
-                    
+
                 ctx.setdefault('form', form)
             adls = self.doc["administrative_levels"]
             for i in range(len(adls)):
@@ -693,7 +693,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         return ctx
 
     def post(self, request, *args, **kwargs):
-        
+
         if not self.facilitator_db_name:
             raise Http404("We don't find the database name for the facilitators.")
 
@@ -723,14 +723,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
                     if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
                         _administrative_levels.append(elt)
-                    
+
                     if not exists_id_in_a_dict(administrative_levels_old, elt.get('id')):
                         administrative_levels_new.append(elt)
-                    
+
         for ad in administrative_levels_old:
             if ad.get('id') and not exists_id_in_a_dict(_administrative_levels, ad.get('id')):
                 administrative_levels_remove.append(ad)
-        
+
         #Assign ADL
         for adl in administrative_levels_new:
             _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
@@ -765,17 +765,17 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         }
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
-        
+
         clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-            "backup_db_facilitators_docs", self.facilitator_db_name, 
+            "backup_db_facilitators_docs", self.facilitator_db_name,
             [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
         ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
-        
+
         clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
             self.facilitator_db_name, "backup_db_facilitators_docs",
             [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
         ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
-        
+
         sync_geographicalunits_with_cvd_on_facilittor(
             facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name
         ) #Rebuild Unit and CVD infos on facilitator doc
@@ -800,7 +800,7 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
         selector = {
-            "type": "task"
+            "type": "task",
         }
 
         if administrative_level_id:
@@ -829,60 +829,61 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks = 0
-        dict_administrative_levels_with_infos = {}
-
+        dict_administrative_levels_with_infos = {'villages': {}}
         object_list = self.get_results()
 
         if object_list:
             for _ in object_list:
 
                 for administrative_level_cvd in self.cvds:
-                    village = administrative_level_cvd['village']
-                    if village and str(village.get("id")) == str(_.get("administrative_level_id")):
-                        if _.get("completed"):
-                            total_tasks_completed += 1
-                        else:
-                            total_tasks_uncompleted += 1
-                        total_tasks += 1
+                    for village in administrative_level_cvd['villages']:
+                        if village and str(village.get("id")) == str(_.get("administrative_level_id")):
+                            if _.get("completed"):
+                                total_tasks_completed += 1
+                            else:
+                                total_tasks_uncompleted += 1
+                            total_tasks += 1
 
-                        if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
-                            if _.get("completed"):
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")][
-                                    'total_tasks_completed'] += 1
+                            if dict_administrative_levels_with_infos.get('villages').get(village.get('name')):
+                                if _.get("completed"):
+                                    dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                        'total_tasks_completed'] += 1
+                                else:
+                                    dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                        'total_tasks_uncompleted'] += 1
+                                dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                    'total_tasks'] += 1
                             else:
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")][
-                                    'total_tasks_uncompleted'] += 1
-                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")][
-                                'total_tasks'] += 1
-                        else:
-                            if _.get("completed"):
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                    'total_tasks_completed': 1,
-                                    'total_tasks_uncompleted': 0
-                                }
-                            else:
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                    'total_tasks_completed': 0,
-                                    'total_tasks_uncompleted': 1
-                                }
-                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")][
-                                'total_tasks'] = 1
-                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")][
-                            'cvd'] = administrative_level_cvd
+                                if _.get("completed"):
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')] = {
+                                        'total_tasks_completed': 1,
+                                        'total_tasks_uncompleted': 0
+                                    }
+
+
+                                else:
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 1
+
+                                    }
+                                dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                    'total_tasks'] = 1
+
+
+                            dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                'percentage_tasks_completed'] = ((dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                        'total_tasks_completed'] / dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                        'total_tasks']) * 100) if dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                        'total_tasks'] else 0
+
+
 
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed / total_tasks) * 100) if total_tasks else 0
         context['nbr_villages'] = 0
-
-        for key, value in dict_administrative_levels_with_infos.items():
-            dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = (
-                        (value["total_tasks_completed"] / value["total_tasks"]) * 100) if value["total_tasks"] else 0
-            del dict_administrative_levels_with_infos[key]["total_tasks"]
-
-            context['nbr_villages'] += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
-
         context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
         context['facilitator_db_name'] = self.facilitator_db_name
 
