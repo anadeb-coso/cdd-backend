@@ -888,10 +888,10 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                         'total_tasks']) * 100) if dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                         'total_tasks'] else 0
 
-                            if _.get('completed') is False:
-                                _["planned_date"] = "2024-2-28 23:17:2"
-                            else:
-                                _["planned_date"] = "2024-2-28 13:17:2"
+                            # if _.get('completed') is False:
+                            #     _["planned_date"] = "2024-2-28 23:17:2"
+                            # else:
+                            #     _["planned_date"] = "2024-2-28 13:17:2"
 
                             if (_.get('completed') is False and _.get('planned_date')
                                     and (
