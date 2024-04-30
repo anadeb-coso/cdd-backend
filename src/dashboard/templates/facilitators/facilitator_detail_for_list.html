@@ -11,27 +11,27 @@
         background-color: #D9D9D9;
     }
 
-    .progress-bar-green {
+    .progress-bar-green, .event-card--green {
         background-color: #63D3AC;
     }
 
-    .progress-bar-red {
+    .progress-bar-red, .event-card--red {
         background-color: #F0788E;
     }
 
-    .progress-bar-yellow {
+    .progress-bar-yellow, .event-card--yellow {
         background-color: #F2CD86;
     }
 
-    .progress-bar-purple {
+    .progress-bar-purple, .event-card--purple {
         background-color: #9095FF;
     }
 
-    .progress-bar-dark-green {
+    .progress-bar-dark-green, .event-card--dark-green {
         background-color: #44967D;
     }
 
-    .progress-bar-pink {
+    .progress-bar-pink, .event-card--pink {
         background-color: #BA79B7;
     }
 
@@ -87,9 +87,51 @@
         padding: 10px 5px 10px 5px;
         width: 155px;
     }
+
+    .event-card {
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        display: flex;
+        align-items: center;
+    }
+
+    .event-card__symbol {
+        border-radius: 50%;
+        border: 2px dashed;
+        width: 35px;
+        height: 35px;
+
+    }
+
+    .event-card__task {
+        font-size: 14px;
+    }
+
+    .event-card__task, .event-card__village {
+        text-align: left;
+    }
+
+    .calendar {
+        height: 660px;
+        overflow-y: scroll;
+    }
+
+    .calendar__date {
+        font-size: 14px;
+    }
+
+    .calendar__hour {
+        color: #D9D9D9;
+        width: 100%;
+        font-weight: bolder;
+        border-bottom: 2px solid #D9D9D9;
+    }
 </style>
 
-<div>
+<div class="row ml-2 mr-2">
     <div class="col-3">
         {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
             <div class="header">
@@ -227,4 +269,61 @@
             {% endfor %}
         {% endwith %}
     </div>
-</div>
+    <div class="col-9">
+        <div class="card calendar">
+            <div class="card-header font-weight-bolder">{% translate 'Tasks to come in the next days' %}</div>
+            <div class="card-body">
+                {% with  dict_administrative_levels_with_infos|get:"upcomingEvents" as upcomingEvents %}
+                    {% if not upcomingEvents %}
+                        {% translate 'No upcoming events' %}
+                    {% endif %}
+                    {% for upcomingEvent, value in upcomingEvents.items|sort %}
+                        <div class="font-weight-bolder text-left text-capitalize calendar__date">
+                            {{ upcomingEvent |date:'l j F Y' }}</div>
+                        {% with  upcomingEvents|get:upcomingEvent as eventsInDate %}
+                            {% for eventInDateHour, value in eventsInDate.items|sort %}
+                                <div class="text-left calendar__hour mt-2">{{ eventInDateHour |date:'H:i' }}</div>
+                                <br>
+                                {% with  eventsInDate|get:eventInDateHour as eventsInHour %}
+
+                                    {% for event in eventsInHour %}
+                                        {% with  event|get:'percentage_tasks_completed' as percentage %}
+                                            {% if percentage < 11.1111111111 %}
+                                                <div class="event-card event-card--green">
+                                            {% elif percentage < 27.7777777778 %}
+                                                <div class="event-card event-card--red">
+                                            {% elif percentage < 55.5555555556 %}
+                                                <div class="event-card event-card--yellow">
+                                            {% elif percentage < 66.6666666667 %}
+                                                <div class="event-card event-card--purple">
+                                            {% elif percentage < 72.2222222222 %}
+                                                <div class="event-card event-card--dark-green">
+                                            {% else %}
+                                                <div class="event-card event-card--pink">
+                                            {% endif %}
+                                        {% endwith %}
+                                    <div class="event-card__symbol"></div>
+                                    <div class="col">
+                                        <div class="event-card__task font-weight-bolder">
+                                            {% with  event|get:'name' as name %}
+                                                {{ name }}
+                                            {% endwith %}
+                                        </div>
+
+                                        <div class="event-card__village">
+                                            {% with  event|get:'village' as village %}
+                                                CVD: {{ village }}
+                                            {% endwith %}
+                                        </div>
+                                    </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endwith %}
+                            {% endfor %}
+                        {% endwith %}
+                    {% endfor %}
+                {% endwith %}
+                </div>
+                </div>
+                </div>
+                </div>

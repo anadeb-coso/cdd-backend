@@ -311,3 +311,7 @@ def get_to_percent_str(number):
 @register.filter
 def replace_comma_by_dot(value):
     return str(value).replace(",",".")
+
+@register.filter(name='sort')
+def listsort(value):
+    return sorted(value)
