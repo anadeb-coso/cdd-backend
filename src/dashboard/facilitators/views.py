@@ -1,7 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
@@ -792,7 +792,6 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
         return redirect('dashboard:facilitators:list')
 
-
 class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.ListView):
     template_name = 'facilitators/facilitator_detail_for_list.html'
     context_object_name = 'facilitator_detail_for_list'
@@ -831,6 +830,9 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         total_tasks = 0
         dict_administrative_levels_with_infos = {'villages': {}, 'upcomingEvents': {}}
         object_list = self.get_results()
+
+        context['facilitator_id'] = self.kwargs.get('id')
+        context['village_name'] = self.request.GET.get('villageName')
 
         if object_list:
             for _ in object_list:
@@ -886,12 +888,18 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                         'total_tasks']) * 100) if dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                         'total_tasks'] else 0
 
-                            # if _.get('completed') is False:
-                            #     _["planned_date"] = "2024-2-28 23:17:2"
-                            # else:
-                            #     _["planned_date"] = "2024-2-28 13:17:2"
+                            if _.get('completed') is False:
+                                _["planned_date"] = "2024-2-28 23:17:2"
+                            else:
+                                _["planned_date"] = "2024-2-28 13:17:2"
 
-                            if _.get('completed') is False and _.get('planned_date'):
+                            if (_.get('completed') is False and _.get('planned_date')
+                                    and (
+                                            self.request.GET.get('villageName') == ''
+                                            or self.request.GET.get('villageName') is None
+                                            or village.get('name') == self.request.GET.get('villageName')
+                                    )
+                            ):
                                 date = datetime.strptime(_.get('planned_date').split(' ')[0], '%Y-%m-%d')
                                 hour =  datetime.strptime(_.get('planned_date'), '%Y-%m-%d %H:%M:%S')
 
@@ -939,8 +947,8 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed / total_tasks) * 100) if total_tasks else 0
-        context['nbr_villages'] = 0
         context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
         context['facilitator_db_name'] = self.facilitator_db_name
+
 
         return context
