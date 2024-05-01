@@ -139,7 +139,7 @@
 </style>
 
 <div class="row ml-2 mr-2 rowDetail">
-    <div class="col-3">
+    <div class="col-4">
         {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
             <div class="header">
                 <div class="header__name">
@@ -280,7 +280,7 @@
             {% endfor %}
         {% endwith %}
     </div>
-    <div class="col-9">
+    <div class="col-8">
         <div class="card calendar">
             <div class="card-header font-weight-bolder">{% translate 'Tasks to come in the next days' %}</div>
             <div class="card-body">
@@ -337,6 +337,7 @@
             </div>
         </div>
     </div>
+</div>
 <script>
     var villageName = null;
     function filterByVillage(name, facilitatorId) {
