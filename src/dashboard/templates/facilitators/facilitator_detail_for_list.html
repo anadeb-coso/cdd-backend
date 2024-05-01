@@ -1,0 +1,370 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .progress-bar {
+        width: 5px;
+        height: 30px;
+        border-radius: 20px;
+    }
+
+    .progress-bar-gray {
+        background-color: #D9D9D9;
+    }
+
+    .progress-bar-green, .event-card--green {
+        background-color: #63D3AC;
+    }
+
+    .progress-bar-red, .event-card--red {
+        background-color: #F0788E;
+    }
+
+    .progress-bar-yellow, .event-card--yellow {
+        background-color: #F2CD86;
+    }
+
+    .progress-bar-purple, .event-card--purple {
+        background-color: #9095FF;
+    }
+
+    .progress-bar-dark-green, .event-card--dark-green {
+        background-color: #44967D;
+    }
+
+    .progress-bar-pink, .event-card--pink {
+        background-color: #BA79B7;
+    }
+
+    .information__progress {
+        display: inline-flex;
+        gap: 2px;
+        padding-left: 10px;
+    }
+
+
+    .header {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        background-color: #f2f2f2;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        align-items: center;
+        font-weight: bolder;
+    }
+
+    .information {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        padding: 5px 20px;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .information--selected {
+        background-color: #f2f2f2;
+        box-shadow: inset 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        border: 1px solid #f5f5f5;
+    }
+
+    .information__name, .header__name {
+        flex: 1;
+        text-align: left;
+    }
+
+    .information__population, .header__population {
+        text-align: center;
+        width: 70px;
+    }
+
+    .header__name {
+        padding: 10px 0 10px 20px;
+        border-right: 1px solid;
+    }
+
+    .header__population {
+        padding: 10px 5px 10px 5px;
+        border-right: 1px solid;
+    }
+
+    .header__progress {
+        padding: 10px 5px 10px 5px;
+        width: 155px;
+    }
+
+    .event-card {
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        padding: 5px 20px;
+        color: white;
+        display: flex;
+        align-items: center;
+    }
+
+    .event-card__symbol {
+        border-radius: 50%;
+        border: 2px dashed;
+        width: 35px;
+        height: 35px;
+
+    }
+
+    .event-card__task {
+        font-size: 14px;
+    }
+
+    .event-card__task, .event-card__village {
+        text-align: left;
+    }
+
+    .calendar {
+        height: 660px;
+        overflow-y: scroll;
+    }
+
+    .calendar__date {
+        font-size: 14px;
+    }
+
+    .calendar__hour {
+        color: #D9D9D9;
+        width: 100%;
+        font-weight: bolder;
+        border-bottom: 2px solid #D9D9D9;
+    }
+</style>
+
+<div class="row ml-2 mr-2 rowDetail">
+    <div class="col-3">
+        {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
+            <div class="header">
+                <div class="header__name">
+                    {% translate 'Villages' %}
+                </div>
+                <div class="header__population">
+                    {% translate 'Pop.' %}
+                </div>
+                <div class="header__progress">
+                    {% translate 'Progress' %}
+                </div>
+            </div>
+            {% for Village in villages %}
+                {% if Village == village_name %}
+                <div class="information information--selected" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
+                {% else %}
+                <div class="information" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
+                {% endif %}
+                    <div class="information__name">
+                        {{ Village }}
+                    </div>
+                    <div class="information__population">
+                        {{ villages|get:Village|get:'populationVillage'  }}
+                    </div>
+                    <div class="information__progress">
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 5.55555556 %}
+                            <div class="progress-bar progress-bar-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 11.1111111111 %}
+                            <div class="progress-bar progress-bar-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 16.6666666667 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 22.2222222222 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 27.7777777778 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 33.3333333333 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 38.8888888889 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 44.4444444444 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 50 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 55.5555555556 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 61.1111111111 %}
+                            <div class="progress-bar progress-bar-purple"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 66.6666666667 %}
+                            <div class="progress-bar progress-bar-purple"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 72.2222222222 %}
+                            <div class="progress-bar progress-bar-dark-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 77.7777777778 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 83.3333333333 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 88.8888888889 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 94.4444444444 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 100 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+            {% endfor %}
+        {% endwith %}
+    </div>
+    <div class="col-9">
+        <div class="card calendar">
+            <div class="card-header font-weight-bolder">{% translate 'Tasks to come in the next days' %}</div>
+            <div class="card-body">
+                {% with  dict_administrative_levels_with_infos|get:"upcomingEvents" as upcomingEvents %}
+                    {% if not upcomingEvents %}
+                        {% translate 'No upcoming events' %}
+                    {% endif %}
+                    {% for upcomingEvent, value in upcomingEvents.items|sort %}
+                        {% with  upcomingEvents|get:upcomingEvent as eventsInDate %}
+                        <div class="font-weight-bolder text-left text-capitalize calendar__date">
+                            {{ upcomingEvent |date:'l j F Y' }}</div>
+                            {% for eventInDateHour, value in eventsInDate.items|sort %}
+                                {% with  eventsInDate|get:eventInDateHour as eventsInHour %}
+                                <div class="text-left calendar__hour mt-2">{{ eventInDateHour |date:'H:i' }}</div>
+                                <br>
+                                    {% for event in eventsInHour %}
+                                        {% with  event|get:'name' as name %}
+                                            {% with  event|get:'village' as village %}
+                                                {% with  event|get:'percentage_tasks_completed' as percentage %}
+                                                            {% if percentage < 11.1111111111 %}
+                                                            <div class="event-card event-card--green">
+                                                            {% elif percentage < 27.7777777778 %}
+                                                                <div class="event-card event-card--red">
+                                                            {% elif percentage < 55.5555555556 %}
+                                                                <div class="event-card event-card--yellow">
+                                                            {% elif percentage < 66.6666666667 %}
+                                                                <div class="event-card event-card--purple">
+                                                            {% elif percentage < 72.2222222222 %}
+                                                                <div class="event-card event-card--dark-green">
+                                                            {% else %}
+                                                                <div class="event-card event-card--pink">
+                                                            {% endif %}
+
+                                                                <div class="event-card__symbol"></div>
+                                                                <div class="col">
+                                                                    <div class="event-card__task font-weight-bolder">
+                                                                        {{ name }}
+                                                                    </div>
+                                                                    <div class="event-card__village">
+                                                                         CVD: {{ village }}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                {% endwith %}
+                                            {% endwith %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                {% endwith %}
+                            {% endfor %}
+                        {% endwith %}
+                    {% endfor %}
+                {% endwith %}
+              </div>
+            </div>
+        </div>
+    </div>
+<script>
+    var villageName = null;
+    function filterByVillage(name, facilitatorId) {
+        document.getElementsByClassName('calendar')[0].innerHTML = '<i class="mt-5 fas fa-2x fa-sync-alt fa-spin"></i>';
+
+        if (villageName == name) {
+             villageName = null;
+        } else {
+            villageName = name;
+        }
+
+         $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:facilitator_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', facilitatorId),
+                data: {
+                    index: 0,
+                    offset:10,
+                    villageName,
+                },
+                success: function (response) {
+                document.getElementsByClassName('rowDetail')[0].parentElement.innerHTML = response;
+            }
+                  ,
+                error: function (data) {
+                 document.getElementsByClassName('rowDetail')[0].parentElement.innerHTML = '<span>Error loading data</span>';
+
+                }
+
+    })
+    }
+</script>
