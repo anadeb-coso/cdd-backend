@@ -838,3 +838,15 @@ msgstr "Fichier AWS S3 Url"
 #: .\supportmaterial
 msgid "Supporting Material Description"
 msgstr "Description du matériel de soutien"
+
+#: .\facilitators
+msgid "Tasks to come in the next days"
+msgstr "Tâches à venir dans les prochains jours"
+
+#: .\facilitators
+msgid "Progress"
+msgstr "Progrès"
+
+#: .\facilitators
+msgid "No upcoming events"
+msgstr "Aucun événement à venir"
