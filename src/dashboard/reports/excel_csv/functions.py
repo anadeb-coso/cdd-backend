@@ -610,9 +610,10 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = backup_db.all_docs(include_docs=True)['rows']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
     administrative_level_cvd_villages = []
-    for doc in query_result_docs:
+    for _ in query_result_docs:
+        doc = _.get('doc')
         if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
         
@@ -635,7 +636,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                 datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
                 datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                 datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
                 
                 for doc in query_result_docs:
                     _ = doc.get('doc')
@@ -852,9 +853,10 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = backup_db.all_docs(include_docs=True)['rows']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
     administrative_level_cvd_villages = []
-    for doc in query_result_docs:
+    for _ in query_result_docs:
+        doc = _.get('doc')
         if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
@@ -877,7 +879,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                 datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
                 datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                 datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
                 
                 for doc in query_result_docs:
                     _ = doc.get('doc')
@@ -1219,9 +1221,10 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = backup_db.all_docs(include_docs=True)['rows']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
     administrative_level_cvd_villages = []
-    for doc in query_result_docs:
+    for _ in query_result_docs:
+        doc = _.get('doc')
         if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
@@ -1244,7 +1247,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                 datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "CVD")][count] = administrativelevel_obj.cvd.name
                 datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "Villages")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                 datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC")][count] = f.name
+                datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC")][count] = ''
                 
                 for doc in query_result_docs:
                     _ = doc.get('doc')

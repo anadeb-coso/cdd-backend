@@ -1375,9 +1375,10 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
 
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = backup_db.all_docs(include_docs=True)['rows']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
     administrative_level_cvd_villages = []
-    for doc in query_result_docs:
+    for _ in query_result_docs:
+        doc = _.get('doc')
         if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
@@ -1403,13 +1404,13 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                 #     villages += f'{o.name} ; '
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
                 
                 total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
                 
                 for doc in query_result_docs:
                     _ = doc.get('doc')
-                    if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
+                    if _.get('type') == "task" and str(administrative_level_cvd_village) == str(_["administrative_level_id"]):
                         form_response = _.get("form_response")
                         if form_response:
                             value = None
@@ -2482,7 +2483,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
 
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = f.no_sql_db_name
+                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = 'backup_db_facilitators_docs'
 
 
 
