@@ -33,7 +33,7 @@ from authentication.functions import get_assign_adl_by_facilitatr
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = Facilitator.objects.all()
+    queryset = Facilitator.objects.filter(active=True)
     template_name = 'facilitators/list.html'
     context_object_name = 'facilitators'
     title = gettext_lazy('Facilitators')
@@ -161,10 +161,10 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
 
                 _facilitators = Facilitator.objects.filter(
                     id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False, training_mode=False
+                    develop_mode=False, training_mode=False, active=True
                 )
             else:
-                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)
 
             for f in _facilitators:
                     already_count_facilitator = False
@@ -188,7 +188,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             # facilitators = list(Facilitator.objects.all())
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
-            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training))
+            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=True))
 
         _facilitators = []
         for f in facilitators:
@@ -613,19 +613,19 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         nsc.create_document(facilitator_database, doc)
 
 
-        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-            "backup_db_facilitators_docs", facilitator.no_sql_db_name,
-            [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-        ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
+        # clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+        #     "backup_db_facilitators_docs", facilitator.no_sql_db_name,
+        #     [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
+        # ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
 
         sync_geographicalunits_with_cvd_on_facilittor(
             facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name
         ) #Rebuild Unit and CVD infos on facilitator doc
 
-        sync_tasks(
-            facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name,
-            administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-        ) #Sync the tasks for the new villages
+        # sync_tasks(
+        #     facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name,
+        #     administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
+        # ) #Sync the tasks for the new villages
 
 
         return super().form_valid(form)
