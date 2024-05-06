@@ -40,7 +40,7 @@ class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
-        context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training']))
+        context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], active=True))
 
         return context
 
