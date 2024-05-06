@@ -854,6 +854,10 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     query_result_docs = backup_db.all_docs(include_docs=True)['rows']
     administrative_level_cvd_villages = []
+    for doc in query_result_docs:
+        if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
+            administrative_level_cvd_villages.append(doc["administrative_level_id"])
+            
     for administrative_level_cvd_village in administrative_level_cvd_villages:
         administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
         if administrativelevel_obj.cvd:
@@ -1217,6 +1221,10 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     query_result_docs = backup_db.all_docs(include_docs=True)['rows']
     administrative_level_cvd_villages = []
+    for doc in query_result_docs:
+        if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
+            administrative_level_cvd_villages.append(doc["administrative_level_id"])
+            
     for administrative_level_cvd_village in administrative_level_cvd_villages:
         administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
         if administrativelevel_obj.cvd:
