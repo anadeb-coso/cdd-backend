@@ -66,6 +66,12 @@
                                    target="_blank" title="{% translate 'See profile' %}">
                                     <span>{{ value }}</span>
                                 </a>
+
+                                <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
+                                    class="btn btn-primary btn-xs" title="{% translate 'See profile' %}">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+
                             </td>
 
                         {% else %}
