@@ -111,7 +111,7 @@ class FacilitatorForm(forms.Form):
         strip=False,
         help_text=_("Enter the same password as before, for verification."),
     )
-    administrative_level = forms.ChoiceField()
+    administrative_level = forms.ChoiceField(required=False)
     administrative_levels = forms.JSONField(label='', required=False)
     sex = forms.ChoiceField(choices=(("M.", "M."), ("Mme", "Mme")))
 

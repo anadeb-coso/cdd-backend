@@ -575,7 +575,7 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.save(replicate_design=False)
 
         _administrative_levels = []
-        if 'administrative_levels' in data:
+        if 'administrative_levels' in data and data['administrative_levels']:
             for elt in data['administrative_levels']:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
                 if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
@@ -714,7 +714,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         administrative_levels_remove = []
         _administrative_levels = []
         administrative_levels_new = []
-        if 'administrative_levels' in data:
+        if 'administrative_levels' in data and data['administrative_levels']:
             for elt in data['administrative_levels']:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
                 if administrativelevel_obj:
