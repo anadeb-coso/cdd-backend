@@ -1,0 +1,195 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .expand-icon {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    table td, table td a {
+        font-size: 10px;
+    }
+</style>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table id="table" class="table-bordered">
+            <thead>
+            <tr>
+                <th width="20%">{% translate 'Name' %}</th>
+                <th width="3%">{% translate 'Sex' %}</th>
+                <th width="17%">{% translate 'Tel/Email' %}</th>
+                <th width="5%">{% translate 'Canton' %}</th>
+                <th width="5%">{% translate 'Nbr locality' %}</th>
+                <th width="50%">{% translate 'Locality' %}</th>
+                {% comment %} <th width="5%" class="no-sort"></th> {% endcomment %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for facilitator in facilitators_stabilized %}
+                {% with facilitator|get_facilitator_by_email as facilitator_object %}
+                <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
+                    
+                    <td align="left">
+                        <a class="pointer-event" data-facilitatorid="{{ facilitator_object.no_sql_db_name }}"
+                            href="{% url 'dashboard:facilitators:detail' facilitator_object.no_sql_db_name %}"
+                            target="_blank" title="{% translate 'See profile' %}">
+                            <span>{{ facilitator.representative.name }}</span>
+                        </a>
+                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator"%}
+                        &nbsp;<a href="http://grm-2-env.eba-speiyafz.us-west-1.elasticbeanstalk.com/fr/administrative-levels/{{facilitator|get:'_id'}}/" target="_blank"
+                            class="" title="{% translate 'See profile' %}">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+
+
+
+                    <td align="left">{{ facilitator_object.sex }}</td>
+                    <td align="left">
+                        {{ facilitator.representative.phone }}<br />
+                        {{ facilitator.representative.email }}
+                    </td>
+
+                    {% with facilitator.administrative_regions_objects|administrative_regions_objects as administrative_regions_objects %}
+                    <td align="left">{{ administrative_regions_objects.cantons }}</td>
+                    <td align="center">{{ administrative_regions_objects.villages_numbers }}</td>
+                    <td align="left">{{ administrative_regions_objects.villages }}</td>
+                    {% endwith %}
+
+                    {% comment %} <td class=" pointer-event ">
+                        <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
+                    </td> {% endcomment %}
+                </tr>
+                {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- DataTables export files -->
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/jszip/3.10.1/jszip.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/pdfmake.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/vfs_fonts.js' %}"></script>
+
+
+<script type="text/javascript">
+
+
+
+
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        let table = $('#table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            {% comment %} dom: "ltipr",
+                columnDefs: [
+                    {
+                        targets: 1,
+                        orderable: false,
+                        searchable: false,
+                    },
+
+                    {
+                        targets: 'no-sort', orderable: false
+                    },
+                ], {% endcomment %}
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
+        });
+        $('#search').on('keyup', function () {
+            table.search($(this).val()).draw();
+        });
+
+        table.on('click', '.expand-icon', function (e) {
+            let target = e.target;
+            let tr = target.closest('tr');
+            let row = table.row(tr);
+            if(document.getElementsByClassName('rowDetail') && document.getElementsByClassName('fa-chevron-circle-down')[5]) {
+                document.getElementsByClassName('fa-chevron-circle-down')[5].classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                document.getElementsByClassName('rowDetail')[0].parentElement.remove();
+            }
+            if (row.child.isShown()) {
+                target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                row.child.hide();
+            } else {
+                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child('<i class="fas fa-2x fa-sync-alt fa-spin"></i>').show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:facilitators:facilitator_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', row.data()[0].split('data-facilitatorid="')[1].split('" href')[0]),
+                    data: {
+                    index: 0,
+                    offset:10,
+                }, success: function (response) {
+                    row.child(response).show();
+                }, error: function (data) {
+                    row.child('<span>Error loading data</span>').show();
+                }});
+            }
+        });
+
+        var id = 0
+        var liste_ids_no_sql_db_name = [];
+
+        async function loadFacilitatorPercent(id) {
+            await $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:facilitator_percent' 'no_sql_db_name' %}".replace('no_sql_db_name', id.split("-")[2]),
+                data: {},
+                success: function (response) {
+                    $('#' + id).html(response);
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
+                }
+            });
+            return true;
+        }
+
+        function loadFacilitatorsPercent(liste) {
+            $.ajax({
+                type: "POST",
+                url: "{% url 'dashboard:facilitators:facilitators_percent' %}",
+                data: {
+                    csrfmiddlewaretoken: "{{ csrf_token }}",
+                    liste: liste
+                },
+                success: function (data) {
+                    for (const [key, value] of Object.entries(data)) {
+                        $('#facilitator-percent-' + key).html(value.toFixed(2));
+                    }
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
+                }
+            });
+            return true;
+        }
+
+        $('#table tr span').each(function () {
+            id = $(this).attr('id');
+            if (id && id.includes("facilitator-percent-")) {
+                {% comment %} loadFacilitatorPercent(id); {% endcomment %}
+                {% comment %} liste_ids_no_sql_db_name.push(id.split("-")[2]); {% endcomment %}
+            }
+        });
+        {% comment %} loadFacilitatorsPercent(liste_ids_no_sql_db_name) {% endcomment %}
+    });
+
+
+</script>
+

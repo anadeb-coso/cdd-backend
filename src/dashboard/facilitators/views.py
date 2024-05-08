@@ -51,6 +51,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = FilterFacilitatorForm()
+        context['breadcrumb'] = False
 
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
@@ -287,6 +288,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['breadcrumb'] = False
 
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
         last_activity_date = "0000-00-00 00:00:00"

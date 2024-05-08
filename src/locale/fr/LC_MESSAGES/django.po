@@ -850,3 +850,19 @@ msgstr "Progrès"
 #: .\facilitators
 msgid "No upcoming events"
 msgstr "Aucun événement à venir"
+
+#: .\facilitators
+msgid "Locality"
+msgstr "Localité"
+
+#: .\facilitators
+msgid "Nbr locality"
+msgstr "Nbr localité"
+
+#: .\facilitators
+msgid "Facilitators Stabilized"
+msgstr "Animateurs Stabilisés"
+
+#: .\facilitators
+msgid "Facilitators assigned"
+msgstr "Animateurs affectés"

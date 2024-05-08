@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy
 
 from dashboard.utils import structure_the_words as utils_structure_the_words
 from dashboard.functions import order_dict
+from authentication.models import Facilitator
 
 register = template.Library()
 
@@ -315,3 +316,22 @@ def replace_comma_by_dot(value):
 @register.filter(name='sort')
 def listsort(value):
     return sorted(value)
+
+@register.filter
+def administrative_regions_objects_names(value):
+    return ", ".join([elt['name'] for v in value for elt in v['villages']])
+
+@register.filter
+def administrative_regions_objects(value):
+    cantons = [c['name'] for c in value]
+    villages = [elt['name'] for v in value for elt in v['villages']]
+    return {
+        'villages': ", ".join(villages),
+        'villages_numbers': len(villages),
+        'cantons': ", ".join(cantons),
+        'cantons_numbers': len(cantons)
+    }
+
+@register.filter
+def get_facilitator_by_email(facilitator):
+    return Facilitator.objects.filter(email=(((facilitator.get('representative').get('email') if facilitator.get('representative') else None) if facilitator.get('representative') else None) if facilitator else None)).first()
