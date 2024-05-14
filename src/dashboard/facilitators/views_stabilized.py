@@ -33,7 +33,7 @@ from authentication.functions import get_assign_adl_by_facilitatr
 
 class FacilitatorStabilizedListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = Facilitator.objects.all()
+    queryset = Facilitator.objects.filter(active=True)
     template_name = 'facilitators/stabilized/list.html'
     context_object_name = 'facilitators_stabilized'
     title = gettext_lazy('Facilitators Stabilized')
@@ -97,6 +97,20 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         nsc = NoSQLClient()
         eadls = nsc.get_db('eadls')
         facilitators_stabilized = []
+        
+        def get_all_facilitators_stabilized():
+            facilitators_stabilized_all_docs = eadls.all_docs(include_docs=True)['rows']
+            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)]
+            
+            return [
+                doc.get('doc') for doc in facilitators_stabilized_all_docs \
+                    if(
+                        type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' \
+                        and doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email') in adls_emaails
+                    )
+            ]
+        
+        
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
             if id_region and type_field == "region":
@@ -121,18 +135,20 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
                 liste_villages = get_cascade_villages_by_administrative_level_id(_id)
                 facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[v['administrative_id'] for v in liste_villages])
                 if facilitators_stabilized:
-                    facilitators_stabilized = [elt['value'] for elt in facilitators_stabilized[:]]
+                    facilitators_stabilized = list(set([elt['value'] for elt in facilitators_stabilized[:]]))
                 
             else:
-                facilitators_stabilized = eadls.get_query_result({
-                    "type": 'adl',
-                    "representative.email": {"$in": [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False)]}
-                })[:]
+                # facilitators_stabilized = eadls.get_query_result({
+                #     "type": 'adl',
+                #     "representative.email": {"$in": [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False)]}
+                # })[:]
+                facilitators_stabilized = get_all_facilitators_stabilized()
         else:
-            facilitators_stabilized = eadls.get_query_result({
-                "type": 'adl',
-                "representative.email": {"$in": [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False)]}
-            })[:]
+            # facilitators_stabilized = eadls.get_query_result({
+            #     "type": 'adl',
+            #     "representative.email": {"$in": [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False)]}
+            # })[:]
+            facilitators_stabilized = get_all_facilitators_stabilized()
 
         return facilitators_stabilized
 
