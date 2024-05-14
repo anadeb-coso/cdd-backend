@@ -27,6 +27,7 @@
             <tbody>
             {% for facilitator in facilitators_stabilized %}
                 {% with facilitator|get_facilitator_by_email as facilitator_object %}
+                {% if facilitator_object and facilitator_object.no_sql_db_name %}
                 <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
                     
                     <td align="left">
@@ -61,6 +62,7 @@
                         <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
                     </td> {% endcomment %}
                 </tr>
+                {% endif %}
                 {% endwith %}
             {% endfor %}
             </tbody>

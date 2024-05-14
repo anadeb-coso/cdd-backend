@@ -135,7 +135,12 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
                 liste_villages = get_cascade_villages_by_administrative_level_id(_id)
                 facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[v['administrative_id'] for v in liste_villages])
                 if facilitators_stabilized:
-                    facilitators_stabilized = list(set([elt['value'] for elt in facilitators_stabilized[:]]))
+                    # facilitators_stabilized = list(set([elt['value'] for elt in facilitators_stabilized[:]]))
+                    _f_s = []
+                    for elt in facilitators_stabilized[:]:
+                        if elt.get('value') and elt.get('value') not in _f_s:
+                            _f_s.append(elt['value'])
+                    facilitators_stabilized = _f_s
                 
             else:
                 # facilitators_stabilized = eadls.get_query_result({
