@@ -57,7 +57,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['region_id'] = self.request.GET.get('region_id')
         
-        if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', True) != '0':
+        if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
             sync_celery_tasks_re()
             
         return context
