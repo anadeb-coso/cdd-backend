@@ -210,36 +210,51 @@ class Facilitator(models.Model):
         
     
     def get_all_infos(self):
-        import json
-        nsc = NoSQLClient()
-        facilitator_db = nsc.get_db(self.no_sql_db_name)
-
-
-        _percent = 0
-        last_activity_date = "0000-00-00 00:00:00"
-        
-        try:
-            tasks_infos = json.loads(facilitator_db.get_list_function_result("_design/tasks_number", "completed_to_total_ratio", "tasks"))
-
-            _percent = tasks_infos.get('percent')
-            _last_activity_date = tasks_infos.get('last_activity_date')
-        except:
-            _percent = 0
-            _last_activity_date = "0000-00-00 00:00:00"
-        
-        if _last_activity_date and _last_activity_date != "0000-00-00 00:00:00":
-            last_activity_date = datetime.strptime(_last_activity_date, '%Y-%m-%d %H:%M:%S')
-        else:
-            last_activity_date = None
-            
-
+        _percent = self.total_tasks_completed/self.total_tasks if self.total_tasks else 0
         percent = float("%.2f" % ((_percent if _percent else 0)*100))
 
         return {
-            "name": self.name, "sex": "F" if self.sex == "Mme" else "M", "username": self.username, "tel": self.phone, 
-            'last_activity_date': last_activity_date, "percent": percent, 
+            "name": self.name, 
+            "sex": "F" if self.sex == "Mme" else "M", 
+            "username": self.username, 
+            "tel": self.phone, 
+            'last_activity_date': self.last_activity, 
+            "percent": percent, 
             "cvd": f"{self.cvds_number}/{self.villages_number}"
         }
+        
+        
+    # def get_all_infos(self):
+    #     import json
+    #     nsc = NoSQLClient()
+    #     facilitator_db = nsc.get_db(self.no_sql_db_name)
+
+
+    #     _percent = 0
+    #     last_activity_date = "0000-00-00 00:00:00"
+        
+    #     try:
+    #         tasks_infos = json.loads(facilitator_db.get_list_function_result("_design/tasks_number", "completed_to_total_ratio", "tasks"))
+
+    #         _percent = tasks_infos.get('percent')
+    #         _last_activity_date = tasks_infos.get('last_activity_date')
+    #     except:
+    #         _percent = 0
+    #         _last_activity_date = "0000-00-00 00:00:00"
+        
+    #     if _last_activity_date and _last_activity_date != "0000-00-00 00:00:00":
+    #         last_activity_date = datetime.strptime(_last_activity_date, '%Y-%m-%d %H:%M:%S')
+    #     else:
+    #         last_activity_date = None
+            
+
+    #     percent = float("%.2f" % ((_percent if _percent else 0)*100))
+
+    #     return {
+    #         "name": self.name, "sex": "F" if self.sex == "Mme" else "M", "username": self.username, "tel": self.phone, 
+    #         'last_activity_date': last_activity_date, "percent": percent, 
+    #         "cvd": f"{self.cvds_number}/{self.villages_number}"
+    #     }
     
     # def get_all_infos(self):
     #     nsc = NoSQLClient()
