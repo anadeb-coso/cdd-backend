@@ -41,6 +41,9 @@ class AdministrativeLevel(BaseModel):
             return self.cvd.subproject_set.get_queryset()
         return []
 
+    @property
+    def children(self):
+        return self.administrativelevel_set.get_queryset()
 
 class GeographicalUnit(BaseModel):
     canton = models.ForeignKey('AdministrativeLevel', null=True, blank=True, on_delete=models.CASCADE)

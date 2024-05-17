@@ -15,6 +15,8 @@ class FunnelsView(PageMixin, LoginRequiredMixin, FormView):
     template_name = 'funnel/funnels.html'
     context_object_name = 'funnels'
     active_level1 = 'funnels'
+    title = gettext_lazy('Funnel')
+     
     form_class = DiagnosticsForm
 
     def get_context_data(self, **kwargs):

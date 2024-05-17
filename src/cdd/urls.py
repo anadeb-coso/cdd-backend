@@ -37,6 +37,7 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     path('services/', include('cdd.my_librairies.services.urls')),
     path('process_manager/', include('process_manager.urls')),
+    path('super/', include('cdd.urls_super')),
     
     path('api/', include('cdd.urls_api')),
 ]

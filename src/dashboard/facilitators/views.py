@@ -29,7 +29,7 @@ from dashboard.administrative_levels.functions import get_administrative_levels_
 from cdd.functions import datetime_complet_str, exists_id_in_a_dict
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.functions import get_assign_adl_by_facilitatr
-
+from dashboard.tasks import sync_celery_tasks_re
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
@@ -56,6 +56,10 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['region_id'] = self.request.GET.get('region_id')
+        
+        if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', True) != '0':
+            sync_celery_tasks_re()
+            
         return context
 
 
