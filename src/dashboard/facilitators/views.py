@@ -272,7 +272,7 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
 
 
 class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, generic.DetailView):
-    template_name = 'facilitators/profile.html'
+    template_name = 'facilitators/profile/profile.html'
     context_object_name = 'facilitator_doc'
     title = gettext_lazy('Facilitator Profile')
     active_level1 = 'facilitators'
