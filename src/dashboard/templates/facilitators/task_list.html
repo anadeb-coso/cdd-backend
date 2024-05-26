@@ -1,79 +1,324 @@
 {% load static i18n custom_tags %}
 
+<style>
+    .progress-bar {
+        width: 5px;
+        height: 30px;
+        border-radius: 20px;
+    }
 
-{% comment %} <div class="card">
-    <div class="card-body">
-        <span class="text-bold-family fs17">{% translate 'Tasks completed' %}: &nbsp;</span>
-        <span class="fs17 text-primary">{{ total_tasks_completed }}</span>
-            &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
-        <span class="text-bold-family fs17">{% translate 'Tasks uncompleted' %}: &nbsp;</span>
-        <span class="fs17 text-primary">{{ total_tasks_uncompleted }}</span>
-            &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; 
-        <span class="text-bold-family fs17">{% translate 'Percentage of the tasks completed' %}: &nbsp;</span>
-        <span class="fs17 text-primary">{{ percentage_tasks_completed|floatformat:"2" }} %</span>
+    .progress-bar-gray {
+        background-color: #D9D9D9;
+    }
+
+    .progress-bar-green {
+        background-color: #63D3AC;
+    }
+
+    .progress-bar-red {
+        background-color: #F0788E;
+    }
+
+    .progress-bar-yellow {
+        background-color: #F2CD86;
+    }
+
+    .progress-bar-purple {
+        background-color: #9095FF;
+    }
+
+    .progress-bar-dark-green {
+        background-color: #44967D;
+    }
+
+    .progress-bar-pink {
+        background-color: #BA79B7;
+    }
+
+    .information__progress {
+        display: inline-flex;
+        gap: 2px;
+        padding-left: 10px;
+    }
+
+    .header {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        background-color: #f2f2f2;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        align-items: center;
+        font-weight: bolder;
+    }
+
+    .header__item {
+        padding: 10px 5px 10px 5px;
+        border-right: 1px solid;
+        display: inline-flex;
+        justify-content: center;
+    }
+
+    .information {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .information__item {
+        padding: 10px 5px 10px 5px;
+    }
+    .information--selected {
+        background-color: #f2f2f2;
+        box-shadow: inset 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        border: 1px solid #f5f5f5;
+    }
+
+    .information__name, .header__name {
+        text-align: left;
+        width: 300px;
+    }
+
+    .information__population, .header__population {
+        text-align: center;
+        width: 70px;
+    }
+
+    .information__validated, .header__validated,
+    .information__rejected, .header__rejected,
+    .information__pending, .header__pending
+    {
+        text-align: center;
+        width: 100px;
+    }
+
+    .header__completed, .information__completed {
+        flex: 1;
+        text-align: center;
+    }
+
+    .header__progress {
+        width: 134px;
+    }
+
+    .header__item:first-of-type {
+        border-right: 1px solid;
+    }
+
+    .header__item:last-of-type {
+        border-right: 0;
+    }
+
+    .header__progress-icon {
+        border: 2px dashed;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+    }
+
+    .header__circle-icon {
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        align-content: center;
+        text-align: center;
+    }
+
+    .header__circle-icon {
+        &.success {
+            background-color: #24c38b;
+            color: white;
+        }
+
+        &.error {
+            background-color: #F0788E;
+            color: white;
+        }
+    }
+
+</style>
+
+
+<div class="row m-2 align-items-center">
+    {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
+    <div class="col-8">
+        <div class="header">
+            <div class="header__item header__name">
+                {% translate 'Village' %}
+            </div>
+            <div class="header__item header__population">
+                {% translate 'Pop.' %}
+            </div>
+            <div class="header__item header__progress">
+                {% translate 'Progress' %}
+            </div>
+            <div class="header__item header__pending">
+                <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
+            </div>
+            <div class="header__item header__completed">
+                <span class="mr-2">{% translate 'En cours de validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="header__item header__rejected">
+                <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
+            </div>
+            <div class="header__item header__validated">
+                <span class="mr-2">{% translate 'Validé' %} </span><div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
+            </div>
+        </div>
+
+         {% for Village in villages %}
+             {% if Village == village_name %}
+                 <div class="information information--selected" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
+             {% else %}
+                 <div class="information" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
+             {% endif %}
+                    <div class="information__item information__name">
+                        {{ Village }}
+                    </div>
+                    <div class="information__item information__population">
+                        {{ villages|get:Village|get:'populationVillage'  }}
+                    </div>
+                    <div class="information__item information__progress">
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 5.55555556 %}
+                                    <div class="progress-bar progress-bar-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 11.1111111111 %}
+                                    <div class="progress-bar progress-bar-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 16.6666666667 %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 22.2222222222 %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 27.7777777778 %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 33.3333333333 %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 38.8888888889 %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 44.4444444444 %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 50 %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 55.5555555556 %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 61.1111111111 %}
+                                    <div class="progress-bar progress-bar-purple"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 66.6666666667 %}
+                                    <div class="progress-bar progress-bar-purple"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 72.2222222222 %}
+                                    <div class="progress-bar progress-bar-dark-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 77.7777777778 %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 83.3333333333 %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 88.8888888889 %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 94.4444444444 %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:'percentage_tasks_completed' > 100 %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                            </div>
+                    <div class="information__item information__pending">
+                        {{ villages|get:Village|get:'total_tasks_pending'  }}
+                    </div>
+                    <div class="information__item information__completed">
+                        {{ villages|get:Village|get:'total_tasks_completed'  }}
+                    </div>
+                    <div class="information__item information__rejected">
+                        {{ villages|get:Village|get:'total_tasks_rejected'  }}
+                    </div>
+                    <div class="information__item information__validated">
+                        {{ villages|get:Village|get:'total_tasks_validated'  }}
+                    </div>
+                </div>
+         {% endfor %}
+        </div>
+        <div class="col-4 text-center">
+            <img src="{% static 'images/house.png' %}" />
+            <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
+        </div>
     </div>
-</div> {% endcomment %}
-<div class="card">
-    <div class="card-body table-responsive">
-        <table id="table" class="table">
-            <thead>
-            <tr>
-                <th>{% translate 'N°' %}</th>
-                <th>{% translate 'CVD' %}</th>
-                <th>{% translate 'Village(s)' %}</th>
-                <th>{% translate 'Completed' %}</th>
-                <th>{% translate 'Uncompleted' %}</th>
-                <th>{% translate 'Percentage' %}</th>
-            </tr>
-            </thead>
-            <tbody>
-                {% for cvd_name, infos in dict_administrative_levels_with_infos.items %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td align="left">{% with infos|get:"cvd" as cvd %}{{ cvd|get:"cvd_name" }}{% endwith %}</td>
-                    {% comment %} {% for key, value in infos.items %}
-                        {% if key == "percentage_tasks_completed" %}
-                        <td>{{ value|floatformat:"2"  }}%</td>
-                        {% else %}
-                        <td>{{ value }}</td>
-                        {% endif %}
-                    {% endfor %} {% endcomment %}
-                    <td align="left">
-                        {% with infos|get:"cvd" as cvd %}
-                            {% with cvd|get:"villages" as villages %}
-                                {% for Village in villages %}
-                                    {% if forloop.last %}
-                                        {{ forloop.counter }}- {{ Village|get:"name" }}
-                                    {% else %}
-                                        {{ forloop.counter }}- {{ Village|get:"name" }}<br />
-                                    {% endif %}
-                                {% endfor %}
-                            {% endwith %}
-                        {% endwith %}
-                        
-                    </td>
-                    <td>{{ infos|get:"total_tasks_completed" }}</td>
-                    <td>{{ infos|get:"total_tasks_uncompleted" }}</td>
-                    <td>
-                        {% with infos|get:"percentage_tasks_completed" as percentage_tasks_completed %}
-                            {{ percentage_tasks_completed|floatformat:"2"  }}%
-                        {% endwith %}
-                    </td>
-                </tr>
-                {% endfor %}
-                {% if dict_administrative_levels_with_infos|length > 1 %}
-                <tr>
-                    <td colspan="2"><b>Total</b></td>
-                    <td align="left">{{ nbr_villages }}</td>
-                    <td><b>{{ total_tasks_completed }}</b></td>
-                    <td><b>{{ total_tasks_uncompleted }}</b></td>
-                    <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
+{% endwith %}
 </div>
+
+</div>
+
+<div class="card">
 
 <div class="row">
     <div class="col-2 text-left">
