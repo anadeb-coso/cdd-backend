@@ -287,7 +287,15 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             'title': title
         }
     ]
+    def get_results(self):
+        administrative_level_id = self.request.GET.get('administrative_level')
+        selector = {
+            "type": "task"
+        }
+        if administrative_level_id:
+            selector["administrative_level_id"] = administrative_level_id
 
+        return self.facilitator_db.get_query_result(selector)
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
@@ -310,62 +318,137 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
 
         context['total_tasks'] = total_tasks
 
-        # facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+        total_tasks_completed = 0
+        total_tasks_uncompleted = 0
+        total_task_pending = 0
+        total_tasks_rejected = 0
+        total_tasks_validated = 0
 
-        # dict_administrative_levels_with_infos = {}
-        # tasks = []
-        # administrative_levels = []
-        # for doc in facilitator_docs:
-        #     doc = doc.get('doc')
-        #     if doc.get('type') == "facilitator":
-        #         administrative_levels = doc.get('administrative_levels')
-        #         break
+        total_tasks = 0
+        dict_administrative_levels_with_infos = {'villages': {}}
 
-        # total_tasks_completed = 0
-        # total_tasks_uncompleted = 0
-        # total_tasks = 0
-        # for doc in facilitator_docs:
-        #     doc = doc.get('doc')
-        #     if doc.get('type') == "task":
-        #         tasks.append(doc)
-        #         if doc.get("completed"):
-        #             total_tasks_completed += 1
-        #         else:
-        #             total_tasks_uncompleted += 1
-        #         total_tasks += 1
+        object_list = self.get_results()
 
-        #         for administrative_level in administrative_levels:
-        #             if str(administrative_level.get("id")) == str(doc.get("administrative_level_id")):
-        #                 if dict_administrative_levels_with_infos.get(administrative_level.get("name")):
-        #                     if doc.get("completed"):
-        #                         dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_completed'] += 1
-        #                     else:
-        #                         dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks_uncompleted'] += 1
-        #                     dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] += 1
-        #                 else:
-        #                     if doc.get("completed"):
-        #                         dict_administrative_levels_with_infos[administrative_level.get("name")] = {
-        #                             'total_tasks_completed': 1,
-        #                             'total_tasks_uncompleted': 0
-        #                         }
-        #                     else:
-        #                         dict_administrative_levels_with_infos[administrative_level.get("name")] = {
-        #                             'total_tasks_completed': 0,
-        #                             'total_tasks_uncompleted': 1
-        #                         }
-        #                     dict_administrative_levels_with_infos[administrative_level.get("name")]['total_tasks'] = 1
+        if object_list:
+            for _ in object_list:
+                for administrative_level_cvd in self.cvds:
+                    for village in administrative_level_cvd['villages']:
+                        if village and str(village.get("id")) == str(_.get("administrative_level_id")):
+                            if _.get("completed") is False:
+                                total_task_pending += 1
+                            elif _.get("completed") is True and _.get("validated") is True:
+                                total_tasks_validated += 1
+                            elif _.get("completed") is True and _.get("validated") is False:
+                                total_tasks_rejected += 1
+                            else:
+                                total_tasks_completed += 1
+                            total_tasks += 1
 
-        # context['total_tasks_completed'] = total_tasks_completed
-        # context['total_tasks_uncompleted'] = total_tasks_uncompleted
-        # context['total_tasks'] = total_tasks
-        # context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
+                            if dict_administrative_levels_with_infos.get('villages').get(village.get('name')):
+                                if _.get("completed") is True:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                        'total_tasks_pending'] += 1
+                                if _.get("completed") is True and _.get("validated") is False:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                        'total_tasks_rejected'] += 1
+                                elif _.get("completed") is True and _.get("validated") is True:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                        'total_tasks_validated'] += 1
+                                else:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                        'total_tasks_completed'] += 1
 
-        # for key, value in dict_administrative_levels_with_infos.items():
-        #     dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
-        #     del dict_administrative_levels_with_infos[key]["total_tasks"]
-        # context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
+                                dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                    'total_tasks'] += 1
+                            else:
+                                if _.get("completed") is False:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_pending': 1,
+                                        'total_tasks_rejected': 0
+                                    }
+                                elif _.get("completed") is True and _.get("validated") is False:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_pending': 0,
+                                        'total_tasks_rejected': 1
+                                    }
+                                elif _.get("completed") is True and _.get("validated") is True:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 1,
+                                        'total_tasks_pending': 0,
+                                        'total_tasks_rejected': 0
+                                    }
+                                elif _.get("completed") is True and _.get("validated") is False:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_pending': 0,
+                                        'total_tasks_rejected': 1
+                                    }
+                                else:
+                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
+                                        'total_tasks_completed': 1,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_pending': 0,
+                                        'total_tasks_rejected': 0
+                                    }
+                                dict_administrative_levels_with_infos.get('villages')[village.get('name')][
+                                    'total_tasks'] = 1
+
+                            self.set_progress_data(
+                                dict_administrative_levels_with_infos,
+                                village.get('name'),
+                                _.get("phase_name"),
+                                _.get("completed")
+                            )
+                            dict_administrative_levels_with_infos.get('villages')[village.get('name')]['id'] = str(
+                                village.get("id"))
+
+                            if _.get("phase_name") == "VISITES PREALABLES" and _.get(
+                                    "name") == 'Etablissement du profil du village':
+                                form_response = _.get('form_response')
+                                if form_response:
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                        'populationVillage'] = form_response[0]['generalitiesSurVillage'][
+                                        'populationVillage']
+                                else:
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                        'populationVillage'] = 0
+
+                            dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                'percentage_tasks_completed'] = (
+                                        (dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                             'total_tasks_completed'] /
+                                         dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                             'total_tasks']) * 100) if \
+                            dict_administrative_levels_with_infos['villages'][village.get('name')][
+                                'total_tasks'] else 0
+
+        context['total_tasks_completed'] = total_tasks_completed
+        context['total_tasks_uncompleted'] = total_tasks_uncompleted
+        context['total_tasks_validated'] = total_tasks_validated
+        context['total_tasks_rejected'] = total_tasks_rejected
+        context['total_task_pending'] = total_task_pending
+        context['total_tasks'] = total_tasks
+        context['percentage_tasks_completed'] = ((total_tasks_completed / total_tasks) * 100) if total_tasks else 0
+        context['nbr_villages'] = 0
+
+        context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
+        context['facilitator_db_name'] = self.facilitator_db_name
 
         return context
+
+    def set_progress_data(self, dict_administrative_levels_with_infos, village_name, phase_name, completed):
+        dict_administrative_levels_with_infos['villages'][village_name][phase_name] = completed
 
     def get_object(self, queryset=None):
         return self.doc
@@ -441,120 +524,9 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        total_tasks_completed = 0
-        total_tasks_uncompleted = 0
-        total_task_pending = 0
-        total_tasks_rejected = 0
-        total_tasks_validated = 0
+        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['adminLevelId'] = self.request.GET.get('administrative_level')
 
-        total_tasks = 0
-        dict_administrative_levels_with_infos = {'villages': {} }
-
-        object_list = self.get_results()
-
-        if object_list:
-            for _ in object_list:
-                for administrative_level_cvd in self.cvds:
-                    for village in administrative_level_cvd['villages']:
-                        if village and str(village.get("id")) == str(_.get("administrative_level_id")):
-                            if _.get("completed") is False:
-                                total_task_pending += 1
-                            elif _.get("completed") is True and _.get("validated") is True:
-                                total_tasks_validated += 1
-                            elif _.get("completed") is True and _.get("validated") is False:
-                                total_tasks_rejected += 1
-                            else:
-                                total_tasks_completed += 1
-                            total_tasks += 1
-
-                            if dict_administrative_levels_with_infos.get('villages').get(village.get('name')):
-                                if _.get("completed") is True:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks_pending'] += 1
-                                if _.get("completed") is True and _.get("validated") is False:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks_rejected'] += 1
-                                elif _.get("completed") is True and _.get("validated") is True:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks_validated'] += 1
-                                else:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks_completed'] += 1
-
-                                dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks'] += 1
-                            else:
-                                if _.get("completed") is False:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
-                                        'total_tasks_completed': 0,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 0,
-                                        'total_tasks_pending': 1,
-                                        'total_tasks_rejected': 0
-                                    }
-                                elif _.get("completed") is True and _.get("validated") is False:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
-                                        'total_tasks_completed': 0,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 0,
-                                        'total_tasks_pending': 0,
-                                        'total_tasks_rejected': 1
-                                    }
-                                elif _.get("completed") is True and _.get("validated") is True:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
-                                        'total_tasks_completed': 0,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 1,
-                                        'total_tasks_pending': 0,
-                                        'total_tasks_rejected': 0
-                                    }
-                                elif _.get("completed") is True and _.get("validated") is False:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
-                                        'total_tasks_completed': 0,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 0,
-                                        'total_tasks_pending': 0,
-                                        'total_tasks_rejected': 1
-                                    }
-                                else:
-                                    dict_administrative_levels_with_infos.get('villages')[village.get('name')] = {
-                                        'total_tasks_completed': 1,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 0,
-                                        'total_tasks_pending': 0,
-                                        'total_tasks_rejected': 0
-                                    }
-                                dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks'] = 1
-
-                            self.set_progress_data(
-                                dict_administrative_levels_with_infos,
-                                village.get('name'),
-                                _.get("phase_name"),
-                                _.get("completed")
-                            )
-
-                            if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
-                                form_response = _.get('form_response')
-                                if form_response:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = form_response[0]['generalitiesSurVillage']['populationVillage']
-                                else:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'populationVillage'] = 0
-
-                            dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                'percentage_tasks_completed'] = ((dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'total_tasks_completed'] / dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'total_tasks']) * 100) if dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'total_tasks'] else 0
-
-
-        context['total_tasks_completed'] = total_tasks_completed
-        context['total_tasks_uncompleted'] = total_tasks_uncompleted
-        context['total_tasks_validated'] = total_tasks_validated
-        context['total_tasks_rejected'] = total_tasks_rejected
-        context['total_task_pending'] = total_task_pending
-        context['total_tasks'] = total_tasks
-        context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
-        context['nbr_villages'] = 0
-
-
-
-        context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
         context['facilitator_db_name'] = self.facilitator_db_name
 
         return context
@@ -846,7 +818,7 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         total_tasks = 0
         dict_administrative_levels_with_infos = {'villages': {}, 'upcomingEvents': {}}
         object_list = self.get_results()
-
+        context['adminLevelId'] = self.request.GET.get('administrative_level')
         context['facilitator_id'] = self.kwargs.get('id')
         context['village_name'] = self.request.GET.get('villageName')
 

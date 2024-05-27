@@ -1,325 +1,4 @@
-{% load static i18n custom_tags %}
-
-<style>
-    .progress-bar {
-        width: 5px;
-        height: 30px;
-        border-radius: 20px;
-    }
-
-    .progress-bar-gray {
-        background-color: #D9D9D9;
-    }
-
-    .progress-bar-green {
-        background-color: #63D3AC;
-    }
-
-    .progress-bar-red {
-        background-color: #F0788E;
-    }
-
-    .progress-bar-yellow {
-        background-color: #F2CD86;
-    }
-
-    .progress-bar-purple {
-        background-color: #9095FF;
-    }
-
-    .progress-bar-dark-green {
-        background-color: #44967D;
-    }
-
-    .progress-bar-purple-pink {
-        background-color: #BA79B7;
-    }
-
-    .progress-bar-pink {
-        background-color: #E9B9C2;
-    }
-
-    .information__progress {
-        display: inline-flex;
-        gap: 2px;
-        padding-left: 10px;
-    }
-
-    .header {
-        display: flex;
-        flex-direction: row;
-        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        background-color: #f2f2f2;
-        margin-bottom: 1rem;
-        border-radius: 10px;
-        align-items: center;
-        font-weight: bolder;
-    }
-
-    .header__item {
-        padding: 10px 5px 10px 5px;
-        border-right: 1px solid;
-        display: inline-flex;
-        justify-content: center;
-    }
-
-    .information {
-        display: flex;
-        flex-direction: row;
-        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
-        border-radius: 10px;
-        align-items: center;
-        cursor: pointer;
-    }
-
-    .information__item {
-        padding: 10px 5px 10px 5px;
-    }
-    .information--selected {
-        background-color: #f2f2f2;
-        box-shadow: inset 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        border: 1px solid #f5f5f5;
-    }
-
-    .information__name, .header__name {
-        text-align: left;
-        width: 300px;
-    }
-
-    .information__population, .header__population {
-        text-align: center;
-        width: 70px;
-    }
-
-    .information__validated, .header__validated,
-    .information__rejected, .header__rejected,
-    .information__pending, .header__pending
-    {
-        text-align: center;
-        width: 100px;
-    }
-
-    .header__completed, .information__completed {
-        flex: 1;
-        text-align: center;
-    }
-
-    .header__progress {
-        width: 134px;
-    }
-
-    .header__item:first-of-type {
-        border-right: 1px solid;
-    }
-
-    .header__item:last-of-type {
-        border-right: 0;
-    }
-
-    .header__progress-icon {
-        border: 2px dashed;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-    }
-
-    .header__circle-icon {
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        align-content: center;
-        text-align: center;
-    }
-
-    .header__circle-icon {
-        &.success {
-            background-color: #24c38b;
-            color: white;
-        }
-
-        &.error {
-            background-color: #F0788E;
-            color: white;
-        }
-    }
-
-</style>
-
-
-<div class="row m-2 align-items-center">
-    {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
-    <div class="col-8">
-        <div class="header">
-            <div class="header__item header__name">
-                {% translate 'Village' %}
-            </div>
-            <div class="header__item header__population">
-                {% translate 'Pop.' %}
-            </div>
-            <div class="header__item header__progress">
-                {% translate 'Progress' %}
-            </div>
-            <div class="header__item header__pending">
-                <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
-            </div>
-            <div class="header__item header__completed">
-                <span class="mr-2">{% translate 'En cours de validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
-            </div>
-            <div class="header__item header__rejected">
-                <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
-            </div>
-            <div class="header__item header__validated">
-                <span class="mr-2">{% translate 'Validé' %} </span><div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
-            </div>
-        </div>
-
-         {% for Village in villages %}
-             {% if Village == village_name %}
-                 <div class="information information--selected" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
-             {% else %}
-                 <div class="information" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
-             {% endif %}
-                    <div class="information__item information__name">
-                        {{ Village }}
-                    </div>
-                    <div class="information__item information__population">
-                        {{ villages|get:Village|get:'populationVillage'  }}
-                    </div>
-                    <div class="information__item information__progress">
-                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                    <div class="progress-bar progress-bar-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                    <div class="progress-bar progress-bar-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-dark-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-dark-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                            </div>
-                    <div class="information__item information__pending">
-                        {{ villages|get:Village|get:'total_tasks_pending'  }}
-                    </div>
-                    <div class="information__item information__completed">
-                        {{ villages|get:Village|get:'total_tasks_completed'  }}
-                    </div>
-                    <div class="information__item information__rejected">
-                        {{ villages|get:Village|get:'total_tasks_rejected'  }}
-                    </div>
-                    <div class="information__item information__validated">
-                        {{ villages|get:Village|get:'total_tasks_validated'  }}
-                    </div>
-                </div>
-         {% endfor %}
-        </div>
-        <div class="col-4 text-center">
-            <img src="{% static 'images/house.png' %}" />
-            <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
-        </div>
-    </div>
-{% endwith %}
-</div>
-
-</div>
+{% load static i18n custom_tags bootstrap4 %}
 
 <div class="card">
 
@@ -971,4 +650,70 @@
     }); 
 
     
+</script>
+
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_administrative_level").select2({
+            placeholder: "{% translate 'CVD' %}",
+            allowClear: true
+        });
+        $("#id_phase").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+        });
+        $("#id_activity").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+         $("#id_task").select2({
+            placeholder: "{% translate 'Task' %}",
+            allowClear: true,
+        });
+         $("#id_is_validated").select2({
+            placeholder: "{% translate 'Choice' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}
+
+<script>
+
+
+
+        previous.click(function () {
+            index -= offset;
+            loadTasks();
+        });
+
+        next.click(function () {
+            index += offset;
+            loadTasks();
+        });
+
+
+        $('.tasks-filter input').on('change keyup', function () {
+            if (!$(this).val()) {
+                index = 0;
+                loadTasks();
+            }
+        });
+
+        $('.tasks-filter select').on('change', function () {
+            index = 0;
+            loadTasks();
+        });
+
+        $("#clear_all_filters").on("click", function () {
+            $('.tasks-filter input').val('');
+            $('.tasks-filter select').val(null).trigger('change.select2');
+            index = 0;
+            loadTasks();
+        });
 </script>
