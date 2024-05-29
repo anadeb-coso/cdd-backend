@@ -311,74 +311,16 @@
                     </div>
              {% endfor %}
             </div>
-            {{ adminLevelId }}
 
-                <div class="col-4 justify-content-start"  id="admin_level_selected">
-                    <div class="row tasks-filter">
-                                    {% comment %} <div class="col-2 text-left">
-                                        <div class="fs28 lh35 text-primary text-bold-family mb-4" style="font-size: 16px !important;">
-                                            {% translate 'Task List' %}<br>
-                                        </div>
-                                    </div> {% endcomment %}
-                                    <div class="col-12 border-left filter_fields">
-                                        <div class="row">
-                                            {% comment %} <div class="col-2">
-                                                <label class="label-align">{% translate 'Filter by' %}</label>
-                                            </div> {% endcomment %}
-                                            <div class="col-1 align-items-center" style="margin: auto !important;">
-                                                <label class="label-align ml-4"><i class="fas fa-filter" style="font-size: 25px;"></i></label>
-                                            </div>
-                                            <div class="col-3">
-                                                {% bootstrap_field form.administrative_level show_label=False %}
-                                            </div>
-                                            <div class="col-2">
-                                                {% bootstrap_field form.phase show_label=False %}
-                                            </div>
-                                            <div class="col-2">
-                                                {% bootstrap_field form.activity show_label=False %}
-                                            </div>
-                                            <div class="col-2">
-                                                {% bootstrap_field form.task show_label=False %}
-                                            </div>
-                                            <div class="col-2">
-                                                {% bootstrap_field form.is_validated show_label=False %}
-                                            </div>
+            <div class="col-4 justify-content-start"  id="admin_level_selected"></div>
 
-                                </div>
-                                <a class="btn fs12 text-bold-family text-primary pull-right p-0"
-                                   id="clear_all_filters">
-                                    {% translate "Clear all filters" %}
-                                </a>
-                        </div>
-                    </div>
-
-                      <div class="row">
-            <div class="col-12">
-
-                <div class="card">
-                    <div class="card-body table-responsive">
-                        <div id="task-list"></div>
-                        <div class="text-right">
-                            <a id="previous" class="btn text-primary hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="current-page" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next" class="btn text-primary hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="overlay" id="spin">
-                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                    </div>
-                </div>
+            <div class="col-4 justify-content-center overlay" id="spin">
+                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
             </div>
-        </div>
-                </div>
-                <div class="col-4 text-center" id="no_admin_level_selected">
-                    <img src="{% static 'images/house.png' %}" />
-                    <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
-              </div>
+            <div class="col-4 align-content-center text-center" id="no_admin_level_selected">
+                        <img src="{% static 'images/house.png' %}" />
+                        <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
+                  </div>
             </div>
         </div>
 </div>
@@ -403,7 +345,6 @@
         const offset = 10;
         let previous = $('#previous');
         let next = $('#next');
-        let tasks = $('#task-list');
         var total_tasks = parseInt("{{ total_tasks }}");
         let current_page = $('#current-page');
         let administrative_level = $('#id_administrative_level');
@@ -412,13 +353,23 @@
         let task = $('#id_task');
         let no_admin_level_selected = $('#no_admin_level_selected');
         let admin_level_selected = $('#admin_level_selected');
-
+        let admin_level_selected_detail = $('#admin_level_selected_detail');
         let is_validated = $('#id_is_validated');
         admin_level_selected.hide();
-        var adminLevelId = null;
+        spin.hide();
+        let adminLevelId = null;
+        let isValidated = null;
+        let isCompleted = null;
+        let isPending = null;
+        let isRejected = null;
 
     function filterByVillage(admin_level_id) {
-        console.log(admin_level_id)
+        no_admin_level_selected.hide();
+        admin_level_selected.hide();
+        isValidated = null;
+        isCompleted = null;
+        isPending = null;
+        isRejected = null;
         spin.show();
         if (adminLevelId == admin_level_id) {
              adminLevelId = null;
@@ -430,20 +381,14 @@
             if ($(".information--selected").length > 0) {
                  $(".information--selected")[0].classList = "information";
             }
-            no_admin_level_selected.hide();
-             admin_level_selected.show();
             adminLevelId = admin_level_id;
              $('#' + admin_level_id)[0].classList = "information information--selected";
             loadTasks();
-
         }
-
-
     }
 
 
      function loadTasks() {
-            spin.show();
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:facilitators:task_list' facilitator_db_name %}",
@@ -454,13 +399,17 @@
                     phase: phase.val(),
                     activity: activity.val(),
                     task: task.val(),
-                    is_validated: is_validated.val(),
+                    is_validated: isValidated,
+                    is_completed: isCompleted,
+                    is_pending: isPending,
+                    is_rejected: isRejected
                 },
                 success: function (response) {
-                    tasks.html(response);
-                    spin.hide();
+                    admin_level_selected.html(response);
+                    admin_level_selected_detail.hide();
                     no_admin_level_selected.hide();
                     admin_level_selected.show();
+
                     if (index - offset >= 0) {
                         previous.show();
                     } else {
@@ -476,6 +425,8 @@
                     } else {
                         current_page.html("")
                     }
+                    spin.hide();
+                    admin_level_selected_detail.show();
                 },
                 error: function (data) {
                     spin.hide();
@@ -485,6 +436,26 @@
             });
         }
 
+
+        function filterBy(field) {
+            isValidated = null;
+            isCompleted = null;
+            isPending = null;
+            isRejected = null;
+            no_admin_level_selected.hide();
+            admin_level_selected.hide();
+            spin.show();
+            if (field == 'validated') {
+                isValidated = isValidated ? null : true;
+            } else if (field == 'completed') {
+                isCompleted = isCompleted  ? null : true;
+            } else if (field == 'pending') {
+                isPending = isPending ? null : true;
+            } else if (field == 'rejected') {
+                isRejected = isRejected ? null : true;
+            }
+            loadTasks();
+        }
 
     </script>
     <script src="{% static 'js/cascade_requests.js' %}"></script>

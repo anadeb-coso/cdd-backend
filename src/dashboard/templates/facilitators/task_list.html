@@ -1,14 +1,52 @@
 {% load static i18n custom_tags bootstrap4 %}
 
-<div class="card">
 
-<div class="row">
-    <div class="col-2 text-left">
-        <div class="fs28 lh35 text-primary text-bold-family" style="font-size: 16px !important;">
-            {% translate 'Task List' %}<br>
+<style>
+    .filters {
+        display: inline-flex;
+        flex-direction: row;
+        padding: 10px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .filters__item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        position: relative;
+        height: 50px;
+    }
+    .filters__item:hover {
+        border-radius: 8px;
+        background-color: #dedede;
+    }
+</style>
+<div class="row" id="admin_level_selected_detail">
+    <div class="col-12 profile__name">
+        {{ village_name }}
+    </div>
+    <div class="card col-12 filters">
+        <strong class="col-auto">{% translate 'Filter by' %}</strong>
+        <div class="filters__item col-2" onclick="filterBy('pending')">
+            <div class="header__progress-icon"></div>
+        </div>
+        <div class="filters__item col-2" onclick="filterBy('completed')">
+            <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+        </div>
+        <div class="filters__item col-2" onclick="filterBy('rejected')">
+            <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
+        </div>
+        <div class="filters__item col-2" onclick="filterBy('validated')">
+            <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
         </div>
     </div>
+
 </div>
+
+
+<div class="card">
+
 
 {% for task in tasks %}
     <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
