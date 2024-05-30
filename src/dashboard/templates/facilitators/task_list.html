@@ -2,51 +2,15 @@
 
 
 <style>
-    .filters {
-        display: inline-flex;
-        flex-direction: row;
-        padding: 10px;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .filters__item {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        position: relative;
-        height: 50px;
-    }
-    .filters__item:hover {
-        border-radius: 8px;
-        background-color: #dedede;
+
+    .card-item {
+        color: #707070;
     }
 </style>
-<div class="row" id="admin_level_selected_detail">
-    <div class="col-12 profile__name">
-        {{ village_name }}
-    </div>
-    <div class="card col-12 filters">
-        <strong class="col-auto">{% translate 'Filter by' %}</strong>
-        <div class="filters__item col-2" onclick="filterBy('pending')">
-            <div class="header__progress-icon"></div>
-        </div>
-        <div class="filters__item col-2" onclick="filterBy('completed')">
-            <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
-        </div>
-        <div class="filters__item col-2" onclick="filterBy('rejected')">
-            <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
-        </div>
-        <div class="filters__item col-2" onclick="filterBy('validated')">
-            <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
-        </div>
-    </div>
-
-</div>
-
 
 <div class="card">
 
+{% block tasks %}
 
 {% for task in tasks %}
     <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
@@ -60,7 +24,7 @@
                     {% translate 'Activity' %}: {{ task.activity_name }}
                 </div>
                 <div class="border-separator"></div>
-                
+
                 <div class="text-bold-family mt-2 mb-2">
                     {% if task.attachments|length != 0 %}
                         {% translate "Attachments" %}
@@ -68,7 +32,7 @@
                         {% translate "No attachments" %}
                     {% endif %}
                 </div>
-                
+
                 {% for attachment in task.attachments %}
                     {% if attachment.cloud_url %}
                         <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
@@ -82,8 +46,19 @@
                     {% endif %}
                 {% endfor %}
             </div>
-            <div class="col-sm-3">
-                <div class="badge-closed-at">
+            <div class="col-sm-5">
+                <div class="col mb-1 text-right text_completed_{{ task|get:'_id' }}">
+                    {% if task.completed %}
+                        <div class="status-badge badge-completed">
+                            {% translate 'Completed' %}
+                        </div>
+                    {% else %}
+                        <div class="status-badge badge-pending">
+                            {% translate 'Pending' %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col badge-closed-at float-right">
                     <i class="far fa-calendar-alt text-warning"></i>
                     {% translate 'Completed on' %}:
                     {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
@@ -92,7 +67,7 @@
                         {{ task.date_action_complete_by|default:'-' }}
                     {% endif %}
                 </div>
-                <div class="badge-closed-at mt-1  text_{{ task|get:'_id' }}">
+                <div class="col badge-closed-at mt-1 float-right text_{{ task|get:'_id' }}">
                     {% comment %} {% if task.completed and task.attachments %}
                         <i class="fas fa-check success-color"></i>
                     {% elif task.completed and not task.attachments %}
@@ -105,29 +80,18 @@
                         <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
                     {% else %}
                         {% if task.validated == False %}
-                            <i class="fas fa-times warning-color"></i> 
+                            <i class="fas fa-times warning-color"></i>
                             {% translate 'Task not validated' %}
                         {% else %}
-                            <i class="fas fa-exclamation-triangle warning-color"></i> 
+                            <i class="fas fa-exclamation-triangle warning-color"></i>
                             {% translate 'Unseen task' %}
                         {% endif %}
                     {% endif %}
                 </div>
             </div>
-            <div class="col-sm-2 text-right text_completed_{{ task|get:'_id' }}">
-                {% if task.completed %}
-                    <div class="status-badge badge-completed">
-                        {% translate 'Completed' %}
-                    </div>
-                {% else %}
-                    <div class="status-badge badge-pending">
-                        {% translate 'Pending' %}
-                    </div>
-                {% endif %}
-            </div>
+
         </div>
     </div>
-
 
     <!-- Modal  modal-dialog-centered -->
     <div class="modal fade" id="card-item-task-{{ task|get:'_id' }}" tabindex="-1" role="dialog"
@@ -159,10 +123,10 @@
                         {% else %}
                             <div class="status-badge warning-color">
                                 {% if task.validated == False %}
-                                    <i class="fas fa-times warning-color"></i> 
+                                    <i class="fas fa-times warning-color"></i>
                                     {% translate 'Task not validated' %}
                                 {% else %}
-                                    <i class="fas fa-exclamation-triangle warning-color"></i> 
+                                    <i class="fas fa-exclamation-triangle warning-color"></i>
                                     {% translate 'Unseen task' %}
                                 {% endif %}
                             </div>
@@ -178,7 +142,7 @@
 
             <div class="card">
                 <div class="card-body">
-                
+
                     {% comment %} {% with task|structureTheFields as fields %}
                     {% for field, value in fields.items %}
                         <div class="form-group row">
@@ -284,7 +248,7 @@
                                             <div class="clearfix"></div>
                                         </div>
                                         {% endif %}
-                                            
+
                                     {% endfor %}
                                     </div>
                                 </fieldset></div>
@@ -324,7 +288,7 @@
                     {% endwith %}
 
 
-                    
+
 
                     {% if task.attachments %}
                     {% for attach in task.attachments %}
@@ -347,17 +311,17 @@
                                         </a><br />
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             <iframe style="float: left;"
-                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}' 
+                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}'
                                                 width="250" height="300" frameborder='0'>
-                                                    This is an embedded 
-                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a> 
-                                                    document, powered by 
+                                                    This is an embedded
+                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a>
+                                                    document, powered by
                                                     <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
                                             </iframe>
                                         </a>
                                     {% else %}
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                        <!-- class="btn btn-primary" data-toggle="modal" 
+                                        <!-- class="btn btn-primary" data-toggle="modal"
                                         data-target="#item-attach-{{ forloop.counter }}" -->
                                             <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
                                         </a>
@@ -373,7 +337,7 @@
 
                 </div>
                 {% if user.is_superuser or user|has_group:"Admin" %}
-                    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}" 
+                    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}"
                             name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
                     {% if task.completed %}
 
@@ -383,9 +347,9 @@
                         {% include "facilitators/validation_invalidation.html" %}
                         {% comment %} End Validation Invalidation {% endcomment %}
 
-                        
+
                         <div style="width: 30%; margin: auto; float: right;" >
-                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete" 
+                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete"
                                 required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                                 {% translate 'Mark as uncompleted' %}
                             </button>
@@ -393,8 +357,8 @@
                     </div>
                     <div style="clear: both;"></div>
                     {% else %}
-                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete" 
-                            style="margin-top: 25px; width: 50%; margin: auto;" 
+                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete"
+                            style="margin-top: 25px; width: 50%; margin: auto;"
                             required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                             {% translate 'Mark as completed' %}
                         </button>
@@ -407,11 +371,11 @@
                     {% if task.completed %}
                         {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" %}
                         <div style="margin-top: 25px; width: 100%;">
-                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
+                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}"
                                 name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
-                            <button type="button" name="invalidate_valide" 
-                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide" 
-                                style="margin-top: 25px; width: 50%; margin: auto;" 
+                            <button type="button" name="invalidate_valide"
+                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide"
+                                style="margin-top: 25px; width: 50%; margin: auto;"
                                 required id="id_invalidate_valide_{{ task|get:'_id' }}">
                                 {% if task.validated %}
                                     {% translate 'Mark as invalidated' %}
@@ -426,20 +390,18 @@
                         </div>
                         {% endif %}
                     {% endif %}
-                    
+
                 {% endif %}
-                
-                    
+
+
             </div>
 
 
-            
+
             </div>
         </div>
     </div>
     <!-- End Modal -->
-    
-
 
     {% comment %} {% for attach in task.attachments %}{% if attach.attachment.uri %}
     <!-- Modal -->
@@ -466,9 +428,6 @@
     </div>
 {% endfor %}
 
-
-
-
 {% block modals %}
 
     <div class="modal fade modal-confirmation" id="modal_comment">
@@ -480,8 +439,8 @@
                         {% translate "Please enter a comment" %}
                     </div>
                     <div class="form-group">
-                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control" 
-                            title="" required="" id="id_in_validation_comment" spellcheck="true" 
+                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
+                            title="" required="" id="id_in_validation_comment" spellcheck="true"
                             placeholder="{% translate 'Add Comment' %}"></textarea>
                     </div>
 
@@ -497,6 +456,8 @@
 
 {% endblock modals %}
 
+
+{% endblock %}
 
 
 <script>
