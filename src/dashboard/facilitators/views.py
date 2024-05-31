@@ -460,8 +460,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
-        # phase_id = self.request.GET.get('phase')
-        # activity_id = self.request.GET.get('activity')
         phase_name = self.request.GET.get('phase')
         activity_name = self.request.GET.get('activity')
         task_name = self.request.GET.get('task')
@@ -469,8 +467,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         is_pending = self.request.GET.get('is_pending', None)
         is_completed = self.request.GET.get('is_completed', None)
         is_rejected = self.request.GET.get('is_rejected', None)
-
-
 
         selector = {
             "type": "task"
@@ -501,8 +497,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         return self.facilitator_db.get_query_result(selector)
 
     def get_queryset(self):
-        index = int(self.request.GET.get('index'))
-        offset = int(self.request.GET.get('offset'))
         phases = Phase.objects.all()
         activities = Activity.objects.all()
 
@@ -520,8 +514,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                     if activity_obj.name == _["activity_name"]:
                         _["activity_order"]=activity_obj.order
                         break
-
-        return sorted(object_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"]))) #[index:index + offset]
+        return sorted(object_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -529,7 +522,12 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         context['adminLevelId'] = self.request.GET.get('administrative_level')
 
         context['facilitator_db_name'] = self.facilitator_db_name
-        context['village_name'] = self.object_list[0]['administrative_level_name'] if len(self.object_list) > 0 else None;
+        context['village_name'] = self.object_list[0]['administrative_level_name'] if len(self.object_list) > 0 else None
+
+        index = int(self.request.GET.get('index'))
+        offset = int(self.request.GET.get('offset'))
+        context['total_tasks'] = len(self.object_list)
+        context['tasks'] = self.object_list[index: index + offset]
         return context
 
     def set_progress_data(self, dict_administrative_levels_with_infos, village_name, phase_name, completed):

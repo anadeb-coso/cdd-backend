@@ -163,7 +163,7 @@
         height: 50px;
     }
 
-    .filters__item:hover {
+    .filters__item:hover, .filters__item--selected {
         border-radius: 8px;
         background-color: #dedede;
     }
@@ -241,7 +241,7 @@
             </div>
 
              {% for Village in villages %}
-                  <div class="information" id="{{ villages|get:Village|get:'id' }}" onclick="filterByVillage('{{  villages|get:Village|get:'id'  }}')">
+                  <div class="information" id="{{ villages|get:Village|get:'id' }}" onclick="filterByVillage('{{ Village }}', '{{  villages|get:Village|get:'id'  }}')">
 
                         <div class="information__item information__name">
                             {{ Village }}
@@ -377,29 +377,29 @@
 
             <div class="col-4 justify-content-start"  id="admin_level_selected">
             <div class="row" id="admin_level_selected_detail">
-                <div class="col-12 profile__name">
+                <div class="col-12 profile__name" id="villageName">
                     {{ village_name }}
                 </div>
                 <div class="card col-12 filters">
                     <strong class="col-auto">{% translate 'Filter by' %}</strong>
-                    <div class="filters__item col-2" onclick="filterBy('pending')">
+                    <div class="filters__item col-2" id="pendingStatus" onclick="filterBy('pending')">
                         <div class="header__progress-icon"></div>
                     </div>
-                    <div class="filters__item col-2" onclick="filterBy('completed')">
+                    <div class="filters__item col-2" id="completedStatus" onclick="filterBy('completed')">
                         <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
                     </div>
-                    <div class="filters__item col-2" onclick="filterBy('rejected')">
+                    <div class="filters__item col-2" id="RejectedStatus" onclick="filterBy('rejected')">
                         <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
                     </div>
-                    <div class="filters__item col-2" onclick="filterBy('validated')">
+                    <div class="filters__item col-2"  id="validatedStatus" onclick="filterBy('validated')">
                         <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
                     </div>
-                     <strong class="col-auto" onclick="filterBy('all')">{% translate 'All' %}</strong>
+                     <strong class="col-auto" style="cursor: pointer;" onclick="filterBy('all')">{% translate 'All' %}</strong>
                 </div>
 
                 <div class="card phase phase--green flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 1
                             </div>
@@ -407,7 +407,7 @@
                                 {% translate 'Visites préalables' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(1)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(1)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -416,12 +416,21 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail1"></div>
+                        <div id="pagination1" class="text-right">
+                            <a id="previous1" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage1" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next1" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card phase phase--red flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 2
                             </div>
@@ -429,7 +438,7 @@
                                 {% translate 'Mobilisation Communautaire' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(2)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(2)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -438,12 +447,21 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail2"></div>
+                        <div id="pagination2" class="text-right">
+                            <a id="previous2" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage2" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next2" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card phase phase--yellow flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 3
                             </div>
@@ -451,7 +469,7 @@
                                 {% translate 'Planification' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(3)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(3)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -460,12 +478,21 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail3"></div>
+                        <div id="pagination3" class="text-right">
+                            <a id="previous3" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage3" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next3" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card phase phase--purple flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 4
                             </div>
@@ -473,7 +500,7 @@
                                 {% translate 'Préparation des sous-projets' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(4)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(4)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -482,12 +509,21 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail4"></div>
+                        <div id="pagination4" class="text-right">
+                            <a id="previous4" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage4" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next4" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card phase phase--dark-green flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 5
                             </div>
@@ -495,7 +531,7 @@
                                 {% translate 'Consultation et examen des sous-projects' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(5)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(5)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -504,13 +540,22 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail5"></div>
+                        <div id="pagination5" class="text-right">
+                            <a id="previous5" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage5" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next5" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
 
                 </div>
 
                 <div class="card phase phase--purple-pink flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 6
                             </div>
@@ -518,7 +563,7 @@
                                 {% trans 'Mise en oeuuvre du sous-projet' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(6)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(6)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -527,12 +572,21 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail6"></div>
+                        <div id="pagination6" class="text-right">
+                            <a id="previous6" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage6" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next6" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card phase phase--pink flex-column col-12">
                     <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col">
+                        <div class="flex-column col mb-2">
                             <div class="phase__title">
                                 {% translate 'Phase' %} 7
                             </div>
@@ -540,7 +594,7 @@
                                 {% translate 'Clotúre et replanification du sous-projets' %}
                             </div>
                         </div>
-                        <div class="pointer-event col-auto" onclick="loadPhaseTasks(7)">
+                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(7)">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -549,6 +603,15 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail7"></div>
+                        <div id="pagination7" class="text-right">
+                            <a id="previous7" class="btn hidden">
+                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                            </a>
+                            <div id="currentPage7" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                            <a id="next7" class="btn hidden">
+                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -585,9 +648,9 @@
     {{ block.super }}
 
     <script>
-    let spin = $('#spin');
+        let spin = $('#spin');
         let index = 0;
-        const offset = 10;
+        const offset = 2;
         let previous = $('#previous');
         let next = $('#next');
         var total_tasks = parseInt("{{ total_tasks }}");
@@ -606,10 +669,27 @@
             for(let i  = 1; i < 8; i++) {
                 $('#phaseDetail' + i).hide();
                 $('#phaseSpinner' + i).hide();
+                $('#previous' + i).hide();
+                $('#next' + i).hide();
+                $('#currentPage' + i).hide();
+                $('#pagination' + i).hide();
             }
         }
 
         hideTask();
+        for(let i  = 1; i < 8; i++) {
+            $('#previous' + i).click(function () {
+                $('#pagination' + phaseNumber).hide();
+                index -= offset;
+                loadTasks();
+            });
+
+            $('#next' + i).click(function () {
+                $('#pagination' + phaseNumber).hide();
+                index += offset;
+                loadTasks();
+            });
+        }
         admin_level_selected.hide();
         spin.hide();
         let adminLevelId = null;
@@ -620,7 +700,7 @@
         let phaseFilter = null;
         let phaseNumber = null;
 
-    function filterByVillage(admin_level_id) {
+    function filterByVillage(village_name, admin_level_id) {
         no_admin_level_selected.hide();
         admin_level_selected.hide();
         hideTask();
@@ -636,6 +716,7 @@
              admin_level_selected.hide();
              spin.hide();
         } else {
+            $('#villageName').html(village_name);
             if ($(".information--selected").length > 0) {
                  $(".information--selected")[0].classList = "information";
             }
@@ -650,9 +731,27 @@
     function loadPhaseTasks(number) {
         phaseFilter = null;
         phaseNumber = number;
+        index = 0;
         hideTask();
-
-        if (phaseNumber == 7 ) {
+        if (phaseNumber == 1 ) {
+            phaseFilter = 'VISITES PREALABLES'
+        }
+        else if (phaseNumber == 2 ) {
+            phaseFilter = 'MOBILISATION COMMUNAUTAIRE'
+        }
+        else if (phaseNumber == 3 ) {
+            phaseFilter = 'PLANIFICATION'
+        }
+        else if (phaseNumber == 4 ) {
+            phaseFilter = 'PRÉPARATION SOUS-PROJET'
+        }
+        else if (phaseNumber == 5 ) {
+            phaseFilter = 'CONSULTATION ET EXAMEN SOUS-PROJET'
+        }
+        else if (phaseNumber == 6 ) {
+            phaseFilter = 'MISE EN ŒUVRE DU SOUS-PROJET'
+        }
+        else if (phaseNumber == 7 ) {
             phaseFilter = 'CLOTURE ET REPLANIFICATION DU SOUS-PROJET'
         }
         loadTasks();
@@ -685,19 +784,25 @@
                     admin_level_selected.show();
 
                     if (index - offset >= 0) {
-                        previous.show();
+                        $('#previous' + phaseNumber).show();
                     } else {
-                        previous.hide();
+                        $('#previous' + phaseNumber).hide();
                     }
                     if (index + offset < total_tasks) {
-                        next.show();
+                        $('#next' + phaseNumber).show();
                     } else {
-                        next.hide();
+                        $('#next' + phaseNumber).hide();
                     }
                     if (response.trim()) {
-                        current_page.html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset));
+                        if (total_tasks == 0) {
+                            $('#phaseDetail' + phaseNumber).html('<div class="text-center">{% translate 'No tasks found' %} </div>');
+                            $('#pagination' + phaseNumber).hide();
+                        } else {
+                            $('#currentPage' + phaseNumber).html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset));
+                            $('#pagination' + phaseNumber).show();
+                        }
                     } else {
-                        current_page.html("")
+                        $('#currentPage' + phaseNumber).html("");
                     }
                     spin.hide();
                     admin_level_selected_detail.show();
@@ -712,23 +817,61 @@
 
 
         function filterBy(field) {
-            isValidated = null;
-            isCompleted = null;
-            isPending = null;
-            isRejected = null;
             if (field == 'validated') {
-                isValidated = isValidated ? null : true;
+                isPending = null;
+                isCompleted = null;
+                isRejected = null;
+                if (isValidated) {
+                    isValidated = null;
+                    $('#validatedStatus')[0].classList = 'filters__item col-2';
+                } else {
+                    isValidated = true;
+                    $('#validatedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                }
             } else if (field == 'completed') {
-                isCompleted = isCompleted  ? null : true;
+                isValidated = null;
+                isPending = null;
+                isRejected = null;
+                if (isCompleted) {
+                    isCompleted = null;
+                    $('#completedStatus')[0].classList = 'filters__item col-2';
+                } else {
+                    isCompleted = true;
+                    $('#completedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                }
             } else if (field == 'pending') {
-                isPending = isPending ? null : true;
+                isValidated = null;
+                isCompleted = null;
+                isRejected = null;
+                if (isPending) {
+                    isPending = null;
+                    $('#pendingStatus')[0].classList = 'filters__item col-2';
+                } else {
+                    isPending = true;
+                    $('#pendingStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                }
             } else if (field == 'rejected') {
-                isRejected = isRejected ? null : true;
+                isValidated = null;
+                isCompleted = null;
+                isPending = null;
+                if (isRejected) {
+                    isRejected = null;
+                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
+                } else {
+                    isRejected = true;
+                    $('#rejectedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                }
+            } else {
+                isValidated = null;
+                isPending = null;
+                isRejected = null;
+                isCompleted = null;
+            }
+            for(let i  = 1; i < 8; i++) {
+                $('#pagination' + i).hide();
             }
             loadTasks();
         }
-
-
 
     </script>
     <script src="{% static 'js/cascade_requests.js' %}"></script>

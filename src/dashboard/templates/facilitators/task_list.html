@@ -422,10 +422,6 @@
     <!-- End Modal -->
     {% endif %}{% endfor %} {% endcomment %}
 
-{% empty %}
-    <div class="text-center">
-        {% translate 'No tasks found' %}
-    </div>
 {% endfor %}
 
 {% block modals %}
@@ -648,71 +644,4 @@
 
     }); 
 
-    
-</script>
-
-
-{% block select2 %}
-    <script type="text/javascript">
-        $("#id_administrative_level").select2({
-            placeholder: "{% translate 'CVD' %}",
-            allowClear: true
-        });
-        $("#id_phase").select2({
-            placeholder: "{% translate 'Phase' %}",
-            allowClear: true,
-        });
-        $("#id_activity").select2({
-            placeholder: "{% translate 'Activity' %}",
-            allowClear: true,
-        });
-         $("#id_task").select2({
-            placeholder: "{% translate 'Task' %}",
-            allowClear: true,
-        });
-         $("#id_is_validated").select2({
-            placeholder: "{% translate 'Choice' %}",
-            allowClear: true,
-        });
-
-        $('b[role="presentation"]').hide();
-        $('.select2-selection__arrow').append(
-            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
-
-    </script>
-{% endblock select2 %}
-
-<script>
-
-
-
-        previous.click(function () {
-            index -= offset;
-            loadTasks();
-        });
-
-        next.click(function () {
-            index += offset;
-            loadTasks();
-        });
-
-
-        $('.tasks-filter input').on('change keyup', function () {
-            if (!$(this).val()) {
-                index = 0;
-                loadTasks();
-            }
-        });
-
-        $('.tasks-filter select').on('change', function () {
-            index = 0;
-            loadTasks();
-        });
-
-        $("#clear_all_filters").on("click", function () {
-            $('.tasks-filter input').val('');
-            $('.tasks-filter select').val(null).trigger('change.select2');
-            index = 0;
-            loadTasks();
-        });
 </script>
