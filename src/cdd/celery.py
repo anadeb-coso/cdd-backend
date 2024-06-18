@@ -1,13 +1,16 @@
 from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
-from celery.schedules import crontab
-from datetime import datetime
+# from celery.schedules import crontab
+# from datetime import datetime
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cdd.settings')
 
-app = Celery('cdd')
+app = Celery('cdd',
+               # broker='redis://127.0.0.1:6379/0',
+               # backend='redis://127.0.0.1:6379/0'
+            )
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -29,13 +32,13 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 #     #     'args' : {datetime.now()} # arguments for the task
 #     # },
 # }
-app.conf.beat_schedule = { # scheduler configuration 
-    'Sync_celery_tasks_schedule' : {  # whatever the name you want 
-        'task': 'dashboard.tasks.sync_celery_tasks', # name of task with path
-        'schedule': crontab(minute=0, hour=0), #120, #crontab(), # crontab() runs the tasks every minute
-        # 'args' : {4, 8}
-    }
-}
+# app.conf.beat_schedule = { # scheduler configuration 
+#     'Sync_celery_tasks_schedule' : {  # whatever the name you want 
+#         'task': 'dashboard.tasks.sync_celery_tasks', # name of task with path
+#         'schedule': crontab(minute=0, hour=0), #120, #crontab(), # crontab() runs the tasks every minute
+#         # 'args' : {4, 8}
+#     }
+# }
 
 
 
