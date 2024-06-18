@@ -7,7 +7,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from no_sql_client import NoSQLClient
-from dashboard.facilitators.functions import get_cvds
+# from dashboard.facilitators.functions import get_cvds
 from cdd.functions import datetime_complet_str
 from django.db.models.signals import post_save, post_delete
 from django.contrib.auth.models import User

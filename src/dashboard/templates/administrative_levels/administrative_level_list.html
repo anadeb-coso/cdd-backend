@@ -1,0 +1,215 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .expand-icon {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+</style>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table id="table" class="table-bordered">
+            <thead>
+            <tr>
+                <th width="29%">{% translate 'CVD' %}</th>
+                <th width="28%">{% translate 'Village(s)' %}</th>
+                <th width="2%">{% translate 'Facilitator' %}</th>
+                <th width="10%">{% translate 'Tel' %}</th>
+                <th width="15%">{% translate 'Last Activity' %}</th>
+                <th width="6%"
+                    title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">{% translate 'Percent' %}</th>
+                
+                <th width="5%" class="no-sort"></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for cvd in administrative_levels %}
+                <tr {% if not cvd.headquarters_village|facilitator_on_this_cvd %} style="color: red;" {% endif %}>
+                    {% with cvd.headquarters_village|last_facilitator_cdd as last_facilitator %}
+                        <td align="left">{{ cvd.name }}</td>
+                        <td align="left">
+                            {% for village in cvd.get_villages %}
+                                {% if forloop.last %}
+                                    {{ village.name }}
+                                {% else %}
+                                    {{ village.name }}, 
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td align="left">{{ last_facilitator.name }}</td>
+                        <td align="left">{{ last_facilitator.phone }}</td>
+                        <td align="left">{{ cvd.headquarters_village|last_activity_cdd }}</td>
+                        {% with cvd.headquarters_village|percent_cdd as percent_cdd %}
+                        <td align="left"
+                            title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                            style="color:
+                                    {% if percent_cdd < 10 %}red
+                                    {% elif percent_cdd < 30 %}orange
+                                    {% elif percent_cdd < 50 %}purple
+                                    {% elif percent_cdd < 70 %}black
+                                    {% elif percent_cdd < 90 %}#04e1e1
+                                    {% elif percent_cdd < 100 %}blue
+                                    {% else %}green
+                                    {% endif %}; font-weight: bold;
+                                    "
+                            >{{ percent_cdd }} %</td>
+                        {% endwith %}
+                        <td class=" pointer-event ">
+                            <i id="adl-{{ cvd.headquarters_village.id }}-{{ last_facilitator.no_sql_db_name }}" class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
+                        </td>
+                    {% endwith %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- DataTables export files -->
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/jszip/3.10.1/jszip.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/pdfmake.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/vfs_fonts.js' %}"></script>
+
+
+<script type="text/javascript">
+
+
+
+
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            "numeric-comma-pre": function (a) {
+                var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                return isNaN(x) ? 0 : x;
+            },
+            "numeric-comma-asc": function (a, b) {
+                return a - b;
+            },
+            "numeric-comma-desc": function (a, b) {
+                return b - a;
+            }
+        });
+
+        let table = $('#table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            columnDefs: [
+                { 
+                    type: 'numeric-comma', targets: [5] 
+                }
+            ],
+            {% comment %} dom: "ltipr",
+                columnDefs: [
+                    {
+                        targets: 1,
+                        orderable: false,
+                        searchable: false,
+                    },
+
+                    {
+                        targets: 'no-sort', orderable: false
+                    },
+                    { 
+                        type: 'numeric-comma', targets: [5] 
+                    }
+                ], {% endcomment %}
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
+        });
+        $('#search').on('keyup', function () {
+            table.search($(this).val()).draw();
+        });
+
+        table.on('click', '.expand-icon', function (e) {
+            let target = e.target;
+            let tr = target.closest('tr');
+            let row = table.row(tr);
+            if(document.getElementsByClassName('rowDetail') && document.getElementsByClassName('fa-chevron-circle-down')[5]) {
+                document.getElementsByClassName('fa-chevron-circle-down')[5].classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                document.getElementsByClassName('rowDetail')[0].parentElement.remove();
+            }
+            if (row.child.isShown()) {
+                target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                row.child.hide();
+            } else {
+                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child('<i class="fas fa-2x fa-sync-alt fa-spin"></i>').show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:administrative_levels:administrative_level_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', this.id.split('-')[2]),
+                    data: {
+                        administrative_level: this.id.split('-')[1],
+                        index: 0,
+                        offset:10,
+                }, success: function (response) {
+                    row.child(response).show();
+                }, error: function (data) {
+                    row.child('<span>Error loading data</span>').show();
+                }});
+            }
+        });
+
+        var id = 0
+        var liste_ids_no_sql_db_name = [];
+
+        async function loadFacilitatorPercent(id) {
+            await $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:facilitator_percent' 'no_sql_db_name' %}".replace('no_sql_db_name', id.split("-")[2]),
+                data: {},
+                success: function (response) {
+                    $('#' + id).html(response);
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
+                }
+            });
+            return true;
+        }
+
+        function loadFacilitatorsPercent(liste) {
+            $.ajax({
+                type: "POST",
+                url: "{% url 'dashboard:facilitators:facilitators_percent' %}",
+                data: {
+                    csrfmiddlewaretoken: "{{ csrf_token }}",
+                    liste: liste
+                },
+                success: function (data) {
+                    for (const [key, value] of Object.entries(data)) {
+                        $('#facilitator-percent-' + key).html(value.toFixed(2));
+                    }
+                },
+                error: function (data) {
+                    console.log(error_server_message + "Error " + data.status);
+                }
+            });
+            return true;
+        }
+
+        $('#table tr span').each(function () {
+            id = $(this).attr('id');
+            if (id && id.includes("facilitator-percent-")) {
+                {% comment %} loadFacilitatorPercent(id); {% endcomment %}
+                {% comment %} liste_ids_no_sql_db_name.push(id.split("-")[2]); {% endcomment %}
+            }
+        });
+        {% comment %} loadFacilitatorsPercent(liste_ids_no_sql_db_name) {% endcomment %}
+    });
+
+
+</script>
+
