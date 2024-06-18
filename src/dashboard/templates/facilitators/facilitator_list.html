@@ -108,10 +108,28 @@
     $(document).ready(function () {
         {% get_current_language as lang %}
 
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            "numeric-comma-pre": function (a) {
+                var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                return isNaN(x) ? 0 : x;
+            },
+            "numeric-comma-asc": function (a, b) {
+                return a - b;
+            },
+            "numeric-comma-desc": function (a, b) {
+                return b - a;
+            }
+        });
+
         let table = $('#table').DataTable({
             language: {
                 url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
             },
+            columnDefs: [
+                { 
+                    type: 'numeric-comma', targets: [5, 6] 
+                }
+            ],
             {% comment %} dom: "ltipr",
                 columnDefs: [
                     {
