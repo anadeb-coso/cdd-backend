@@ -1,6 +1,11 @@
 from datetime import datetime
 from django import template
 from django.utils.translation import gettext_lazy
+from django.db.models import Sum
+
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from cdd.call_objects_from_other_db import mis_objects_call
+from process_manager.models import AggregatedStatus
 
 from dashboard.utils import structure_the_words as utils_structure_the_words
 from dashboard.functions import order_dict
@@ -335,3 +340,42 @@ def administrative_regions_objects(value):
 @register.filter
 def get_facilitator_by_email(facilitator):
     return Facilitator.objects.filter(email=(((facilitator.get('representative').get('email') if facilitator.get('representative') else None) if facilitator.get('representative') else None) if facilitator else None)).first()
+
+
+
+@register.filter
+def last_facilitator_cdd(adl):
+    assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+        administrative_level_id=adl.id,
+        project_id=1
+    ).order_by('id')
+    if assigns:
+        l = [int(f.facilitator_id) for f in assigns]
+        return Facilitator.objects.get(id=l[-1])
+    return None
+
+@register.filter
+def percent_cdd(adl):
+    aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+    t_t_c = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+    t_t = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']
+    if t_t_c and t_t:
+        _percent = t_t_c/t_t if t_t else 0
+        return float("%.2f" % ((_percent if _percent else 0)*100))
+    return None
+
+@register.filter
+def last_activity_cdd(adl):
+    aggreg = AggregatedStatus.objects.filter(administrative_level_id=adl.id).order_by('last_activity').last()
+    if aggreg:
+        return aggreg.last_activity
+    
+    return None
+
+@register.filter
+def facilitator_on_this_cvd(adl):
+    return mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+        administrative_level_id=adl.id,
+        project_id=1,
+        activated=True
+    ).exists()
