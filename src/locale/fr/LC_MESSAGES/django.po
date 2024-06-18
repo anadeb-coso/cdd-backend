@@ -866,3 +866,7 @@ msgstr "Animateurs Stabilisés"
 #: .\facilitators
 msgid "Facilitators assigned"
 msgstr "Animateurs affectés"
+
+#: .\dashboard\administrative_levels
+msgid "administrative level"
+msgstr "niveau administratif"
