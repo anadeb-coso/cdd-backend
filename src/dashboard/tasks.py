@@ -235,6 +235,8 @@ def sync_celery_tasks_re():
                             if _ok:
                                 a.total_tasks_completed = 1 if _task['completed'] else 0
                                 a.total_tasks = 1
+                                _l_act = datetime_complet_str(_task.get('last_updated'))
+                                a.last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
                                 a.save()
                     
 
