@@ -33,6 +33,17 @@
                 </li>
             </ul>
         </nav>
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:administrative_levels:list' %}"
+                       class="nav-link {% if active_level1 == 'administrative_levels' %}active{% endif %}">
+                        <i class="nav-icon fa fa-user-friends"></i>
+                        <p>{% translate "Administrative levels" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
         
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
