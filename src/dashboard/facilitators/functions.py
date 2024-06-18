@@ -13,27 +13,28 @@ def get_cvds(facilitator):
                 elt = element["cvd_groups"][i]
                 
                 cvd_obj = administrativelevels_models.CVD.objects.using('mis').filter(id=int(elt['sql_id'])).first()
-                if cvd_obj and not '(' in cvd_obj.name:
-                    elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
-                else:
-                    elt['cvd_name'] = cvd_obj.name
-                
-                villages = []
-                for _index in range(len(administrative_levels)):
-                    adl = administrative_levels[_index]
-                    if elt.get('villages') and adl['id'] in elt['villages']:
-                        
-                        _in_list = False
-                        for v in villages:
-                            if adl['id'] == v['id']:
-                                _in_list = True
-                        if not _in_list:
-                            villages.append(adl)
+                if cvd_obj:
+                    if cvd_obj and not '(' in cvd_obj.name:
+                        elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
+                    else:
+                        elt['cvd_name'] = cvd_obj.name
+                    
+                    villages = []
+                    for _index in range(len(administrative_levels)):
+                        adl = administrative_levels[_index]
+                        if elt.get('villages') and adl['id'] in elt['villages']:
+                            
+                            _in_list = False
+                            for v in villages:
+                                if adl['id'] == v['id']:
+                                    _in_list = True
+                            if not _in_list:
+                                villages.append(adl)
 
-                            if adl.get('is_headquarters_village'):
-                                elt['village'] = adl
-                                elt['village_id'] = adl['id']
-                
+                                if adl.get('is_headquarters_village'):
+                                    elt['village'] = adl
+                                    elt['village_id'] = adl['id']
+                    
                 # elt['village'] = villages[0] if len(villages) != 0 else None
                 # elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
                 if elt.get('village_id'):
@@ -48,6 +49,14 @@ def get_cvd_name_by_village_id(cvds, village_id):
         for village in cvd['villages']:
             if village['id'] == village_id:
                 return cvd['name']
+    return None
+
+def get_headquarters_village_id(cvds, village_id):
+    for cvd in cvds:
+        for village in cvd['villages']:
+            if village['id'] == village_id:
+                print(cvd)
+                return cvd['village']['id']
     return None
 
 def is_village_principal(cvds, village_id):
