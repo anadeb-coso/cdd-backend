@@ -235,6 +235,7 @@ class AggregatedStatus(BaseModel):
     task = models.ForeignKey("Task", on_delete=models.CASCADE)
     total_tasks = models.IntegerField(default=0)
     total_tasks_completed = models.IntegerField(default=0)
+    last_activity = models.DateTimeField(blank=True, null=True)
 
 
     def administrative_level(self):
