@@ -171,24 +171,25 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             else:
                 _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)
 
-            for f in _facilitators:
-                    already_count_facilitator = False
-                    facilitator_db = nsc.get_db(f.no_sql_db_name)
+            facilitators = _facilitators
+            # for f in _facilitators:
+            #         already_count_facilitator = False
+            #         facilitator_db = nsc.get_db(f.no_sql_db_name)
 
-                    query_result = facilitator_db.get_query_result({
-                        "type": 'facilitator'
-                        })[:]
-                    if query_result:
-                        doc = query_result[0]
-                        for _village in doc['administrative_levels']:
+            #         query_result = facilitator_db.get_query_result({
+            #             "type": 'facilitator'
+            #             })[:]
+            #         if query_result:
+            #             doc = query_result[0]
+            #             for _village in doc['administrative_levels']:
 
-                            if str(_village['id']).isdigit(): #Verify if id contain only digit
+            #                 if str(_village['id']).isdigit(): #Verify if id contain only digit
 
-                                for village in liste_villages:
-                                    if str(_village['id']) == str(village['administrative_id']):
-                                        if not already_count_facilitator:
-                                            facilitators.append(f)
-                                            already_count_facilitator = True
+            #                     for village in liste_villages:
+            #                         if str(_village['id']) == str(village['administrative_id']):
+            #                             if not already_count_facilitator:
+            #                                 facilitators.append(f)
+            #                                 already_count_facilitator = True
         else:
             # facilitators = list(Facilitator.objects.all())
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
