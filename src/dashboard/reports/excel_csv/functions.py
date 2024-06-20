@@ -530,13 +530,12 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                                         if _.get('sql_id') == 20: #Etablissement du profil du village
                                             try:
                                                 value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
                                                 if not value:
                                                     try:
                                                         value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
-                                                        pass
-                                            except Exception as exc:
-                                                value = None
+                                                        value = None
                                             datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                                             
                                             try:
@@ -653,13 +652,12 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             if _.get('sql_id') == 20: #Etablissement du profil du village
                                 try:
                                     value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                except Exception as exc:
                                     if not value:
                                         try:
                                             value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
-                                            pass
-                                except Exception as exc:
-                                    value = None
+                                            value = None
                                 datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                                 
                                 try:
@@ -839,13 +837,12 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                                         if _.get('sql_id') == 20: #Etablissement du profil du village
                                             try:
                                                 value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
                                                 if not value:
                                                     try:
                                                         value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
-                                                        pass
-                                            except Exception as exc:
-                                                value = None
+                                                        value = None
                                             datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                                             
                                             try:
@@ -906,13 +903,12 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                             if _.get('sql_id') == 20: #Etablissement du profil du village
                                 try:
                                     value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                except Exception as exc:
                                     if not value:
                                         try:
                                             value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
-                                            pass
-                                except Exception as exc:
-                                    value = None
+                                            value = None
                                 datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                                 
                                 try:
@@ -1090,13 +1086,12 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                                         if _.get('sql_id') == 20: #Etablissement du profil du village
                                             try:
                                                 value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            except Exception as exc:
                                                 if not value:
                                                     try:
                                                         value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
-                                                        pass
-                                            except Exception as exc:
-                                                value = None
+                                                        value = None
                                             datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "Eff. Population")][count] = value
                                             
                                             try:
@@ -1284,13 +1279,12 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                             if _.get('sql_id') == 20: #Etablissement du profil du village
                                 try:
                                     value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                except Exception as exc:
                                     if not value:
                                         try:
                                             value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
-                                            pass
-                                except Exception as exc:
-                                    value = None
+                                            value = None
                                 datas[("MONOGRAPHIE", "LOCALITE", "Eff. Population", "Eff. Population", "Eff. Population")][count] = value
                                 
                                 try:
