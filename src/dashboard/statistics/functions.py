@@ -302,6 +302,11 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                                         if _.get('sql_id') == 20: #Etablissement du profil du village
                                             try:
                                                 value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                                if not value:
+                                                    try:
+                                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                                    except:
+                                                        pass
                                             except Exception as exc:
                                                 value = None
                                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
@@ -1418,6 +1423,11 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                             if _.get('sql_id') == 20: #Etablissement du profil du village
                                 try:
                                     value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                    if not value:
+                                        try:
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                        except:
+                                            pass
                                 except Exception as exc:
                                     value = None
                                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
