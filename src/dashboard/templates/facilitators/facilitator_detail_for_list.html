@@ -31,9 +31,14 @@
         background-color: #44967D;
     }
 
-    .progress-bar-pink, .event-card--pink {
+    .progress-bar-purple-pink, .event-card--purple-pink {
         background-color: #BA79B7;
     }
+
+    .progress-bar-pink, .event-card--pink {
+        background-color: #E9B9C2;
+    }
+
 
     .information__progress {
         display: inline-flex;
@@ -164,117 +169,116 @@
                     <div class="information__population">
                         {{ villages|get:Village|get:'populationVillage'  }}
                     </div>
-                    <div class="information__progress">
+                    <div class="information__item information__progress">
+                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
+                                    <div class="progress-bar progress-bar-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 5.55555556 %}
-                            <div class="progress-bar progress-bar-green"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
+                                    <div class="progress-bar progress-bar-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 11.1111111111 %}
-                            <div class="progress-bar progress-bar-green"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 16.6666666667 %}
-                            <div class="progress-bar progress-bar-red"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 22.2222222222 %}
-                            <div class="progress-bar progress-bar-red"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                    <div class="progress-bar progress-bar-red"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 27.7777777778 %}
-                            <div class="progress-bar progress-bar-red"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 33.3333333333 %}
-                            <div class="progress-bar progress-bar-yellow"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 38.8888888889 %}
-                            <div class="progress-bar progress-bar-yellow"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 44.4444444444 %}
-                            <div class="progress-bar progress-bar-yellow"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 50 %}
-                            <div class="progress-bar progress-bar-yellow"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
+                                    <div class="progress-bar progress-bar-yellow"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 55.5555555556 %}
-                            <div class="progress-bar progress-bar-yellow"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-purple"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 61.1111111111 %}
-                            <div class="progress-bar progress-bar-purple"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"CONSULTATION  ET EXAMEN SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-dark-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 66.6666666667 %}
-                            <div class="progress-bar progress-bar-purple"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"CONSULTATION  ET EXAMEN SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-dark-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 72.2222222222 %}
-                            <div class="progress-bar progress-bar-dark-green"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-purple-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 77.7777777778 %}
-                            <div class="progress-bar progress-bar-pink"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-purple-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 83.3333333333 %}
-                            <div class="progress-bar progress-bar-pink"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 88.8888888889 %}
-                            <div class="progress-bar progress-bar-pink"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 94.4444444444 %}
-                            <div class="progress-bar progress-bar-pink"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
 
-                        {% if villages|get:Village|get:'percentage_tasks_completed' > 100 %}
-                            <div class="progress-bar progress-bar-pink"></div>
-                        {% else %}
-                            <div class="progress-bar progress-bar-gray"></div>
-                        {% endif %}
-
-                    </div>
+                            </div>
                 </div>
 
             {% endfor %}
@@ -299,20 +303,21 @@
                                     {% for event in eventsInHour %}
                                         {% with  event|get:'name' as name %}
                                             {% with  event|get:'village' as village %}
-                                                {% with  event|get:'percentage_tasks_completed' as percentage %}
-                                                            {% if percentage < 11.1111111111 %}
-                                                            <div class="event-card event-card--green">
-                                                            {% elif percentage < 27.7777777778 %}
-                                                                <div class="event-card event-card--red">
-                                                            {% elif percentage < 55.5555555556 %}
-                                                                <div class="event-card event-card--yellow">
-                                                            {% elif percentage < 66.6666666667 %}
-                                                                <div class="event-card event-card--purple">
-                                                            {% elif percentage < 72.2222222222 %}
-                                                                <div class="event-card event-card--dark-green">
-                                                            {% else %}
-                                                                <div class="event-card event-card--pink">
-                                                            {% endif %}
+                                                {% if village|get:"VISITES PREALABLES" %}
+                                                    <div class="event-card event-card--green">
+                                                {% elif village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                                    <div class="event-card event-card--red">
+                                                {% elif village|get:"PLANIFICATION" %}
+                                                    <div class="event-card event-card--yellow">
+                                                {% elif village|get:"PRÉPARATION SOUS-PROJET" %}
+                                                    <div class="event-card event-card--purple">
+                                                {% elif village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
+                                                    <div class="event-card event-card--dark-green">
+                                                {% elif village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                                    <div class="event-card event-card--purple-pink">
+                                                {% else %}
+                                                    <div class="event-card event-card--pink">
+                                                {% endif %}
 
                                                                 <div class="event-card__symbol"></div>
                                                                 <div class="col">
@@ -324,7 +329,6 @@
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                {% endwith %}
                                             {% endwith %}
                                         {% endwith %}
                                     {% endfor %}
