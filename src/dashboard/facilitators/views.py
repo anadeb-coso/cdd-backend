@@ -521,8 +521,15 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                                     }
                                 dict_administrative_levels_with_infos.get('villages')[village.get('name')]['total_tasks'] = 1
 
+                            self.set_progress_data(
+                                dict_administrative_levels_with_infos,
+                                village.get('name'),
+                                _.get("phase_name"),
+                                _.get("completed")
+                            )
+
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
-                                form_response =  _.get('form_response')
+                                form_response = _.get('form_response')
                                 if form_response:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = form_response[0]['generalitiesSurVillage']['populationVillage']
                                 else:
@@ -551,6 +558,9 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         context['facilitator_db_name'] = self.facilitator_db_name
 
         return context
+
+    def set_progress_data(self, dict_administrative_levels_with_infos, village_name, phase_name, completed):
+        dict_administrative_levels_with_infos['villages'][village_name][phase_name] = completed
 
 
 class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.FormView):
@@ -879,6 +889,13 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                 dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                     'phase_name'] = _.get('phase_name')
 
+                            self.set_progress_data(
+                                dict_administrative_levels_with_infos,
+                                village.get('name'),
+                                _.get("phase_name"),
+                                _.get("completed")
+                            )
+
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
                                 form_response =  _.get('form_response')
                                 if form_response:
@@ -957,3 +974,6 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
 
 
         return context
+
+    def set_progress_data(self, dict_administrative_levels_with_infos, village_name, phase_name, completed):
+        dict_administrative_levels_with_infos['villages'][village_name][phase_name] = completed

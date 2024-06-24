@@ -31,8 +31,12 @@
         background-color: #44967D;
     }
 
-    .progress-bar-pink {
+    .progress-bar-purple-pink {
         background-color: #BA79B7;
+    }
+
+    .progress-bar-pink {
+        background-color: #E9B9C2;
     }
 
     .information__progress {
@@ -183,110 +187,109 @@
                         {{ villages|get:Village|get:'populationVillage'  }}
                     </div>
                     <div class="information__item information__progress">
-
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 5.55555556 %}
+                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
                                     <div class="progress-bar progress-bar-green"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 11.1111111111 %}
+                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
                                     <div class="progress-bar progress-bar-green"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 16.6666666667 %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
                                     <div class="progress-bar progress-bar-red"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 22.2222222222 %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
                                     <div class="progress-bar progress-bar-red"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 27.7777777778 %}
+                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
                                     <div class="progress-bar progress-bar-red"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 33.3333333333 %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
                                     <div class="progress-bar progress-bar-yellow"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 38.8888888889 %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
                                     <div class="progress-bar progress-bar-yellow"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 44.4444444444 %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
                                     <div class="progress-bar progress-bar-yellow"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 50 %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
                                     <div class="progress-bar progress-bar-yellow"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 55.5555555556 %}
+                                {% if villages|get:Village|get:"PLANIFICATION" %}
                                     <div class="progress-bar progress-bar-yellow"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 61.1111111111 %}
+                                {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
                                     <div class="progress-bar progress-bar-purple"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 66.6666666667 %}
-                                    <div class="progress-bar progress-bar-purple"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 72.2222222222 %}
+                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
                                     <div class="progress-bar progress-bar-dark-green"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 77.7777777778 %}
+                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-dark-green"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-purple-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                    <div class="progress-bar progress-bar-purple-pink"></div>
+                                {% else %}
+                                    <div class="progress-bar progress-bar-gray"></div>
+                                {% endif %}
+
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
                                     <div class="progress-bar progress-bar-pink"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 83.3333333333 %}
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
                                     <div class="progress-bar progress-bar-pink"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
                                 {% endif %}
 
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 88.8888888889 %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 94.4444444444 %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:'percentage_tasks_completed' > 100 %}
+                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
                                     <div class="progress-bar progress-bar-pink"></div>
                                 {% else %}
                                     <div class="progress-bar progress-bar-gray"></div>
