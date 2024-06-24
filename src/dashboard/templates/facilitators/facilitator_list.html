@@ -75,7 +75,6 @@
                     <td class=" pointer-event ">
                         <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
                     </td>
-
                 </tr>
             {% endfor %}
             </tbody>
@@ -102,12 +101,6 @@
 
     $(document).ready(function () {
         {% get_current_language as lang %}
-
-        function loadContent(d) {
-            console.log(d)
-
-
-        }
 
         let table = $('#table').DataTable({
             language: {
@@ -136,37 +129,31 @@
         });
 
         table.on('click', '.expand-icon', function (e) {
-            console.log('chanfles')
             let target = e.target;
             let tr = target.closest('tr');
             let row = table.row(tr);
-               if (row.child.isShown()) {
-
+            if(document.getElementsByClassName('rowDetail') && document.getElementsByClassName('fa-chevron-circle-down')[5]) {
+                document.getElementsByClassName('fa-chevron-circle-down')[5].classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                document.getElementsByClassName('rowDetail')[0].parentElement.remove();
+            }
+            if (row.child.isShown()) {
                 target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
                 row.child.hide();
             } else {
-                     $.ajax({
-                type: "GET",
-                url: "{% url 'dashboard:facilitators:facilitator_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', row.data()[0].split('data-facilitatorid="')[1].split('" href')[0]),
-                            data: {
+                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child('<i class="fas fa-2x fa-sync-alt fa-spin"></i>').show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:facilitators:facilitator_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', row.data()[0].split('data-facilitatorid="')[1].split('" href')[0]),
+                    data: {
                     index: 0,
                     offset:10,
-                },
-                success: function (response) {
-
-                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
-                row.child(response).show();
+                }, success: function (response) {
+                    row.child(response).show();
+                }, error: function (data) {
+                    row.child('<span>Error loading data</span>').show();
+                }});
             }
-                  ,
-                error: function (data) {
-                       target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
-                row.child('<span>Error loading data</span>').show();
-
-                }
-            });
-               }
-
-
         });
 
         var id = 0
@@ -215,7 +202,6 @@
             }
         });
         {% comment %} loadFacilitatorsPercent(liste_ids_no_sql_db_name) {% endcomment %}
-
     });
 
 
