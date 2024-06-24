@@ -1,335 +1,16 @@
-{% load static i18n custom_tags %}
+{% load static i18n custom_tags bootstrap4 %}
+
 
 <style>
-    .progress-bar {
-        width: 5px;
-        height: 30px;
-        border-radius: 20px;
-    }
 
-    .progress-bar-gray {
-        background-color: #D9D9D9;
+    .card-item {
+        color: #707070;
     }
-
-    .progress-bar-green {
-        background-color: #63D3AC;
-    }
-
-    .progress-bar-red {
-        background-color: #F0788E;
-    }
-
-    .progress-bar-yellow {
-        background-color: #F2CD86;
-    }
-
-    .progress-bar-purple {
-        background-color: #9095FF;
-    }
-
-    .progress-bar-dark-green {
-        background-color: #44967D;
-    }
-
-    .progress-bar-purple-pink {
-        background-color: #BA79B7;
-    }
-
-    .progress-bar-pink {
-        background-color: #E9B9C2;
-    }
-
-    .information__progress {
-        display: inline-flex;
-        gap: 2px;
-        padding-left: 10px;
-    }
-
-    .header {
-        display: flex;
-        flex-direction: row;
-        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        background-color: #f2f2f2;
-        margin-bottom: 1rem;
-        border-radius: 10px;
-        align-items: center;
-        font-weight: bolder;
-    }
-
-    .header__item {
-        padding: 10px 5px 10px 5px;
-        border-right: 1px solid;
-        display: inline-flex;
-        justify-content: center;
-    }
-
-    .information {
-        display: flex;
-        flex-direction: row;
-        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
-        border-radius: 10px;
-        align-items: center;
-        cursor: pointer;
-    }
-
-    .information__item {
-        padding: 10px 5px 10px 5px;
-    }
-    .information--selected {
-        background-color: #f2f2f2;
-        box-shadow: inset 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
-        border: 1px solid #f5f5f5;
-    }
-
-    .information__name, .header__name {
-        text-align: left;
-        width: 300px;
-    }
-
-    .information__population, .header__population {
-        text-align: center;
-        width: 70px;
-    }
-
-    .information__validated, .header__validated,
-    .information__rejected, .header__rejected,
-    .information__pending, .header__pending
-    {
-        text-align: center;
-        width: 100px;
-    }
-
-    .header__completed, .information__completed {
-        flex: 1;
-        text-align: center;
-    }
-
-    .header__progress {
-        width: 134px;
-    }
-
-    .header__item:first-of-type {
-        border-right: 1px solid;
-    }
-
-    .header__item:last-of-type {
-        border-right: 0;
-    }
-
-    .header__progress-icon {
-        border: 2px dashed;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-    }
-
-    .header__circle-icon {
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        align-content: center;
-        text-align: center;
-    }
-
-    .header__circle-icon {
-        &.success {
-            background-color: #24c38b;
-            color: white;
-        }
-
-        &.error {
-            background-color: #F0788E;
-            color: white;
-        }
-    }
-
 </style>
-
-
-<div class="row m-2 align-items-center">
-    {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
-    <div class="col-8">
-        <div class="header">
-            <div class="header__item header__name">
-                {% translate 'Village' %}
-            </div>
-            <div class="header__item header__population">
-                {% translate 'Pop.' %}
-            </div>
-            <div class="header__item header__progress">
-                {% translate 'Progress' %}
-            </div>
-            <div class="header__item header__pending">
-                <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
-            </div>
-            <div class="header__item header__completed">
-                <span class="mr-2">{% translate 'En cours de validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
-            </div>
-            <div class="header__item header__rejected">
-                <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
-            </div>
-            <div class="header__item header__validated">
-                <span class="mr-2">{% translate 'Validé' %} </span><div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
-            </div>
-        </div>
-
-         {% for Village in villages %}
-             {% if Village == village_name %}
-                 <div class="information information--selected" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
-             {% else %}
-                 <div class="information" id="{{ Village }}" onclick="filterByVillage('{{ Village }}', '{{ facilitator_id }}')">
-             {% endif %}
-                    <div class="information__item information__name">
-                        {{ Village }}
-                    </div>
-                    <div class="information__item information__population">
-                        {{ villages|get:Village|get:'populationVillage'  }}
-                    </div>
-                    <div class="information__item information__progress">
-                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                    <div class="progress-bar progress-bar-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                    <div class="progress-bar progress-bar-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                    <div class="progress-bar progress-bar-red"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PLANIFICATION" %}
-                                    <div class="progress-bar progress-bar-yellow"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-dark-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-dark-green"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-purple-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                                {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                    <div class="progress-bar progress-bar-pink"></div>
-                                {% else %}
-                                    <div class="progress-bar progress-bar-gray"></div>
-                                {% endif %}
-
-                            </div>
-                    <div class="information__item information__pending">
-                        {{ villages|get:Village|get:'total_tasks_pending'  }}
-                    </div>
-                    <div class="information__item information__completed">
-                        {{ villages|get:Village|get:'total_tasks_completed'  }}
-                    </div>
-                    <div class="information__item information__rejected">
-                        {{ villages|get:Village|get:'total_tasks_rejected'  }}
-                    </div>
-                    <div class="information__item information__validated">
-                        {{ villages|get:Village|get:'total_tasks_validated'  }}
-                    </div>
-                </div>
-         {% endfor %}
-        </div>
-        <div class="col-4 text-center">
-            <img src="{% static 'images/house.png' %}" />
-            <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
-        </div>
-    </div>
-{% endwith %}
-</div>
-
-</div>
 
 <div class="card">
 
-<div class="row">
-    <div class="col-2 text-left">
-        <div class="fs28 lh35 text-primary text-bold-family" style="font-size: 16px !important;">
-            {% translate 'Task List' %}<br>
-        </div>
-    </div>
-</div>
+{% block tasks %}
 
 {% for task in tasks %}
     <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
@@ -343,7 +24,7 @@
                     {% translate 'Activity' %}: {{ task.activity_name }}
                 </div>
                 <div class="border-separator"></div>
-                
+
                 <div class="text-bold-family mt-2 mb-2">
                     {% if task.attachments|length != 0 %}
                         {% translate "Attachments" %}
@@ -351,7 +32,7 @@
                         {% translate "No attachments" %}
                     {% endif %}
                 </div>
-                
+
                 {% for attachment in task.attachments %}
                     {% if attachment.cloud_url %}
                         <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
@@ -365,8 +46,19 @@
                     {% endif %}
                 {% endfor %}
             </div>
-            <div class="col-sm-3">
-                <div class="badge-closed-at">
+            <div class="col-sm-5">
+                <div class="col mb-1 text-right text_completed_{{ task|get:'_id' }}">
+                    {% if task.completed %}
+                        <div class="status-badge badge-completed">
+                            {% translate 'Completed' %}
+                        </div>
+                    {% else %}
+                        <div class="status-badge badge-pending">
+                            {% translate 'Pending' %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col badge-closed-at float-right">
                     <i class="far fa-calendar-alt text-warning"></i>
                     {% translate 'Completed on' %}:
                     {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
@@ -375,7 +67,7 @@
                         {{ task.date_action_complete_by|default:'-' }}
                     {% endif %}
                 </div>
-                <div class="badge-closed-at mt-1  text_{{ task|get:'_id' }}">
+                <div class="col badge-closed-at mt-1 float-right text_{{ task|get:'_id' }}">
                     {% comment %} {% if task.completed and task.attachments %}
                         <i class="fas fa-check success-color"></i>
                     {% elif task.completed and not task.attachments %}
@@ -388,29 +80,18 @@
                         <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
                     {% else %}
                         {% if task.validated == False %}
-                            <i class="fas fa-times warning-color"></i> 
+                            <i class="fas fa-times warning-color"></i>
                             {% translate 'Task not validated' %}
                         {% else %}
-                            <i class="fas fa-exclamation-triangle warning-color"></i> 
+                            <i class="fas fa-exclamation-triangle warning-color"></i>
                             {% translate 'Unseen task' %}
                         {% endif %}
                     {% endif %}
                 </div>
             </div>
-            <div class="col-sm-2 text-right text_completed_{{ task|get:'_id' }}">
-                {% if task.completed %}
-                    <div class="status-badge badge-completed">
-                        {% translate 'Completed' %}
-                    </div>
-                {% else %}
-                    <div class="status-badge badge-pending">
-                        {% translate 'Pending' %}
-                    </div>
-                {% endif %}
-            </div>
+
         </div>
     </div>
-
 
     <!-- Modal  modal-dialog-centered -->
     <div class="modal fade" id="card-item-task-{{ task|get:'_id' }}" tabindex="-1" role="dialog"
@@ -442,10 +123,10 @@
                         {% else %}
                             <div class="status-badge warning-color">
                                 {% if task.validated == False %}
-                                    <i class="fas fa-times warning-color"></i> 
+                                    <i class="fas fa-times warning-color"></i>
                                     {% translate 'Task not validated' %}
                                 {% else %}
-                                    <i class="fas fa-exclamation-triangle warning-color"></i> 
+                                    <i class="fas fa-exclamation-triangle warning-color"></i>
                                     {% translate 'Unseen task' %}
                                 {% endif %}
                             </div>
@@ -461,7 +142,7 @@
 
             <div class="card">
                 <div class="card-body">
-                
+
                     {% comment %} {% with task|structureTheFields as fields %}
                     {% for field, value in fields.items %}
                         <div class="form-group row">
@@ -567,7 +248,7 @@
                                             <div class="clearfix"></div>
                                         </div>
                                         {% endif %}
-                                            
+
                                     {% endfor %}
                                     </div>
                                 </fieldset></div>
@@ -607,7 +288,7 @@
                     {% endwith %}
 
 
-                    
+
 
                     {% if task.attachments %}
                     {% for attach in task.attachments %}
@@ -630,17 +311,17 @@
                                         </a><br />
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             <iframe style="float: left;"
-                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}' 
+                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}'
                                                 width="250" height="300" frameborder='0'>
-                                                    This is an embedded 
-                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a> 
-                                                    document, powered by 
+                                                    This is an embedded
+                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a>
+                                                    document, powered by
                                                     <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
                                             </iframe>
                                         </a>
                                     {% else %}
                                         <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                        <!-- class="btn btn-primary" data-toggle="modal" 
+                                        <!-- class="btn btn-primary" data-toggle="modal"
                                         data-target="#item-attach-{{ forloop.counter }}" -->
                                             <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
                                         </a>
@@ -656,7 +337,7 @@
 
                 </div>
                 {% if user.is_superuser or user|has_group:"Admin" %}
-                    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}" 
+                    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}"
                             name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
                     {% if task.completed %}
 
@@ -666,9 +347,9 @@
                         {% include "facilitators/validation_invalidation.html" %}
                         {% comment %} End Validation Invalidation {% endcomment %}
 
-                        
+
                         <div style="width: 30%; margin: auto; float: right;" >
-                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete" 
+                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete"
                                 required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                                 {% translate 'Mark as uncompleted' %}
                             </button>
@@ -676,8 +357,8 @@
                     </div>
                     <div style="clear: both;"></div>
                     {% else %}
-                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete" 
-                            style="margin-top: 25px; width: 50%; margin: auto;" 
+                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete"
+                            style="margin-top: 25px; width: 50%; margin: auto;"
                             required id="id_uncomplete_complete_{{ task|get:'_id' }}">
                             {% translate 'Mark as completed' %}
                         </button>
@@ -690,11 +371,11 @@
                     {% if task.completed %}
                         {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" %}
                         <div style="margin-top: 25px; width: 100%;">
-                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}" 
+                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}"
                                 name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
-                            <button type="button" name="invalidate_valide" 
-                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide" 
-                                style="margin-top: 25px; width: 50%; margin: auto;" 
+                            <button type="button" name="invalidate_valide"
+                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide"
+                                style="margin-top: 25px; width: 50%; margin: auto;"
                                 required id="id_invalidate_valide_{{ task|get:'_id' }}">
                                 {% if task.validated %}
                                     {% translate 'Mark as invalidated' %}
@@ -709,20 +390,18 @@
                         </div>
                         {% endif %}
                     {% endif %}
-                    
+
                 {% endif %}
-                
-                    
+
+
             </div>
 
 
-            
+
             </div>
         </div>
     </div>
     <!-- End Modal -->
-    
-
 
     {% comment %} {% for attach in task.attachments %}{% if attach.attachment.uri %}
     <!-- Modal -->
@@ -743,14 +422,7 @@
     <!-- End Modal -->
     {% endif %}{% endfor %} {% endcomment %}
 
-{% empty %}
-    <div class="text-center">
-        {% translate 'No tasks found' %}
-    </div>
 {% endfor %}
-
-
-
 
 {% block modals %}
 
@@ -763,8 +435,8 @@
                         {% translate "Please enter a comment" %}
                     </div>
                     <div class="form-group">
-                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control" 
-                            title="" required="" id="id_in_validation_comment" spellcheck="true" 
+                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
+                            title="" required="" id="id_in_validation_comment" spellcheck="true"
                             placeholder="{% translate 'Add Comment' %}"></textarea>
                     </div>
 
@@ -780,6 +452,8 @@
 
 {% endblock modals %}
 
+
+{% endblock %}
 
 
 <script>
@@ -970,5 +644,4 @@
 
     }); 
 
-    
 </script>
