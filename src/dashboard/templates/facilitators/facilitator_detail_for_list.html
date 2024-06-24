@@ -1,0 +1,230 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .progress-bar {
+        width: 5px;
+        height: 30px;
+        border-radius: 20px;
+    }
+
+    .progress-bar-gray {
+        background-color: #D9D9D9;
+    }
+
+    .progress-bar-green {
+        background-color: #63D3AC;
+    }
+
+    .progress-bar-red {
+        background-color: #F0788E;
+    }
+
+    .progress-bar-yellow {
+        background-color: #F2CD86;
+    }
+
+    .progress-bar-purple {
+        background-color: #9095FF;
+    }
+
+    .progress-bar-dark-green {
+        background-color: #44967D;
+    }
+
+    .progress-bar-pink {
+        background-color: #BA79B7;
+    }
+
+    .information__progress {
+        display: inline-flex;
+        gap: 2px;
+        padding-left: 10px;
+    }
+
+
+    .header {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        background-color: #f2f2f2;
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        align-items: center;
+        font-weight: bolder;
+    }
+
+    .information {
+        display: flex;
+        flex-direction: row;
+        box-shadow: 3px 3px 17px 0 rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border-radius: 10px;
+        padding: 5px 20px;
+        align-items: center;
+    }
+
+    .information__name, .header__name {
+        flex: 1;
+        text-align: left;
+    }
+
+    .information__population, .header__population {
+        text-align: center;
+        width: 70px;
+    }
+
+    .header__name {
+        padding: 10px 0 10px 20px;
+        border-right: 1px solid;
+    }
+
+    .header__population {
+        padding: 10px 5px 10px 5px;
+        border-right: 1px solid;
+    }
+
+    .header__progress {
+        padding: 10px 5px 10px 5px;
+        width: 155px;
+    }
+</style>
+
+<div>
+    <div class="col-3">
+        {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
+            <div class="header">
+                <div class="header__name">
+                    {% translate 'Villages' %}
+                </div>
+                <div class="header__population">
+                    {% translate 'Pop.' %}
+                </div>
+                <div class="header__progress">
+                    {% translate 'Progress' %}
+                </div>
+            </div>
+            {% for Village in villages %}
+                <div class="information">
+                    <div class="information__name">
+                        {{ Village }}
+                    </div>
+                    <div class="information__population">
+                        {{ villages|get:Village|get:'populationVillage'  }}
+                    </div>
+                    <div class="information__progress">
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 5.55555556 %}
+                            <div class="progress-bar progress-bar-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 11.1111111111 %}
+                            <div class="progress-bar progress-bar-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 16.6666666667 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 22.2222222222 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 27.7777777778 %}
+                            <div class="progress-bar progress-bar-red"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 33.3333333333 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 38.8888888889 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 44.4444444444 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 50 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 55.5555555556 %}
+                            <div class="progress-bar progress-bar-yellow"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 61.1111111111 %}
+                            <div class="progress-bar progress-bar-purple"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 66.6666666667 %}
+                            <div class="progress-bar progress-bar-purple"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 72.2222222222 %}
+                            <div class="progress-bar progress-bar-dark-green"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 77.7777777778 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 83.3333333333 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 88.8888888889 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 94.4444444444 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                        {% if villages|get:Village|get:'percentage_tasks_completed' > 100 %}
+                            <div class="progress-bar progress-bar-pink"></div>
+                        {% else %}
+                            <div class="progress-bar progress-bar-gray"></div>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+            {% endfor %}
+        {% endwith %}
+    </div>
+</div>

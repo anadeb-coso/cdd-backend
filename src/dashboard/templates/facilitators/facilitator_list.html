@@ -1,5 +1,11 @@
 {% load static i18n custom_tags %}
 
+<style>
+    .expand-icon {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+</style>
 
 <div class="card">
     <div class="card-body table-responsive">
@@ -53,9 +59,9 @@
                                 {% endif %}
                             </td>
                         {% elif forloop.counter == 1 %}
-                            <td align="left" }>
+                            <td align="left">
 
-                                <a class="pointer-event"
+                                <a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
                                    href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
                                    target="_blank" title="{% translate 'See profile' %}">
                                     <span>{{ value }}</span>
@@ -90,14 +96,17 @@
 
 
 <script type="text/javascript">
+
+
+
+
     $(document).ready(function () {
         {% get_current_language as lang %}
 
-        function format(d) {
+        function loadContent(d) {
             console.log(d)
-            return (
-                '<span>More information comming soon</span>'
-            );
+
+
         }
 
         let table = $('#table').DataTable({
@@ -131,15 +140,33 @@
             let target = e.target;
             let tr = target.closest('tr');
             let row = table.row(tr);
-
-            if (row.child.isShown()) {
+               if (row.child.isShown()) {
 
                 target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
                 row.child.hide();
             } else {
+                     $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:facilitators:facilitator_detail_for_list'  'no_sql_db_name' %}".replace('no_sql_db_name', row.data()[0].split('data-facilitatorid="')[1].split('" href')[0]),
+                            data: {
+                    index: 0,
+                    offset:10,
+                },
+                success: function (response) {
+
                 target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
-                row.child(format(row.data())).show();
+                row.child(response).show();
             }
+                  ,
+                error: function (data) {
+                       target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child('<span>Error loading data</span>').show();
+
+                }
+            });
+               }
+
+
         });
 
         var id = 0
