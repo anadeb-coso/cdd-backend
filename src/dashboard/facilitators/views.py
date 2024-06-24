@@ -829,7 +829,7 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks = 0
-        dict_administrative_levels_with_infos = {'villages': {}}
+        dict_administrative_levels_with_infos = {'villages': {}, 'upcomingEvents': {}}
         object_list = self.get_results()
 
         if object_list:
@@ -837,6 +837,7 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
 
                 for administrative_level_cvd in self.cvds:
                     for village in administrative_level_cvd['villages']:
+
                         if village and str(village.get("id")) == str(_.get("administrative_level_id")):
                             if _.get("completed"):
                                 total_tasks_completed += 1
@@ -860,7 +861,6 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                         'total_tasks_uncompleted': 0
                                     }
 
-
                                 else:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')] = {
                                         'total_tasks_completed': 0,
@@ -869,6 +869,8 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                     }
                                 dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                     'total_tasks'] = 1
+                                dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
+                                    'phase_name'] = _.get('phase_name')
 
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
                                 form_response =  _.get('form_response')
@@ -884,6 +886,53 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                         'total_tasks']) * 100) if dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                         'total_tasks'] else 0
 
+                            # if _.get('completed') is False:
+                            #     _["planned_date"] = "2024-2-28 23:17:2"
+                            # else:
+                            #     _["planned_date"] = "2024-2-28 13:17:2"
+
+                            if _.get('completed') is False and _.get('planned_date'):
+                                date = datetime.strptime(_.get('planned_date').split(' ')[0], '%Y-%m-%d')
+                                hour =  datetime.strptime(_.get('planned_date'), '%Y-%m-%d %H:%M:%S')
+
+                                if dict_administrative_levels_with_infos.get('upcomingEvents').get(date) is not None:
+                                    if dict_administrative_levels_with_infos.get('upcomingEvents').get(
+                                            date).get(hour) is not None:
+                                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour].append(
+
+                                                    {
+                                                        "village": village.get('name'),
+                                                        "name": _.get('name'),
+                                                        "phase_name": _.get('phase_name'),
+                                                        "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                                                            village.get('name'))[
+                                                            'percentage_tasks_completed']
+                                                                }
+
+                                            )
+                                    else:
+                                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                                            {
+                                                "village": village.get('name'),
+                                                "name": _.get('name'),
+                                                "phase_name": _.get('phase_name'),
+                                                "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                                                    village.get('name'))[
+                                                    'percentage_tasks_completed']
+                                                }
+                                        ]
+                                else:
+                                    dict_administrative_levels_with_infos.get('upcomingEvents')[date] = {}
+                                    dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                                        {
+                                            "village": village.get('name'),
+                                            "name": _.get('name'),
+                                            "phase_name": _.get('phase_name'),
+                                            "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                                                village.get('name'))[
+                                                'percentage_tasks_completed']
+                                        }
+                                    ]
 
 
         context['total_tasks_completed'] = total_tasks_completed
