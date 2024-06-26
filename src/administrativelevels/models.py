@@ -159,4 +159,4 @@ def update_or_create_amd_couch(sender, instance, **kwargs):
 
 
 
-post_save.connect(update_or_create_amd_couch, sender=AdministrativeLevel)
+# post_save.connect(update_or_create_amd_couch, sender=AdministrativeLevel)
