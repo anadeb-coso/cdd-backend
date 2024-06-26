@@ -3,8 +3,44 @@
 
 <style>
 
-    .card-item {
+    .card-item, .modal {
         color: #707070;
+    }
+</style>
+
+
+<style>
+    .fieldset {
+        border: solid 2px gray;
+        margin-bottom: 10px !important;
+    }
+    .fieldset fieldset .content {
+        width: 95% !important;
+    }
+    .fieldset fieldset .content:last-of-type {
+        margin-left: auto;
+    }
+    fieldset {
+    background-color: #eeeeee;
+    }
+
+    legend {
+    background-color: gray;
+    color: white;
+    padding: 5px 10px;
+    }
+
+    input {
+    margin: 5px;
+    }
+
+    .attach-file a {
+        float: right !important;
+        margin-right: 45px !important;
+    }
+    .attach-file p {
+        margin-left: 15px !important;
+        margin-top: 8px !important;
     }
 </style>
 
@@ -471,21 +507,9 @@
         let action_code = null;
         let id_invalidate_elt = null;
         let btn_send_comment = $('#btn-send-comment');
-        $(document).on('click', '.invalidate_valide', function () {
-            task__id = this.id.split("_")[this.id.split("_").length - 1];
-            id_invalidate_elt = $(('#id_invalidate_'+task__id));
-            for(var i = 0; i < this.classList.length; i++){
-                if(this.classList[i].includes("action_code_")){
-                    action_code = this.classList[i].split("_")[2];
-                }
-            }
 
-            $('#card-item-task-'+task__id).modal('hide');
-            $('#modal_comment').modal('show');
-        });
-
-
-        btn_send_comment.click(function () {
+        
+        function validate_invalidate_function () {
             let in_validation_comment = $('#id_in_validation_comment').val();
             
             if(["0", 0].includes(action_code) && (
@@ -569,7 +593,31 @@
                 });
             }
             
+        }
+
+        $(document).on('click', '.invalidate_valide', function () {
+            task__id = this.id.split("_")[this.id.split("_").length - 1];
+            id_invalidate_elt = $(('#id_invalidate_'+task__id));
+            for(var i = 0; i < this.classList.length; i++){
+                if(this.classList[i].includes("action_code_")){
+                    action_code = this.classList[i].split("_")[2];
+
+                    if(["1", 1].includes(action_code)){
+                        validate_invalidate_function();
+                    }
+                }
+            }
+
+            $('#card-item-task-'+task__id).modal('hide');
+
+            if(["0", 0].includes(action_code)){
+                $('#modal_comment').modal('show');
+            }
+            
         });
+
+
+        btn_send_comment.click(validate_invalidate_function);
         //End valide invalide
 
 
