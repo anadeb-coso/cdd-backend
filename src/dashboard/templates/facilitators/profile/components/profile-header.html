@@ -53,7 +53,15 @@
             <div class="col-12 profile__name">
                 {% translate 'Facilitator not assigned' as not_assigned %}
                 <span {% if not facilitator_doc %}class="text-warning"{% endif %} id="name">
-                    {{ facilitator_doc.name|default:not_assigned }}
+                    {% if user.is_superuser %}
+                        <a class="pointer-event" 
+                            href="{% url 'dashboard:facilitators:old_detail' facilitator.no_sql_db_name %}"
+                            title="{% translate 'See profile' %}">
+                            <span>{{ facilitator_doc.name|default:not_assigned }}</span>
+                        </a>
+                    {% else %}
+                        {{ facilitator_doc.name|default:not_assigned }}
+                    {% endif %}
                 </span>
             </div>
             <div class="col-12 profile__phone">

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.facilitators import views, views_stabilized
+from dashboard.facilitators import views, views_stabilized, views_old_profile
 
 app_name = 'facilitators'
 urlpatterns = [
@@ -12,6 +12,8 @@ urlpatterns = [
     path('<int:pk>/update/', views.UpdateFacilitatorView.as_view(), name='update'),
     path('<slug:id>/detail/', views.FacilitatorDetailView.as_view(), name='detail'),
     path('task-list/<slug:id>/', views.FacilitatorTaskListView.as_view(), name='task_list'),
+    path('old/<slug:id>/detail/', views_old_profile.FacilitatorDetailView.as_view(), name='old_detail'),
+    path('old/task-list/<slug:id>/', views_old_profile.FacilitatorTaskListView.as_view(), name='old_task_list'),
     path('facilitator-detail-list/<slug:id>/', views.FacilitatorDetailForListView.as_view(), name='facilitator_detail_for_list'),
     
     path('stabilized/', views_stabilized.FacilitatorStabilizedListView.as_view(), name='stabilized_list'),
