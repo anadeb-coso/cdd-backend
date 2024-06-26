@@ -1,0 +1,533 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n humanize bootstrap4 custom_tags %}
+
+{% block extracss %}
+    {{ block.super }}
+    <style>
+        .attachment-container {
+            display: inline-flex;
+            gap: 0 40px;
+            flex-wrap: wrap;
+            @media (max-width: 700px) {
+                gap: 10px;
+            }
+        }
+
+        .attachment-link-container {
+            width: 120px;
+            text-align: center;
+
+            &:nth-child(even) .attachment-link {
+                width: 120px;
+
+                .attachment-placeholder:not(.attachment-placeholder--document) {
+                    width: 120px;
+                }
+            }
+        }
+
+        .attachment-link {
+            width: 80px;
+            height: 80px;
+            background: #f6f9fb;
+            border-radius: 10px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .attachment-placeholder {
+            height: 80px;
+            width: auto;
+            border-radius: 10px;
+        }
+
+        .attachment-placeholder--document {
+            height: 40px;
+            width: 30px;
+        }
+
+        #attachmentModal, #attachmentFilterModal {
+            .modal-header {
+                border: 0;
+            }
+
+            .btn-closeModal {
+                margin-bottom: 30px;
+                background-color: #599cf7;
+                color: white;
+                padding: 5px !important;
+                font-size: 10px;
+                height: 25px;
+                width: 25px;
+                opacity: 1;
+                border-radius: 50%;
+                margin: 5px;
+                margin-left: auto;
+                outline: transparent;
+            }
+        }
+
+        .checkbox {
+            position: absolute;
+            left: 5px;
+            top: 5px;
+        }
+
+        .form-attachment {
+            gap: 0 20px;
+            flex-wrap: wrap;
+        }
+
+        .pagination {
+            font-size: 13px;
+        }
+
+        #attachmentModal {
+            .attachment-modal-link {
+                width: calc(100% - 120px);
+                height: 50vh;
+                margin: auto;
+                display: flex;
+            }
+
+            .attachment-placeholder {
+                height: 50vh;
+                width: 100%;
+                margin: auto;
+            }
+
+            .carousel-control-next, .carousel-control-prev {
+                bottom: -50px;
+            }
+
+            .carousel-control-next-icon, .carousel-control-prev-icon {
+                border-radius: 50%;
+                background-color: #599cf7;
+                padding: 5px !important;
+                background-size: 10px;
+                height: 25px;
+                width: 25px;
+                bottom: -40px;
+            }
+
+            .carousel-indicators {
+                bottom: -40px;
+            }
+
+            .carousel-indicators li {
+                background-color: #599cf7;
+            }
+
+            .download {
+                display: inline-flex;
+                width: calc(100% - 25px);
+                justify-content: flex-end;
+            }
+        }
+
+        .attachment-filter {
+            background-color: transparent;
+            border-radius: 50%;
+            border: 1px solid black;
+            height: 25px;
+            width: 25px;
+            padding: 2px 0 0 1px;
+        }
+
+        #attachmentFilterModal {
+            .form-checkbox-row {
+                display: inline-flex;
+                gap: 10px;
+                justify-content: center;
+            }
+
+            .select2-container {
+                width: 50% !important;
+            }
+
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                color: black;
+            }
+
+            .form-checkbox label {
+                margin: 0 !important;
+            }
+
+            .btn-primary {
+                border-radius: 8px !important;
+                font-size: 12px;
+                float: right;
+            }
+        }
+
+        .download-all {
+            background-color: #599cf7;
+            outline: transparent;
+            border-radius: 4px;
+            padding: 5px 10px 3px 10px;
+            border: 0;
+        }
+
+        .download-all, .download-all:focus, .download-all:hover {
+            color: white;
+            text-transform: capitalize;
+        }
+
+        .download-all:focus, .download-all:hover {
+            opacity: 0.8;
+        }
+
+    </style>
+    <link rel="stylesheet" href="{% static 'plugins/babylon-grid/babylongrid-default.css' %}">
+{% endblock %}
+
+{% block content %}
+    {% csrf_token %}
+    <div class="row">
+
+        <div class="col-12 p-0 d-flex justify-content-end">
+            <button class="attachment-filter" data-toggle="modal" data-target="#attachmentFilterModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                     class="bi bi-filter" viewBox="0 0 16 16">
+                    <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="col-12">
+        
+            {% include 'administrative_levels/attachments/_grid.html' with attachments=attachments %}
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="attachmentModal" tabindex="-1" role="dialog"
+         aria-labelledby="attachmentModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close btn-closeModal" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body mb-5">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="attachmentFilterModal" tabindex="-1" role="dialog"
+         aria-labelledby="attachmentFilterModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>{% translate 'Choose attachments to view' %}</h5>
+                    <button type="button" class="close btn-closeModal" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form action="" method="get">
+                        <div class="form-checkbox-row">
+
+                            <div class="form-checkbox">
+                                <label for="id_type_0"><input type="radio" name="type" value="Photo" id="id_type_0" required="" {% if 'type' in query_strings_raw and query_strings_raw.type == 'Photo' %}checked=""{% endif %}> Photo</label>
+                            </div>
+
+                            <div class="form-checkbox">
+                                <label for="id_type_1"><input type="radio" name="type" value="Document" id="id_type_1" required="" {% if 'type' in query_strings_raw and query_strings_raw.type == 'Document' %}checked=""{% endif %}> Document</label>
+                            </div>
+
+                            <div class="form-checkbox">
+                                <label for="id_type_2"><input type="radio" name="type" value="" id="id_type_2" required="" {% if not 'type' in query_strings_raw or query_strings_raw.type not in 'Photo,Document' %}checked=""{% endif %}> Both</label>
+                            </div>
+
+                        </div>
+                        <br><br>
+                        <div class="form-group">
+                            <div class="form-label">
+                                <label for="id_administrative_level">{% translate 'Administrative level' %}</label>
+                            </div>
+                            <div class="form-select-row">
+                                <select class="form-control" name="administrative_level" id="id_administrative_level" empty-option="---" style="width: 100%;">
+                                    <option selected value="">---</option>
+                                    {% for administrative_level in administrative_levels %}
+                                        {% if 'administrative_level' in query_strings_raw %}
+                                            {% if query_strings_raw|get_item:'administrative_level' == administrative_level.id %}
+                                            <option value="{{ administrative_level.id }}" selected>{{ administrative_level.name }}</option>
+                                            {% else %}
+                                            <option value="{{ administrative_level.id }}">{{ administrative_level.name }}</option>
+                                            {% endif %}
+                                        {% else %}
+                                            <option value="{{ administrative_level.id }}">{{ administrative_level.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">
+                                <label for="id_phase">{% translate 'Phase' %}</label>
+                            </div>
+                            <div class="form-select-row">
+                                <select class="form-control" name="phase" id="id_phase" empty-option="---" style="width: 100%;" {% if not 'administrative_level' in query_strings_raw %}disabled{% endif %}>
+                                    <option selected value="">---</option>
+                                    {% for phase in phases %}
+                                        {% if 'phase-filter' in query_strings_raw %}
+                                            {% if query_strings_raw|get_item:'phase-filter' == phase.id %}
+                                            <option value="{{ phase.id }}" selected>{{ phase.name }}</option>
+                                            {% else %}
+                                            <option value="{{ phase.id }}">{{ phase.name }}</option>
+                                            {% endif %}
+                                        {% else %}
+                                            <option value="{{ phase.id }}">{{ phase.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">
+                                <label for="id_activity">{% translate 'Activity' %}</label>
+                            </div>
+                            <div class="form-select-row">
+                                <select class="form-control" name="activity" id="id_activity" empty-option="---" style="width: 100%;" {% if not 'phase' in query_strings_raw %}disabled{% endif %}>
+                                    <option selected value="">---</option>
+                                    {% for activity in activities %}
+                                        {% if 'activity-filter' in query_strings_raw %}
+                                            {% if query_strings_raw|get_item:'activity-filter' == activity.id %}
+                                            <option value="{{ activity.id }}" selected>{{ activity.name }}</option>
+                                            {% else %}
+                                            <option value="{{ activity.id }}">{{ activity.name }}</option>
+                                            {% endif %}
+                                        {% else %}
+                                            <option value="{{ activity.id }}">{{ activity.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">
+                                <label for="id_task">{% translate 'Task' %}</label>
+                            </div>
+                            <div class="form-select-row">
+                                <select class="form-control" name="task" id="id_task" empty-option="---" style="width: 100%;" {% if not 'activity' in query_strings_raw %}disabled{% endif %}>
+                                    <option selected value="">---</option>
+                                    {% for task in tasks %}
+                                        {% if 'task-filter' in query_strings_raw %}
+                                            {% if query_strings_raw|get_item:'task-filter' == task.id %}
+                                            <option value="{{ task.id }}" selected>{{ task.name }}</option>
+                                            {% else %}
+                                            <option value="{{ task.id }}">{{ task.name }}</option>
+                                            {% endif %}
+                                        {% else %}
+                                            <option value="{{ task.id }}">{{ task.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <input type="submit" class="btn btn-primary" value="{% translate 'Apply' %}">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript" src="{% static 'plugins/babylon-grid/jquery.babylongrid.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/htmx.min.js' %}" defer></script>
+    <script type="text/javascript" data-attachments="{{ attachments }}">
+        var current_page = "{{ request.path }}";
+        var csrf_token = "{{ csrf_token }}";
+        $(document).ready(function () {
+
+            $('input[type=checkbox]').click(function (event) {
+                if (event.stopPropagation) {
+                    event.stopPropagation();
+                } else {
+                    event.cancelBubble = true;
+                }
+            });
+
+            $('#id_administrative_level').on('change', function(){
+                change_filters_selects(
+                    $(this), $('#id_phase'),
+                    [$('#id_activity'), $('#id_task')]
+                )
+            });
+
+            $('#id_phase').on('change', function(){
+                change_filters_selects(
+                    $(this), $('#id_activity'),
+                    [$('#id_task')]
+                )
+            });
+
+            $('#id_activity').on('change', function(){
+                change_filters_selects(
+                    $(this), $('#id_task'), []
+                )
+            });
+
+            $('.babylongrid').babylongrid({
+                scheme: [
+                    {
+                        minWidth: 1250,
+                        columns: 3
+                    },
+                    {
+                        minWidth: 960,
+                        columns: 3
+                    },
+                    {
+                        minWidth: 500,
+                        columns: 2
+                    },
+                    {
+                        minWidth: 0,
+                        columns: 1
+                    }
+                ]
+            });
+
+            $('.download-all').click(function (event) {
+                var formArray = $('.form-attachment').serializeArray();
+                let ids = '';
+                formArray.forEach((input, index) => {
+                    if (index != 0) {
+                        ids = ids + ','
+                    }
+                    ids = ids + input.value;
+                });
+                if (ids.length != 0) {
+                    window.location = current_page + 'download-zip/?ids=' + ids;
+                }
+            });
+
+            <!-- Script for carrousel -->
+            $('.attachment-link, .second-target').click(function () {
+                $("#attachmentModal .modal-body").html(`
+                <div class="clearfix" id="attachments">
+                        <div id="carouselIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
+                            <ol class="carousel-indicators">
+                                {% for attachment in attachments %}
+                                    <li data-target="#carouselIndicators" #selectorId{{ forloop.counter0 }}
+                                        data-slide-to="{{ forloop.counter0 }}"
+                                        {% if attachment.attachment.uri == selectedAttachmentUrl %}class="active"{% endif %}></li>
+                                {% endfor %}
+                            </ol>
+                            <div class="carousel-inner">
+                                {% for attachment in attachments %}
+                                    <div class="carousel-item text-center" #slideid{{ forloop.counter0 }}>
+                                        {% if attachment.type == 'Photo' %}
+                                            <a class="attachment-modal-link" target="_blank"
+                                               href="{{ attachment.attachment.uri|imgAWSS3Filter }}">
+                                                <img class="img-fluid mx-auto d-block"
+                                                     src="{{ attachment.attachment.uri|imgAWSS3Filter }}"
+                                                     alt="{{ attachment.task }}" style="max-width: 100%; height: auto;">
+                                            </a>
+                                        {% else %}
+                                            <a class="align-items-center justify-content-center attachment-modal-link"
+                                               target="_blank" href="{{ attachment.attachment.uri|imgAWSS3Filter }}">
+                                                <embed src="{{ attachment.attachment.uri|imgAWSS3Filter }}" type="application/pdf" height="100%">
+                                            </a>
+                                        {% endif %}
+
+                    {#<a target="_blank" class="download" href="{% url 'administrativelevels:attachment_download' adm_id=adm_id url=attachment.attachment.uri %}">#}
+
+                    {#    <img width="30px" height="auto" src="{% static 'images/download_icon.svg' %}" alt="download">#}
+                                       {#</a>#}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselIndicators" role="button"
+                               data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselIndicators" role="button"
+                               data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="overlay" id="spin-attachments">
+                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                    </div>
+                  `);
+                let spin_attachments = $("#spin-attachments");
+                spin_attachments.show();
+                const count = $(this).data('count');
+                $('.carousel-item').eq(count).addClass('active');
+                $('.carousel-indicators li').eq(count).addClass('active');
+                spin_attachments.hide();
+            });
+
+            function change_filters_selects(select_input, select_to_fill, other_selects){
+                let selected_value = select_input.find(":selected").val();
+
+                if (selected_value != '') {
+                    let base_url = "{% url 'dashboard:administrative_levels:attachment_filter' %}";
+                    $.ajax({
+                        type : "POST",
+                        url: base_url,
+                        data: {
+                          type: select_input.attr('name'),
+                          value: selected_value,
+                          csrfmiddlewaretoken: '{{ csrf_token }}',
+                        },
+                        success: function(response){
+                            select_to_fill.html("<option selected value=''>" + select_to_fill.attr('empty-option') + "</option>");
+                            response.values.forEach((element) => {
+                                select_to_fill.html(select_to_fill.html() + "<option value='" + element.id + "'>" + element.name + "</option>");
+                            })
+                        }
+                    });
+                    select_to_fill.prop('disabled', false);
+                }
+                else {
+                    select_to_fill.prop('disabled', 'disabled');
+                    select_to_fill.html("<option selected value=''>" + select_to_fill.attr('empty-option') + "</option>");
+                }
+                other_selects.forEach((select) => {
+                    select.prop('disabled', 'disabled');
+                    select.html("<option selected value=''>" + select.attr('empty-option') + "</option>");
+                });
+            };
+        })
+
+        document.addEventListener('htmx:afterRequest', function(evt) {
+            $('.babylongrid').babylongrid({
+                scheme: [
+                    {
+                        minWidth: 1250,
+                        columns: 3
+                    },
+                    {
+                        minWidth: 960,
+                        columns: 3
+                    },
+                    {
+                        minWidth: 500,
+                        columns: 2
+                    },
+                    {
+                        minWidth: 0,
+                        columns: 1
+                    }
+                ]
+            });
+            $('.babylongrid').trigger('babylongrid:resize');
+        });
+    </script>
+{% endblock %}

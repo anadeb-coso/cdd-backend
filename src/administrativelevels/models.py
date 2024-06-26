@@ -105,6 +105,18 @@ class CVD(BaseModel):
             count += 1
         return name if name else self.unique_code
     
+    def get_names(self):
+        administrativelevels = self.get_villages()        
+        name = ""
+        count = 1
+        length = len(administrativelevels)
+        for adl in administrativelevels:
+            name += adl.name
+            if length != count:
+                name += "/"
+            count += 1
+        return name if name else self.unique_code
+    
     def get_villages(self):
         return self.administrativelevel_set.get_queryset()
     

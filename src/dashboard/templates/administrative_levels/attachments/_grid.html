@@ -1,0 +1,39 @@
+{% load static i18n humanize bootstrap4 custom_tags %}
+
+    <div class="babylongrid"
+                    hx-trigger="revealed"
+                    hx-get="{% url 'dashboard:administrative_levels:attachments' %}?page={{ page_obj.number|add:1 }}&type={{ request.GET.type }}&administrative_level={{ request.GET.administrative_level }}&phase={{ request.GET.phase }}&activity={{ request.GET.activity }}&task={{ request.GET.task }}"
+                    hx-swap="afterend"
+            >
+        {% for attachment in attachments %}
+        {% if attachment.attachment.uri|not_local and not attachment.attachment.uri|is_pdf%}
+            <article>
+                <div class="card mr-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'dashboard:administrative_levels:detail' no_sql_db_name %}?administrative_level={{ administrative_level_id }}">
+                                {{ cvd.headquarters_village.type }}: {{ cvd.headquarters_village.name }} {% if cvd.get_villages|length > 1 %}({{ cvd.get_names }}){% endif %}
+                            </a>
+                        </h5>
+                        {% if attachment.task %}
+                        <p class="card-text">
+                            <b>{% translate 'Task' %}</b>: {{ attachment.task.name }}
+                            <span class="badge badge-pill badge-info">{{ attachment.task.status }}</span>
+                        </p>
+                        <p class="card-text">
+                            {{ attachment.task.description }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% if attachment.attachment.uri|is_pdf %}
+
+                    {% else %}
+                    <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                        <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" class="card-img-top second-target" alt="{{ attachment.task }}">
+                    </a>
+                    {% endif %}
+                </div>
+            </article>
+        {% endif %}
+        {% endfor %}
+    </div>

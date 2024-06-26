@@ -1,0 +1,647 @@
+{% load static i18n custom_tags bootstrap4 %}
+
+
+<style>
+
+    .card-item {
+        color: #707070;
+    }
+</style>
+
+<div class="card">
+
+{% block tasks %}
+
+{% for task in tasks %}
+    <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
+        <div class="row">
+            <div class="col-sm-7">
+                <div class="phase-title">
+                    <span id="task_number_{{ task|get:'_id' }}" style="color: white;" class="btn {% if task.completed %}badge-completed{% else %}badge-pending{% endif %}">{{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}</span> {{ task.name }}
+                </div>
+                <div class="phase-title mt-3 mb-2">
+                    {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
+                    {% translate 'Activity' %}: {{ task.activity_name }}
+                </div>
+                <div class="border-separator"></div>
+
+                <div class="text-bold-family mt-2 mb-2">
+                    {% if task.attachments|length != 0 %}
+                        {% translate "Attachments" %}
+                    {% else %}
+                        {% translate "No attachments" %}
+                    {% endif %}
+                </div>
+
+                {% for attachment in task.attachments %}
+                    {% if attachment.cloud_url %}
+                        <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
+                           target="_blank">
+                            <i class="fas fa-paperclip mr-2"></i>
+                            {{ attachment.name }}
+                        </a>
+                    {% else %}
+                        <i class="fas fa-paperclip mr-2"></i>
+                        {{ attachment.name }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <div class="col-sm-5">
+                <div class="col mb-1 text-right text_completed_{{ task|get:'_id' }}">
+                    {% if task.completed %}
+                        <div class="status-badge badge-completed">
+                            {% translate 'Completed' %}
+                        </div>
+                    {% else %}
+                        <div class="status-badge badge-pending">
+                            {% translate 'Pending' %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col badge-closed-at float-right">
+                    <i class="far fa-calendar-alt text-warning"></i>
+                    {% translate 'Completed on' %}:
+                    {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
+                        {{ task.completed_date|default:'-' }}
+                    {% else %}
+                        {{ task.date_action_complete_by|default:'-' }}
+                    {% endif %}
+                </div>
+                <div class="col badge-closed-at mt-1 float-right text_{{ task|get:'_id' }}">
+                    {% comment %} {% if task.completed and task.attachments %}
+                        <i class="fas fa-check success-color"></i>
+                    {% elif task.completed and not task.attachments %}
+                        <i class="fas fa-exclamation-triangle warning-color"></i>
+                    {% else %}
+                        <i class="fas fa-clock gray-color"></i>
+                    {% endif %}
+                    {% translate 'Proof of completion' %} {% endcomment %}
+                    {% if task.validated %}
+                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                    {% else %}
+                        {% if task.validated == False %}
+                            <i class="fas fa-times warning-color"></i>
+                            {% translate 'Task not validated' %}
+                        {% else %}
+                            <i class="fas fa-exclamation-triangle warning-color"></i>
+                            {% translate 'Unseen task' %}
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal  modal-dialog-centered -->
+    <div class="modal fade" id="card-item-task-{{ task|get:'_id' }}" tabindex="-1" role="dialog"
+        aria-labelledby="UploadTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {{ task.name }} (CVD : <b>{{ task.administrative_level_name }}</b>)
+                </h5>
+                <div class="col-sm-2 text-right">
+                    <div class="modal_text_completed_{{ task|get:'_id' }}">
+                        {% if task.completed %}
+                            <div class="status-badge badge-completed">
+                                {% translate 'Completed' %}
+                            </div>
+                        {% else %}
+                            <div class="status-badge badge-pending">
+                                {% translate 'Pending' %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal_text_{{ task|get:'_id' }}" style="margin-top: 10px;">
+                        {% if task.validated %}
+                            <div class="status-badge success-color">
+                                <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                            </div>
+                        {% else %}
+                            <div class="status-badge warning-color">
+                                {% if task.validated == False %}
+                                    <i class="fas fa-times warning-color"></i>
+                                    {% translate 'Task not validated' %}
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle warning-color"></i>
+                                    {% translate 'Unseen task' %}
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+
+                    {% comment %} {% with task|structureTheFields as fields %}
+                    {% for field, value in fields.items %}
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">{{ field }}</label>
+                            <div class="col-sm-9">
+                                <input type="text" readonly value="{% if value %}{{ value }}{% else %}-{% endif %}" class="form-control" />
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    {% endfor %}
+                    {% endwith %} {% endcomment %}
+
+                    {% with task|structureTheFieldsLabels as liste %}
+                    {% for fields in liste %}
+                        {% for field, dicts in fields.items %}
+                            {% if dicts.value|checkType:'dict' %}
+                                <div class="fieldset"><fieldset>
+                                    <legend>{{ dicts.name }}</legend>
+                                    <div class="content">
+                                    {% for k, v in dicts.value.items %}
+                                        {% if v.value|checkType:'dict' %}
+                                        <div><fieldset>
+                                            <legend>{{ v.name }}</legend>
+                                            <div class="content">
+                                                {% for k1, v1 in v.value.items %}
+                                                    {% if v1.value|checkType:'dict' %}
+                                                    <div><fieldset>
+                                                        <legend>{{ v1.name }}</legend>
+                                                        <div class="content">
+                                                        {% for k2, v2 in v1.value.items %}
+                                                            <div class="form-group row">
+                                                                <label class="col-sm-3 col-form-label">{{ v2.name }}</label>
+                                                                <div class="col-sm-9">
+                                                                    <input type="text" readonly value="{% if v2.value %}{{ v2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                                </div>
+                                                                <div class="clearfix"></div>
+                                                            </div>
+                                                        {% endfor %}
+                                                        </div>
+                                                    </fieldset></div>
+                                                    {% elif v1.value|checkType:'list' %}
+                                                    <div class="fieldset"><fieldset>
+                                                        <legend>{{ v1.name }}</legend>
+                                                        <div class="content">
+                                                        {% for item2 in v1.value %}
+                                                        <div><fieldset>
+                                                            <legend>{{ forloop.counter }}</legend>
+                                                            <div class="content">
+                                                            {% for field2, dicts2 in item2.items %}
+                                                                <div class="form-group row">
+                                                                    <label class="col-sm-3 col-form-label">{{ dicts2.name|structureTheWords }}</label>
+                                                                    <div class="col-sm-9">
+                                                                        <input type="text" readonly value="{% if dicts2.value %}{{ dicts2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                                    </div>
+                                                                    <div class="clearfix"></div>
+                                                                </div>
+                                                            {% endfor %}
+                                                            </div>
+                                                        </fieldset></div>
+                                                        {% endfor %}
+                                                        </div>
+                                                    </fieldset></div>
+                                                    {% else %}
+                                                    <div class="form-group row">
+                                                        <label class="col-sm-3 col-form-label">{{ v1.name }}</label>
+                                                        <div class="col-sm-9">
+                                                            <input type="text" readonly value="{% if v1.value %}{{ v1.value }}{% else %}-{% endif %}" class="form-control" />
+                                                        </div>
+                                                        <div class="clearfix"></div>
+                                                    </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </fieldset></div>
+                                        {% elif v.value|checkType:'list' %}
+                                        <div class="fieldset"><fieldset>
+                                            <legend>{{ v.name }}</legend>
+                                            <div class="content">
+                                            {% for item0 in v.value %}
+                                                <div><fieldset>
+                                                    <legend>{{ forloop.counter }}</legend>
+                                                    <div class="content">
+                                                    {% for field0, dicts0 in item0.items %}
+                                                        <div class="form-group row">
+                                                            <label class="col-sm-3 col-form-label">{{ dicts0.name|structureTheWords }}</label>
+                                                            <div class="col-sm-9">
+                                                                <input type="text" readonly value="{% if dicts0.value %}{{ dicts0.value }}{% else %}-{% endif %}" class="form-control" />
+                                                            </div>
+                                                            <div class="clearfix"></div>
+                                                        </div>
+                                                    {% endfor %}
+                                                    </div>
+                                                </fieldset></div>
+                                            {% endfor %}
+                                            </div>
+                                        </fieldset></div>
+                                        {% else %}
+                                        <div class="form-group row">
+                                            <label class="col-sm-3 col-form-label">{{ v.name }}</label>
+                                            <div class="col-sm-9">
+                                                <input type="text" readonly value="{% if v.value %}{{ v.value }}{% else %}-{% endif %}" class="form-control" />
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        {% endif %}
+
+                                    {% endfor %}
+                                    </div>
+                                </fieldset></div>
+                            {% elif dicts.value|checkType:'list' %}
+                                <div class="fieldset"><fieldset>
+                                    <legend>{{ dicts.name }}</legend>
+                                    <div class="content">
+                                    {% for item in dicts.value %}
+                                        <div><fieldset>
+                                            <legend>{{ forloop.counter }}</legend>
+                                            <div class="content">
+                                            {% for field1, dicts1 in item.items %}
+                                                <div class="form-group row">
+                                                    <label class="col-sm-3 col-form-label">{{ dicts1.name|structureTheWords }}</label>
+                                                    <div class="col-sm-9">
+                                                        <input type="text" readonly value="{% if dicts1.value %}{{ dicts1.value }}{% else %}-{% endif %}" class="form-control" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            {% endfor %}
+                                            </div>
+                                        </fieldset></div>
+                                    {% endfor %}
+                                    </div>
+                                </fieldset></div>
+                            {% else %}
+                            <div class="form-group row">
+                                <label class="col-sm-3 col-form-label">{{ dicts.name }}</label>
+                                <div class="col-sm-9">
+                                    <input type="text" readonly value="{% if dicts.value %}{{ dicts.value }}{% else %}-{% endif %}" class="form-control" />
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                    {% endwith %}
+
+
+
+
+                    {% if task.attachments %}
+                    {% for attach in task.attachments %}
+                        <div class="form-group row">
+                            <label class="col-sm-3 col-form-label">{{ attach.name }}</label>
+                            <div class="col-sm-9 attach-file">
+                                {% if attach.attachment.uri %}
+                                    {% if "file:///data" in attach.attachment.uri %}
+                                        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
+                                    {% elif ".pdf" in attach.attachment.uri %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Link" %}
+                                        </a><br />
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
+                                        </a>
+                                    {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Download" %}
+                                        </a><br />
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe style="float: left;"
+                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}'
+                                                width="250" height="300" frameborder='0'>
+                                                    This is an embedded
+                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a>
+                                                    document, powered by
+                                                    <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
+                                            </iframe>
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <!-- class="btn btn-primary" data-toggle="modal"
+                                        data-target="#item-attach-{{ forloop.counter }}" -->
+                                            <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
+                                {% endif %}
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    {% endfor %}
+                    {% endif %}
+
+                </div>
+                {% if user.is_superuser or user|has_group:"Admin" %}
+                    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}"
+                            name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
+                    {% if task.completed %}
+
+                    <div style="margin-top: 25px; width: 100%;">
+
+                        {% comment %} Validation Invalidation {% endcomment %}
+                        {% include "facilitators/validation_invalidation.html" %}
+                        {% comment %} End Validation Invalidation {% endcomment %}
+
+
+                        <div style="width: 30%; margin: auto; float: right;" >
+                            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete"
+                                required id="id_uncomplete_complete_{{ task|get:'_id' }}">
+                                {% translate 'Mark as uncompleted' %}
+                            </button>
+                        </div>
+                    </div>
+                    <div style="clear: both;"></div>
+                    {% else %}
+                        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete"
+                            style="margin-top: 25px; width: 50%; margin: auto;"
+                            required id="id_uncomplete_complete_{{ task|get:'_id' }}">
+                            {% translate 'Mark as completed' %}
+                        </button>
+                    {% endif %}
+
+
+
+
+                {% else %}
+                    {% if task.completed %}
+                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" %}
+                        <div style="margin-top: 25px; width: 100%;">
+                            {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}"
+                                name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />
+                            <button type="button" name="invalidate_valide"
+                                class="btn {% if task.validated %}btn-warning{% else %}btn-primary{% endif %} invalidate_valide"
+                                style="margin-top: 25px; width: 50%; margin: auto;"
+                                required id="id_invalidate_valide_{{ task|get:'_id' }}">
+                                {% if task.validated %}
+                                    {% translate 'Mark as invalidated' %}
+                                {% else %}
+                                    {% translate 'Mark as validated' %}
+                                {% endif %}
+                            </button> {% endcomment %}
+
+                            {% comment %} Validation Invalidation {% endcomment %}
+                            {% include "facilitators/validation_invalidation.html" %}
+                            {% comment %} End Validation Invalidation {% endcomment %}
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                {% endif %}
+
+
+            </div>
+
+
+
+            </div>
+        </div>
+    </div>
+    <!-- End Modal -->
+
+    {% comment %} {% for attach in task.attachments %}{% if attach.attachment.uri %}
+    <!-- Modal -->
+    <div class="modal fade" id="item-attach-{{ forloop.counter }}" tabindex="-2" role="dialog"
+        aria-labelledby="attach" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+
+                <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" class="btn btn-primary" target="_blank" >
+                    <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="700" height="700" />
+                </a>
+            </div>
+        </div>
+    </div>
+    <!-- End Modal -->
+    {% endif %}{% endfor %} {% endcomment %}
+
+{% endfor %}
+
+{% block modals %}
+
+    <div class="modal fade modal-confirmation" id="modal_comment">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="text-primary text-center fs17 lh19 text-bold mb-4"
+                         style="padding: 0 45px 0 45px;">
+                        {% translate "Please enter a comment" %}
+                    </div>
+                    <div class="form-group">
+                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
+                            title="" required="" id="id_in_validation_comment" spellcheck="true"
+                            placeholder="{% translate 'Add Comment' %}"></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer border-0">
+                    <button id="btn-send-comment" type="submit" class="btn btn-lg btn-primary text-right">
+                        {% translate "Send" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock modals %}
+
+
+{% endblock %}
+
+
+<script>
+    try{
+        total_tasks = parseInt("{{ total_tasks }}");
+    }catch(e){
+        console.log(e);
+    }
+
+    $(document).ready(function () {
+        let facilitator_db_name = "{{ facilitator_db_name }}";
+
+        //Valide invalide
+        let task__id = null;
+        let action_code = null;
+        let id_invalidate_elt = null;
+        let btn_send_comment = $('#btn-send-comment');
+        $(document).on('click', '.invalidate_valide', function () {
+            task__id = this.id.split("_")[this.id.split("_").length - 1];
+            id_invalidate_elt = $(('#id_invalidate_'+task__id));
+            for(var i = 0; i < this.classList.length; i++){
+                if(this.classList[i].includes("action_code_")){
+                    action_code = this.classList[i].split("_")[2];
+                }
+            }
+
+            $('#card-item-task-'+task__id).modal('hide');
+            $('#modal_comment').modal('show');
+        });
+
+
+        btn_send_comment.click(function () {
+            let in_validation_comment = $('#id_in_validation_comment').val();
+            
+            if(["0", 0].includes(action_code) && (
+                    ["", null, undefined].includes(in_validation_comment) || (
+                        in_validation_comment && [""].includes(in_validation_comment.replace(/\s/g, ''))
+                    )
+                )
+                )
+            {
+                alert("{% translate 'Please add a comment' %}");
+            }else if(task__id != null && action_code != null){
+                btn_send_comment.prop("disabled", true);
+                btn_send_comment.text("{% translate 'Sending...' %}");
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+                    data: {
+                        no_sql_db_name: facilitator_db_name,
+                        task_id: task__id,
+                        action_code: action_code,
+                        in_validation_comment: in_validation_comment
+                    },
+                    success: function (response) {
+                        if(response.status == "ok"){
+                            let id_invalidate_valide_task__id_elt = $(("#id_invalidate_valide_"+task__id));
+                            id_invalidate_valide_task__id_elt.removeClass(('action_code_'+action_code));
+
+                            if(action_code == "1" || action_code == 1){
+                                id_invalidate_valide_task__id_elt.addClass('action_code_0');
+
+                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
+                                id_invalidate_valide_task__id_elt.removeClass("btn-primary");
+                                id_invalidate_valide_task__id_elt.addClass("btn-warning");
+                                $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge success-color">
+                                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                                    </div>
+                                `);
+                            }else{
+                                id_invalidate_valide_task__id_elt.addClass('action_code_1');
+
+                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as validated' %}`);
+                                id_invalidate_valide_task__id_elt.removeClass("btn-warning");
+                                id_invalidate_valide_task__id_elt.addClass("btn-primary");
+                                $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge warning-color">
+                                        <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
+                                    </div>
+                                `);
+                            }
+                            $('#modal_comment').modal('hide');
+                            {% comment %} $('#card-item-task-'+task__id).modal('show'); {% endcomment %}
+                            task__id = null;
+                            action_code = null;
+                            if(id_invalidate_elt){
+                                id_invalidate_elt.hide();
+                            }
+                            $('#id_in_validation_comment').val("");
+                        }else{
+                            alert(response.message);
+                        }
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+
+                        if(response.mail_message && response.sms_message){
+                            alert(response.mail_message+"\n"+response.sms_message);
+                        }else if(response.mail_message){
+                            alert(response.mail_message);
+                        }else if(response.sms_message){
+                            alert(response.sms_message);
+                        }
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+                    }
+                });
+            }
+            
+        });
+        //End valide invalide
+
+
+
+
+        //Complet Uncomplet
+        $('.uncomplete_complete').click(function () {
+
+            //Completed Uncompleted
+            let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
+            let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
+            let elt_task_number = $(('#task_number_'+task_completed__id));
+            
+            $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
+                data: {
+                    no_sql_db_name: facilitator_db_name,
+                    task_id: task_completed__id,
+                    action_code: action_code_completed
+                },
+                success: function (response) {
+                    if(response.status == "ok"){
+                        if(action_code_completed == "1" || action_code_completed == 1){
+                            $(('#action_code_completed_'+task_completed__id)).val(0);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as uncompleted' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-primary");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-warning");
+                            $(('.text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-completed">
+                                    {% translate 'Completed' %}
+                                </div>
+                            `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-completed">
+                                    {% translate 'Completed' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-pending");
+                            elt_task_number.addClass("badge-completed");
+                        }else{
+                            $(('#action_code_completed_'+task_completed__id)).val(1);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as completed' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-warning");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-primary");
+                            $(('.text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-pending">
+                                    {% translate 'Pending' %}
+                                </div>
+                            `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-pending">
+                                    {% translate 'Pending' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-completed");
+                            elt_task_number.addClass("badge-pending");
+                        }
+                    }else{
+                        alert(response.message);
+                    }
+                    
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+                
+        });
+        //End complet Uncomplet
+
+    }); 
+
+</script>

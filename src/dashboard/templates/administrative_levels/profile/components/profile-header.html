@@ -1,0 +1,204 @@
+{% load bootstrap4 static i18n custom_tags %}
+
+<style>
+    .profile {
+        color: #1F2D3D;
+    }
+
+    .profile__title {
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .profile__name {
+        font-size: 22px;
+        margin-top: 5px;
+        line-height: 33px;
+        font-weight: bolder;
+        margin-bottom: 10px;
+    }
+
+    .profile__email, .profile__phone {
+        i {
+            color: #24c38b;
+        }
+    }
+
+    .profile__phone {
+        i {
+            -webkit-transform: scaleX(-1);
+            transform: scaleX(-1);
+        }
+    }
+
+    .profile__email, .profile__phone, .profile__activity, .profile__code {
+        line-height: 25px;
+        font-size: 12px;
+    }
+
+    .profile__activity, .profile__code {
+        text-align: right;
+    }
+
+</style>
+
+<link rel="stylesheet" href="{% static 'css/detail.css' %}"/>
+
+
+
+
+
+
+        
+<div class="row mb-4">
+    <div class="col-md-8 col-12">
+        <div class="clearfix" id="attachments_images">
+
+        </div>
+        <div class="overlay" id="spin-attachments-images">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+    <div class="col-md-4 col-12 mt-4 mt-md-0">
+        <div class="card col-12">
+            <div class="card-header pb-0">
+                <h5 class="font-weight-bold mb-0">{% translate "Population" %}</h5>
+            </div>
+            <div class="card-body p-2">
+                <table class="table">
+                    <tbody>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Total" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if population %}{{ population }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Men" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if nbr_men %}{{ nbr_men }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Women" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if nbr_women %}{{ nbr_women }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Young" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if young %}{{ young }}{% endif %}</td>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Elder" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if elderly %}{{ elderly }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Handicap" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if handicap %}{{ handicap }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Households added" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if households_added %}{{ households_added }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Added due to conflict" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if households_added_due_to_conflict %}{{ households_added_due_to_conflict }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Minorities" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if liste_minorities %}{{ liste_minorities }}{% endif %}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Languages" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if languages %}{{ languages }}{% endif %}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card col-12">
+            <div class="card-header pb-0">
+                <h5 class="font-weight-bold mb-0">{% translate 'Planning Cycle' %}</h5>
+            </div>
+            <div class="card-body p-2">
+                <table class="table">
+                    <tbody>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate 'Phase' %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ last_activity.phase_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate 'Activity' %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ last_activity.activity_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate 'Task' %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ last_activity.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Completed" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{% if last_activity.completed %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</td>
+                    </tr>
+                    {% comment %} <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Priorities Identified" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ planning_status.priorities_identified }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Village Development Plan Date" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ planning_status.village_development_plan_date }}</td>
+                    </tr>
+                    <tr>
+                        <td class="border-0 p-0 pl-2 text-left font-weight-bold">{% translate "Facilitator" %}</td>
+                        <td class="border-0 p-0 pr-2 text-right">{{ planning_status.facilitator }}</td>
+                    </tr> {% endcomment %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+{% comment %} <div class="card profile">
+    <div class="card-body row">
+        <div class="col-12 col-md-9">
+            <div class="col-12 mb-3  profile__title">
+                <strong>
+                    {% translate "Facilitator Profile" %}
+                </strong>
+            </div>
+            <div class="col-12 profile__name">
+                {% translate 'Facilitator not assigned' as not_assigned %}
+                <span {% if not facilitator_doc %}class="text-warning"{% endif %} id="name">
+                    {{ facilitator_doc.name|default:not_assigned }}
+                </span>
+            </div>
+            <div class="col-12 profile__phone">
+                <i class="fas fa-phone text-primary"></i> {% translate "Teléphone" %}: {{ facilitator_doc.phone }}
+            </div>
+            <div class="col-12 profile__email">
+                <i class="fas fa-envelope text-primary"></i> {% translate "Email" %}: {{ facilitator_doc.email }}
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="col-12 profile__activity">
+                <strong>{% translate 'Last Activity' %}:</strong>
+                <span>
+                            {% if last_activity_date %}
+                                {{ last_activity_date }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </span>
+            </div>
+            <div class="col-12 profile__code">
+                <div>
+                    <strong>{% translate 'Facilitator Code' %}:</strong>
+                    <span class="text-primary" id="facilitator_code">{{ facilitator.code }}</span>
+                </div>
+                    <div class="facilitator-code mt-3" id="facilitator_code">{{ facilitator.code }}</div>
+                
+            </div>
+        </div>
+    </div>
+</div> {% endcomment %}
+
+
+
+

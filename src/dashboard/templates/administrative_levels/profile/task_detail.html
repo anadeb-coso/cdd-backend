@@ -1,0 +1,179 @@
+{% load static i18n custom_tags %}
+
+<div class="modal-header">
+    <h4 class="modal-title text-primary" id="taskModalTitle">
+        {{ task.name }}
+    </h4>
+        <span class="badge badge-pill badge-lg badge-info ml-1" id="taskModalStatus">
+            {{ task.status }}
+        </span>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
+    <div class="modal-body">
+        <p id="taskModalDescription">{{ task.description }}</p>
+        {% with task.task|structureTheFieldsLabels as liste %}
+        {% for fields in liste %}
+            {% for field, dicts in fields.items %}
+                {% if dicts.value|checkType:'dict' %}
+                    <div class="fieldset">
+                        <h5>{{ dicts.name }}</h5>
+                        <div class="content">
+                        {% for k, v in dicts.value.items %}
+                            {% if v.value|checkType:'dict' %}
+                            <div>
+                                <h5>{{ v.name }}</h5>
+                                <div class="content">
+                                    {% for k1, v1 in v.value.items %}
+                                        {% if v1.value|checkType:'dict' %}
+                                        <div>
+                                            <h5>{{ v1.name }}</h5>
+                                            <div class="content">
+                                            {% for k2, v2 in v1.value.items %}
+                                                <div class="form-group">
+                                                    <label>{{ v2.name }}</label>
+                                                    <div>
+                                                        <input type="text" readonly value="{% if v2.value %}{{ v2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                    </div>
+                                                    <div class="clearfix"></div>
+                                                </div>
+                                            {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% elif v1.value|checkType:'list' %}
+                                        <div class="fieldset">
+                                            <h5>{{ v1.name }}</h5>
+                                            <div class="content">
+                                            {% for item2 in v1.value %}
+                                            <div>
+                                                <h5>{{ forloop.counter }}</h5>
+                                                <div class="content">
+                                                {% for field2, dicts2 in item2.items %}
+                                                    <div class="form-group">
+                                                        <label>{{ dicts2.name|structureTheWords }}</label>
+                                                        <div>
+                                                            <input type="text" readonly value="{% if dicts2.value %}{{ dicts2.value }}{% else %}-{% endif %}" class="form-control" />
+                                                        </div>
+                                                        <div class="clearfix"></div>
+                                                    </div>
+                                                {% endfor %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="form-group">
+                                            <label>{{ v1.name }}</label>
+                                            <div>
+                                                <input type="text" readonly value="{% if v1.value %}{{ v1.value }}{% else %}-{% endif %}" class="form-control" />
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% elif v.value|checkType:'list' %}
+                            <div class="fieldset">
+                                <h5>{{ v.name }}</h5>
+                                <div class="content">
+                                {% for item0 in v.value %}
+                                    <div>
+                                        <h6>{{ forloop.counter }}.</h6>
+                                        <div class="content">
+                                        {% for field0, dicts0 in item0.items %}
+                                            <div class="form-group">
+                                                <label>{{ dicts0.name|structureTheWords }}</label>
+                                                <div>
+                                                    <input type="text" readonly value="{% if dicts0.value %}{{ dicts0.value }}{% else %}-{% endif %}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+                                        {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="form-group">
+                                <label>{{ v.name }}</label>
+                                <div>
+                                    <input type="text" readonly value="{% if v.value %}{{ v.value }}{% else %}-{% endif %}" class="form-control" />
+                                </div>
+                                <div class="clearfix"></div>
+                            </div>
+                            {% endif %}
+
+                        {% endfor %}
+                        </div>
+                    </div>
+                {% elif dicts.value|checkType:'list' %}
+                    <div class="fieldset">
+                        <h5>{{ dicts.name }}</h5>
+                        <div class="content">
+                        {% for item in dicts.value %}
+                            <div>
+                                <h6>{{ forloop.counter }}.</h6>
+                                <div class="content">
+                                {% for field1, dicts1 in item.items %}
+                                    <div class="form-group">
+                                        <label>{{ dicts1.name|structureTheWords }}</label>
+                                        <div>
+                                            <input type="text" readonly value="{% if dicts1.value %}{{ dicts1.value }}{% else %}-{% endif %}" class="form-control" />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                <div class="form-group">
+                    <label>{{ dicts.name }}</label>
+                    <div>
+                        <input type="text" readonly value="{% if dicts.value %}{{ dicts.value }}{% else %}-{% endif %}" class="form-control" />
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+        {% endwith %}
+
+        {% if task.task.attachments %}
+        {% for attach in task.task.attachments %}
+            <div class="form-group">
+                <label>{{ attach.name }}</label>
+                <div class="col-sm-9 attach-file">
+                    {% if attach.attachment.uri %}
+                        {% if "file:///data" in attach.attachment.uri %}
+                            <p><i class="fas fa-paperclip mr-2"></i>Not synchronized</p>
+                        {% elif ".pdf" in attach.attachment.uri %}
+                            <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
+                            </a>
+                        {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+                            <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                                Download {{ attach.name }}
+                            </a>
+                        {% else %}
+                            <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        {% endfor %}
+
+        {% endif %}
+
+    </div>
+

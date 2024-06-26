@@ -870,3 +870,11 @@ msgstr "Animateurs affectés"
 #: .\dashboard\administrative_levels
 msgid "administrative level"
 msgstr "niveau administratif"
+
+#: .\dashboard\administrative_levels
+msgid "Households added"
+msgstr "Menages ajoutés"
+
+#: .\dashboard\administrative_levels
+msgid "Added due to conflict"
+msgstr "Ajoutés en raison d'un conflit"

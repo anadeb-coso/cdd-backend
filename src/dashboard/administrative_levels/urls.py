@@ -15,4 +15,9 @@ urlpatterns = [
     path('', views_adl.AdministrativeLevelListView.as_view(), name='list'),
     path('administrative-level-list/', views_adl.AdministrativeLevelListTableView.as_view(), name='administrative_levels_list'),
     path('administrative-level-detail-list/<slug:id>/', views_adl.AdministrativeLevelDetailForListView.as_view(), name='administrative_level_detail_for_list'),
+    path('<slug:id>/detail/', views_adl.AdministrativeLevelDetailView.as_view(), name='detail'),
+    
+    path('attachments/', views_adl.AttachmentListView.as_view(), name='attachments'),
+    path('task-detail/<int:pk>', views_adl.TaskDetailAjaxView.as_view(), name='task_detail'),
+    path('attachments-filter', views_adl.FillAttachmentSelectFilters.as_view(), name='attachment_filter'),
 ]

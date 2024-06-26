@@ -27,7 +27,14 @@
             {% for cvd in administrative_levels %}
                 <tr {% if not cvd.headquarters_village|facilitator_on_this_cvd %} style="color: red;" {% endif %}>
                     {% with cvd.headquarters_village|last_facilitator_cdd as last_facilitator %}
-                        <td align="left">{{ cvd.name }}</td>
+                        <td align="left">
+                            <a class="pointer-event" data-facilitatorid="{{ last_facilitator.no_sql_db_name }}"
+                                href="{% url 'dashboard:administrative_levels:detail' last_facilitator.no_sql_db_name %}?administrative_level={{ cvd.headquarters_village.id }}"
+                                target="_blank" title="{% translate 'See profile' %}">
+                                <span>{{ cvd.name }}</span>
+                            </a>
+                        </td>
+
                         <td align="left">
                             {% for village in cvd.get_villages %}
                                 {% if forloop.last %}
@@ -53,7 +60,7 @@
                                     {% else %}green
                                     {% endif %}; font-weight: bold;
                                     "
-                            >{{ percent_cdd }} %</td>
+                            >{% if percent_cdd %}{{ percent_cdd }} %{% else %} - {% endif %}</td>
                         {% endwith %}
                         <td class=" pointer-event ">
                             <i id="adl-{{ cvd.headquarters_village.id }}-{{ last_facilitator.no_sql_db_name }}" class=" expand-icon fas fa-chevron-circle-right text-primary"></i>

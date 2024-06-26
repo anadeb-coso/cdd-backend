@@ -6,7 +6,8 @@ from authentication.models import Facilitator
 
 class AssignAdministrativeLevelToFacilitator(BaseModel):
     administrative_level_id = models.IntegerField()
-    facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
+    # facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
+    facilitator_id = models.IntegerField()
     project_id = models.IntegerField()
     activated = models.BooleanField(default=True)
     assign_date = models.DateField(null=True, blank=True)
