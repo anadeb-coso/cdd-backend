@@ -180,6 +180,56 @@ def test_one():
 #     sender.add_periodic_task(10.0, test.s(4, 8), name='add every 10')
 
 
+def sync_aggregated_status_on_adl():
+    
+    for adl in mis_objects_call.filter_objects(AdministrativeLevel, type="Village"):
+        aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+        aggreg_last_activity = aggregs.order_by('last_activity').last()
+        if aggreg_last_activity:
+            adl.last_activity = aggreg_last_activity.last_activity
+        adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+        adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+        adl.save()
+    
+    #Canton|Commune|Prefecture|Region
+    for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
+        adls = mis_objects_call.filter_objects(AdministrativeLevel, type=type_adl)
+        
+        for adl in adls:
+            if type_adl == 'Canton':
+                _adls_ids = list(set([v.cvd.headquarters_village.id for v in adl.children if v and v.cvd and v.cvd.headquarters_village]))
+            else:
+                _adls_ids = [adm.id for adm in adl.children]
+            
+            for task in Task.objects.all().order_by('id'):
+                children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids)
+
+                a = None
+                _ok = True
+                try:
+                    a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=task.id)
+                except AggregatedStatus.DoesNotExist as exc:
+                    a = AggregatedStatus()
+                    a.administrative_level_id = adl.id
+                    a.task_id = task.id
+                except Exception as exc:
+                    print(exc)
+                    _ok = False
+                if _ok:
+                    a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
+                    a.total_tasks = sum([agg.total_tasks for agg in children_agg])
+                    a.save()
+            
+            
+            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+            aggreg_last_activity = aggregs.order_by('last_activity').last()
+            if aggreg_last_activity:
+                adl.last_activity = aggreg_last_activity.last_activity
+            adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+            adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+            adl.save()
+                      
+    #End Canton|Commune|Prefecture|Region
 
 def sync_celery_tasks_re():
     nsc = NoSQLClient()
@@ -262,69 +312,25 @@ def sync_celery_tasks_re():
     for _task in backup_db_docs:
         _task = _task.get('doc')
         if _task.get('type') == 'task' and _task.get('sql_id'):
-            for adl_o in mis_objects_call.get_object(AdministrativeLevel, id=int(_task['administrative_level_id'])).cvd.get_villages():
-                a = None
-                _ok = True
-                try:
-                    a = AggregatedStatus.objects.get(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]))
-                except AggregatedStatus.DoesNotExist as exc:
-                    a = AggregatedStatus()
-                    a.administrative_level_id = adl_o.id
-                    a.task_id = int(_task["sql_id"])
-                except Exception as exc:
-                    print(exc)
-                    _ok = False
-                if _ok:
-                    a.total_tasks_completed = 1 if _task['completed'] else 0
-                    a.total_tasks = 1
-                    a.save()
+            _adl = mis_objects_call.get_object(AdministrativeLevel, id=int(_task['administrative_level_id']))
+            if _adl and _adl.cvd:
+                for adl_o in _adl.cvd.get_villages():
+                    a = None
+                    _ok = True
+                    try:
+                        a = AggregatedStatus.objects.get(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]))
+                    except AggregatedStatus.DoesNotExist as exc:
+                        a = AggregatedStatus()
+                        a.administrative_level_id = adl_o.id
+                        a.task_id = int(_task["sql_id"])
+                    except Exception as exc:
+                        print(exc)
+                        _ok = False
+                    if _ok:
+                        a.total_tasks_completed = 1 if _task['completed'] else 0
+                        a.total_tasks = 1
+                        a.save()
     
-    for adl in mis_objects_call.filter_objects(AdministrativeLevel, type="Village"):
-        aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
-        aggreg_last_activity = aggregs.order_by('last_activity').last()
-        if aggreg_last_activity:
-            adl.last_activity = aggreg_last_activity.last_activity
-        adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-        adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
-        adl.save()
+    sync_aggregated_status_on_adl()
     
-    #Canton|Commune|Prefecture|Region
-    for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
-        adls = mis_objects_call.filter_objects(AdministrativeLevel, type=type_adl)
-        
-        for adl in adls:
-            if type_adl == 'Canton':
-                _adls_ids = list(set([v.cvd.headquarters_village.id for v in adl.children if v and v.cvd and v.cvd.headquarters_village]))
-            else:
-                _adls_ids = [adm.id for adm in adl.children]
-            
-            for task in Task.objects.all().order_by('id'):
-                children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids)
-
-                a = None
-                _ok = True
-                try:
-                    a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=task.id)
-                except AggregatedStatus.DoesNotExist as exc:
-                    a = AggregatedStatus()
-                    a.administrative_level_id = adl.id
-                    a.task_id = task.id
-                except Exception as exc:
-                    print(exc)
-                    _ok = False
-                if _ok:
-                    a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
-                    a.total_tasks = sum([agg.total_tasks for agg in children_agg])
-                    a.save()
-            
-            
-            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
-            aggreg_last_activity = aggregs.order_by('last_activity').last()
-            if aggreg_last_activity:
-                adl.last_activity = aggreg_last_activity.last_activity
-            adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-            adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
-            adl.save()
-                      
-    #End Canton|Commune|Prefecture|Region
     print("End")
