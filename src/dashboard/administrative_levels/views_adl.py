@@ -85,7 +85,7 @@ class AdministrativeLevelListTableView(LoginRequiredMixin, generic.ListView):
         _id = 0
         assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
             project_id=1,
-            activated=True
+            # activated=True
         )
 
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:

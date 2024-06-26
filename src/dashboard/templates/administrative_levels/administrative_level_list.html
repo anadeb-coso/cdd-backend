@@ -46,22 +46,20 @@
                         </td>
                         <td align="left">{{ last_facilitator.name }}</td>
                         <td align="left">{{ last_facilitator.phone }}</td>
-                        <td align="left">{{ cvd.headquarters_village|last_activity_cdd }}</td>
-                        {% with cvd.headquarters_village|percent_cdd as percent_cdd %}
+                        <td align="left">{{ cvd.headquarters_village.last_activity }}</td>
                         <td align="left"
                             title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
                             style="color:
-                                    {% if percent_cdd < 10 %}red
-                                    {% elif percent_cdd < 30 %}orange
-                                    {% elif percent_cdd < 50 %}purple
-                                    {% elif percent_cdd < 70 %}black
-                                    {% elif percent_cdd < 90 %}#04e1e1
-                                    {% elif percent_cdd < 100 %}blue
+                                    {% if cvd.headquarters_village.cdd_task_percent < 10 %}red
+                                    {% elif cvd.headquarters_village.cdd_task_percent < 30 %}orange
+                                    {% elif cvd.headquarters_village.cdd_task_percent < 50 %}purple
+                                    {% elif cvd.headquarters_village.cdd_task_percent < 70 %}black
+                                    {% elif cvd.headquarters_village.cdd_task_percent < 90 %}#04e1e1
+                                    {% elif cvd.headquarters_village.cdd_task_percent < 100 %}blue
                                     {% else %}green
                                     {% endif %}; font-weight: bold;
                                     "
-                            >{% if percent_cdd %}{{ percent_cdd }} %{% else %} - {% endif %}</td>
-                        {% endwith %}
+                            >{% if cvd.headquarters_village.cdd_task_percent %}{{ cvd.headquarters_village.cdd_task_percent }} %{% else %} - {% endif %}</td>
                         <td class=" pointer-event ">
                             <i id="adl-{{ cvd.headquarters_village.id }}-{{ last_facilitator.no_sql_db_name }}" class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
                         </td>

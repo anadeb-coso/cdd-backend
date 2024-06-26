@@ -20,6 +20,10 @@ class AdministrativeLevel(BaseModel):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
     no_sql_db_id = models.CharField(null=True, blank=True, max_length=255)
+    
+    total_tasks = models.IntegerField(default=0)
+    total_tasks_completed = models.IntegerField(default=0)
+    last_activity = models.DateTimeField(blank=True, null=True)
 
     
     class Meta:
@@ -44,6 +48,13 @@ class AdministrativeLevel(BaseModel):
     @property
     def children(self):
         return self.administrativelevel_set.get_queryset()
+    
+    @property
+    def cdd_task_percent(self):
+        if self.total_tasks_completed and self.total_tasks:
+            _percent = self.total_tasks_completed/self.total_tasks if self.total_tasks else 0
+            return float("%.2f" % ((_percent if _percent else 0)*100))
+        return None
 
 class GeographicalUnit(BaseModel):
     canton = models.ForeignKey('AdministrativeLevel', null=True, blank=True, on_delete=models.CASCADE)

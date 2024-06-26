@@ -3,6 +3,7 @@ from cdd.celery import app
 from celery import shared_task
 from datetime import datetime
 import pytz
+from django.db.models import Sum
 
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
@@ -277,7 +278,15 @@ def sync_celery_tasks_re():
                     a.total_tasks_completed = 1 if _task['completed'] else 0
                     a.total_tasks = 1
                     a.save()
-            
+    
+    for adl in mis_objects_call.filter_objects(AdministrativeLevel, type="Village"):
+        aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+        aggreg_last_activity = aggregs.order_by('last_activity').last()
+        if aggreg_last_activity:
+            adl.last_activity = aggreg_last_activity.last_activity
+        adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+        adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+        adl.save()
     
     #Canton|Commune|Prefecture|Region
     for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
@@ -307,6 +316,15 @@ def sync_celery_tasks_re():
                     a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
                     a.total_tasks = sum([agg.total_tasks for agg in children_agg])
                     a.save()
-                                
+            
+            
+            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+            aggreg_last_activity = aggregs.order_by('last_activity').last()
+            if aggreg_last_activity:
+                adl.last_activity = aggreg_last_activity.last_activity
+            adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+            adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+            adl.save()
+                      
     #End Canton|Commune|Prefecture|Region
     print("End")
