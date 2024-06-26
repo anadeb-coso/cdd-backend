@@ -60,10 +60,16 @@
     }
 
     .header__item {
-        padding: 10px 5px 10px 5px;
-        border-right: 1px solid;
+        padding: 0 5px 0 5px;
+        border-right: 1px solid #d9d9d9;
         display: inline-flex;
+        align-items: center;
         justify-content: center;
+        min-height: 40px;
+    }
+
+    .header__item span {
+        width: calc(100% - 25px);
     }
 
     .information {
@@ -112,7 +118,7 @@
     }
 
     .header__item:first-of-type {
-        border-right: 1px solid;
+        border-right: 1px solid #d9d9d9;
     }
 
     .header__item:last-of-type {
@@ -122,19 +128,23 @@
     .header__progress-icon {
         border: 2px dashed;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 25px;
+        height: 25px;
     }
 
     .header__circle-icon {
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 25px;
+        height: 25px;
         align-content: center;
         text-align: center;
     }
 
     .header__circle-icon {
+        justify-content: center;
+        display: flex;
+        align-items: center;
+
         &.success {
             background-color: #24c38b;
             color: white;
@@ -215,7 +225,7 @@
         <hr />
         <div class="row m-2">
         {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
-        <div class="col-8">
+        <div class="col-12 col-md-8">
             <div class="header">
                 <div class="header__item header__name">
                     {% translate 'Village' %}
@@ -230,7 +240,7 @@
                     <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
                 </div>
                 <div class="header__item header__completed">
-                    <span class="mr-2">{% translate 'En cours de validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+                    <span class="mr-2">{% translate 'En validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
                 </div>
                 <div class="header__item header__rejected">
                     <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
@@ -375,7 +385,7 @@
              {% endfor %}
             </div>
 
-            <div class="col-4 justify-content-start"  id="admin_level_selected">
+            <div class="col-md-4 col-12 justify-content-start"  id="admin_level_selected">
             <div class="row" id="admin_level_selected_detail">
                 <div class="col-12 profile__name" id="villageName">
                     {{ village_name }}
@@ -411,8 +421,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner1">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner1">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail1"></div>
@@ -442,8 +452,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner2">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner2">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail2"></div>
@@ -473,8 +483,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner3">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner3">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail3"></div>
@@ -504,8 +514,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner4">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner4">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail4"></div>
@@ -535,8 +545,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner5">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner5">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail5"></div>
@@ -567,8 +577,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner6">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner6">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail6"></div>
@@ -598,8 +608,8 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div>
-                        <div class="phase__detail mt-1" id="phaseSpinner7">
+                    <div class="w-100">
+                        <div class="phase__detail mt-1 text-center" id="phaseSpinner7">
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </div>
                         <div class="phase__detail" id="phaseDetail7"></div>
@@ -622,10 +632,10 @@
 
             </div>
 
-            <div class="col-4 justify-content-center overlay" id="spin">
+            <div class="col-md-4 col-12 justify-content-center overlay" id="spin">
                 <i class="fas fa-2x fa-sync-alt fa-spin"></i>
             </div>
-            <div class="col-4 align-content-center text-center" id="no_admin_level_selected">
+            <div class="col-md-4 col-12 align-content-center text-center" id="no_admin_level_selected">
                         <img src="{% static 'images/house.png' %}" />
                         <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
                   </div>

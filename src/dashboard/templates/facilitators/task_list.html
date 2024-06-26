@@ -2,131 +2,144 @@
 
 
 <style>
-
-    .card-item, .modal {
-        color: #707070;
-    }
-</style>
-
-
-<style>
-    .fieldset {
-        border: solid 2px gray;
-        margin-bottom: 10px !important;
-    }
-    .fieldset fieldset .content {
-        width: 95% !important;
-    }
-    .fieldset fieldset .content:last-of-type {
-        margin-left: auto;
-    }
-    fieldset {
-    background-color: #eeeeee;
-    }
-
-    legend {
-    background-color: gray;
+.task-card {
+    background-color: #00000017;
     color: white;
-    padding: 5px 10px;
-    }
+}
 
-    input {
-    margin: 5px;
-    }
 
-    .attach-file a {
-        float: right !important;
-        margin-right: 45px !important;
+.status {
+    color: white;
+    .status__circle-icon {
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        align-content: center;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        &.success {
+             background-color: white;
+             color: #24c38b;
+        }
+
+        &.error {
+            background-color:white;
+            color:  #F0788E;
+        }
     }
-    .attach-file p {
-        margin-left: 15px !important;
-        margin-top: 8px !important;
-    }
+}
+
 </style>
 
-<div class="card">
+<div class="col-12 p-0">
 
 {% block tasks %}
 
 {% for task in tasks %}
-    <div class="card-item" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
+    <div class="card-item task-card" data-toggle="modal" data-target="#card-item-task-{{ task|get:'_id' }}" style="cursor: pointer;" >
         <div class="row">
-            <div class="col-sm-7">
-                <div class="phase-title">
-                    <span id="task_number_{{ task|get:'_id' }}" style="color: white;" class="btn {% if task.completed %}badge-completed{% else %}badge-pending{% endif %}">{{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}</span> {{ task.name }}
-                </div>
-                <div class="phase-title mt-3 mb-2">
-                    {{ task.administrative_level_name }}, {% translate 'Phase' %}: {{ task.phase_name }},
-                    {% translate 'Activity' %}: {{ task.activity_name }}
-                </div>
-                <div class="border-separator"></div>
+            <div class="col-12">
+             <div class="flex-column col mb-2">
+                 <div class="phase__title">
+                    {% translate 'Etape' %} <span {% if task.completed %}badge-completed{% else %}badge-pending{% endif %}"> {{ task.activity_order }}: {{ task.activity_name }}</span>
+                 </div>
+             </div>
+             <div class="card-item task-card" id="task_number_{{ task|get:'_id' }}">
+                   <div class="row align-items-center">
+                       <div class="mt-3 mb-2 col-10">
+                           <span class="font-weight-bold">{% translate 'Activity' %} {{ task.phase_order }}.{{ task.activity_order }}.{{ task.order }}:</span> {{ task.name }}
+                        </div>
+                        <div class="col-auto ml-auto">
 
-                <div class="text-bold-family mt-2 mb-2">
-                    {% if task.attachments|length != 0 %}
-                        {% translate "Attachments" %}
-                    {% else %}
-                        {% translate "No attachments" %}
-                    {% endif %}
-                </div>
+                            {% if task.completed == False %}
+                                <div class="status">
+                                   <div class="status__progress-icon"></div>
+                                </div>
+                            {% elif task.completed == True and task.validated == True %}
+                                <div class="status">
+                                    <div class="status__circle-icon success"><i class="fas fa-check-double"></i></div>
+                                </div>
+                            {% elif task.completed == True and task.validated == False %}
+                                <div class="status">
+                                    <div class="status__circle-icon error"><i class="fas fa-times"></i></div>
+                                </div>
+                            {% elif task.completed == True and task.validated == False %}
+                                <div class="status">
+                                    <div class="status__circle-icon error"><i class="fas fa-times"></i></div>
+                                </div>
+                            {% elif task.completed == True %}
+                                <div class="status">
+                            <div class="status__circle-icon success"><i class="fas fa-check"></i></div>
+                                </div>
+                            {% endif %}
 
-                {% for attachment in task.attachments %}
-                    {% if attachment.cloud_url %}
-                        <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
-                           target="_blank">
+                                  <div class="col-sm-5">
+                                    <div class="col mb-1 text-right text_completed_{{ task|get:'_id' }}">
+                                </div>
+
+                        </div>
+                        </div>
+                   </div>
+
+                    <div class="text-bold-family mt-2 mb-2">
+                        {% if task.attachments|length != 0 %}
+                            {% translate "Attachments" %}
+                        {% else %}
+                            {% translate "No attachments" %}
+                        {% endif %}
+                    </div>
+
+                    {% for attachment in task.attachments %}
+                        {% if attachment.cloud_url %}
+                            <a class="link-attachment mt-2" href="{{ attachment.cloud_url }}"
+                               target="_blank">
+                                <i class="fas fa-paperclip mr-2"></i>
+                                {{ attachment.name }}
+                            </a>
+                        {% else %}
                             <i class="fas fa-paperclip mr-2"></i>
                             {{ attachment.name }}
-                        </a>
-                    {% else %}
-                        <i class="fas fa-paperclip mr-2"></i>
-                        {{ attachment.name }}
-                    {% endif %}
-                {% endfor %}
-            </div>
-            <div class="col-sm-5">
-                <div class="col mb-1 text-right text_completed_{{ task|get:'_id' }}">
-                    {% if task.completed %}
-                        <div class="status-badge badge-completed">
-                            {% translate 'Completed' %}
-                        </div>
-                    {% else %}
-                        <div class="status-badge badge-pending">
-                            {% translate 'Pending' %}
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="col badge-closed-at float-right">
-                    <i class="far fa-calendar-alt text-warning"></i>
-                    {% translate 'Completed on' %}:
-                    {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
-                        {{ task.completed_date|default:'-' }}
-                    {% else %}
-                        {{ task.date_action_complete_by|default:'-' }}
-                    {% endif %}
-                </div>
-                <div class="col badge-closed-at mt-1 float-right text_{{ task|get:'_id' }}">
-                    {% comment %} {% if task.completed and task.attachments %}
-                        <i class="fas fa-check success-color"></i>
-                    {% elif task.completed and not task.attachments %}
-                        <i class="fas fa-exclamation-triangle warning-color"></i>
-                    {% else %}
-                        <i class="fas fa-clock gray-color"></i>
-                    {% endif %}
-                    {% translate 'Proof of completion' %} {% endcomment %}
-                    {% if task.validated %}
-                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
-                    {% else %}
-                        {% if task.validated == False %}
-                            <i class="fas fa-times warning-color"></i>
-                            {% translate 'Task not validated' %}
-                        {% else %}
-                            <i class="fas fa-exclamation-triangle warning-color"></i>
-                            {% translate 'Unseen task' %}
                         {% endif %}
-                    {% endif %}
+                    {% endfor %}
                 </div>
-            </div>
 
-        </div>
+                    <div class="col badge-closed-at float-right">
+                        <i class="far fa-calendar-alt text-warning"></i>
+                        {% translate 'Completed on' %}:
+                        {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}
+                            {{ task.completed_date|default:'-' }}
+                        {% else %}
+                            {{ task.date_action_complete_by|default:'-' }}
+                        {% endif %}
+                    </div>
+                    <div class="col badge-closed-at mt-1 float-right text_{{ task|get:'_id' }}">
+                        {% comment %} {% if task.completed and task.attachments %}
+                            <i class="fas fa-check success-color"></i>
+                        {% elif task.completed and not task.attachments %}
+                            <i class="fas fa-exclamation-triangle warning-color"></i>
+                        {% else %}
+                            <i class="fas fa-clock gray-color"></i>
+                        {% endif %}
+                        {% translate 'Proof of completion' %} {% endcomment %}
+                        {% if task.validated %}
+                            <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                        {% else %}
+                            {% if task.validated == False %}
+                                <i class="fas fa-times warning-color"></i>
+                                {% translate 'Task not validated' %}
+                            {% else %}
+                                <i class="fas fa-exclamation-triangle warning-color"></i>
+                                {% translate 'Unseen task' %}
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+             </div>
+
     </div>
 
     <!-- Modal  modal-dialog-centered -->
@@ -507,11 +520,23 @@
         let action_code = null;
         let id_invalidate_elt = null;
         let btn_send_comment = $('#btn-send-comment');
+        $(document).on('click', '.invalidate_valide', function () {
+            task__id = this.id.split("_")[this.id.split("_").length - 1];
+            id_invalidate_elt = $(('#id_invalidate_'+task__id));
+            for(var i = 0; i < this.classList.length; i++){
+                if(this.classList[i].includes("action_code_")){
+                    action_code = this.classList[i].split("_")[2];
+                }
+            }
 
-        
-        function validate_invalidate_function () {
+            $('#card-item-task-'+task__id).modal('hide');
+            $('#modal_comment').modal('show');
+        });
+
+
+        btn_send_comment.click(function () {
             let in_validation_comment = $('#id_in_validation_comment').val();
-            
+
             if(["0", 0].includes(action_code) && (
                     ["", null, undefined].includes(in_validation_comment) || (
                         in_validation_comment && [""].includes(in_validation_comment.replace(/\s/g, ''))
@@ -592,32 +617,8 @@
                     }
                 });
             }
-            
-        }
 
-        $(document).on('click', '.invalidate_valide', function () {
-            task__id = this.id.split("_")[this.id.split("_").length - 1];
-            id_invalidate_elt = $(('#id_invalidate_'+task__id));
-            for(var i = 0; i < this.classList.length; i++){
-                if(this.classList[i].includes("action_code_")){
-                    action_code = this.classList[i].split("_")[2];
-
-                    if(["1", 1].includes(action_code)){
-                        validate_invalidate_function();
-                    }
-                }
-            }
-
-            $('#card-item-task-'+task__id).modal('hide');
-
-            if(["0", 0].includes(action_code)){
-                $('#modal_comment').modal('show');
-            }
-            
         });
-
-
-        btn_send_comment.click(validate_invalidate_function);
         //End valide invalide
 
 
