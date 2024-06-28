@@ -1,0 +1,91 @@
+{% load static i18n humanize bootstrap4 custom_tags %}
+
+    <div class="babylongrid row"
+                    hx-trigger="revealed"
+                    hx-get="{% url 'dashboard:administrative_levels:documents' %}?page={{ page_obj.number|add:1 }}&type={{ request.GET.type }}&administrative_level={{ request.GET.administrative_level }}&phase={{ request.GET.phase }}&activity={{ request.GET.activity }}&task={{ request.GET.task }}"
+                    hx-swap="afterend"
+            >
+        {% for attachment in attachments %}
+        {% if attachment.attachment.uri|not_local %}
+        <div class="col-3">
+            <article>
+                <div class="card mr-3">
+                    <div class="card-body">
+                        <p class="card-title" style="height: 20px !important; font-size: 11px;">
+                            <a href="{% url 'dashboard:administrative_levels:detail' attachment.no_sql_db_name %}?administrative_level={{ attachment.headquarters_village_id }}" target="_blank">
+                                {% if "canton" in attachment.name %}
+                                    {{ attachment.canton }}
+                                {% else %}
+                                    {% translate "Village" %}: {{ attachment.headquarters_village }} {% if attachment.villages_names %}({{ attachment.villages_names }}){% endif %}
+                                {% endif %}
+                            </a>
+                        </p>
+                        {% if attachment.task %}
+                        <p class="card-text">
+                            <b>{% translate 'Task' %}</b>: {{ attachment.task.name }}
+                            <span class="badge badge-pill badge-info">{{ attachment.task.status }}</span>
+                        </p>
+                        <p class="card-text">
+                            {{ attachment.task.description }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% if attachment.attachment.uri|is_pdf %}
+                        <div class="card second-target">
+                            <div class="card-body attach-file">
+                                {% if attachment.attachment.uri %}
+                                    {% if "file:///data" in attachment.attachment.uri %}
+                                        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
+                                    {% elif ".pdf" in attachment.attachment.uri %}
+                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Link" %}
+                                        </a><br />
+                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe src="{{ attachment.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
+                                        </a>
+                                    {% elif ".docx" in attachment.attachment.uri or ".doc" in attachment.attachment.uri %}
+                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            {% translate "Download" %}
+                                        </a><br />
+                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                            <iframe style="float: left;"
+                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attachment.attachment.uri|imgAWSS3Filter }}'
+                                                width="250" height="300" frameborder='0'>
+                                                    This is an embedded
+                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a>
+                                                    document, powered by
+                                                    <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
+                                            </iframe>
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <!-- class="btn btn-primary" data-toggle="modal"
+                                        data-target="#item-attach-{{ forloop.counter }}" -->
+                                            <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer">
+                                <p>{{ attachment.name|repalce:"Télecharger le " }}</p>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+
+
+
+
+
+                    {% else %}
+                    <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                        <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" class="card-img-top second-target" alt="{{ attachment.task }}">
+                    </a>
+                    {% endif %}
+                </div>
+            </article>
+            </div>
+        {% endif %}
+        {% endfor %}
+    </div>

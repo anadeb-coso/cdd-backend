@@ -462,7 +462,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                         _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
 
                     nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
-                        {"attachments": ["name"]}, fc_task[0]['attachments'])  # Update task for the facilitator
+                        {"attachments": ["name", "order"]}, fc_task[0]['attachments'])  # Update task for the facilitator
                     print(_fc_task)
                 print(administrative_level)
 

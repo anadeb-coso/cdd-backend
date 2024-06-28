@@ -195,8 +195,8 @@
         </div>
 
         <div class="col-12">
-        
-            {% include 'administrative_levels/attachments/_grid.html' with attachments=attachments %}
+            <p>{% translate "PAV and PAC from " %} {{ canton }}</p>
+            {% include 'administrative_levels/documents/_grid.html' with attachments=attachments %}
 
         </div>
     </div>
@@ -232,7 +232,7 @@
                 </div>
                 <div class="card-body">
                     <form action="" method="get">
-                        <div class="form-checkbox-row">
+                        {% comment %} <div class="form-checkbox-row">
 
                             <div class="form-checkbox">
                                 <label for="id_type_0"><input type="radio" name="type" value="Photo" id="id_type_0" required="" {% if 'type' in query_strings_raw and query_strings_raw.type == 'Photo' %}checked=""{% endif %}> Photo</label>
@@ -247,7 +247,7 @@
                             </div>
 
                         </div>
-                        <br><br>
+                        <br><br> {% endcomment %}
                         <div class="form-group">
                             <div class="form-label">
                                 <label for="id_administrative_level">{% translate 'Administrative level' %}</label>
@@ -269,7 +269,7 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group">
+                        {% comment %} <div class="form-group">
                             <div class="form-label">
                                 <label for="id_phase">{% translate 'Phase' %}</label>
                             </div>
@@ -331,7 +331,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                        </div>
+                        </div> {% endcomment %}
 
                         <input type="submit" class="btn btn-primary" value="{% translate 'Apply' %}">
                     </form>

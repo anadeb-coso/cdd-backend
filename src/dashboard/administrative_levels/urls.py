@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.administrative_levels import views, views_adl
+from dashboard.administrative_levels import views, views_adl, views_doc
 
 app_name = 'administrative_levels'
 urlpatterns = [
@@ -20,4 +20,6 @@ urlpatterns = [
     path('attachments/', views_adl.AttachmentListView.as_view(), name='attachments'),
     path('task-detail/<int:pk>', views_adl.TaskDetailAjaxView.as_view(), name='task_detail'),
     path('attachments-filter', views_adl.FillAttachmentSelectFilters.as_view(), name='attachment_filter'),
+    
+    path('documents/', views_doc.AttachmentListView.as_view(), name='documents'),
 ]

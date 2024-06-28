@@ -836,21 +836,21 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             
             if administrative_level_id:
                 selector["administrative_level_id"] = administrative_level_id
-
-            if "phase" in self.request.GET and self.request.GET["phase"] not in [
+            
+            if "task" in self.request.GET and self.request.GET["task"] not in [
+                "",
+                None,
+            ]:
+                selector["name"] = Task.objects.get(id=self.request.GET["task"]).name
+            elif "activity" in self.request.GET and self.request.GET[
+                "activity"
+            ] not in ["", None]:
+                selector["activity_name"] = Activity.objects.get(id=self.request.GET["activity"]).name
+            elif "phase" in self.request.GET and self.request.GET["phase"] not in [
                 "",
                 None,
             ]:
                 selector["phase_name"] = Phase.objects.get(id=self.request.GET["phase"]).name
-            elif "activities" in self.request.GET and self.request.GET[
-                "activities"
-            ] not in ["", None]:
-                selector["activity_name"] = Activity.objects.get(id=self.request.GET["activities"]).name
-            elif "tasks" in self.request.GET and self.request.GET["tasks"] not in [
-                "",
-                None,
-            ]:
-                selector["name"] = Task.objects.get(id=self.request.GET["tasks"]).name
         # else:
         #     if "phase" in self.request.GET and self.request.GET["phase"] not in [
         #         "",
@@ -889,7 +889,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                         attachments += [i for i in (_.get("attachments") if _.get("attachments") else []) if (
                             i.get("attachment") and i.get("type") and "image" in i.get("type")
                         )]
-                    if self.request.GET.get('type') == 'Document':
+                    elif self.request.GET.get('type') == 'Document':
                         attachments += [i for i in (_.get("attachments") if _.get("attachments") else []) if (
                             i.get("attachment") and i.get("type") and "pdf" in str(i['type']).lower() and "word" in str(i['type']).lower() and "excel" in str(i['type']).lower()
                         )]
@@ -945,7 +945,7 @@ class FillAttachmentSelectFilters(rest_generics.GenericAPIView):
         select_type = request.POST['type']
         child_qs = list()
         if select_type == 'administrative_level':
-            parent_obj = administrativelevels_models.AdministrativeLevel.objects.get(id=request.POST['value'])
+            parent_obj = mis_objects_call.get_object(administrativelevels_models.AdministrativeLevel, id=request.POST['value'])
             child_qs = Phase.objects.filter(village=parent_obj)
         elif select_type == 'phase':
             parent_obj = Phase.objects.get(id=request.POST['value'])

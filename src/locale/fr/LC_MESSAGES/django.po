@@ -872,9 +872,128 @@ msgid "administrative level"
 msgstr "niveau administratif"
 
 #: .\dashboard\administrative_levels
+msgid "Administrative level"
+msgstr "Niveau administratif"
+
+#: .\dashboard\administrative_levels
 msgid "Households added"
 msgstr "Menages ajoutés"
 
 #: .\dashboard\administrative_levels
 msgid "Added due to conflict"
 msgstr "Ajoutés en raison d'un conflit"
+
+#: .\dashboard\administrative_levels
+msgid "PAV and PAC from "
+msgstr "Les PAV et les PAC de "
+
+#: .\dashboard\administrative_levels
+msgid "Choose attachments to view"
+msgstr "Choisir les pièces jointes à visualiser"
+
+
+#: .\dashboard\administrative_levels
+msgid "Village Development Plan"
+msgstr "Plan de Développement du Village"
+
+#: .\dashboard\administrative_levels
+msgid "Search a level"
+msgstr "Rechercher un niveau"
+
+#: .\dashboard\administrative_levels
+msgid "Check"
+msgstr "Voir"
+
+#: .\dashboard\administrative_levels
+msgid "Choice the village in canton"
+msgstr "Choisir le village dans le canton"
+
+#: .\dashboard\administrative_levels
+msgid "See village"
+msgstr "Voir le village"
+
+#: .\dashboard\administrative_levels
+#, fuzzy
+#| msgid "Procurement"
+msgid "No attachment"
+msgstr "Aucun document"
+
+#: .\dashboard\administrative_levels
+#, fuzzy
+#| msgid "Download"
+msgid "download"
+msgstr "Télécharger"
+
+#: .\dashboard\administrative_levels
+msgid "of"
+msgstr "de"
+
+#: .\dashboard\administrative_levels
+msgid "Apply"
+msgstr "Appliquer"
+
+#: .\dashboard\administrative_levels
+#, fuzzy
+#| msgid "Canton overview"
+msgid "Canton Overview"
+msgstr "Vue d'ensemble du canton"
+
+#: .\dashboard\administrative_levels
+msgid "Total"
+msgstr "Total"
+
+#: .\dashboard\administrative_levels
+msgid "Men"
+msgstr "Hommes"
+
+#: .\dashboard\administrative_levels
+msgid "Women"
+msgstr "Femmes"
+
+#: .\dashboard\administrative_levels
+msgid "Young"
+msgstr "Jeunes"
+
+#: .\dashboard\administrative_levels
+#, fuzzy
+#| msgid "Elderly"
+msgid "Elder"
+msgstr "Personnes agées"
+
+#: .\dashboard\administrative_levels
+msgid "Handicap"
+msgstr "Handicapé"
+
+#: .\dashboard\administrative_levels
+#, fuzzy
+#| msgid "Agriculture"
+msgid "Agruculture"
+msgstr "Agriculture"
+
+#: .\dashboard\administrative_levels
+msgid "Breeders"
+msgstr "Eleveurs"
+
+#: .\dashboard\administrative_levels
+msgid "Minorities"
+msgstr "Minorités"
+
+#: .\dashboard\administrative_levels
+msgid "Languages"
+msgstr "Langues"
+
+#: .\dashboard\administrative_levels
+msgid "Priorities"
+msgstr "Priorités"
+
+#: .\dashboard\administrative_levels
+msgid "Canton overview"
+msgstr "Vue d'ensemble du canton"
+
+#: .\dashboard\administrative_levels
+msgid "Overview of the canton"
+msgstr "Aperçu du canton"
+
+#: .\dashboard\administrative_levels
+msgid "Villages overview"
+msgstr "Résumé des villages"

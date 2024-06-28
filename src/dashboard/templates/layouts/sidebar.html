@@ -57,6 +57,16 @@
             </ul>
         </nav>
 
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+            <li class="nav-item">
+                <a href="{% url 'dashboard:administrative_levels:documents' %}"
+                    class="nav-link {% if active_level1 == 'documents' %}active{% endif %}">
+                    <i class="nav-icon fa fa-square"></i>
+                    <p>{% translate "Documents" %}</p>
+                </a>
+            </li>
+        </ul>
+
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -81,7 +91,7 @@
             </ul>
         </nav>
 
-        <nav class="mt-2">
+        {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:funnel:funnels' %}"
@@ -91,7 +101,7 @@
                     </a>
                 </li>
             </ul>
-        </nav>
+        </nav> {% endcomment %}
 
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">

@@ -265,6 +265,14 @@ def is_pdf(uri):
 def not_local(uri):
     return uri.split(":")[0] != 'file'
 
+@register.filter(name="repalce")
+def repalce(v: str, s: str):
+    _ = s.split(";")
+    for elt in _:
+        v = v.replace(elt, "")
+    return v
+
+    
 @register.filter
 def get_item(dictionary, key):
     try:
