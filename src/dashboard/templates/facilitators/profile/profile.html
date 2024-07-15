@@ -4,6 +4,9 @@
 {% block content %}
 
     <style>
+    .expand-icon {
+        cursor: pointer;
+    }
     .progress-bar {
         width: 5px;
         height: 30px;
@@ -398,13 +401,13 @@
                     <div class="filters__item col-2" id="completedStatus" onclick="filterBy('completed')">
                         <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
                     </div>
-                    <div class="filters__item col-2" id="RejectedStatus" onclick="filterBy('rejected')">
+                    <div class="filters__item col-2" id="rejectedStatus" onclick="filterBy('rejected')">
                         <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
                     </div>
                     <div class="filters__item col-2"  id="validatedStatus" onclick="filterBy('validated')">
                         <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
                     </div>
-                     <strong class="col-auto" style="cursor: pointer;" onclick="filterBy('all')">{% translate 'All' %}</strong>
+                     <strong class="col-auto" style="cursor: pointer;" id="allStatus" onclick="filterBy('all')">{% translate 'All' %}</strong>
                 </div>
 
                 <div class="card phase phase--green flex-column col-12">
@@ -417,8 +420,8 @@
                                 {% translate 'Visites préalables' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(1)">
-                            <i class="fas fa-chevron-right"></i>
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon1">
+                            <i class="fas fa-chevron-right cursor"></i>
                         </div>
                     </div>
                     <div class="w-100">
@@ -448,7 +451,7 @@
                                 {% translate 'Mobilisation Communautaire' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(2)">
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon2">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -479,7 +482,7 @@
                                 {% translate 'Planification' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(3)">
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon3">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -510,7 +513,7 @@
                                 {% translate 'Préparation des sous-projets' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(4)">
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon4">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -541,7 +544,7 @@
                                 {% translate 'Consultation et examen des sous-projects' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(5)">
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon5">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -573,7 +576,7 @@
                                 {% trans 'Mise en oeuuvre du sous-projet' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(6)">
+                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon6">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -604,7 +607,7 @@
                                 {% translate 'Clotúre et replanification du sous-projets' %}
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20" onclick="loadPhaseTasks(7)">
+                        <div class="ml-auto pointer-event fs20 expand-icon" id="icon7">
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
@@ -675,7 +678,7 @@
         let is_validated = $('#id_is_validated');
 
 
-        function hideTask() {
+        function hideTask(hideContent=false) {
             for(let i  = 1; i < 8; i++) {
                 $('#phaseDetail' + i).hide();
                 $('#phaseSpinner' + i).hide();
@@ -683,6 +686,9 @@
                 $('#next' + i).hide();
                 $('#currentPage' + i).hide();
                 $('#pagination' + i).hide();
+                if (hideContent) {
+                    document.getElementsByClassName('fa-chevron-down')[i-1].classList = 'expand-icon fas fa-chevron-right';
+                }
             }
         }
 
@@ -737,6 +743,22 @@
              admin_level_selected_detail.show();
         }
     }
+    function iconClick() {
+        let id = +this.id.split('icon')[1];
+        if(document.getElementsByClassName('fa-chevron-down')[id-1]) {
+            hideTask(true);
+        } else {
+            document.getElementsByClassName('fa-chevron-right')[id-1].classList = 'expand-icon fas fa-chevron-down';
+            loadPhaseTasks(id);
+        }
+    }
+    document.querySelectorAll('.expand-icon')[0].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[1].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[2].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[3].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[4].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[5].addEventListener('click', iconClick);
+    document.querySelectorAll('.expand-icon')[6].addEventListener('click', iconClick);
 
     function loadPhaseTasks(number) {
         phaseFilter = null;
@@ -837,6 +859,10 @@
                 } else {
                     isValidated = true;
                     $('#validatedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
+                    $('#pendingStatus')[0].classList = 'filters__item col-2';
+                    $('#completedStatus')[0].classList = 'filters__item col-2';
+                    $('#allStatus')[0].classList = 'filters__item col-2';
                 }
             } else if (field == 'completed') {
                 isValidated = null;
@@ -848,6 +874,10 @@
                 } else {
                     isCompleted = true;
                     $('#completedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
+                    $('#pendingStatus')[0].classList = 'filters__item col-2';
+                    $('#validatedStatus')[0].classList = 'filters__item col-2';
+                    $('#allStatus')[0].classList = 'filters__item col-2';
                 }
             } else if (field == 'pending') {
                 isValidated = null;
@@ -859,6 +889,10 @@
                 } else {
                     isPending = true;
                     $('#pendingStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
+                    $('#validatedStatus')[0].classList = 'filters__item col-2';
+                    $('#completedStatus')[0].classList = 'filters__item col-2';
+                    $('#allStatus')[0].classList = 'filters__item col-2';
                 }
             } else if (field == 'rejected') {
                 isValidated = null;
@@ -870,12 +904,21 @@
                 } else {
                     isRejected = true;
                     $('#rejectedStatus')[0].classList = 'filters__item filters__item--selected col-2';
+                    $('#validatedStatus')[0].classList = 'filters__item col-2';
+                    $('#pendingStatus')[0].classList = 'filters__item col-2';
+                    $('#completedStatus')[0].classList = 'filters__item col-2';
+                    $('#allStatus')[0].classList = 'filters__item col-2';
                 }
             } else {
                 isValidated = null;
                 isPending = null;
                 isRejected = null;
                 isCompleted = null;
+                $('#pendingStatus')[0].classList = 'filters__item col-2';
+                $('#rejectedStatus')[0].classList = 'filters__item col-2';
+                $('#validatedStatus')[0].classList = 'filters__item col-2';
+                $('#completedStatus')[0].classList = 'filters__item col-2';
+                $('#allStatus')[0].classList = 'filters__item filters__item--selected col-2';
             }
             for(let i  = 1; i < 8; i++) {
                 $('#pagination' + i).hide();
