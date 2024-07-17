@@ -686,8 +686,8 @@
                 $('#next' + i).hide();
                 $('#currentPage' + i).hide();
                 $('#pagination' + i).hide();
-                if (hideContent) {
-                    document.getElementsByClassName('fa-chevron-down')[i-1].classList = 'expand-icon fas fa-chevron-right';
+                if(hideContent) {
+                    $('#icon' + i + ' .fas')[0].classList = 'expand-icon fas fa-chevron-right';
                 }
             }
         }
@@ -744,11 +744,10 @@
         }
     }
     function iconClick() {
+        hideTask(true);
         let id = +this.id.split('icon')[1];
-        if(document.getElementsByClassName('fa-chevron-down')[id-1]) {
-            hideTask(true);
-        } else {
-            document.getElementsByClassName('fa-chevron-right')[id-1].classList = 'expand-icon fas fa-chevron-down';
+        if($('#icon' + id + ' .fas')[0].classList.contains('fa-chevron-down') == false) {
+            $('#icon' + id + ' .fas')[0].classList = 'expand-icon fas fa-chevron-down';
             loadPhaseTasks(id);
         }
     }
