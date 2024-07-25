@@ -440,6 +440,7 @@
                                                         <div class="phase__title">
                                                             {% translate 'Etape' %} {{ activity.order }}: {{ activity.name }}
                                                         </div>
+
                                                     </div>
                                                     <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
                                                         <i class="fas fa-chevron-right cursor"></i>
@@ -447,6 +448,11 @@
                                                  </div>
                                                  <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
                                                         <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                                 </div>
+                                                 <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
+                                                     <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
+                                                     <br>
+                                                     <br>
                                                  </div>
                                                  <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
                                                        <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
@@ -523,6 +529,7 @@
 
         function hideTask(hideContent=false) {
             document.querySelectorAll('[id^=phaseDetail]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=activityDescription]').forEach(element => element.hidden = true);
             document.querySelectorAll('[id^=content]').forEach(element => element.hidden = true);
             document.querySelectorAll('[id^=previous]').forEach(element => element.hidden = true);
             document.querySelectorAll('[id^=next]').forEach(element => element.hidden = true);
@@ -595,6 +602,7 @@
 
     function iconActivityPhase() {
         document.querySelectorAll('[id^=phaseDetail]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=activityDescription]').forEach(element => element.hidden = true);
         document.querySelectorAll('[id^=previous]').forEach(element => element.hidden = true);
         document.querySelectorAll('[id^=next]').forEach(element => element.hidden = true);
         document.querySelectorAll('[id^=currentPage]').forEach(element => element.hidden = true);
@@ -656,6 +664,7 @@
                 success: function (response) {
                     $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = response;
                     $('#phaseDetail' + phaseNumber + activityNumber)[0].hidden = false;
+                    $('#activityDescription' + phaseNumber + activityNumber)[0].hidden = false;
                     $('#phaseSpinner' + phaseNumber + activityNumber)[0].hidden = true;
                     total_tasks = $('#totalActTasks')[0].value;
                     admin_level_selected_detail.hide();
