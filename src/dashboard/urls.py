@@ -12,4 +12,5 @@ urlpatterns = [
     path('funnels/', include('dashboard.funnel.urls')),
     path('statistics/', include('dashboard.statistics.urls')),
     path('store-apps/', include('dashboard.storeapp.urls')),
+    path('planning/', include('dashboard.planning.urls')),
 ]

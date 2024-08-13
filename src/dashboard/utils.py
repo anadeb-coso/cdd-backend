@@ -634,7 +634,7 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, adminis
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
         create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids)
 
-    add_facilitator_design(develop_mode=False, trainning_mode=False)
+    add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=no_sql_db)
 
 
 def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False):
@@ -1200,6 +1200,56 @@ def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, tr
 
                     
 
+def copy_village_pac_completed_to_other_villages_belonging_to_same_canton(develop_mode=False, training_mode=False, no_sql_db=False):
+    
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
+
+    nsc = NoSQLClient()
+    for facilitator in facilitators:
+        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        print(facilitator.no_sql_db_name, facilitator.username)
+        
+        
+        
+        fc_tasks = facilitator_database.get_query_result({
+            'type': 'task',
+            'sql_id': 47
+        })[:]
+        
+        for task in fc_tasks:
+            attachments = task.get("attachments")
+
+            for f_same_canton in facilitators:
+                f_same_canton_database = nsc.get_db(f_same_canton.no_sql_db_name)
+                fc_tasks_same_canton = f_same_canton_database.get_query_result({
+                    'type': 'task',
+                    'sql_id': 47,
+                    'canton_sql_id': task.get("canton_sql_id")
+                })[:]
+                if attachments:
+                    att = attachments[5]
+                    if (att.get('name') == "Télecharger le document du plan d'actions cantonales finalisé" and att.get('attachment') and att.get('attachment').get("uri") and "https://" in att['attachment']['uri']):
+                        for _task in fc_tasks_same_canton:
+                            _att = _task['attachments'][5]
+                            if _att.get('name') == "Télecharger le document du plan d'actions cantonales finalisé" and (
+                                not _att.get('attachment') or (
+                                    _att.get('attachment').get("uri") and (
+                                        "https://" not in _att['attachment']['uri']
+                                    )
+                                )
+                            ):
+                                _task['attachments'][5] = att
+                                print("==========> ", f_same_canton.no_sql_db_name, f_same_canton.username)
+                                nsc.update_cloudant_document(f_same_canton_database,  _task["_id"], _task)  # Update task for the facilitator
+                                print(_task)
+                                print()
+                                print()
+
+
+
 def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=False):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
@@ -1210,6 +1260,7 @@ def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=F
     nsc_database = nsc.get_db("process_design")
     
     doc_designs = [
+        # nsc_database.get_design_document('_design/views_docs'),
         nsc_database.get_design_document('_design/tasks_number'),
         nsc_database.get_query_result({"type": "geolocation"})[:][0]
     ]
@@ -1227,6 +1278,10 @@ def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=F
 
             if doc_design.get('type') == "geolocation":
                 _f_design = facilitator_database.get_query_result({"type": "geolocation"})[:]
+            elif doc_design.get('_id') == "_design/views_docs":
+                _f_design = facilitator_database.get_design_document('_design/views_docs')
+                print(_f_design)
+                print(_f_design.get('_rev'))
             else:
                 _f_design = facilitator_database.get_design_document('_design/tasks_number')
                 print(_f_design)
@@ -1234,7 +1289,8 @@ def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=F
 
             if not _f_design or (_f_design and type(_f_design) is not list and not _f_design.get('_rev')):
                 nsc.create_document(facilitator_database, doc_design)
-            elif '_id' in doc_design and doc_design['_id'] == '_design/tasks_number' and _f_design and _f_design.get('_rev'):
+            # elif '_id' in doc_design and doc_design['_id'] == '_design/tasks_number' and _f_design and _f_design.get('_rev'):
+            elif '_id' in doc_design and doc_design['_id'] in ('_design/tasks_number', '_design/views_docs') and _f_design and _f_design.get('_rev'):
                 #Update phase if it exists
                 _doc_design = doc_design.copy()
                 del _doc_design['_id']

@@ -1,7 +1,7 @@
-<!-- Constants -->
+// <!-- Constants -->
 const error_server_message = "An error has occurred, please check your network connection and try again. ";
 
-<!-- Django messages -->
+// <!-- Django messages -->
 /**
  * Show alerts and hide success alerts after 4 seconds
  */
@@ -39,11 +39,11 @@ function showPopupMessage(content) {
     }
 }
 
-<!-- Checkbox style -->
+// <!-- Checkbox style -->
 $('.form-check').addClass("icheck-primary");
 
 
-<!-- Delay for ajax calls -->
+// <!-- Delay for ajax calls -->
 function delay(callback, ms) {
     let timer = 0;
     return function () {
@@ -53,4 +53,18 @@ function delay(callback, ms) {
             callback.apply(context, args);
         }, ms || 0);
     };
+}
+
+
+function convert_array_request_to_js_array (data_django_safe_str) {
+    return JSON.parse(data_django_safe_str
+        .replaceAll("{'", '{"')
+        .replaceAll("'}", '"}')
+        .replaceAll("':", '":')
+        .replaceAll(": '", ': "')
+        .replaceAll("',", '",')
+        .replaceAll(", '", ', "')
+        .replaceAll("']", '"]')
+        .replaceAll("['", '["')
+    );
 }

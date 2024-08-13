@@ -1,0 +1,250 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .planning-table {
+        width: 100% !important;
+    }
+    
+    .task {
+        margin-bottom: 2px;
+        padding: 2px;
+        border-radius: 11px;
+        color: #fff;
+        text-align: center;
+    }
+
+    thead th {
+        font-weight: bold;
+    }
+    
+</style>
+
+
+
+
+        <div class="card">
+            <div class="card-body table-responsive">
+                <table id="planning-table" class="table-bordered" style="width: 100% !important">
+                    <thead>
+                        <tr>
+                            <th width="16%" id="timeColumn" class="time-column" >&nbsp;</th>
+                            <th width="12%" class="day-column">{% translate "Monday" %}<span id="dayColumn0"></span></th>
+                            <th width="12%" class="day-column">{% translate "Tuesday" %}<span id="dayColumn1"></span></th>
+                            <th width="12%" class="day-column">{% translate "Wednesday" %}<span id="dayColumn2"></span></th>
+                            <th width="12%" class="day-column">{% translate "Thursday" %}<span id="dayColumn3"></span></th>
+                            <th width="12%" class="day-column">{% translate "Friday" %}<span id="dayColumn4"></span></th>
+                            <th width="12%" class="day-column">{% translate "Saturday" %}<span id="dayColumn5"></span></th>
+                            <th width="12%" class="day-column">{% translate "Sunday" %}<span id="dayColumn6"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="calendarContent">
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+
+
+
+
+
+<script type="text/javascript">
+        currentWeek = parseInt("{{ currentWeek }}");
+        currentMondayDate = new Date('{{ currentMondayDate|date:"Y/m/d" }}');
+
+
+        function couperChaine(chaine, longueurMax) {
+            if (chaine.length > longueurMax) {
+                return chaine.substring(0, longueurMax) + "...";
+            } else {
+                return chaine;
+            }
+        }
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        const weekInfo = document.getElementById('weekInfo');
+        const prevWeek = document.getElementById('prevWeek');
+        const nextWeek = document.getElementById('nextWeek');
+        const calendarContent = document.getElementById('calendarContent');
+        const timeColumn = document.getElementById("timeColumn");
+        const times = ["08:00", "12:00", "16:00"];
+        const dayColumns = [
+            document.getElementById('dayColumn0'),
+            document.getElementById('dayColumn1'),
+            document.getElementById('dayColumn2'),
+            document.getElementById('dayColumn3'),
+            document.getElementById('dayColumn4'),
+            document.getElementById('dayColumn5'),
+            document.getElementById('dayColumn6')
+        ];
+        
+        {% comment %} const tasks = convert_array_request_to_js_array("{{ planning|safe }}") {% endcomment %}
+        const tasks = convert_array_request_to_js_array(
+            "{{ planning }}"
+            .replaceAll("&#x27;", "'")
+            .replaceAll("&quot;", '"')
+            .replaceAll("None", null)
+            .replaceAll("True", true)
+            .replaceAll("False", false)
+        )
+        
+        function updateDates(mondayDate) {
+            for (let i = 0; i < 7; i++) {
+                const currentDate = new Date(mondayDate);
+                currentDate.setDate(mondayDate.getDate() + i);
+                const dayName = currentDate.toLocaleDateString('fr-FR', { weekday: 'long' });
+                const dayNumber = currentDate.getDate();
+                dayColumns[i].textContent = ` ${dayNumber}`;//`${dayName} ${dayNumber}`;
+            }
+        }
+
+        updateDates(currentMondayDate);
+
+
+        if ($.fn.DataTable.isDataTable('#planning-table')) {
+            $('#planning-table').DataTable().destroy();
+            $('#planning-table').empty(); 
+        }
+
+        let table = $('#planning-table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            dom: '',
+            ordering: false
+        });
+        
+    
+    
+
+function renderCalendar(week) {
+    calendarContent.innerHTML = '';
+    calendarContent.style.width = '100% !important';
+    const weekData = tasks[week] || [];
+    weekData.forEach(taskRowData => {
+
+        let t = times.map((elt, i) => `<div>${elt ?? ""}</div>${i < 2 ? "<br /><br />" : ""}`)
+        let personCell = `
+        <div style="">
+            <div style="float: left; width: 80% !important;font-weight: bold;">${taskRowData.person}</div>
+            <div style="float: right; width: 20% !important;">
+                ${t.join("")}
+            </div>
+        </div>
+        `;
+        let planning_tasks = [personCell];
+        for (let i = 0; i < 7; i++) {
+            let taskCell = '<div>';
+            const tasksData = taskRowData.tasks.filter(task => task.day === i) ?? [];
+            if (tasksData) {
+
+                let _taskCell = [
+                    `<div style="width: 100% !important;">&nbsp;</div>`, 
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                ]
+                tasksData.sort((a, b) => (a.datetime ??  "").localeCompare(b.datetime ?? ""));
+                
+                let i_12 = 0;
+                let i_16 = 3;
+                let i_ = 6;
+                for (let a = 0; a < tasksData.length; a++) {
+                    let dateObject = new Date(tasksData[a].datetime);
+                    let hours = dateObject.getHours();
+                    if(12 > hours && i_12 < 3){
+                        _taskCell[i_12] = `
+                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
+                            <div style="text-align: left; width: 90%; float: left;">` +
+                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
+                            `</div>
+                            <div style="width: 10%; float: right;">
+                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                                <br />
+                                <i class="nav-icon fa fa-envelope"></i>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                            `;
+                        i_12 += 1;
+                    }
+                    else if(16 > hours && i_16 < 6){
+                        _taskCell[i_16] = `
+                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
+                            <div style="text-align: left; width: 90%; float: left;">` +
+                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
+                            `</div>
+                            <div style="width: 10%; float: right;">
+                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                                <br />
+                                <i class="nav-icon fa fa-envelope"></i>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                            `;
+                        i_16 += 1;
+                    }else{
+                        if(_taskCell[i_]){
+                            _taskCell[i_] = `
+                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
+                            <div style="text-align: left; width: 90%; float: left;">` +
+                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
+                            `</div>
+                            <div style="width: 10%; float: right;">
+                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                                <br />
+                                <i class="nav-icon fa fa-envelope"></i>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                            `;
+                        }else{
+                            _taskCell[a] = `
+                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
+                            <div style="text-align: left; width: 90%; float: left;">` +
+                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
+                            `</div>
+                            <div style="width: 10%; float: right;">
+                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                                <br />
+                                <i class="nav-icon fa fa-envelope"></i>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                            `;
+                        }
+                        
+                    }
+                }
+                taskCell += _taskCell.join("");
+                
+            }
+            
+            taskCell += '</div>'
+            planning_tasks.push(taskCell);
+        }
+
+        table.row.add(planning_tasks).draw(false); 
+
+
+    });
+    weekInfo.textContent = `Semaine ${week}`;
+    updateDates(currentMondayDate);
+}
+
+
+//table.clear().draw();
+
+
+renderCalendar(currentWeek)
+
+    });
+
+
+</script>

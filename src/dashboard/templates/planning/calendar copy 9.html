@@ -1,0 +1,229 @@
+<style>
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+    }
+    
+    .week-calendar {
+        width: 100%;
+        max-width: 1200px;
+        margin: 20px auto;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #3b5998;
+        color: #fff;
+        padding: 10px 20px;
+        font-size: 18px;
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: 100px repeat(7, 1fr);
+        gap: 1px;
+        background-color: #ddd;
+    }
+    
+    .header-row {
+        display: contents;
+    }
+    
+    .time-column,
+    .day-column {
+        background-color: #f7f7f7;
+        padding: 10px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .task-row {
+        display: grid;
+        grid-template-columns: 100px repeat(7, 1fr);
+        gap: 1px;
+    }
+    
+    .time-cell,
+    .task-cell {
+        background-color: #fff;
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .task {
+        margin-bottom: 5px;
+        padding: 5px;
+        border-radius: 4px;
+        color: #fff;
+        text-align: center;
+    }
+    
+    
+    
+    
+</style>
+
+
+
+
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Hebdomadaire Dynamique</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="week-calendar">
+        <div class="header">
+            <button id="prevWeek">❮</button>
+            <div id="weekInfo">Semaine 34</div>
+            <button id="nextWeek">❯</button>
+        </div>
+        <div class="calendar-grid">
+            <div class="header-row">
+                <div class="time-column">Heures</div>
+                <div id="dayColumn0" class="day-column"></div>
+                <div id="dayColumn1" class="day-column"></div>
+                <div id="dayColumn2" class="day-column"></div>
+                <div id="dayColumn3" class="day-column"></div>
+                <div id="dayColumn4" class="day-column"></div>
+                <div id="dayColumn5" class="day-column"></div>
+                <div id="dayColumn6" class="day-column"></div>
+            </div>
+            <div id="calendarContent">
+                <!-- Les tâches seront générées ici dynamiquement -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+<script type="text/javascript">
+    const weekInfo = document.getElementById('weekInfo');
+const prevWeek = document.getElementById('prevWeek');
+const nextWeek = document.getElementById('nextWeek');
+const calendarContent = document.getElementById('calendarContent');
+const dayColumns = [
+    document.getElementById('dayColumn0'),
+    document.getElementById('dayColumn1'),
+    document.getElementById('dayColumn2'),
+    document.getElementById('dayColumn3'),
+    document.getElementById('dayColumn4'),
+    document.getElementById('dayColumn5'),
+    document.getElementById('dayColumn6')
+];
+
+let currentWeek = 34;
+let currentMondayDate = new Date(2024, 7, 12); // Lundi de la semaine 34
+
+const tasks = {
+    "34": [
+        {
+            person: "DJOLOGUE Kanfiguin",
+            time: "08:00",
+            tasks: [
+                { day: 0, task: "Tâche 1", color: "#b2dfdb" },
+                { day: 4, task: "Tâche 2", color: "#ffccbc" }
+            ]
+        },
+        {
+            person: "LARE Yambambate",
+            time: "12:00",
+            tasks: [
+                { day: 1, task: "Tâche 1", color: "#c5cae9" }
+            ]
+        },
+        {
+            person: "YAMBA Wassila",
+            time: "16:00",
+            tasks: [
+                { day: 2, task: "Tâche 1", color: "#ffe0b2" }
+            ]
+        },
+        {
+            person: "DJABONE Minlibe",
+            time: "16:00",
+            tasks: [
+                { day: 3, task: "Tâche 1", color: "#ffab91" }
+            ]
+        }
+    ]
+};
+
+function updateDates(mondayDate) {
+    for (let i = 0; i < 7; i++) {
+        const currentDate = new Date(mondayDate);
+        currentDate.setDate(mondayDate.getDate() + i);
+        const dayName = currentDate.toLocaleDateString('fr-FR', { weekday: 'long' });
+        const dayNumber = currentDate.getDate();
+        dayColumns[i].textContent = `${dayName} ${dayNumber}`;
+    }
+}
+
+function renderCalendar(week) {
+    calendarContent.innerHTML = '';
+    const weekData = tasks[week] || [];
+    weekData.forEach(taskRowData => {
+        const personCell = document.createElement('div');
+        personCell.classList.add('time-cell');
+        personCell.textContent = taskRowData.person;
+
+        const timeCell = document.createElement('div');
+        timeCell.classList.add('time-cell');
+        timeCell.textContent = taskRowData.time;
+
+        calendarContent.appendChild(personCell);
+        calendarContent.appendChild(timeCell);
+
+        for (let i = 0; i < 7; i++) {
+            const taskCell = document.createElement('div');
+            taskCell.classList.add('task-cell');
+            const taskData = taskRowData.tasks.find(task => task.day === i);
+            if (taskData) {
+                const task = document.createElement('div');
+                task.classList.add('task');
+                task.style.backgroundColor = taskData.color;
+                task.textContent = taskData.task;
+                taskCell.appendChild(task);
+            }
+            calendarContent.appendChild(taskCell);
+        }
+    });
+    weekInfo.textContent = `Semaine ${week}`;
+    updateDates(currentMondayDate);
+}
+
+prevWeek.addEventListener('click', () => {
+    currentWeek--;
+    currentMondayDate.setDate(currentMondayDate.getDate() - 7);
+    renderCalendar(currentWeek);
+});
+
+nextWeek.addEventListener('click', () => {
+    currentWeek++;
+    currentMondayDate.setDate(currentMondayDate.getDate() + 7);
+    renderCalendar(currentWeek);
+});
+
+renderCalendar(currentWeek);
+
+
+
+</script>

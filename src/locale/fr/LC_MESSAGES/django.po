@@ -997,3 +997,11 @@ msgstr "Aperçu du canton"
 #: .\dashboard\administrative_levels
 msgid "Villages overview"
 msgstr "Résumé des villages"
+
+#: .\dashboard\planning
+msgid "Planning"
+msgstr "Planification"
+
+#: .\dashboard\planning
+msgid "Week"
+msgstr "Semaine"

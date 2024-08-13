@@ -25,3 +25,8 @@ def get_administrative_region_name(administrative_id, use_cvd=True):
             has_parent = False
 
     return ', '.join(region_names)
+
+
+def elements_communs(liste1, liste2):
+    communs = list(set(liste1) & set(liste2))
+    return communs

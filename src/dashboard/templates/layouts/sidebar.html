@@ -67,6 +67,16 @@
             </li>
         </ul>
 
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+            <li class="nav-item">
+                <a href="{% url 'dashboard:planning:list' %}"
+                    class="nav-link {% if active_level1 == 'planning' %}active{% endif %}">
+                    <i class="nav-icon fa fa-calendar"></i>
+                    <p>{% translate "Planning" %}</p>
+                </a>
+            </li>
+        </ul>
+
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -128,17 +138,19 @@
         </nav>
 
 
-        <nav class="toogle-sidebar-button">
-            <ul class="nav nav-pills nav-sidebar flex-column">
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-widget="pushmenu">
-                        <i class="fa text-primary" ></i>
-                        <p>{% translate "Toggle Sidebar" %}</p>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+        
         <!-- /.sidebar-menu -->
     </div>
     <!-- /.sidebar -->
+    <nav class="toogle-sidebar-button" style="bottom: 0px !important; position: absolute !important; zindex: 99 !important">
+        <ul class="nav nav-pills nav-sidebar flex-column">
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-widget="pushmenu">
+                    <i class="fa text-primary" ></i>
+                    <p>{% translate "Toggle Sidebar" %}</p>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
 </aside>
