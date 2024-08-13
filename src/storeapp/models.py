@@ -33,6 +33,7 @@ class StoreProject(BaseModel):
     name = models.CharField(max_length=100, unique=True, verbose_name=_('Project Name'))
     image = models.ImageField(upload_to=app_path, storage=S3Boto3Storage(), verbose_name=_('Image'))
     package = models.CharField(max_length=100,unique=True, verbose_name=_('Project Package'))
+    playstore_url = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('PlayStore Url'))
     description = models.TextField(verbose_name=_('Project Description'))
     
     def last_version(self):

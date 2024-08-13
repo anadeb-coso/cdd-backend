@@ -12,18 +12,21 @@ class StoreProjectAdmin(admin.ModelAdmin):
         'name',
         'image',
         'package',
+        'playstore_url',
         'description',
     )
     list_display = (
         'id',
         'name',
         'package',
+        'playstore_url',
         'description',
     )
     search_fields = (
         'id',
         'name',
         'package',
+        'playstore_url',
         'description',
     )
 
