@@ -1005,3 +1005,55 @@ msgstr "Planification"
 #: .\dashboard\planning
 msgid "Week"
 msgstr "Semaine"
+
+#: .\dashboard\planning
+msgid "Show my calendar"
+msgstr "Afficher mon calendrier"
+
+#: .\dashboard\planning
+msgid "Task Status"
+msgstr "Statut de la tâche"
+
+#: .\dashboard\planning
+msgid "Detail"
+msgstr "Détail"
+
+#: .\dashboard\planning
+msgid "the"
+msgstr "le"
+
+#: .\dashboard\planning
+msgid "at"
+msgstr "à"
+
+#: .\dashboard\planning
+msgid "Another activity was carried out instead of the planned one. Below are the details of the activity carried out"
+msgstr "Autre activité a été éffectuée à la place de celle qui était planifiée. Ci-dessous les détails de l'activité réalisée"
+
+#: .\dashboard\planning
+msgid "Comment not mentioned"
+msgstr "Commentaire non mentionné"
+
+#: .\dashboard\planning
+msgid "Free Task?"
+msgstr "Tâche libre"
+
+#: .\dashboard\planning
+msgid "Add comment"
+msgstr "Ajouter commentaire"
+
+#: .\dashboard\planning
+msgid "Recording in progress..."
+msgstr "Enregistrement en cours..."
+
+#: .\dashboard\planning
+msgid "The comment was successfully saved."
+msgstr "Le commentaire a été enregistré avec succès."
+
+#: .\dashboard\planning
+msgid "The comment was not successfully saved."
+msgstr "Le commentaire n'a pas été enregistré avec succès."
+
+#: .\dashboard\planning
+msgid "No comments found"
+msgstr "Aucun commentaire trouvé"
