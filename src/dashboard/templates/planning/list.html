@@ -158,24 +158,48 @@
                     <div class="col-3 col-lg mb-2 mb-lg-0">
                         
                         <div class="header">
-                            <i id="prevWeek" class="nav-icon fa fa-chevron-left text-success"></i>
-                            <div class="font-weight-bold"><span id="weekInfo">{% translate "Week" %}</span> <span id="weekInfo">34</span></div>
-                            <i id="nextWeek" class="nav-icon fa fa-chevron-right text-success"></i>
+                            <i id="prevWeek" class="nav-icon fa fa-chevron-left text-success" style="cursor: pointer;"></i>
+                            <div ><span class="font-weight-bold">{% translate "Week" %} </span> <span id="weekInfo">??</span></div>
+                            <i id="nextWeek" class="nav-icon fa fa-chevron-right text-success" style="cursor: pointer;"></i>
                         </div>
                     </div>
 
 
-                    <div class="col-2 col-lg input-group mb-2 mb-lg-0">
-                        <div class="input-group-prepend">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        </div>
-                        <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
-                    </div>
-                    
-                    
                     <div class="col-2 col-lg mb-2 mb-lg-0">
-                        {% bootstrap_field form.commune show_label=False %}
+                        <div class="form-check justify-content-center" style="margin-top: 12px !important; margin-left: 13px;">
+                            <input class="form-check-input" type="checkbox" value="" id="show_my_calendar">
+                            <label class="form-check-label" for="show_my_calendar">
+                                {% translate "Show my calendar" %} 
+                            </label>
+                        </div>
                     </div>
+                          
+                    
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_task_status">
+                            <select class="form-control" id="id_task_status" name="task_status" style="width: 100%;">
+                                <option value="All" >{% translate 'All' %}</option>
+                                <option value="pending">{% translate 'Pending' %}</option>
+                                <option value="completed">{% translate 'Completed' %}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_facilitators">
+                            <select class="form-control" id="id_facilitator" name="facilitato" style="width: 100%;">
+                                <option value="All" >{% translate 'All' %}</option>
+                                {% for facilitator in facilitators %}
+                                    <option value="{{ facilitator.id }}">{{ facilitator.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+
                     <div class="col-2 col-lg mb-2 mb-lg-0">
                         {% bootstrap_field form.canton show_label=False %}
                     </div>
@@ -208,9 +232,8 @@
     {{ block.super }}
 
     <script src="{% static 'js/cascade_requests.js' %}"></script>
-
-
-    
+    <script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+    <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
 
 
     <script type="text/javascript">
@@ -236,7 +259,7 @@
             return `${year}/${month}/${day}`;
         }
 
-        let ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"]
+        let ids = ["id_canton", "id_village"]
         var type_field = "all";
         let spin = $('#spin');
         let facilitators = $('#facilitators-list');
@@ -246,6 +269,10 @@
         let id_commune = $('#id_commune');
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
+
+        let id_facilitator = $('#id_facilitator');
+        let id_task_status = $('#id_task_status');
+        let show_my_calendar = $('#show_my_calendar');
         
         var currentWeek = null;
         var currentMondayDate = null;
@@ -279,48 +306,45 @@
 
 
         function loadFacilitators(type_field = "") {
-            console.log(type_field)
             if ($("#id_" + type_field).val() || type_field == "all") {
-                {% comment %}
-                    let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
-                    ajax_request_cascade_administrative_level(cascade_url, "id_region");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_commune");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
+                
 
                 $(".facilitators-filter select").attr('disabled', true);
-                $.ajax({
-                    type: 'GET',
-                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
-                    data: {
-                        parent_id: $("#id_" + type_field).val()
-                    },
-                    success: function (data) {
-                        if (type_field == "region") {
-                            set_datas_administrative_level(id_prefecture, data.prefectures);
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "prefecture") {
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "commune") {
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "canton") {
-                            set_datas_administrative_level(id_village, data.villages);
-                        }
 
-                    },
-                    error: function (data) {
-                        alert(error_server_message + "Error " + data.status);
-                        $(".facilitators-filter select").attr('disabled', false);
-                    }
-                }).done(function () {
-                        $(".facilitators-filter select").attr('disabled', false);
-                    }
-                );
+                if(ids.includes($("#id_" + type_field).val())){
+                    $.ajax({
+                        type: 'GET',
+                        url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                        data: {
+                            parent_id: $("#id_" + type_field).val()
+                        },
+                        success: function (data) {
+                            if (type_field == "region") {
+                                set_datas_administrative_level(id_prefecture, data.prefectures);
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "prefecture") {
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "commune") {
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "canton") {
+                                set_datas_administrative_level(id_village, data.villages);
+                            }
+
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                            $(".facilitators-filter select").attr('disabled', false);
+                        }
+                    }).done(function () {
+                            $(".facilitators-filter select").attr('disabled', false);
+                        }
+                    );
+                }
 
 
                 spin.show();
@@ -337,6 +361,9 @@
                         type_field: type_field,
                         is_training: "{{ is_training }}",
                         is_develop: "{{ is_develop }}",
+                        show_my_calendar: show_my_calendar.is(':checked'),
+                        task_status: id_task_status.val(),
+                        id_facilitator: id_facilitator.val(),
                         
                         current_week: currentWeek ?? null,
                         current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
@@ -345,10 +372,13 @@
                         spin.hide();
 
                         facilitators.html(response);
+
+                        $(".facilitators-filter select").attr('disabled', false);
                     },
                     error: function (data) {
                         spin.hide();
                         alert(error_server_message + "Error " + data.status);
+                        $(".facilitators-filter select").attr('disabled', false);
                     }
                 });
 
@@ -360,17 +390,24 @@
         loadFacilitators("all");
 
         $('.facilitators-filter select').on('change', function () {
-            type_field = "";
-            if ($(this).attr('id') && $(this).val()) {
-                type_field = $(this).attr('id').split('_')[1];
-                {% comment %} for (let i = 0; i < ids.length; i++) {
-                    if (!(ids[i] == $(this).attr('id'))) {
-                        $("#" + ids[i]).val(null).trigger('change.select2');
-                    }
-                } {% endcomment %}
+            if($(this).attr('id') && ids.includes($(this).attr('id'))){
+                type_field = "";
+                if ($(this).val()) {
+                    type_field = $(this).attr('id').split('_')[1];
+                    {% comment %} for (let i = 0; i < ids.length; i++) {
+                        if (!(ids[i] == $(this).attr('id'))) {
+                            $("#" + ids[i]).val(null).trigger('change.select2');
+                        }
+                    } {% endcomment %}
+                }
             }
             loadFacilitators(type_field);
         });
+        $('.facilitators-filter #show_my_calendar').on('change', function () {
+            loadFacilitators(type_field);
+        });
+
+        
 
         $("#clear_all_filters").on("click", function () {
             $('.facilitators-filter input').val('');
@@ -394,7 +431,18 @@
         });
 
 
-        
+
+        function loadComments() {
+            $('#load-comments-spin').show();
+            $('#comments').load("{% url 'dashboard:planning:task_plan_comments' %}", function (
+                response, status, xhr) {
+                if (status === "error") {
+                    alert(error_server_message + "Error " + response.status);
+                }
+                $('#load-comments-spin').hide();
+            });
+        }
+
 
     </script>
 
@@ -406,16 +454,12 @@
 
 {% block select2 %}
     <script type="text/javascript">
-        $("#id_region").select2({
-            placeholder: "{% translate 'Region' %}",
+        $("#id_task_status").select2({
+            placeholder: "{% translate 'Task Status' %}",
             allowClear: true
         });
-        $("#id_prefecture").select2({
-            placeholder: "{% translate 'Prefecture' %}",
-            allowClear: true,
-        });
-        $("#id_commune").select2({
-            placeholder: "{% translate 'Commune' %}",
+        $("#id_facilitator").select2({
+            placeholder: "{% translate 'Facilitators' %}",
             allowClear: true,
         });
         $("#id_canton").select2({

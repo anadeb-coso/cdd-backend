@@ -1,0 +1,36 @@
+{% load static i18n custom_tags %}
+{% for comment in comments %}
+    <div class="row">
+        <div class="col-6">
+            {% with indexed_users|get_indexed_user:comment.user_id as color_index %}
+                <div class="circle-icon float-left mr-2 navbar-{{ colors|next_in_circular_list:color_index }}">
+                    <div class="center-32 pt-1 text-white text-bold-family">
+                        {% get_initials comment.user_name %}
+                    </div>
+                </div>
+            {% endwith %}
+            <div class="text-bold-family">
+                {{ comment.user_name }}
+            </div>
+            <div class="text-regular-family">
+                {{ comment.created_date|string_to_date|date:'j-F-Y' }}
+            </div>
+        </div>
+        <div class="col-6 text-right lh15 mt-3 text-regular-family">
+            {% get_hour comment.created_date %}
+        </div>
+    </div>
+    <div class="row border-bottom mt-2 mb-3">
+        <div class="col-10 mb-2 text-regular-family mb-3">
+            <p id="issue_comment_comment">
+            {{ comment.comment|safe }}
+            </p>
+        </div>
+    </div>
+{% empty %}
+    <div class="row">
+        <div class="col-12 text-center">
+            {% translate 'No comments found' %}
+        </div>
+    </div>
+{% endfor %}

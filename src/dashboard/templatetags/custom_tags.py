@@ -24,6 +24,9 @@ def date_order_format(date):
     data = date.split('-') if date else []
     return f'{data[2]}{data[1]}{data[0]}' if len(data) > 2 else ''
 
+@register.filter
+def get_indexed_user(dictionary, key):
+    return dictionary.get(key, 0)
 
 @register.simple_tag
 def get_date(date_time):

@@ -1,0 +1,316 @@
+{% load bootstrap4 i18n static custom_tags %}
+<script src="{% static 'js/disableOnSubmit.js' %}"></script>
+<style>
+    .fieldset {
+        border: solid 2px gray;
+        margin-bottom: 10px !important;
+    }
+    .fieldset fieldset .content {
+        width: 95% !important;
+    }
+    .fieldset fieldset .content:last-of-type {
+        margin-left: auto;
+    }
+    fieldset {
+    background-color: #eeeeee;
+    }
+
+    legend {
+    background-color: gray;
+    color: white;
+    padding: 5px 10px;
+    }
+
+    input, textarea {
+    margin: 5px;
+    }
+
+    textarea {
+        text-align: left !important;
+    }
+
+    .attach-file a {
+        float: right !important;
+        margin-right: 45px !important;
+    }
+    .attach-file p {
+        margin-left: 15px !important;
+        margin-top: 8px !important;
+    }
+</style>
+
+<div class="modal-dialog modal-confirmation modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {{ task.name }}
+                 (CVD : <b>{{ task.administrative_level_name }}</b>)
+            </h5>
+            <div class="col-sm-2 text-right">
+                <div>
+                    {% if task_plan.completed or task_plan.is_another %}
+                        <div class="status-badge badge-completed">
+                            {% translate 'Completed' %}
+                        </div>
+                    {% else %}
+                        <div class="status-badge badge-pending">
+                            {% translate 'Pending' %}
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+            {% comment %} <div class="modal-title mx-auto">
+                <div class="fs29 text-bold-family text-primary">
+                    {{ title }}
+                </div>
+                {% if subtitle %}
+                    <p>
+                        <small class="subtitle">{{ subtitle }}</small>
+                    </p>
+                {% endif %}
+            </div> {% endcomment %}
+            <button type="button" class="border-0 bg-transparent close-modal" data-dismiss="modal" aria-label="Close">
+                <div class="circle-icon bg-primary">
+                    <div class="center-27">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+            </button>
+        </div>
+        <form id="{{ id_form }}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="overlay-wrapper">
+                    {% if picture %}
+                        <div class="text-center">
+                            <img id="modal_form_picture" src="{{ picture }}" class="{{ picture_class }}">
+                        </div>
+                    {% endif %}
+                    
+                    <div class="fieldset">
+                        <fieldset>
+                            <div class="content">
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Phase" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{{ task.phase_name }}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Activity" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{{ task.activity_name }}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Free Task?" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{% if task.type == 'free_task' %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Village" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{% if task_plan.administrative_level_name %}{{ task_plan.administrative_level_name }}{% else %}{{ task.administrative_level_name }}{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Planifiée sur " %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{{ task_plan.planned_datetime_start|date:"l" }}, {% translate 'the' %} {{ task_plan.planned_datetime_start|date:"d F Y" }} {% translate 'of' %} {{ task_plan.planned_datetime_start|date:"P" }} {% translate 'at' %} {{ task_plan.planned_datetime_end|date:"P" }}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+
+                                {% if task_plan.is_another %}
+                                <div class="fieldset">
+                                    <fieldset>
+                                        <legend>{% translate "Another activity was carried out instead of the planned one. Below are the details of the activity carried out" %}</legend>
+                                        <div class="content">
+
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Phase" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.phase.name }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Activity" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.activity.name }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Task" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.task_name }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Free Task?" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{% if task_plan.is_another %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+
+                                        </div>
+                                    </fieldset>
+                                </div>
+                                {% endif %}
+
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Comment" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <textarea readonly class="form-control">{% if task_plan.another_detail.comment %}{{ task_plan.another_detail.comment }}{% else %}{% translate 'Comment not mentioned' %}{% endif %}</textarea>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                
+                                {% if task_plan.photo_uri %}
+                                <br />
+                                <div class="form-group row">
+                                    <a href="{{ task_plan.photo_uri|imgAWSS3Filter }}" target="_blank" >
+                                        <img src="{{ task_plan.photo_uri|imgAWSS3Filter }}" width="200" height="200" />
+                                    </a>
+                                    <div class="clearfix"></div>
+                                </div>
+                                {% endif %}
+
+                                
+                                
+                                <div class="card-body overflow-y-auto">
+                                    <div class="overlay-wrapper">
+                                        <div id="comments">
+                                            {% include 'planning/comments.html' with comments=task_plan.comments colors=colors indexed_users=indexed_users %}
+                                        </div>
+                                        <div class="overlay" id="load-comments-spin">
+                                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                
+                                <div id="add_comment_content">
+                                    <br />
+                                    <div class="form-group row">
+                                        <label class="col-sm-3 col-form-label">{% translate "Comment" %}</label>
+                                        <div class="col-sm-8">
+                                            <textarea class="form-control" id="id_comment_value"></textarea>
+                                        </div>
+                                        <label class="col-sm-1 col-form-label">
+                                            <div class="center-27">
+                                                <i class="fas fa-times" style="cursor: pointer;"  id="add_comment_close"></i>
+                                            </div>
+                                        </label>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                </div>
+                                
+
+                                <button type="button" name="add_comment_btn" class="btn btn-primary add_comment float-md-right"
+                                    style="margin-top: 25px; width: 50%; margin: auto;"
+                                    id="id_add_comment_btn">
+                                    {% translate 'Add comment' %}
+                                </button>
+                                <button type="button" name="save_comment_btn" class="btn btn-primary save_comment float-md-right"
+                                    style="margin-top: 25px; width: 50%; margin: auto;"
+                                    id="id_save_comment_btn">
+                                    <span id="save_comment_btn_label">{% translate 'Save' %}</span>
+                                </button>
+
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="overlay submit-spin">
+                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#load-comments-spin').hide();
+
+        let add_comment_content = $("#add_comment_content");
+        let id_add_comment_btn = $("#id_add_comment_btn");
+        let id_save_comment_btn = $("#id_save_comment_btn");
+        let save_comment_btn_label = $("#save_comment_btn_label");
+        let add_comment_close = $("#add_comment_close");
+        
+        add_comment_content.hide();
+        id_save_comment_btn.hide();
+
+        id_add_comment_btn.click(function(){
+            id_add_comment_btn.hide();
+            add_comment_content.show();
+            id_save_comment_btn.show();
+        });
+        add_comment_close.click(function(){
+            id_save_comment_btn.hide();
+            add_comment_content.hide();
+            id_add_comment_btn.show();
+        });
+        id_save_comment_btn.click(function(){
+            save_comment_btn_label.textCentent = "{% translate 'Recording in progress...' %}"
+
+
+            if(id_comment_value.val()){
+                $.ajax({
+                    type: "POST",
+                    url: "{% url 'dashboard:planning:add_comment_to_plan_task' %}",
+                    data: {
+                        "comment": id_comment_value.val(),
+                        "no_sql_db_name": "{{ no_sql_db_name }}",
+                        "task_plan_datetime": "{{ task_plan_datetime }}",
+                        "task__id": "{{ task__id }}",
+                    },
+                    success: function (response) {
+                                    
+                        id_save_comment_btn.hide();
+                        add_comment_content.hide();
+                        id_add_comment_btn.show();
+                        id_comment_value.val('');
+
+                        showPopupMessage(response.msg);
+
+                        
+                        if(response.comments){
+                            loadComments()
+                        }
+                    },
+                    error: function (data, status, error) {
+                                if(error == "Forbidden"){
+                                    alert(`{% translate "You don't have permission to request this request." %}` + " Error " + data.status);
+                                }else{
+                                    alert(error_server_message + "Error " + data.status);
+                                }
+                            }
+                });
+            }
+
+        });
+    });
+</script>

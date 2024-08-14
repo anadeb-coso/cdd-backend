@@ -3,10 +3,13 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
 from datetime import datetime, timedelta
+from django.contrib import messages
+from django.shortcuts import render
+from django.http import Http404
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
-from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
+from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin, ModalFormMixin
 from dashboard.facilitators.forms import FilterFacilitatorForm
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from assignments.models import AssignAdministrativeLevelToFacilitator
@@ -15,14 +18,36 @@ from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
 from cdd.constants import PHASES_COLORS, PHASES_WITH_THEIR_NUMBERS
 from cdd.utils import elements_communs
+from dashboard.planning.forms import TaskPlanCommentForm
 
+
+
+class PlanMixin:
+    task = None
+    facilitator_db = None
+
+    def get_query_result(self, **kwargs):
+        return self.facilitator_db.get_query_result({
+            "_id": kwargs['task__id']
+        })
+    
+    def dispatch(self, request, *args, **kwargs):
+        nsc = NoSQLClient()
+        self.facilitator_db = nsc.get_db(kwargs['no_sql_db_name'])
+        docs = self.get_query_result(**kwargs)
+        try:
+            self.task = self.grm_db[docs[0][0]['_id']]
+        except Exception:
+            raise Http404
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class PlanningListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
     queryset = Facilitator.objects.filter(active=True)
     template_name = 'planning/list.html'
-    context_object_name = 'planning'
+    context_object_name = 'facilitators'
     title = gettext_lazy('Planning')
     active_level1 = 'planning'
     breadcrumb = [
@@ -84,6 +109,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
 
         current_week = self.request.GET.get('current_week')
         current_monday_date = self.request.GET.get('current_monday_date')
+        show_my_calendar = self.request.GET.get('show_my_calendar')
+        task_status = self.request.GET.get('task_status', 'All')
+        id_facilitator = self.request.GET.get('id_facilitator', 'All')
 
 
         if current_week and current_week != 'null':
@@ -143,6 +171,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
             facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=True))
 
+        if id_facilitator not in  ('All', ''):
+            facilitators = facilitators.filter(id=int(id_facilitator))
+
         _facilitators =  {
             str(current_week): [
                 # {
@@ -180,8 +211,12 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                             "task": task['name'],
                             "color": PHASES_COLORS[PHASES_WITH_THEIR_NUMBERS[task['phase_name']]],
                             "datetime": p['planned_datetime_start'],
-                            "task_order": task.get('task_order')
-                         } for p in task['planning'] if p['planned_date'] in week_dates
+                            "task_order": task.get('task_order'),
+                            "task__id": task.get('_id'),
+                            "no_sql_db_name": f.no_sql_db_name
+                        } for p in task['planning'] if p['planned_date'] in week_dates and (
+                            (task_status == 'completed' and (p.get('completed') or p.get('is_another'))) or (task_status == 'pending' and (not p.get('completed') and not p.get('is_another'))) or (task_status in  ('All', ''))
+                        )
                     ]
 
                 _f = {
@@ -197,3 +232,128 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
 
         return self.get_results()
+    
+
+
+
+class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, JSONResponseMixin, generic.TemplateView):
+    template_name = "planning/task_detail_modal.html"
+    id_form = "task_plan_comment"
+    title = gettext_lazy('Detail')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        no_sql_db_name = kwargs['no_sql_db_name']
+        task_plan_datetime = kwargs['task_plan_datetime']
+        task__id = kwargs['task__id']
+        nsc = NoSQLClient()
+        
+        facilitator_database = nsc.get_db(no_sql_db_name)
+        try:
+            task = facilitator_database.get_query_result({
+                "_id": task__id,
+            })[:][0]
+        except Exception:
+            raise Http404
+
+        context['task'] = task
+        context['task_plan'] = None
+
+        task_planning = [p for p in task['planning'] if p['planned_datetime_start'] == task_plan_datetime]
+        
+        if task_planning:
+            context['task_plan'] = task_planning[0]
+            context['task_plan']['planned_datetime_start'] = datetime.strptime(context['task_plan']['planned_datetime_start'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            context['task_plan']['planned_datetime_end'] = datetime.strptime(context['task_plan']['planned_datetime_end'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            context['task_plan']['created_date'] = datetime.strptime(context['task_plan']['created_date'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            context['task_plan']['updated_date'] = datetime.strptime(context['task_plan']['updated_date'], "%Y-%m-%dT%H:%M:%S.%fZ") if 'updated_date' in context['task_plan'] else context['task_plan']['created_date']
+            context['task_plan']['comments'] = context['task_plan']['comments'] if 'comments' in context['task_plan'] else list()
+
+            context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
+            users = {c['id'] for c in context['task_plan']['comments']} | {self.request.user.id}
+            indexed_users = {}
+            for index, user_id in enumerate(users):
+                indexed_users[user_id] = index
+            context['indexed_users'] = indexed_users
+
+        context['no_sql_db_name'] = no_sql_db_name
+        context['task_plan_datetime'] = task_plan_datetime
+        context['task__id'] = task__id
+        return context
+    
+
+
+class SaveCommentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def post(self, request, *args, **kwargs):
+        no_sql_db_name = self.request.POST.get('no_sql_db_name')
+        task_plan_datetime = self.request.POST.get('task_plan_datetime')
+        task__id = self.request.POST.get('task__id')
+        comment = self.request.POST.get('comment').strip()
+        nsc = NoSQLClient()
+        
+        facilitator_database = nsc.get_db(no_sql_db_name)
+        try:
+            docs = facilitator_database.get_query_result({
+                "_id": task__id,
+            })
+            task = facilitator_database[docs[0][0]['_id']]
+        except Exception:
+            raise Http404
+
+        save = False
+        for i in range(len(task['planning'])):
+            p = task['planning'][i]
+            if p['planned_datetime_start'] == task_plan_datetime:
+                due_at = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                comments = p['comments'] if 'comments' in p else list()
+                comments.insert(0, {
+                    "user_name": request.user.name,
+                    "user_id": request.user.id,
+                    "comment": comment,
+                    "created_date": due_at,
+                    "type": "comment"
+                })
+
+                task['planning'][i]['comments'] = comments
+                task.save()
+                save = True
+                break
+            
+        
+        msg = gettext_lazy("The comment was successfully saved." if save else "The comment was not successfully saved.")
+        messages.add_message(self.request, messages.SUCCESS if save else messages.WARNING, msg, extra_tags='success' if save else 'warning')
+        context = {
+            'msg': render(self.request, 'common/messages.html').content.decode("utf-8"),
+            'comments': comments
+        }
+        return self.render_to_json_response(context, safe=False)
+    
+
+class TaskPlanCommentListView(PlanMixin, AJAXRequestMixin, LoginRequiredMixin, generic.TemplateView):
+    
+    template_name = 'planning/comments.html'
+    context_object_name = 'comments'
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        task_plan_datetime = kwargs['task_plan_datetime']
+        context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
+
+        
+        task_planning = [p for p in self.task['planning'] if p['planned_datetime_start'] == task_plan_datetime]
+        if task_planning:
+            context['task_plan'] = task_planning[0]
+
+            comments = context['task_plan']['comments'] if 'comments' in context['task_plan'] else list()
+
+            users = {c['id'] for c in comments} | {self.request.user.id}
+
+            indexed_users = {}
+            for index, user_id in enumerate(users):
+                indexed_users[user_id] = index
+            context['indexed_users'] = indexed_users
+
+            context['comments'] = comments
+
+        return context

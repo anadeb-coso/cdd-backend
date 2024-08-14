@@ -28,13 +28,13 @@
                     <thead>
                         <tr>
                             <th width="16%" id="timeColumn" class="time-column" >&nbsp;</th>
-                            <th width="12%" class="day-column">{% translate "Monday" %}<span id="dayColumn0"></span></th>
-                            <th width="12%" class="day-column">{% translate "Tuesday" %}<span id="dayColumn1"></span></th>
-                            <th width="12%" class="day-column">{% translate "Wednesday" %}<span id="dayColumn2"></span></th>
-                            <th width="12%" class="day-column">{% translate "Thursday" %}<span id="dayColumn3"></span></th>
-                            <th width="12%" class="day-column">{% translate "Friday" %}<span id="dayColumn4"></span></th>
-                            <th width="12%" class="day-column">{% translate "Saturday" %}<span id="dayColumn5"></span></th>
-                            <th width="12%" class="day-column">{% translate "Sunday" %}<span id="dayColumn6"></span></th>
+                            <th width="12%" class="day-column">{% translate "Monday" %} <span id="dayColumn0"></span></th>
+                            <th width="12%" class="day-column">{% translate "Tuesday" %} <span id="dayColumn1"></span></th>
+                            <th width="12%" class="day-column">{% translate "Wednesday" %} <span id="dayColumn2"></span></th>
+                            <th width="12%" class="day-column">{% translate "Thursday" %} <span id="dayColumn3"></span></th>
+                            <th width="12%" class="day-column">{% translate "Friday" %} <span id="dayColumn4"></span></th>
+                            <th width="12%" class="day-column">{% translate "Saturday" %} <span id="dayColumn5"></span></th>
+                            <th width="12%" class="day-column">{% translate "Sunday" %} <span id="dayColumn6"></span></th>
                         </tr>
                     </thead>
                     <tbody id="calendarContent">
@@ -42,15 +42,20 @@
                     </tbody>
                 </table>
             </div>
+            <div class="overlay" id="task-plan-detail-spin">
+                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+            </div>
         </div>
 
 
 
+        <div id="taskPlanDetailModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 
 
 
 
 <script type="text/javascript">
+    var task_planed_detail=null;
         currentWeek = parseInt("{{ currentWeek }}");
         currentMondayDate = new Date('{{ currentMondayDate|date:"Y/m/d" }}');
 
@@ -62,8 +67,25 @@
                 return chaine;
             }
         }
+
+
+        function get_current_task_planed (t){
+            console.log(typeof t)
+            console.log(t)
+            task_planed_detail = t;
+            //const taskData = JSON.parse(taskDataStr);
+        }
+
     $(document).ready(function () {
         {% get_current_language as lang %}
+
+        class TaskPlanDetailFormAjaxSubmit extends FormAjaxSubmit {
+            submitted_form() {
+                
+            }
+        }
+        let task_plan_detail_form_ajax = new TaskPlanDetailFormAjaxSubmit();
+        let task_plan_detail_modal = $('#taskPlanDetailModalForm');
 
         const weekInfo = document.getElementById('weekInfo');
         const prevWeek = document.getElementById('prevWeek');
@@ -80,8 +102,9 @@
             document.getElementById('dayColumn5'),
             document.getElementById('dayColumn6')
         ];
+        let task_plan_detail_spin = $('#task-plan-detail-spin');
+        task_plan_detail_spin.hide();
         
-        {% comment %} const tasks = convert_array_request_to_js_array("{{ planning|safe }}") {% endcomment %}
         const tasks = convert_array_request_to_js_array(
             "{{ planning }}"
             .replaceAll("&#x27;", "'")
@@ -97,7 +120,7 @@
                 currentDate.setDate(mondayDate.getDate() + i);
                 const dayName = currentDate.toLocaleDateString('fr-FR', { weekday: 'long' });
                 const dayNumber = currentDate.getDate();
-                dayColumns[i].textContent = ` ${dayNumber}`;//`${dayName} ${dayNumber}`;
+                dayColumns[i].textContent = `${dayNumber}`;//`${dayName} ${dayNumber}`;
             }
         }
 
@@ -158,10 +181,13 @@ function renderCalendar(week) {
                 for (let a = 0; a < tasksData.length; a++) {
                     let dateObject = new Date(tasksData[a].datetime);
                     let hours = dateObject.getHours();
+                    
                     if(12 > hours && i_12 < 3){
                         _taskCell[i_12] = `
                         <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left;">` +
+                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
+                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
+                                >` +
                                 `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
                             `</div>
                             <div style="width: 10%; float: right;">
@@ -177,7 +203,9 @@ function renderCalendar(week) {
                     else if(16 > hours && i_16 < 6){
                         _taskCell[i_16] = `
                         <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left;">` +
+                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
+                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
+                                >` +
                                 `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
                             `</div>
                             <div style="width: 10%; float: right;">
@@ -193,7 +221,9 @@ function renderCalendar(week) {
                         if(_taskCell[i_]){
                             _taskCell[i_] = `
                         <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left;">` +
+                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
+                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
+                                >` +
                                 `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
                             `</div>
                             <div style="width: 10%; float: right;">
@@ -207,7 +237,9 @@ function renderCalendar(week) {
                         }else{
                             _taskCell[a] = `
                         <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left;">` +
+                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
+                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
+                                >` +
                                 `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
                             `</div>
                             <div style="width: 10%; float: right;">
@@ -221,6 +253,10 @@ function renderCalendar(week) {
                         }
                         
                     }
+
+
+
+
                 }
                 taskCell += _taskCell.join("");
                 
@@ -234,7 +270,7 @@ function renderCalendar(week) {
 
 
     });
-    weekInfo.textContent = `Semaine ${week}`;
+    weekInfo.textContent = `${week}`;
     updateDates(currentMondayDate);
 }
 
@@ -242,7 +278,28 @@ function renderCalendar(week) {
 //table.clear().draw();
 
 
-renderCalendar(currentWeek)
+renderCalendar(currentWeek);
+
+
+
+
+
+        $(".task-plan").on('click', function () {
+            task_plan_detail_spin.show();
+            let elt_id = $(this).attr('id').split("__");
+            let no_sql_db_name = elt_id[0];
+            let task_id = elt_id[1];
+            let task_plan_datetime = elt_id[2];
+            let url = `{% url 'dashboard:planning:plan_task_detail' "no_sql_db_name" "task__id" "task_plan_datetime" %}`;
+            url = url.replace('no_sql_db_name', no_sql_db_name).replace('task__id', task_id).replace('task_plan_datetime', task_plan_datetime);
+            task_plan_detail_form_ajax.load_form('#open_reason_form', task_plan_detail_modal, url).then(r => {
+                task_plan_detail_spin.hide();
+            }).catch(e => {
+                task_plan_detail_spin.hide();
+            });
+            
+        });
+
 
     });
 
