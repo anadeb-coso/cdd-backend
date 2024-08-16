@@ -71,7 +71,7 @@
                 {% endif %}
             </div> {% endcomment %}
             <button type="button" class="border-0 bg-transparent close-modal" data-dismiss="modal" aria-label="Close">
-                <div class="circle-icon bg-primary">
+                <div class="circle-icon bg-gray">
                     <div class="center-27">
                         <i class="fas fa-times"></i>
                     </div>
@@ -132,7 +132,7 @@
                                     <div class="clearfix"></div>
                                 </div>
 
-                                {% if task_plan.is_another %}
+                                {% if task_plan.is_another and task_plan.another_detail %}
                                 <div class="fieldset">
                                     <fieldset>
                                         <legend>{% translate "Another activity was carried out instead of the planned one. Below are the details of the activity carried out" %}</legend>
@@ -165,7 +165,7 @@
                                             <div class="form-group row">
                                                 <label class="col-sm-3 col-form-label">{% translate "Free Task?" %}</label>
                                                 <div class="col-sm-9">
-                                                    <input type="text" readonly value="{% if task_plan.is_another %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}" class="form-control" />
+                                                    <input type="text" readonly value="{% if task_plan.is_free_task %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}" class="form-control" />
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
@@ -195,17 +195,19 @@
                                 {% endif %}
 
                                 
-                                
-                                <div class="card-body overflow-y-auto">
-                                    <div class="overlay-wrapper">
-                                        <div id="comments">
-                                            {% include 'planning/comments.html' with comments=task_plan.comments colors=colors indexed_users=indexed_users %}
-                                        </div>
-                                        <div class="overlay" id="load-comments-spin">
-                                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                <div class="card" style="margin-right: 20px !important; margin-top: 15px !important;">
+                                    <div class="card-body overflow-y-auto">
+                                        <div class="overlay-wrapper" style="width: 80%; margin: auto !important;">
+                                            <div id="comments">
+                                                {% include 'planning/comments.html' with comments=task_plan.comments colors=colors indexed_users=indexed_users %}
+                                            </div>
+                                            <div class="overlay" id="load-comments-spin">
+                                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
+
 
                                 
                                 <div id="add_comment_content">
@@ -224,6 +226,13 @@
                                     </div>
                                 </div>
                                 
+
+
+                                <button type="button" class="btn bg-transparent close-modal bg-gray" data-dismiss="modal" aria-label="Close">
+                                    {% translate 'Close' %}
+                                </button>
+
+
 
                                 <button type="button" name="add_comment_btn" class="btn btn-primary add_comment float-md-right"
                                     style="margin-top: 25px; width: 50%; margin: auto;"
@@ -259,6 +268,7 @@
         let id_save_comment_btn = $("#id_save_comment_btn");
         let save_comment_btn_label = $("#save_comment_btn_label");
         let add_comment_close = $("#add_comment_close");
+        let id_comment_value = $("#id_comment_value");
         
         add_comment_content.hide();
         id_save_comment_btn.hide();
@@ -274,7 +284,8 @@
             id_add_comment_btn.show();
         });
         id_save_comment_btn.click(function(){
-            save_comment_btn_label.textCentent = "{% translate 'Recording in progress...' %}"
+            id_save_comment_btn.prop('disabled', true);
+            save_comment_btn_label.text("{% translate 'Recording in progress...' %}");
 
 
             if(id_comment_value.val()){
@@ -293,21 +304,23 @@
                         add_comment_content.hide();
                         id_add_comment_btn.show();
                         id_comment_value.val('');
+                        
+                        id_save_comment_btn.prop('disabled', false);
 
-                        showPopupMessage(response.msg);
-
+                        save_comment_btn_label.text("{% translate 'Save' %}");
                         
                         if(response.comments){
-                            loadComments()
+                            loadComments("{{ no_sql_db_name }}", "{{ task__id }}", "{{ task_plan_datetime }}")
                         }
                     },
                     error: function (data, status, error) {
-                                if(error == "Forbidden"){
-                                    alert(`{% translate "You don't have permission to request this request." %}` + " Error " + data.status);
-                                }else{
-                                    alert(error_server_message + "Error " + data.status);
-                                }
-                            }
+                        id_save_comment_btn.prop('disabled', false);
+                        if(error == "Forbidden"){
+                            alert(`{% translate "You don't have permission to request this request." %}` + " Error " + data.status);
+                        }else{
+                            alert(error_server_message + "Error " + data.status);
+                        }
+                    }
                 });
             }
 

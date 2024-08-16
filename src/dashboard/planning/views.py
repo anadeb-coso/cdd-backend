@@ -36,7 +36,7 @@ class PlanMixin:
         self.facilitator_db = nsc.get_db(kwargs['no_sql_db_name'])
         docs = self.get_query_result(**kwargs)
         try:
-            self.task = self.grm_db[docs[0][0]['_id']]
+            self.task = self.facilitator_db[docs[0][0]['_id']]
         except Exception:
             raise Http404
 
@@ -112,8 +112,13 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         show_my_calendar = self.request.GET.get('show_my_calendar')
         task_status = self.request.GET.get('task_status', 'All')
         id_facilitator = self.request.GET.get('id_facilitator', 'All')
-
-
+        
+        if (id_village in (None, 'null', '', 'All') and current_week in (None, 'null', '', 'All') and \
+            task_status in (None, 'null', '', 'All') and id_facilitator in (None, 'null', '', 'All')):
+            id_canton = id_canton if id_canton != '' else '1973'
+            type_field = type_field if type_field != 'all' else 'canton'
+        
+        
         if current_week and current_week != 'null':
             current_week = current_week
             current_monday_date_object = datetime.strptime(current_monday_date, "%Y/%m/%d").date()
@@ -126,7 +131,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         _id = 0
         facilitators = []
 
-        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
+        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field != 'clear':
             _type = None
             if id_region and type_field == "region":
                 _type = "region"
@@ -199,8 +204,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                     "$in": week_dates
                 }
             })
-            
-            if query_result:
+            _f = None
+            if query_result and query_result[:]:
                 tasks_planed = []
                 
                 for task in query_result[:]:
@@ -224,8 +229,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                     'person': f.name, 'tasks': tasks_planed}
 
             
-            
-            _facilitators[str(current_week)].append(_f)
+            if _f:
+                _facilitators[str(current_week)].append(_f)
 
         return _facilitators
 
@@ -270,7 +275,7 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
             context['task_plan']['comments'] = context['task_plan']['comments'] if 'comments' in context['task_plan'] else list()
 
             context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
-            users = {c['id'] for c in context['task_plan']['comments']} | {self.request.user.id}
+            users = {c['user_id'] for c in context['task_plan']['comments']} | {self.request.user.id}
             indexed_users = {}
             for index, user_id in enumerate(users):
                 indexed_users[user_id] = index
@@ -307,14 +312,16 @@ class SaveCommentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, g
                 due_at = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                 comments = p['comments'] if 'comments' in p else list()
                 comments.insert(0, {
-                    "user_name": request.user.name,
+                    "user_name": f"{request.user.first_name} {request.user.last_name}",
                     "user_id": request.user.id,
                     "comment": comment,
                     "created_date": due_at,
-                    "type": "comment"
+                    "type": "comment",
+                    "comments_read": False
                 })
 
                 task['planning'][i]['comments'] = comments
+                task['planning'][i]['comments_read'] = False
                 task.save()
                 save = True
                 break
@@ -347,7 +354,7 @@ class TaskPlanCommentListView(PlanMixin, AJAXRequestMixin, LoginRequiredMixin, g
 
             comments = context['task_plan']['comments'] if 'comments' in context['task_plan'] else list()
 
-            users = {c['id'] for c in comments} | {self.request.user.id}
+            users = {c['user_id'] for c in comments} | {self.request.user.id}
 
             indexed_users = {}
             for index, user_id in enumerate(users):

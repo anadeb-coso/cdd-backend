@@ -237,6 +237,9 @@
 
 
     <script type="text/javascript">
+        
+        const prevWeek = document.getElementById('prevWeek');
+        const nextWeek = document.getElementById('nextWeek');
 
         function convert_array_request_to_js_array (data_django_safe_str) {
             return JSON.parse(data_django_safe_str
@@ -306,7 +309,7 @@
 
 
         function loadFacilitators(type_field = "") {
-            if ($("#id_" + type_field).val() || type_field == "all") {
+            if ($("#id_" + type_field).val() || ["all", "clear"].includes(type_field)) {
                 
 
                 $(".facilitators-filter select").attr('disabled', true);
@@ -365,7 +368,7 @@
                         task_status: id_task_status.val(),
                         id_facilitator: id_facilitator.val(),
                         
-                        current_week: currentWeek ?? null,
+                        current_week: currentWeek ? currentWeek : null,
                         current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
                     },
                     success: function (response) {
@@ -394,14 +397,21 @@
                 type_field = "";
                 if ($(this).val()) {
                     type_field = $(this).attr('id').split('_')[1];
-                    {% comment %} for (let i = 0; i < ids.length; i++) {
-                        if (!(ids[i] == $(this).attr('id'))) {
-                            $("#" + ids[i]).val(null).trigger('change.select2');
+                }else{
+                    let ids_r = ids.reverse();
+                    for(let i=0; i<ids_r.length; i++){
+                        if($('#'+ids_r[i]).val()){
+                            type_field = $('#'+ids_r[i]).attr('id').split('_')[1];
+                            break;
                         }
-                    } {% endcomment %}
+                    }
                 }
             }
+            if(type_field == ""){
+                type_field = "all";
+            }
             loadFacilitators(type_field);
+            
         });
         $('.facilitators-filter #show_my_calendar').on('change', function () {
             loadFacilitators(type_field);
@@ -412,7 +422,7 @@
         $("#clear_all_filters").on("click", function () {
             $('.facilitators-filter input').val('');
             $('.facilitators-filter select').val(null).trigger('change.select2');
-            loadFacilitators("all");
+            loadFacilitators("clear");
         });
 
 
@@ -432,10 +442,14 @@
 
 
 
-        function loadComments() {
+        function loadComments(no_sql_db_name, task__id, task_plan_datetime) {
             $('#load-comments-spin').show();
-            $('#comments').load("{% url 'dashboard:planning:task_plan_comments' %}", function (
-                response, status, xhr) {
+            $('#comments').load(
+                "{% url 'dashboard:planning:task_plan_comments' 'no_sql_db_name' 'task__id' 'task_plan_datetime' %}"
+                .replace('no_sql_db_name', no_sql_db_name)
+                .replace('task__id', task__id)
+                .replace('task_plan_datetime', task_plan_datetime), 
+                function (response, status, xhr) {
                 if (status === "error") {
                     alert(error_server_message + "Error " + response.status);
                 }
@@ -466,6 +480,8 @@
             placeholder: "{% translate 'Canton' %}",
             allowClear: true,
         });
+        $('#id_canton option[value="1973"]').attr("selected",true);
+        $('#id_canton').val("1973").trigger('change.select2');
         $("#id_village").select2({
             placeholder: "{% translate 'Village' %}",
             allowClear: true,

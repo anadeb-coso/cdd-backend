@@ -88,8 +88,6 @@
         let task_plan_detail_modal = $('#taskPlanDetailModalForm');
 
         const weekInfo = document.getElementById('weekInfo');
-        const prevWeek = document.getElementById('prevWeek');
-        const nextWeek = document.getElementById('nextWeek');
         const calendarContent = document.getElementById('calendarContent');
         const timeColumn = document.getElementById("timeColumn");
         const times = ["08:00", "12:00", "16:00"];
@@ -137,10 +135,37 @@
                 url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
             },
             dom: '',
-            ordering: false
+            ordering: false,
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
         });
         
-    
+    function renderTask (taskData) {
+        return `
+            <div class="task" style="width: 100%;background-color: ${taskData.color} !important; ">
+                <div style="text-align: left; width: 83%; float: left; cursor: pointer;" class="task-plan" id="${taskData.no_sql_db_name}__${taskData.task__id}__${taskData.datetime}"
+                    {% comment %} onclick="get_current_task_planed(\'${taskData.datetime}\')" {% endcomment %}
+                    >` +
+                    `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${taskData.task_order} ${couperChaine(taskData.task, 35)}</span>` +
+                `</div>
+                <div style="width: 17%; float: right;">
+                    ${(taskData.planning.completed ? true : (taskData.planning.is_another ? true : false)) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                    <br />
+                    ${taskData.planning?.comments ? '<i class="nav-icon fa fa-envelope">'+
+                        (![null, undefined, 0].includes(taskData.planning?.comments?.filter((elt) => [undefined, false].includes(elt.comment_read))?.length) ? (
+                            '<span style="font-size: 7px;background-color: red;text-align: center;color: white;padding: 1px;border-radius: 50px;margin-top: 10px !important;">'
+                                +
+                                taskData.planning?.comments?.filter((elt) => [undefined, false].includes(elt.comment_read))?.length
+                                +
+                            '</span>'
+                        ) : '')
+                    +'</i>' : ''}
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        `;
+    };
     
 
 function renderCalendar(week) {
@@ -149,7 +174,7 @@ function renderCalendar(week) {
     const weekData = tasks[week] || [];
     weekData.forEach(taskRowData => {
 
-        let t = times.map((elt, i) => `<div>${elt ?? ""}</div>${i < 2 ? "<br /><br />" : ""}`)
+        let t = times.map((elt, i) => `<div>${elt ? elt : ""}</div>${i < 2 ? "<br /><br />" : ""}`)
         let personCell = `
         <div style="">
             <div style="float: left; width: 80% !important;font-weight: bold;">${taskRowData.person}</div>
@@ -161,7 +186,8 @@ function renderCalendar(week) {
         let planning_tasks = [personCell];
         for (let i = 0; i < 7; i++) {
             let taskCell = '<div>';
-            const tasksData = taskRowData.tasks.filter(task => task.day === i) ?? [];
+            let tasksData = taskRowData.tasks.filter(task => task.day === i);
+            tasksData = tasksData ? tasksData : [];
             if (tasksData) {
 
                 let _taskCell = [
@@ -173,7 +199,7 @@ function renderCalendar(week) {
                     `<div style="width: 100% !important;">&nbsp;</div>`,
                     `<div style="width: 100% !important;">&nbsp;</div>`,
                 ]
-                tasksData.sort((a, b) => (a.datetime ??  "").localeCompare(b.datetime ?? ""));
+                tasksData.sort((a, b) => (a.datetime ? a.datetime : "").localeCompare(b.datetime ? b.datetime : ""));
                 
                 let i_12 = 0;
                 let i_16 = 3;
@@ -183,78 +209,20 @@ function renderCalendar(week) {
                     let hours = dateObject.getHours();
                     
                     if(12 > hours && i_12 < 3){
-                        _taskCell[i_12] = `
-                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
-                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
-                                >` +
-                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
-                            `</div>
-                            <div style="width: 10%; float: right;">
-                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
-                                <br />
-                                <i class="nav-icon fa fa-envelope"></i>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                            `;
+                        _taskCell[i_12] = renderTask(tasksData[a]);
                         i_12 += 1;
                     }
                     else if(16 > hours && i_16 < 6){
-                        _taskCell[i_16] = `
-                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
-                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
-                                >` +
-                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
-                            `</div>
-                            <div style="width: 10%; float: right;">
-                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
-                                <br />
-                                <i class="nav-icon fa fa-envelope"></i>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                            `;
+                        _taskCell[i_16] = renderTask(tasksData[a]);
                         i_16 += 1;
                     }else{
                         if(_taskCell[i_]){
-                            _taskCell[i_] = `
-                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
-                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
-                                >` +
-                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
-                            `</div>
-                            <div style="width: 10%; float: right;">
-                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
-                                <br />
-                                <i class="nav-icon fa fa-envelope"></i>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                            `;
+                            _taskCell[i_] = renderTask(tasksData[a]);
                         }else{
-                            _taskCell[a] = `
-                        <div class="task" style="width: 100%;background-color: ${tasksData[a].color} !important; ">
-                            <div style="text-align: left; width: 90%; float: left; cursor: pointer;" class="task-plan" id="${tasksData[a].no_sql_db_name}__${tasksData[a].task__id}__${tasksData[a].datetime}"
-                                {% comment %} onclick="get_current_task_planed(\'${tasksData[a].datetime}\')" {% endcomment %}
-                                >` +
-                                `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${tasksData[a].task_order} ${couperChaine(tasksData[a].task, 35)}</span>` +
-                            `</div>
-                            <div style="width: 10%; float: right;">
-                                ${(tasksData[a].planning.completed ?? tasksData[a].planning.is_another) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
-                                <br />
-                                <i class="nav-icon fa fa-envelope"></i>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                            `;
+                            _taskCell[a] = renderTask(tasksData[a]);
                         }
                         
                     }
-
-
 
 
                 }
