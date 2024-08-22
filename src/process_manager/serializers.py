@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from authentication.models import Facilitator
+from process_manager.models import Project
 
 
 class SaveFormDatasSerializer(serializers.Serializer):
@@ -28,3 +29,10 @@ class SaveFormDatasSerializer(serializers.Serializer):
 
         attrs['no_sql_db_name'] = facilitator.no_sql_db_name
         return attrs
+
+
+class ProjectSerializer(serializers.ModelSerializer):
+	class Meta:
+		"""docstring for Meta"""
+		model = Project
+		fields = '__all__'

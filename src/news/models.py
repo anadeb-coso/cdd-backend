@@ -1,0 +1,53 @@
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+import os
+from django.contrib.auth.models import User
+
+from cdd.models_base import BaseModel
+from authentication.models import Facilitator
+
+
+class Category(BaseModel):
+    name = models.CharField(max_length=100, verbose_name=_('Name'))
+    description = models.TextField(verbose_name=_('Description'), null=True, blank=True)
+    
+    def __str__(self):
+        return self.name
+
+
+class Tag(BaseModel):
+    name = models.CharField(max_length=255)
+    
+class News(BaseModel):
+    category = models.ForeignKey('Category', on_delete=models.CASCADE, verbose_name=_('Category'))
+    administrative_levels = models.JSONField(null=True, blank=True)
+    projects = models.JSONField(null=True, blank=True)
+    title = models.CharField(max_length=250, verbose_name=_('Title'))
+    description = models.TextField(verbose_name=_('Description'))
+    tags = models.ManyToManyField(Tag, default=[], blank=True, related_name="news_tags", verbose_name=_("Tags"))
+    publish = models.BooleanField(default=False, verbose_name=_("Publish"))
+
+    facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, verbose_name=_('Facilitator'))
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, verbose_name=_('User'))
+    
+    def __str__(self):
+        return f"{self.title}"
+
+    def get_files(self):
+        return self.newsfile_set.get_queryset().order_by("-date_taken")
+    
+    # def save(self, *args, **kwargs):
+    #     super().save(*args, **kwargs)
+    #     return super().save(*args, **kwargs)
+
+
+class NewsFile(BaseModel):
+    news = models.ForeignKey(News, null=True, blank=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255)
+    url = models.CharField(max_length=255)
+    order = models.IntegerField(default=0)
+    principal = models.BooleanField(default=False)
+    date_taken = models.DateField()
+    file_type = models.CharField(max_length=100, default="image")
+    username = models.CharField(max_length=255)
+    user_email = models.CharField(max_length=255, null=True, blank=True)

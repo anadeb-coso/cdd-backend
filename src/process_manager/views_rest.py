@@ -3,8 +3,9 @@ from rest_framework import parsers, renderers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from process_manager.serializers import SaveFormDatasSerializer
+from process_manager.serializers import SaveFormDatasSerializer, ProjectSerializer
 from no_sql_client import NoSQLClient
+from process_manager.models import Project
 
 
 class SaveFormDatas(APIView):
@@ -78,3 +79,23 @@ class SaveGeolocationFormDatas(APIView):
                 has_error = True
         
         return Response({'status': 'ok', 'has_error': has_error}, status=status.HTTP_200_OK)
+
+
+
+class RestGetProjects(APIView):
+    throttle_classes = ()
+    permission_classes = ()
+    
+    def post(self, request, *args, **kwargs):
+        try:
+            return Response(
+                ProjectSerializer(
+                    Project.objects.all().order_by('name'),
+                    many=True).data, 
+                status=status.HTTP_200_OK
+            )
+        except Exception as exc:
+            return Response(
+                {'error': exc.__str__()}, 
+                status=status.HTTP_404_NOT_FOUND
+            )

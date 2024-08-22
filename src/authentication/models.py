@@ -168,6 +168,10 @@ class Facilitator(models.Model):
         import zlib
         return str(zlib.adler32(str(seed).encode('utf-8')))[:6]
 
+    @property
+    def is_active(self):
+        return self.active
+        
     def get_name(self):
         try:
             nsc = NoSQLClient()
