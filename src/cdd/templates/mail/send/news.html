@@ -1,0 +1,418 @@
+{% load static i18n custom_tags %}
+
+<style>
+    ._mobile {
+            display: none !important;
+    }
+    @media only screen and (max-width: 1400px) {
+            ._web {
+                display: none !important;
+            }
+            ._mobile {
+                display: inline-block !important;
+            }
+    }
+
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+    }
+    
+    .card {
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    .image-gallery {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .image-gallery32 img {
+        width: 32%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+    }
+
+    .image-gallery49 img {
+        width: 49%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+    }
+
+    .image-gallery98 img {
+        width: 98%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+    }
+    
+    .content {
+        padding: 20px;
+    }
+    
+    h2 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+    
+    .location {
+        background-color: #3CCF4E;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 0.9em;
+    }
+    
+    p {
+        color: #555;
+    }
+    
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: 20px;
+    }
+    
+    .tag {
+        background-color: #e0e0e0;
+        color: #555;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.8em;
+    }
+    
+    .green {
+        background-color: #5cb85c;
+        color: white;
+    }
+    
+    .red {
+        background-color: #d9534f;
+        color: white;
+    }
+    
+    .pink {
+        background-color: #f78da7;
+        color: white;
+    }
+    
+    .light-green {
+        background-color: #81c784;
+        color: white;
+    }
+    
+    .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+    }
+    
+    .modify-btn {
+        background-color: #6c63ff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+    }
+    
+    .modify-btn:hover {
+        background-color: #574bff;
+    }
+</style>
+
+
+
+<div class="_web" style='width: 75% !important; margin: auto !important;border-style: double !important; padding-bottom: 50px !important;'>
+    <div style="margin-left: 17px;">
+        <div class="card" style="background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        width: 100%;
+        margin: 0 auto;">
+            {% if files_count != 0 %}
+            <div 
+                class="image-gallery 
+                {% comment %} {% if files_count == 1 %}image-gallery98{% elif files_count == 2%}image-gallery49{% else %}image-gallery32{% endif %}" {% endcomment %}
+                {% if files_count == 1 %}
+                style="
+                    display: flex;
+        justify-content: space-between;
+        width: 98%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+                "
+                {% elif files_count == 2 %}
+                style="
+                    display: flex;
+        justify-content: space-between;
+        width: 49%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+                "
+                {% else %}
+                style="
+                    display: flex;
+        justify-content: space-between;
+        width: 32%;
+        height: auto;
+        border-radius: 10px;
+        margin: 10px 0;
+                "
+                {% endif %}
+                >
+                {% for fl in files %}
+                <img src="{{ fl.url|imgAWSS3Filter }}" alt="Image 1">
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="content" style="padding: 20px;">
+                <h2>{{ news.title }} 
+                    {% for p in news.projets %}
+                    <span class="location" style="background-color: #3CCF4E;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 0.9em;">📍 {{ p.name }}</span>
+                    {% endfor %}
+                </h2>
+                <p>
+                    {{ news.description|safe }}
+                </p>
+                
+                <div class="footer" style="display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;">
+                    <div class="tags" style=" display: flex;
+        flex-wrap: wrap;
+        margin-top: 20px;">
+                        <div class="tags" style=" display: flex;
+                        flex-wrap: wrap;
+                        margin-top: 20px;">
+                            <span class="tag green" style="background-color: #e0e0e0;
+        color: #555;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.8em; display: block !important; background-color: #5cb85c;
+        color: white;">{{ news.category.name }}</span>
+                        </div>
+                        <div class="tags" style=" display: flex;
+                        flex-wrap: wrap;
+                        margin-top: 20px;">
+                            {% for t in news.tags.all %}
+                            <span class="tag" style="background-color: #e0e0e0;
+        color: #555;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.8em;">{{ t.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="tags" style=" display: flex;
+                    flex-wrap: wrap;
+                    margin-top: 20px;">
+                        <div class="tags" style=" display: flex;
+                        flex-wrap: wrap;
+                        margin-top: 20px;">
+                            {% for ad in news.administrative_levels %}{% if ad.type == "Canton" %}
+                            <span class="tag light-green" style="background-color: #e0e0e0;
+        color: #555;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.8em;background-color: #81c784;
+        color: white;">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                        <div class="tags" style=" display: flex;
+                        flex-wrap: wrap;
+                        margin-top: 20px;">
+                            {% for ad in news.administrative_levels %}{% if ad.type == "Village" %}
+                            <span class="tag red" style="background-color: #e0e0e0;
+        color: #555;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin: 5px;
+        font-size: 0.8em;background-color: #d9534f;
+        color: white;">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="footer" style="display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;">
+                    <div>
+                        <div>
+                            <i class="fa fa-user"></i> 
+                            {% if news.user %}
+                                {{ news.user.last_name }} {{ news.user.first_name }}
+                            {% elif news.facilitator %}
+                                {{ news.facilitator.name }}
+                            {% else %}
+                                Non défini
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if news.event_date %}
+                                Date de l'événément : {{ event_date|date:'l j F Y' }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if news.publication_date %}
+                                Date de publication : {{ publication_date|date:'l j F Y à H:i' }}
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    <div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center !important; margin: auto !important;">
+        <a href='#' 
+        style='margin-bottom: 50px !important;'><button style='display: inline-block;
+        padding: 15px 25px;
+        font-size: 24px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 9px #999;'>
+            Lisez tous les autres détails sur l'application DCC
+        </button></a>
+    </div>
+
+</div>
+
+
+{% comment %} <div class="_mobile" style='width: 100% !important; margin: auto !important;border-style: double !important; padding-bottom: 50px !important;'>
+    <div style="margin-left: 7px;margin-right: 7px;">
+        <div class="card">
+            {% if files_count != 0 %}
+            <div class="image-gallery image-gallery{% if files_count == 1 %}98{% elif files_count == 2%}49{% else %}32{% endif %}">
+                {% for fl in files %}
+                <img src="{{ fl.url|imgAWSS3Filter }}" alt="Image 1">
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="content">
+                <h2>{{ news.title }} 
+                    {% for p in news.projets %}
+                    <span class="location">📍 {{ p.name }}</span>
+                    {% endfor %}
+                </h2>
+                <p>
+                    {{ news.description|safe }}
+                </p>
+                
+                <div class="footer">
+                    <div class="tags">
+                        <div class="tags">
+                            <span class="tag green" style="display: block !important;">{{ news.category.name }}</span>
+                        </div>
+                        <div class="tags">
+                            {% for t in news.tags.all %}
+                            <span class="tag">{{ t.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="tags">
+                        <div class="tags">
+                            {% for ad in news.administrative_levels %}{% if ad.type == "Canton" %}
+                            <span class="tag light-green">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                        <div class="tags">
+                            {% for ad in news.administrative_levels %}{% if ad.type == "Village" %}
+                            <span class="tag red">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="footer">
+                    <div>
+                        <div>
+                            <i class="fa fa-user"></i> 
+                            {% if news.user %}
+                                {{ news.user.last_name }} {{ news.user.first_name }}
+                            {% elif news.facilitator %}
+                                {{ news.facilitator.name }}
+                            {% else %}
+                                Non défini
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if news.event_date %}
+                                Date de l'événément : {{ event_date|date:'l j F Y' }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if news.publication_date %}
+                                Date de publication : {{ publication_date|date:'l j F Y à H:i' }}
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    <div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="text-align: center !important; margin: auto !important;">
+        <a href='#' 
+        style='margin-bottom: 50px !important;'><button style='display: inline-block;
+        padding: 15px 25px;
+        font-size: 24px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 9px #999;'>
+            Lisez tous les autres détails sur l'application DCC
+        </button></a>
+    </div>
+
+</div> {% endcomment %}
+
+
+<div>
+    <p>
+        <b>Web</b>: <a href="http://cddanadeb.e3grm.org/">http://cddanadeb.e3grm.org/</a>
+    </p>
+    <p>
+        <b>Mobile</b> : <a href="http://cddanadeb.e3grm.org/fr/store-apps/">http://cddanadeb.e3grm.org/fr/store-apps/</a>
+    </p>
+</div>
