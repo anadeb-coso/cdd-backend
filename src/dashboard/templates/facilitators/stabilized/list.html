@@ -153,14 +153,28 @@
                     </a>
                 </div>
                 <div class="float-right mb-3">&nbsp;&nbsp;</div>
-                <div class="float-right mb-3">
-                    <a href="{% url 'dashboard:facilitators:list' %}"
-                       class="btn btn-primary btn-sm rounded-xl" target="_blank">
-                        <i class="fa fa-list mr-2"></i>
-                        {% translate "Facilitators assigned" %}
-                    </a>
-                </div>
             {% endif %}
+            <div class="float-right mb-3">
+                <a href="{% url 'dashboard:facilitators:list' %}"
+                   class="btn btn-primary btn-sm rounded-xl">
+                    <i class="fa fa-list mr-2"></i>
+                    {% translate "Facilitators assigned" %}
+                </a>
+            </div>
+            <div class="float-right mb-3">&nbsp;&nbsp;</div>
+            <div class="float-right mb-3">&nbsp;&nbsp;</div>
+            <div class="float-right mb-3">
+                <a href="{% url 'dashboard:facilitators:stabilized_list' %}{% if type_facilitator != 'inactive' %}?type_facilitator=inactive{% endif %}"
+                   class="btn btn-primary btn-sm rounded-xl">
+                    <i class="fa fa-list mr-2"></i>
+                    {% if type_facilitator != 'inactive' %}
+                        {% translate "Inactive facilitators stabilized" %}
+                    {% else %}
+                        {% translate "Active facilitators stabilized" %}
+                    {% endif %}
+                </a>
+            </div>
+
 
             <div class="clearfix"></div>
             <div class="card">
@@ -300,7 +314,8 @@
                     id_village: id_village.val(),
                     type_field: type_field,
                     is_training: "{{ is_training }}",
-                    is_develop: "{{ is_develop }}"
+                    is_develop: "{{ is_develop }}",
+                    type_facilitator: "{{ type_facilitator }}"
                 },
                 success: function (response) {
                     spin.hide();
@@ -372,7 +387,8 @@
                         id_village: id_village.val(),
                         type_field: type_field,
                         is_training: "{{ is_training }}",
-                        is_develop: "{{ is_develop }}"
+                        is_develop: "{{ is_develop }}",
+                        type_facilitator: "{{ type_facilitator }}"
                     },
                     success: function (response) {
                         spin.hide();

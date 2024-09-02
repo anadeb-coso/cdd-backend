@@ -34,7 +34,7 @@ from dashboard.tasks import sync_celery_tasks_re
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = Facilitator.objects.filter(active=True)
+    queryset = [] #Facilitator.objects.filter(active=True)
     template_name = 'facilitators/list.html'
     context_object_name = 'facilitators'
     title = gettext_lazy('Facilitators')
@@ -57,6 +57,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['region_id'] = self.request.GET.get('region_id')
+        context['type_facilitator'] = self.request.GET.get('type_facilitator')
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
             sync_celery_tasks_re()
@@ -97,6 +98,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         id_canton = self.request.GET.get('id_canton')
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
+        type_facilitator = self.request.GET.get('type_facilitator')
         _id = 0
         facilitators = []
 
@@ -167,10 +169,10 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
 
                 _facilitators = Facilitator.objects.filter(
                     id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False, training_mode=False, active=True
+                    develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True)
                 )
             else:
-                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)
+                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True))
 
             facilitators = _facilitators
             # for f in _facilitators:
@@ -195,7 +197,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             # facilitators = list(Facilitator.objects.all())
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
-            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=True))
+            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=(False if type_facilitator=='inactive' else True)))
 
         _facilitators = []
         for f in facilitators:

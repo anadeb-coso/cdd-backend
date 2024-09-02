@@ -15,7 +15,13 @@
         <table id="table" class="table-bordered">
             <thead>
             <tr>
+                
+                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                <th width="2%">{% translate 'Edit' %}</th>
+                <th width="18%">{% translate 'Name' %}</th>
+                {% else %}
                 <th width="20%">{% translate 'Name' %}</th>
+                {% endif %}
                 <th width="3%">{% translate 'Sex' %}</th>
                 <th width="17%">{% translate 'Tel/Email' %}</th>
                 <th width="5%">{% translate 'Canton' %}</th>
@@ -30,21 +36,18 @@
                 {% if facilitator_object and facilitator_object.no_sql_db_name %}
                 <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
                     
+                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
                     <td align="left">
-                        <a class="pointer-event" data-facilitatorid="{{ facilitator_object.no_sql_db_name }}"
-                            href="{% url 'dashboard:facilitators:detail' facilitator_object.no_sql_db_name %}"
-                            target="_blank" title="{% translate 'See profile' %}">
-                            <span>{{ facilitator.representative.name }}</span>
-                        </a>
-                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
-                        &nbsp;<a href="http://grm-2-env.eba-speiyafz.us-west-1.elasticbeanstalk.com/fr/administrative-levels/{{facilitator|get:'_id'}}/" target="_blank"
+                        <a href="http://grm-2-env.eba-speiyafz.us-west-1.elasticbeanstalk.com/fr/administrative-levels/{{facilitator|get:'_id'}}/" target="_blank"
                             class="" title="{% translate 'See profile' %}">
                             <i class="fa fa-edit"></i>
                         </a>
-                        {% endif %}
                     </td>
+                    {% endif %}
 
-
+                    <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator_object.no_sql_db_name }}"
+                            href="{% url 'dashboard:facilitators:detail' facilitator_object.no_sql_db_name %}"
+                            target="_blank" title="{% translate 'See profile' %}"><span>{{ facilitator.representative.name }}</span></a></td>
 
                     <td align="left">{{ facilitator_object.sex }}</td>
                     <td align="left">

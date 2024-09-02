@@ -51,7 +51,7 @@
                                 <tbody>
                                 {% for user_obj in users %}
                                     <tr>
-                                        <td>{{ user_obj.get_full_name }}</td>
+                                        <td align="left">{{ user_obj.get_full_name }}</td>
                                         <td>{{ user_obj.username }}</td>
                                         <td>{{ user_obj.email }}</td>
                                         <td>{{ user_obj|get_group_high }}</td>

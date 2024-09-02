@@ -33,7 +33,7 @@ from authentication.functions import get_assign_adl_by_facilitatr
 
 class FacilitatorStabilizedListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = Facilitator.objects.filter(active=True)
+    queryset = [] #Facilitator.objects.filter(active=True)
     template_name = 'facilitators/stabilized/list.html'
     context_object_name = 'facilitators_stabilized'
     title = gettext_lazy('Facilitators Stabilized')
@@ -55,6 +55,7 @@ class FacilitatorStabilizedListView(PageMixin, LoginRequiredMixin, generic.ListV
 
         # context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         # context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
+        context['type_facilitator'] = self.request.GET.get('type_facilitator')
 
         return context
 
@@ -92,6 +93,7 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         id_canton = self.request.GET.get('id_canton')
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
+        type_facilitator = self.request.GET.get('type_facilitator')
         _id = 0
         
         nsc = NoSQLClient()
@@ -100,7 +102,7 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         
         def get_all_facilitators_stabilized():
             facilitators_stabilized_all_docs = eadls.all_docs(include_docs=True)['rows']
-            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)]
+            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True))]
             
             return [
                 doc.get('doc') for doc in facilitators_stabilized_all_docs \

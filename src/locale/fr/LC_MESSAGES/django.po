@@ -1185,3 +1185,19 @@ msgstr "Date de publication"
 #: .\dashboard\news
 msgid "Event date"
 msgstr "Date de l'événément"
+
+#: .\dashboard
+msgid "Inactive facilitators"
+msgstr "Facilitateurs inactifs"
+
+#: .\dashboard
+msgid "Active facilitators"
+msgstr "Facilitateurs actifs"
+
+#: .\dashboard
+msgid "Inactive facilitators stabilized"
+msgstr "Facilitateurs stabilisés inactifs"
+
+#: .\dashboard
+msgid "Active facilitators stabilized"
+msgstr "Facilitateurs stabilisés actifs"
