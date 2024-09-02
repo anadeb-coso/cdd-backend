@@ -8,6 +8,7 @@ from dashboard.utils import get_administrative_level_choices, get_administrative
 from no_sql_client import NoSQLClient
 from .functions import get_cvds
 from process_manager.models import Task, Phase, Activity
+from administrativelevels.models import AdministrativeLevel
 
 
 class FilterTaskForm(forms.Form):
@@ -214,35 +215,42 @@ class FilterFacilitatorForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        nsc = NoSQLClient()
-        db = nsc.get_db("administrative_levels")
+        # nsc = NoSQLClient()
+        # db = nsc.get_db("administrative_levels")
 
-        administrativelevels_docs = db.all_docs(include_docs=True)['rows']
+        # administrativelevels_docs = db.all_docs(include_docs=True)['rows']
 
-        query_result_regions = []
-        query_result_prefectures = []
-        query_result_communes = []
-        query_result_cantons = []
-        query_result_villages = []
-        for doc in administrativelevels_docs:
-            doc = doc.get('doc')
-            if doc.get('type') == 'administrative_level':
-                if doc.get('administrative_level') == "Region":
-                    query_result_regions.append(doc)
-                elif doc.get('administrative_level') == "Prefecture":
-                    query_result_prefectures.append(doc)
-                elif doc.get('administrative_level') == "Commune":
-                    query_result_communes.append(doc)
-                elif doc.get('administrative_level') == "Canton":
-                    query_result_cantons.append(doc)
-                elif doc.get('administrative_level') == "Village":
-                    query_result_villages.append(doc)
+        # query_result_regions = []
+        # query_result_prefectures = []
+        # query_result_communes = []
+        # query_result_cantons = []
+        # query_result_villages = []
+        # for doc in administrativelevels_docs:
+        #     doc = doc.get('doc')
+        #     if doc.get('type') == 'administrative_level':
+        #         if doc.get('administrative_level') == "Region":
+        #             query_result_regions.append(doc)
+        #         elif doc.get('administrative_level') == "Prefecture":
+        #             query_result_prefectures.append(doc)
+        #         elif doc.get('administrative_level') == "Commune":
+        #             query_result_communes.append(doc)
+        #         elif doc.get('administrative_level') == "Canton":
+        #             query_result_cantons.append(doc)
+        #         elif doc.get('administrative_level') == "Village":
+        #             query_result_villages.append(doc)
         
-        self.fields['region'].widget.choices = get_choices(query_result_regions, "administrative_id", "name")
-        self.fields['prefecture'].widget.choices = get_choices(query_result_prefectures, "administrative_id", "name")
-        self.fields['commune'].widget.choices = get_choices(query_result_communes, "administrative_id", "name")
-        self.fields['canton'].widget.choices = get_choices(query_result_cantons, "administrative_id", "name")
-        self.fields['village'].widget.choices = get_choices(query_result_villages, "administrative_id", "name")
+        # self.fields['region'].widget.choices = get_choices(query_result_regions, "administrative_id", "name")
+        # self.fields['prefecture'].widget.choices = get_choices(query_result_prefectures, "administrative_id", "name")
+        # self.fields['commune'].widget.choices = get_choices(query_result_communes, "administrative_id", "name")
+        # self.fields['canton'].widget.choices = get_choices(query_result_cantons, "administrative_id", "name")
+        # self.fields['village'].widget.choices = get_choices(query_result_villages, "administrative_id", "name")
+
+        self.fields['region'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Region").order_by("name")]
+        self.fields['prefecture'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Prefecture").order_by("name")]
+        self.fields['commune'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Commune").order_by("name")]
+        self.fields['canton'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Canton").order_by("name")]
+        self.fields['village'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Village").order_by("name")]
+
     
 class FilterFacilitatorFormMultiChoices(forms.Form):
     region = forms.MultipleChoiceField()
@@ -254,33 +262,40 @@ class FilterFacilitatorFormMultiChoices(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        nsc = NoSQLClient()
-        db = nsc.get_db("administrative_levels")
+        # nsc = NoSQLClient()
+        # db = nsc.get_db("administrative_levels")
 
-        administrativelevels_docs = db.all_docs(include_docs=True)['rows']
+        # administrativelevels_docs = db.all_docs(include_docs=True)['rows']
 
-        query_result_regions = []
-        query_result_prefectures = []
-        query_result_communes = []
-        query_result_cantons = []
-        query_result_villages = []
-        for doc in administrativelevels_docs:
-            doc = doc.get('doc')
-            if doc.get('type') == 'administrative_level':
-                if doc.get('administrative_level') == "Region":
-                    query_result_regions.append(doc)
-                elif doc.get('administrative_level') == "Prefecture":
-                    query_result_prefectures.append(doc)
-                elif doc.get('administrative_level') == "Commune":
-                    query_result_communes.append(doc)
-                elif doc.get('administrative_level') == "Canton":
-                    query_result_cantons.append(doc)
-                elif doc.get('administrative_level') == "Village":
-                    query_result_villages.append(doc)
+        # query_result_regions = []
+        # query_result_prefectures = []
+        # query_result_communes = []
+        # query_result_cantons = []
+        # query_result_villages = []
+        # for doc in administrativelevels_docs:
+        #     doc = doc.get('doc')
+        #     if doc.get('type') == 'administrative_level':
+        #         if doc.get('administrative_level') == "Region":
+        #             query_result_regions.append(doc)
+        #         elif doc.get('administrative_level') == "Prefecture":
+        #             query_result_prefectures.append(doc)
+        #         elif doc.get('administrative_level') == "Commune":
+        #             query_result_communes.append(doc)
+        #         elif doc.get('administrative_level') == "Canton":
+        #             query_result_cantons.append(doc)
+        #         elif doc.get('administrative_level') == "Village":
+        #             query_result_villages.append(doc)
         
-        self.fields['region'].widget.choices = get_choices(query_result_regions, "administrative_id", "name")
-        self.fields['prefecture'].widget.choices = get_choices(query_result_prefectures, "administrative_id", "name")
-        self.fields['commune'].widget.choices = get_choices(query_result_communes, "administrative_id", "name")
-        self.fields['canton'].widget.choices = get_choices(query_result_cantons, "administrative_id", "name")
-        self.fields['village'].widget.choices = get_choices(query_result_villages, "administrative_id", "name")
+        # self.fields['region'].widget.choices = get_choices(query_result_regions, "administrative_id", "name")
+        # self.fields['prefecture'].widget.choices = get_choices(query_result_prefectures, "administrative_id", "name")
+        # self.fields['commune'].widget.choices = get_choices(query_result_communes, "administrative_id", "name")
+        # self.fields['canton'].widget.choices = get_choices(query_result_cantons, "administrative_id", "name")
+        # self.fields['village'].widget.choices = get_choices(query_result_villages, "administrative_id", "name")
+        
+        self.fields['region'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Region").order_by("name")]
+        self.fields['prefecture'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Prefecture").order_by("name")]
+        self.fields['commune'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Commune").order_by("name")]
+        self.fields['canton'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Canton").order_by("name")]
+        self.fields['village'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Village").order_by("name")]
+
     

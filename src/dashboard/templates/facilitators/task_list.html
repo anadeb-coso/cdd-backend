@@ -372,7 +372,7 @@
                     {% endif %}
 
                 </div>
-                {% if user.is_superuser or user|has_group:"Admin" %}
+                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"Supervisor" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
                     <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}"
                             name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
                     {% if task.completed %}
@@ -405,7 +405,7 @@
 
                 {% else %}
                     {% if task.completed %}
-                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" %}
+                        {% if user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Validator" or user|has_group:"Supervisor" %}
                         <div style="margin-top: 25px; width: 100%;">
                             {% comment %} <input type="hidden" value="{% if task.validated %}0{% else %}1{% endif %}"
                                 name="{{ task|get:'_id' }}" id="action_code_{{ task|get:'_id' }}"  />

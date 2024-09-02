@@ -691,6 +691,14 @@ msgstr "Utilisateurs"
 msgid "User"
 msgstr "Utilisateur"
 
+#: .\dashboard\authentication\views.py
+msgid "Supervisor"
+msgstr "Superviseur"
+
+#: .\dashboard\authentication\views.py
+msgid "Validator"
+msgstr "Valideur"
+
 #: .\dashboard\templates\authentication\users.html
 msgid "Group"
 msgstr "Groupe"
@@ -1057,3 +1065,123 @@ msgstr "Le commentaire n'a pas été enregistré avec succès."
 #: .\dashboard\planning
 msgid "No comments found"
 msgstr "Aucun commentaire trouvé"
+
+#: .\dashboard\news
+msgid "Total men present over 35"
+msgstr "Total d'hommes présents plus de 35 ans"
+
+#: .\dashboard\news
+msgid "Total women present over 35"
+msgstr "Total de femmes présentes plus de 35 ans"
+
+#: .\dashboard\news
+msgid "Total people present over 35"
+msgstr "Total de personnes présentes plus de 35 ans"
+
+#: .\dashboard\news
+msgid "Total men present under 35"
+msgstr "Total d'hommes présents moins de 35 ans"
+
+#: .\dashboard\news
+msgid "Total women present under 35"
+msgstr "Total de femmes présentes moins de 35 ans"
+
+#: .\dashboard\news
+msgid "Total people present under 35"
+msgstr "Total de personnes présentes moins de 35 ans"
+
+#: .\dashboard\news
+msgid "Total people present"
+msgstr "Total de personnes présentes"
+
+#: .\dashboard\news
+msgid "Total men over 35 injured"
+msgstr "Total d'hommes plus de 35 ans blessés"
+
+#: .\dashboard\news
+msgid "Total women over 35 injured"
+msgstr "Total de femmes plus de 35 ans blessées"
+
+#: .\dashboard\news
+msgid "Total people over 35 injured"
+msgstr "Total de personnes plus de 35 ans blessées"
+
+#: .\dashboard\news
+msgid "Total men between 10 and 35 injured"
+msgstr "Total d'hommes entre 10 ans et 35 ans blessés"
+
+#: .\dashboard\news
+msgid "Total women between 10 and 35 injured"
+msgstr "Total de femmes entre 10 ans et 35 ans blessées"
+
+#: .\dashboard\news
+msgid "Total people between 10 and 35 injured"
+msgstr "Total de personnes entre 10 ans et 35 ans blessées"
+
+#: .\dashboard\news
+msgid "Total men under 10 injured"
+msgstr "Total d'hommes moins de 10 ans blessés"
+
+#: .\dashboard\news
+msgid "Total women under 10 injured"
+msgstr "Total de femmes moins de 10 ans blessées"
+
+#: .\dashboard\news
+msgid "Total people under 10 injured"
+msgstr "Total de personnes moins de 10 ans blessées"
+
+#: .\dashboard\news
+msgid "Total people injured"
+msgstr "Total de personnes blessées"
+
+#: .\dashboard\news
+msgid "Total men over 35 died"
+msgstr "Total d'hommes plus de 35 ans morts"
+
+#: .\dashboard\news
+msgid "Total women over 35 died"
+msgstr "Total de femmes plus de 35 ans mortes"
+
+#: .\dashboard\news
+msgid "Total people over 35 died"
+msgstr "Total de personnes plus de 35 ans mortes"
+
+#: .\dashboard\news
+msgid "Total men between 10 and 35 died"
+msgstr "Total d'hommes entre 10 ans et 35 ans morts"
+
+#: .\dashboard\news
+msgid "Total women between 10 and 35 died"
+msgstr "Total de femmes entre 10 ans et 35 ans mortes"
+
+#: .\dashboard\news
+msgid "Total people between 10 and 35 died"
+msgstr "Total de personnes entre 10 ans et 35 ans mortes"
+
+#: .\dashboard\news
+msgid "Total men under 10 died"
+msgstr "Total d'hommes moins de 10 ans morts"
+
+#: .\dashboard\news
+msgid "Total women under 10 died"
+msgstr "Total de femmes moins de 10 ans mortes"
+
+#: .\dashboard\news
+msgid "Total people under 10 died"
+msgstr "Total de personnes moins de 10 ans mortes"
+
+#: .\dashboard\news
+msgid "Total people died"
+msgstr "Total de personnes mortes"
+
+#: .\dashboard\news
+msgid "Total people affected by the event"
+msgstr "Total personnes touchées par l'événément"
+
+#: .\dashboard\news
+msgid "Publication date"
+msgstr "Date de publication"
+
+#: .\dashboard\news
+msgid "Event date"
+msgstr "Date de l'événément"

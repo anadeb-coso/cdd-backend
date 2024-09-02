@@ -334,6 +334,10 @@ def get_group_high(user):
         return gettext_lazy("Advisor").__str__()
     if user.groups.filter(name="Minister").exists():
         return gettext_lazy("Minister").__str__()
+    if user.groups.filter(name="Supervisor").exists():
+        return gettext_lazy("Supervisor").__str__()
+    if user.groups.filter(name="Validator").exists():
+        return gettext_lazy("Validator").__str__()
 
 
     return gettext_lazy("User").__str__()

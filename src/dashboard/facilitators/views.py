@@ -7,6 +7,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
 from datetime import datetime
+from django.contrib.auth.models import User
 
 from process_manager.models import Phase, Activity
 from authentication.models import Facilitator
@@ -614,7 +615,17 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         #     facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name,
         #     administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
         # ) #Sync the tasks for the new villages
-
+        
+        try:
+            user = User.objects.get(email=facilitator.email)
+            user.password = facilitator.password
+            user.username = facilitator.username
+            user.last_name = facilitator.name.split(' ')[0]
+            user.first_name = ' '.join(facilitator.name.split(' ')[1:])
+            user.is_active = facilitator.active
+            user.save()
+        except:
+            pass
 
         return super().form_valid(form)
 
@@ -692,6 +703,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
     def form_valid(self, form):
         data = form.cleaned_data
+        facilitator_email = self.facilitator.email
         facilitator = form.save(commit=False)
         facilitator.name = data['name']
         facilitator.email = data['email']
@@ -754,15 +766,15 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
 
-        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-            "backup_db_facilitators_docs", self.facilitator_db_name,
-            [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-        ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
+        # clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+        #     "backup_db_facilitators_docs", self.facilitator_db_name,
+        #     [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        # ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
 
-        clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-            self.facilitator_db_name, "backup_db_facilitators_docs",
-            [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
-        ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
+        # clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
+        #     self.facilitator_db_name, "backup_db_facilitators_docs",
+        #     [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
+        # ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
 
         sync_geographicalunits_with_cvd_on_facilittor(
             facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name
@@ -773,10 +785,21 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                 "is_headquarters_village": True,
                 "id": "0"
             })
-        sync_tasks(
-            facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
-            administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-        ) #Sync the tasks for the new villages
+        # sync_tasks(
+        #     facilitator.develop_mode, facilitator.training_mode, self.facilitator_db_name,
+        #     administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
+        # ) #Sync the tasks for the new villages
+
+        try:
+            user = User.objects.get(email=facilitator_email)
+            user.password = facilitator.password
+            user.username = facilitator.username
+            user.last_name = facilitator.name.split(' ')[0]
+            user.first_name = ' '.join(facilitator.name.split(' ')[1:])
+            user.is_active = facilitator.active
+            user.save()
+        except:
+            pass
 
         return redirect('dashboard:facilitators:list')
 

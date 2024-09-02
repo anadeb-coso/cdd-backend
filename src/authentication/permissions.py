@@ -250,6 +250,8 @@ class ValidatorPermissionRequiredMixin(UserPassesTestMixin):
         return True if(self.request.user.is_authenticated and (
             self.request.user.groups.filter(name="Validator").exists()
             or 
+            self.request.user.groups.filter(name="Supervisor").exists()
+            or 
             self.request.user.groups.filter(name="CDDSpecialist").exists()
             or 
             self.request.user.groups.filter(name="Evaluator").exists()
@@ -268,4 +270,29 @@ class ValidatorPermissionRequiredMixin(UserPassesTestMixin):
         return super().handle_no_permission()
 
     def dispatch(self, request, *args, **kwargs):
-        return super(CDDSpecialistPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)
+        return super(ValidatorPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)
+    
+
+class SupervisorPermissionRequiredMixin(UserPassesTestMixin):
+    permission_required = None
+
+    def test_func(self):
+        return True if(self.request.user.is_authenticated and (
+            self.request.user.groups.filter(name="Supervisor").exists()
+            or 
+            self.request.user.groups.filter(name="CDDSpecialist").exists()
+            or 
+            self.request.user.groups.filter(name="Evaluator").exists()
+            or 
+            self.request.user.groups.filter(name="Admin").exists()
+            or 
+            bool(self.request.user.is_superuser)
+        )) else False
+    
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            return page_not_found(self.request, _('Page not found').__str__())
+        return super().handle_no_permission()
+
+    def dispatch(self, request, *args, **kwargs):
+        return super(SupervisorPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)

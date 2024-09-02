@@ -12,7 +12,12 @@
         <table id="table" class="table-bordered">
             <thead>
             <tr>
+                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                <th width="2%">{% translate 'Edit' %}</th>
+                <th width="27%">{% translate 'Name' %}</th>
+                {% else %}
                 <th width="29%">{% translate 'Name' %}</th>
+                {% endif %}
                 <th width="2%">{% translate 'Sex' %}</th>
                 <th width="24%">{% translate 'Username' %}</th>
                 <th width="10%">{% translate 'Tel' %}</th>
@@ -35,6 +40,15 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </span>
                         </td> {% endcomment %}
+                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                    <td>
+                        <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
+                            class="" title="{% translate 'See profile' %}">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                    </td>
+                    {% endif %}
+
                     {% for key, value in facilitator.get_all_infos.items %}
                         {% if key == "percent" %}
                             <td
@@ -59,21 +73,9 @@
                                 {% endif %}
                             </td>
                         {% elif forloop.counter == 1 %}
-                            <td align="left">
-
-                                <a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
+                            <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
                                    href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
-                                   target="_blank" title="{% translate 'See profile' %}">
-                                    <span>{{ value }}</span>
-                                </a>
-                                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator"%}
-                                &nbsp;<a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
-                                    class="" title="{% translate 'See profile' %}">
-                                    <i class="fa fa-edit"></i>
-                                </a>
-                                {% endif %}
-                            </td>
-
+                                   target="_blank" title="{% translate 'See profile' %}"><span>{{ value }}</span></a></td>
                         {% else %}
                             <td>{{ value }}</td>
                         {% endif %}
