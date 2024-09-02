@@ -29,26 +29,7 @@ class DiagnosticsForm(forms.Form):
         # administrative_levels_db = nsc.get_db('administrative_levels')
         # process_design = nsc.get_db('process_design')
 
-        query_result_phases = [('', '')]
-        query_result_activities = [('', '')]
-        query_result_tasks = [('', '')]
-
-        query_result_regions = [('', '')]
-        query_result_prefectures = [('', '')]
-        query_result_communes = [('', '')]
-        query_result_cantons = [('', '')]
-        query_result_villages = [('', '')]
-
-
-        [query_result_phases.append((o.id, o.name)) for o in Phase.objects.all().order_by("order")]
-        [query_result_activities.append((o.id, o.name)) for o in Activity.objects.all().order_by("phase__order", "order")]
-        [query_result_tasks.append((o.id, o.name)) for o in Task.objects.all().order_by("phase__order", "activity__order", "order")]
-
-        [query_result_regions.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Region").order_by("name")]
-        [query_result_prefectures.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Prefecture").order_by("name")]
-        [query_result_communes.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Commune").order_by("name")]
-        [query_result_cantons.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Canton").order_by("name")]
-        [query_result_villages.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Village").order_by("name")]
+        
         # for label in ["phase", "activity", "task"]:
         #     try:
         #         elements = get_choices(get_documents_by_type(process_design, label), 'sql_id', "name", True)
@@ -57,9 +38,9 @@ class DiagnosticsForm(forms.Form):
         #         self.fields[label].widget.attrs['class'] = label
         #     except Exception as exc:
         #         pass
-        self.fields['phase'].widget.choices = query_result_phases
-        self.fields['activity'].widget.choices = query_result_activities
-        self.fields['task'].widget.choices = query_result_tasks
+        self.fields['phase'].widget.choices = [('', '')] + [(o.id, o.name) for o in Phase.objects.all().order_by("order")]
+        self.fields['activity'].widget.choices = [('', '')] + [(o.id, o.name) for o in Activity.objects.all().order_by("phase__order", "order")]
+        self.fields['task'].widget.choices = [('', '')] + [(o.id, o.name) for o in Task.objects.all().order_by("phase__order", "activity__order", "order")]
 
         # for label in ["region", "prefecture", "commune", "canton", "village"]:
         #     try:
@@ -71,10 +52,10 @@ class DiagnosticsForm(forms.Form):
         #         self.fields[label].widget.attrs['class'] = label
         #     except Exception as exc:
         #         pass
-        self.fields['region'].widget.choices = query_result_regions
-        self.fields['prefecture'].widget.choices = query_result_prefectures
-        self.fields['commune'].widget.choices = query_result_communes
-        self.fields['canton'].widget.choices = query_result_cantons
-        self.fields['village'].widget.choices = query_result_villages
+        self.fields['region'].widget.choices = [('', '')] + [(o.id, o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Region").order_by("name")]
+        self.fields['prefecture'].widget.choices = [('', '')] + [(o.id, o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Prefecture").order_by("name")]
+        self.fields['commune'].widget.choices = [('', '')] + [(o.id, o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Commune").order_by("name")]
+        self.fields['canton'].widget.choices = [('', '')] + [(o.id, o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Canton").order_by("name")]
+        self.fields['village'].widget.choices = [('', '')] + [(o.id, o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Village").order_by("name")]
         
 

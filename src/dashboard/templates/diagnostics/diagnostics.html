@@ -81,6 +81,11 @@
                                             </table>
 
                                             <div id="_p"></div>
+
+                                            <div class="overlay" id="statistics-table-spin">
+                                                <i class="fas fa-10x fa-sync-alt fa-spin">
+                                                </i>
+                                            </div>
                                             
                                         </div>
 
@@ -256,115 +261,150 @@ padding: 0;
 {% block select2 %}
     <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script type="text/javascript">
+        let statistics_table_spin = $('#statistics-table-spin');
         let table = document.getElementById("table");
         let p = document.getElementById("_p");
+
+        function display_table (field_name, field_value){
+            if(field_value){
+                if(field_name != "all"){
+                    let r = "select2-id_"+`${field_name}`+"-container";
+                    selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
+                    statistics_spin.show();
+                }
+
+                statistics_table_spin.show();
+                $.ajax({
+                    type: 'GET',
+                    url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
+                    data: {
+                        type: `${field_name}`,
+                        sql_id: field_value
+                    },
+                    success: function (data) {
+                        if(data.search_by_locality && field_name=="all"){
+                            document.getElementById("_savanes").innerHTML = ``;
+                            document.getElementById("_kara").innerHTML = ``;
+                            document.getElementById("_centrale").innerHTML = ``;
+                            
+                            if(data.region){
+                                document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
+                            }
+                            table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>{% translate 'Region' %}</th>
+                                    <th>{% translate 'Task Completed' %}</th>
+                                    <th>{% translate 'Percentage' %}</th>
+                                </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr title="{% translate 'Facilitators' %}: `+data.nbr_facilitators+` ; {% translate 'Task' %}s: `+data.nbr_tasks_completed+`/`+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
+                                        <td>{% translate 'All' %}</td>
+                                        <td>`+data.nbr_tasks_completed+`</td>
+                                        <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                                    </tr>
+                                </tbody>
+                                <br />
+                            `;
+                            p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+` (${((data.nbr_tasks_completed*100)/data.nbr_tasks).toFixed(2)}%)`+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                        }else if(data.search_by_locality){
+                            document.getElementById("_savanes").innerHTML = ``;
+                            document.getElementById("_kara").innerHTML = ``;
+                            document.getElementById("_centrale").innerHTML = ``;
+                            
+                            if(data.region){
+                                document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
+                            }
+                            table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>{% translate '`+data.type+`' %}</th>
+                                    <th>{% translate 'Task Completed' %}</th>
+                                    <th>{% translate 'Percentage' %}</th>
+                                </tr>
+                                </thead>
+
+                                <tbody>
+                                    <tr title="{% translate 'Facilitators' %}: `+data.nbr_facilitators+` ; {% translate 'Task' %}s: `+data.nbr_tasks_completed+`/`+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
+                                        <td>`+selected.toUpperCase()+`</td>
+                                        <td>`+data.nbr_tasks_completed+`</td>
+                                        <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                                    </tr>
+                                </tbody>
+                                <br />
+                            `;
+                            p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+` (${((data.nbr_tasks_completed*100)/data.nbr_tasks).toFixed(2)}%)`+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                        }else{
+                            table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>{% translate 'Region' %}</th>
+                                    <th>{% translate 'Task Completed' %}</th>
+                                    <th>{% translate 'Percentage' %}</th>
+                                </tr>
+                                </thead>
+
+                                <tbody>
+                            `;
+                            
+                            let nbr_tasks = 0;
+                            for (const [key, value] of Object.entries(data.regions)) {
+                                document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
+                                table.innerHTML += `
+                                <tr title="{% translate 'Task' %}s: `+value.nbr_tasks_completed+`/`+value.nbr_tasks+` ; CVD: `+value.nbr_cvds+` ; Village(s): `+value.nbr_villages+`" style="cursor: pointer;" >
+                                    <td>`+key+`</td>
+                                    <td>`+value.nbr_tasks_completed+`</td>
+                                    <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
+                                </tr>
+                                `;
+                                nbr_tasks += value.nbr_tasks;
+                            }
+
+                            table.innerHTML += `
+                            </tbody>
+                            <br />
+                            `;
+                            p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+` (${((data.nbr_tasks_completed*100)/data.nbr_tasks).toFixed(2)}%)`+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                        }
+                        
+                        {% comment %} if (data.length > 0) {
+                            data = data.slice(1);
+                            data.push(administrative_levels);
+                        }   {% endcomment %}
+
+                        statistics_spin.hide();
+                        statistics_table_spin.hide();
+                    },
+                    error: function (data) {
+                        alert(error_server_message + "Error " + data.status);
+                        statistics_spin.hide();
+                    }
+                });
+            }else{
+                document.getElementById("_savanes").innerHTML = ``;
+                document.getElementById("_kara").innerHTML = ``;
+                document.getElementById("_centrale").innerHTML = ``;
+                table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>{% translate 'Region' %}</th>
+                        <th>{% translate 'Task Completed' %}</th>
+                        <th>{% translate 'Percentage' %}</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                `;
+                p.innerHTML = '';
+            }
+        }
         {% for field in list_fields %}
             console.log("{{ field }}");
             $(document).on("change", ("#id_"+"{{ field }}"), function (event) {
                 
-                if(this.value){
-                    let r = "select2-id_"+"{{ field }}"+"-container";
-                    selected = document.getElementById(r).innerHTML.split("</span>")[1].toUpperCase();
-                    statistics_spin.show();
-
-                    $.ajax({
-                        type: 'GET',
-                        url: `{% url 'dashboard:diagnostics:get_tasks_diagnostics_view' %}`,
-                        data: {
-                            type: "{{ field }}",
-                            sql_id: this.value
-                        },
-                        success: function (data) {
-                            
-                            if(data.search_by_locality){
-                                document.getElementById("_savanes").innerHTML = ``;
-                                document.getElementById("_kara").innerHTML = ``;
-                                document.getElementById("_centrale").innerHTML = ``;
-                                
-                                if(data.region){
-                                    document.getElementById(("_"+data.region.toLowerCase())).innerHTML = (data.percentage_tasks_completed).toFixed(2)+"%";
-                                }
-                                table.innerHTML = `
-                                <thead>
-                                    <tr>
-                                        <th>{% translate '`+data.type+`' %}</th>
-                                        <th>{% translate 'Task Completed' %}</th>
-                                        <th>{% translate 'Percentage' %}</th>
-                                    </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        <tr title="{% translate 'Facilitators' %}: `+data.nbr_facilitators+` ; {% translate 'Task' %}s: `+data.nbr_tasks_completed+`/`+data.nbr_tasks+` ; Village(s) : `+data.nbr_villages+`" style="cursor: pointer;" >
-                                            <td>`+selected.toUpperCase()+`</td>
-                                            <td>`+data.nbr_tasks_completed+`</td>
-                                            <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
-                                        </tr>
-                                    </tbody>
-                                    <br />
-                                `;
-                                p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
-                            }else{
-                                table.innerHTML = `
-                                <thead>
-                                    <tr>
-                                        <th>{% translate 'Region' %}</th>
-                                        <th>{% translate 'Task Completed' %}</th>
-                                        <th>{% translate 'Percentage' %}</th>
-                                    </tr>
-                                    </thead>
-
-                                    <tbody>
-                                `;
-                                
-                                let nbr_tasks = 0;
-                                for (const [key, value] of Object.entries(data.regions)) {
-                                    document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
-                                    table.innerHTML += `
-                                    <tr title="{% translate 'Task' %}s: `+value.nbr_tasks_completed+`/`+value.nbr_tasks+` ; CVD: `+value.nbr_cvds+` ; Village(s): `+value.nbr_villages+`" style="cursor: pointer;" >
-                                        <td>`+key+`</td>
-                                        <td>`+value.nbr_tasks_completed+`</td>
-                                        <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
-                                    </tr>
-                                    `;
-                                    nbr_tasks += value.nbr_tasks;
-                                }
-
-                                table.innerHTML += `
-                                </tbody>
-                                <br />
-                                `;
-                                p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
-                            }
-                            
-                            {% comment %} if (data.length > 0) {
-                                data = data.slice(1);
-                                data.push(administrative_levels);
-                            }   {% endcomment %}
-
-                            statistics_spin.hide();
-                        },
-                        error: function (data) {
-                            alert(error_server_message + "Error " + data.status);
-                            statistics_spin.hide();
-                        }
-                    });
-                }else{
-                    document.getElementById("_savanes").innerHTML = ``;
-                    document.getElementById("_kara").innerHTML = ``;
-                    document.getElementById("_centrale").innerHTML = ``;
-                    table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th>{% translate 'Region' %}</th>
-                            <th>{% translate 'Task Completed' %}</th>
-                            <th>{% translate 'Percentage' %}</th>
-                        </tr>
-                        </thead>
-
-                        <tbody>
-                    `;
-                    p.innerHTML = '';
-                }
+                display_table("{{ field }}", this.value);
                 
             });
 
@@ -375,6 +415,8 @@ padding: 0;
 
 
         {% endfor %}
+
+        display_table('all', 'all');
 
         
         $("#id_phase").select2({

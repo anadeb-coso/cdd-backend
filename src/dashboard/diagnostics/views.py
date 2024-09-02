@@ -332,16 +332,18 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 "nbr_cvds": 0,
                 "nbr_villages": 0
             }
+        
+        assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=1)
 
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
             
             liste_villages = get_cascade_villages_by_administrative_level_id(int(sql_id))
             
-            assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+            assign_facilitators = assigns.filter(
                 administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
-                project_id=1,
-                activated=True
+                # project_id=1,
+                # activated=True
             )
 
             _facilitators = Facilitator.objects.filter(
@@ -352,7 +354,9 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             nbr_facilitators = _facilitators.count()
             
             for f in _facilitators:
-                villages_ids = list(set([ass.administrative_level_id for ass in mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,id__in=[a_f.id for a_f in assign_facilitators], facilitator_id=f.id) if ass.activated==True]))
+                villages_ids = list(set([ass.administrative_level_id for ass in assigns.filter(id__in=[a_f.id for a_f in assign_facilitators], facilitator_id=f.id) \
+                                        #  if ass.activated==True
+                                         ]))
                 cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
                 aggrs_status = AggregatedStatus.objects.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
                 
@@ -362,21 +366,22 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 nbr_tasks += sum([agg.total_tasks for agg in aggrs_status])
             
             #Backup
-            backup_db = nsc.get_db("backup_db_facilitators_docs")
-            backup_tasks = backup_db.get_view_result('administrative_level', 'by_administrative_level_id', keys=[v['administrative_id'] for v in liste_villages])
-            backup_adls = []
-            if backup_tasks:
-                _backup_tasks = []
-                for elt in backup_tasks[:]:
-                    if elt.get('value') and elt.get('value') and elt.get('value').get('type') == 'task' and elt.get('value') not in backup_tasks:
-                        _backup_tasks.append(elt['value'])
-                        nbr_tasks_completed += 1 if elt['value']['completed'] else 0
-                        nbr_tasks += 1
-                        backup_adls.append(elt['value']['administrative_level_id'])
-                backup_tasks = _backup_tasks
-                backup_adls = list(set(backup_adls))
-                nbr_cvds += len(backup_adls)
-                nbr_villages += len(list(set([_elt.id for o in mis_objects_call.filter_objects(AdministrativeLevel, id__in=[int(elt) for elt in backup_adls]) for _elt in o.cvd.get_villages()])))
+            # backup_db = nsc.get_db("backup_db_facilitators_docs")
+            # backup_tasks = backup_db.get_view_result('administrative_level', 'by_administrative_level_id', keys=[v['administrative_id'] for v in liste_villages])
+            # backup_adls = []
+            # if backup_tasks:
+            #     _backup_tasks = []
+            #     for elt in backup_tasks[:]:
+            #         if elt.get('value') and elt.get('value') and elt.get('value').get('type') == 'task' and elt.get('value') not in _backup_tasks:
+            #             if int(elt['value']['administrative_level_id']) in list(assigns.filter(activated=False).values_list('administrative_level_id', flat=True)):
+            #                 _backup_tasks.append(elt['value'])
+            #                 # nbr_tasks_completed += 1 if elt['value']['completed'] else 0
+            #                 # nbr_tasks += 1
+            #                 backup_adls.append(elt['value']['administrative_level_id'])
+            #     # backup_tasks = _backup_tasks
+            #     backup_adls = list(set(backup_adls))
+            #     nbr_cvds += len(backup_adls)
+            #     nbr_villages += len(list(set([_elt.id for o in mis_objects_call.filter_objects(AdministrativeLevel, id__in=[int(elt) for elt in backup_adls]) for _elt in o.cvd.get_villages()])))
             #End Backup
                         
             if nbr_villages > 0:
@@ -388,7 +393,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
 
             percentage_tasks_completed = ((nbr_tasks_completed/nbr_tasks)*100) if nbr_tasks else 0
 
-        elif _type in ["phase", "activity", "task"]:
+        elif _type in ["phase", "activity", "task", "all"]:
             tasks = []
             if _type == "phase":
                 tasks = Phase.objects.get(id=int(sql_id)).task_set.get_queryset()
@@ -396,26 +401,31 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 tasks = Activity.objects.get(id=int(sql_id)).task_set.get_queryset()
             elif _type == "task":
                 tasks.append(Task.objects.get(id=int(sql_id)))
+            else:
+                tasks = Task.objects.all()
             
             aggrs_status = AggregatedStatus.objects.filter(task_id__in=[t.id for t in tasks])
-            
+
             for k, v in regions.items():
-                aggrs_status_region = aggrs_status.filter(administrative_level_id=mis_objects_call.get_object(AdministrativeLevel, type='Region', name=k).id)
+                villages_ids = list(set([
+                    v.id for v in mis_objects_call.filter_objects(AdministrativeLevel,type='Village', parent__parent__parent__parent__name=k) \
+                    # if v.id in list(assigns.filter(activated=True).values_list('administrative_level_id', flat=True))
+                    if v.id in list(assigns.values_list('administrative_level_id', flat=True))
+                ]))
+                cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
+
+                # aggrs_status_region = aggrs_status.filter(administrative_level_id=mis_objects_call.get_object(AdministrativeLevel, type='Region', name=k).id)
+                aggrs_status_region = aggrs_status.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
                 regions[k]['nbr_tasks'] = sum([agg.total_tasks for agg in aggrs_status_region])
                 regions[k]['nbr_tasks_completed'] = sum([agg.total_tasks_completed for agg in aggrs_status_region])
                 regions[k]['percentage_tasks_completed'] = ((regions[k]["nbr_tasks_completed"]/regions[k]["nbr_tasks"])*100) if regions[k]["nbr_tasks"] else 0
             
-                villages_ids = list(set([
-                    v.id for v in mis_objects_call.filter_objects(AdministrativeLevel,type='Village', parent__parent__parent__parent__name=k) \
-                    if mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, administrative_level_id=v.id, project_id=1, activated=True)
-                ]))
-                cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
                 regions[k]['nbr_villages'] = len(villages_ids)
                 regions[k]['nbr_cvds'] = cvds.count()
                 
-                assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+                assign_facilitators = assigns.filter(
                     administrative_level_id__in=villages_ids,
-                    project_id=1,
+                    # project_id=1,
                     activated=True
                 )
 
@@ -431,23 +441,44 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 nbr_tasks_completed += regions[k]['nbr_tasks_completed']
             
             #Backup
-            backup_db = nsc.get_db("backup_db_facilitators_docs")
-            backup_tasks = backup_db.get_view_result('task', 'by_task_id', keys=[t.id for t in tasks])
-            backup_adls = []
-            if backup_tasks:
-                _backup_tasks = []
-                for elt in backup_tasks[:]:
-                    if elt.get('value') and elt.get('value') and elt.get('value').get('type') == 'task' and elt.get('value') not in backup_tasks:
-                        _backup_tasks.append(elt['value'])
-                        nbr_tasks_completed += 1 if elt['value']['completed'] else 0
-                        nbr_tasks += 1
-                        backup_adls.append(elt['value']['administrative_level_id'])
-                backup_tasks = _backup_tasks
+            # backup_db = nsc.get_db("backup_db_facilitators_docs")
+            # backup_tasks = backup_db.get_view_result('task', 'by_task_id', keys=[t.id for t in tasks])
+            # backup_adls = []
+            # if backup_tasks:
+            #     _backup_tasks = []
+            #     for elt in backup_tasks[:]:
+            #         if elt.get('value') and elt.get('value') and elt.get('value').get('type') == 'task' and elt.get('value') not in _backup_tasks:
+            #             if int(elt['value']['administrative_level_id']) in list(assigns.filter(activated=False).values_list('administrative_level_id', flat=True)):
+            #                 _backup_tasks.append(elt['value'])
+            #                 # nbr_tasks_completed += 1 if elt['value']['completed'] else 0
+            #                 # nbr_tasks += 1
+            #                 backup_adls.append(elt['value']['administrative_level_id'])
+            #     # backup_tasks = _backup_tasks
                 
-                backup_adls = list(set(backup_adls))
-                nbr_cvds += len(backup_adls)
-                nbr_villages += len(list(set([_elt.id for o in mis_objects_call.filter_objects(AdministrativeLevel, id__in=[int(elt) for elt in backup_adls]) for _elt in o.cvd.get_villages()])))
+            #     backup_adls = list(set(backup_adls))
+            #     nbr_cvds += len(backup_adls)
+            #     nbr_villages += len(list(set([_elt.id for o in mis_objects_call.filter_objects(AdministrativeLevel, id__in=[int(elt) for elt in backup_adls]) for _elt in o.cvd.get_villages()])))
             #End Backup
+        # else:
+        #     search_by_locality = True
+        #     facilitators = Facilitator.objects.filter(active=True, develop_mode=False, training_mode=False)
+
+        #     cvds = mis_objects_call.filter_objects(CVD)
+        #     aggrs_status = AggregatedStatus.objects.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
+            
+        #     nbr_cvds += cvds.count()
+        #     nbr_villages += mis_objects_call.filter_objects(
+        #         AdministrativeLevel, type='Village',
+        #         id__in=list(assigns.filter(facilitator_id__in=list(facilitators.values_list('id', flat=True))).values_list('administrative_level_id', flat=True))
+        #         ).count()
+        #     nbr_tasks_completed += sum([agg.total_tasks_completed for agg in aggrs_status])
+        #     nbr_tasks += sum([agg.total_tasks for agg in aggrs_status])
+
+        #     percentage_tasks_completed = ((nbr_tasks_completed/nbr_tasks)*100) if nbr_tasks else 0
+
+        #     nbr_facilitators = facilitators.count()
+
+        #     type_header = gettext_lazy('All')
             
         if search_by_locality:
             return self.render_to_json_response({
