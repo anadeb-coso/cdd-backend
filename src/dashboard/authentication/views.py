@@ -12,6 +12,8 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.http import Http404
 
+from authentication.models import Facilitator
+
 
 def handler400(request, exception):
     return render(
@@ -114,8 +116,13 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
         return ctx
 
     def post(self, request, *args, **kwargs):
+        facilitator = None
+        facilitator_email = None
+
         if self.id:
-            form = UpdateUserForm(request.POST, instance=User.objects.get(id=self.id))
+            user = User.objects.get(id=self.id)
+            form = UpdateUserForm(request.POST, instance=user)
+            facilitator_email = user.email
         else:
             form = CreateUserForm(request.POST)
         if form.is_valid():
@@ -170,6 +177,17 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             instance.save()
             user.save(using='mis')
             #End
+
+    
+            try:
+                facilitator = Facilitator.objects.get(email=(facilitator_email if facilitator_email else _user.email))
+                facilitator.password = _user.password
+                facilitator.username = _user.username
+                facilitator.name = f"{_user.last_name} {_user.first_name}"
+                facilitator.active = _user.is_active
+                facilitator.save()
+            except:
+                pass
 
             return redirect('dashboard:authentication:users')
         return super(CreateUpdateUserFormView, self).get(request, *args, **kwargs)
