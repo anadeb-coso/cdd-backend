@@ -4,6 +4,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
+from datetime import datetime
+import locale
 
 from news.serializers import *
 from news.models import *
@@ -73,6 +75,7 @@ class RestSaveNews(APIView):
             if news.publish:
                 try:
                     
+                    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
                     msg = send_email(
                         f"Nouvelle - COSO : {news.title}",
                         "mail/send/news",
@@ -83,8 +86,11 @@ class RestSaveNews(APIView):
                             },
                             "url": f"",
                             "news": news,
+                            "event_date": news.event_date.strftime('%A %d %B %Y à %H:%M') if news.event_date else None,
+                            "publication_date": news.publication_date.strftime('%A %d %B %Y à %H:%M') if news.publication_date else None,
                             "files": news.get_files() if news.get_files().count() <= 3 else news.get_files()[:3],
-                            "files_count": news.get_files().count() if news.get_files().count() <= 3 else 3
+                            "files_count": news.get_files().count() if news.get_files().count() <= 3 else 3,
+                            "villages_exist": (len([ad for ad in news.administrative_levels if ad.get('type') == "Village"]) != 0) if news.administrative_levels else False
                         },
                         [
                             (subscrib.user.email if subscrib.user else subscrib.facilitator.email) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
@@ -95,13 +101,14 @@ class RestSaveNews(APIView):
                     )
                     
                     mail_message = gettext_lazy("Mail sent successfully")
-                except:
+                except Exception as exc:
+                    print(exc)
                     mail_message = gettext_lazy("An error occurred while sending the email")
 
         
             return Response(
                 NewsSerializer(
-                    News.objects.get(id=news.pk),
+                    news,
                     many=False).data, 
                 status=status.HTTP_200_OK
             )

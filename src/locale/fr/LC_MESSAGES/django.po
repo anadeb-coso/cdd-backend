@@ -1201,3 +1201,11 @@ msgstr "Facilitateurs stabilisés inactifs"
 #: .\dashboard
 msgid "Active facilitators stabilized"
 msgstr "Facilitateurs stabilisés actifs"
+
+#: .\dashboard
+msgid "Published by"
+msgstr "Publié(e) par"
+
+#: .\dashboard
+msgid "Category"
+msgstr "Catégorie"
