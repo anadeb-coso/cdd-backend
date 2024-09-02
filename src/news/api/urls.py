@@ -21,6 +21,10 @@ urlpatterns = [
 
     
     path('get-projects/', RestGetProjects.as_view(), name="get_projects"),
+    
+    path('get-subscriptions-by-user/', views.RestGetSubscriptionsByUser.as_view(), name="get_subscriptions_by_user"),
+    path('subscription/', views.SubscriptionAPIView.as_view(), name="subscription"),
+    path('delete-subscription/', views.DeleteSubscriptionAPIView.as_view(), name="delete_subscription"),
 ]
 
 

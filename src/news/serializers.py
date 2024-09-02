@@ -52,3 +52,11 @@ class SaveNewsSerializer(serializers.ModelSerializer):
 		"""docstring for Meta"""
 		model = News
 		fields = '__all__'
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+	category = CategorySerializer(many=False)
+	class Meta:
+		"""docstring for Meta"""
+		model = Subscription
+		fields = '__all__'

@@ -26,6 +26,45 @@ class News(BaseModel):
     description = models.TextField(verbose_name=_('Description'))
     tags = models.ManyToManyField(Tag, default=[], blank=True, related_name="news_tags", verbose_name=_("Tags"))
     publish = models.BooleanField(default=False, verbose_name=_("Publish"))
+    
+    total_men_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total men present over 35"))
+    total_women_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total women present over 35"))
+    total_people_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present over 35"))
+    total_men_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total men present under 35"))
+    total_women_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total women present under 35"))
+    total_people_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present under 35"))
+    total_people_present = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present"))
+    
+    total_men_over_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total men over 35 injured"))
+    total_women_over_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total women over 35 injured"))
+    total_people_over_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total people over 35 injured"))
+    total_men_between_10_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total men between 10 and 35 injured"))
+    total_women_between_10_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total women between 10 and 35 injured"))
+    total_people_between_10_35_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total people between 10 and 35 injured"))
+    total_men_under_10_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total men under 10 injured"))
+    total_women_under_10_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total women under 10 injured"))
+    total_people_under_10_injured = models.IntegerField(null=True, blank=True, verbose_name=_("Total people under 10 injured"))
+    total_people_injured  = models.IntegerField(null=True, blank=True, verbose_name=_("Total people injured"))
+    
+    total_men_over_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total men over 35 died"))
+    total_women_over_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total women over 35 died"))
+    total_people_over_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total people over 35 died"))
+    total_men_between_10_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total men between 10 and 35 died"))
+    total_women_between_10_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total women between 10 and 35 died"))
+    total_people_between_10_35_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total people between 10 and 35 died"))
+    total_men_under_10_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total men under 10 died"))
+    total_women_under_10_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total women under 10 died"))
+    total_people_under_10_died = models.IntegerField(null=True, blank=True, verbose_name=_("Total people under 10 died"))
+    total_people_died  = models.IntegerField(null=True, blank=True, verbose_name=_("Total people died"))
+    
+    total_people_by_the_event  = models.IntegerField(null=True, blank=True, verbose_name=_("Total people affected by the event"))
+
+    publication_date = models.DateTimeField(blank=True, null=True, verbose_name=_("Publication date"))
+    event_date = models.DateField(blank=True, null=True, verbose_name=_("Event date"))
+    
+    
+    latitude = models.FloatField(null=True, blank=True, verbose_name=_("Latitude"))
+    longitude = models.FloatField(null=True, blank=True, verbose_name=_("Longitude"))
 
     facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, verbose_name=_('Facilitator'))
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, verbose_name=_('User'))
@@ -51,3 +90,10 @@ class NewsFile(BaseModel):
     file_type = models.CharField(max_length=100, default="image")
     username = models.CharField(max_length=255)
     user_email = models.CharField(max_length=255, null=True, blank=True)
+
+
+
+class Subscription(BaseModel):
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
