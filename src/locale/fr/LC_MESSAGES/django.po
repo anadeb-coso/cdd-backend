@@ -1209,3 +1209,27 @@ msgstr "Publié(e) par"
 #: .\dashboard
 msgid "Category"
 msgstr "Catégorie"
+
+#: .\dashboard
+msgid "News"
+msgstr "Nouvelles"
+
+#: .\dashboard
+msgid "Wording"
+msgstr "Libellé"
+
+#: .\dashboard
+msgid "Present"
+msgstr "Présents"
+
+#: .\dashboard
+msgid "Injured"
+msgstr "Blessés"
+
+#: .\dashboard
+msgid "Between 10 and 35"
+msgstr "Entre 10 et 35"
+
+#: .\dashboard
+msgid "Died"
+msgstr "Morts"

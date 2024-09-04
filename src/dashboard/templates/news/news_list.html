@@ -1,0 +1,157 @@
+{% load bootstrap4 static i18n custom_tags %}
+
+<style>
+    p {
+        color: #555;
+    }
+
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .tag {
+        background-color: #e0e0e0;
+        color: #555;
+        border-radius: 20px;
+        margin: 1px;
+        font-size: 0.6em;
+    }
+
+    .tag-custom {
+        background-color: #e0e0e0;
+        color: #555;
+        border-radius: 20px;
+        margin: 1px;
+        font-size: 0.8em;
+        padding: 1px 2px;
+    }
+
+    .green {
+        background-color: #5cb85c;
+        color: white;
+    }
+
+    .red {
+        background-color: #d9534f;
+        color: white;
+    }
+
+    .pink {
+        background-color: #f78da7;
+        color: white;
+    }
+
+    .light-green {
+        background-color: #81c784;
+        color: white;
+    }
+
+    .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .footer-user {}
+</style>
+
+{% for row in news %}
+<div class="row" style="display: flex;">
+    {% for new in row %}
+    <a href="{% url 'dashboard:news:detail' new.id %}">
+        <div class="col-3 card" style="">
+            {% if new.get_file %}
+            <img class="card-img-top" src="{{ new.get_file.url|imgAWSS3Filter }}" alt="{{ new.title }}"
+                style="height: 13rem;">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">
+                    {{ new.title }}
+                    <span class="tags" style="display: inline">
+                        {% for pr in new.projects %}
+                        <span class="tag-custom light-green" style="border-radius: 20px;">{{ pr.name }}</span>
+                        {% endfor %}
+                    </span>
+                </h5>
+                <p class="card-text">
+                    {{ new.description|safe|truncate_with_dots:200 }}
+                </p>
+                <span class="card-text tag-custom light-green">
+                    {{ new.category.name }}
+                </span>
+                {% comment %} <a href="#" class="btn btn-primary">Go somewhere</a> {% endcomment %}
+
+                <div class="footer">
+                    <div class="tags">
+                        {% for t in new.tags.all %}
+                        <span class="tag-custom">#{{ t.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="tags">
+                        <div class="tags">
+                            {% for ad in new.administrative_levels %}{% if ad.type == "Canton" %}
+                            <span class="tag-custom light-green">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                        {% comment %} <div class="tags">
+                            {% for ad in new.administrative_levels %}{% if ad.type == "Village" %}
+                            <span class="tag red">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div> {% endcomment %}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="card-footer">
+                
+                <div class="">
+                    <div class="">
+                        {% if new.event_date %}
+                        <span style="display: block;color:grey;">{% translate "Event date" %}: {{ new.event_date|date:"Y/m/d" }}</span>
+                        {% endif %}
+                        {% if new.publication_date %}
+                        <span style="display: block;color:grey;">{% translate "Publication date" %}: {{ new.publication_date|date:"d/m/Y à H:i" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <div class="">
+                        <i class="fa fa-user"></i> <span class="">
+                            {% if new.user %}
+                            {{ new.user.last_name }} {{ new.user.first_name }}
+                            {% elif new.facilitator %}
+                            {{ new.facilitator.name }}
+                            {% else %}
+                            {% translate "not define" %}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="">
+                        {% if new.latitude and new.longitude %}
+                        <a href="https://www.google.com/maps?q={{ new.latitude|replace:',r|.' }},{{ new.longitude|replace:',r|.' }}&z=12"
+                            target="_blank">
+                            <i class="fa fa-map-marker text-danger"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<script>
+    try {
+        total_news = parseInt("{{ total_news }}");
+    } catch (e) {
+        console.log(e);
+    }
+    $(document).ready(function() {
+        {% get_current_language as lang %}
+    });
+</script>

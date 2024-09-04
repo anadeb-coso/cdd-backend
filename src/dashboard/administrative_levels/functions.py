@@ -5,7 +5,10 @@ def get_administrative_level_under_json(administrative_level):
     if administrative_level:
         return {
             "administrative_id": str(administrative_level.id),
-            "name": str(administrative_level.name)
+            "name": str(administrative_level.name),
+            "id": administrative_level.id, 
+            "parent": administrative_level.parent.id if administrative_level.parent else None, 
+            "type": administrative_level.type 
         }
         
     return None

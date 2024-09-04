@@ -75,6 +75,12 @@ class News(BaseModel):
     def get_files(self):
         return self.newsfile_set.get_queryset().order_by("-date_taken")
     
+    def get_file(self):
+        file = self.newsfile_set.get_queryset().filter(principal=True).first()
+        if not file:
+            file = self.newsfile_set.get_queryset().first()
+        return file
+    
     # def save(self, *args, **kwargs):
     #     super().save(*args, **kwargs)
     #     return super().save(*args, **kwargs)

@@ -87,6 +87,12 @@ def get_hour(date_time):
         data = data[1].split('.')[0]
     return data
 
+@register.filter
+def truncate_with_dots(value, length):
+    if len(value) > length:
+        return value[:length] + '...'
+    return value
+
 
 @register.filter(name="structureTheFields")
 def structure_the_fields(task):
@@ -268,11 +274,19 @@ def is_pdf(uri):
 def not_local(uri):
     return uri.split(":")[0] != 'file'
 
-@register.filter(name="repalce")
-def repalce(v: str, s: str):
-    _ = s.split(";")
-    for elt in _:
-        v = v.replace(elt, "")
+@register.filter(name="replace")
+def replace(v: str, s: str):
+    v = str(v)
+    if "r|" in s:
+        if len(s.split('r|')) != 2:
+            return v
+        else:
+            what, to = s.split('r|')
+            return v.replace(what, to)
+    else:
+        _ = s.split(";")
+        for elt in _:
+            v = v.replace(elt, "")
     return v
 
     

@@ -1,0 +1,361 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block extracss %}
+    {{ block.super }}
+    <style>
+        #table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0;
+            border-radius: 10px 0 0 0 !important;
+
+            & thead th {
+                border: 1px solid #f2f2f2 !important;
+
+                font-weight: bolder !important;;
+                height: 36px;
+                padding: 0 25px 0 10px;
+
+                &:not([class^="bg-"]) {
+                    background-color: #f2f2f2 !important;
+                }
+
+                &:after, &:before {
+                    top: 30%;
+                }
+
+                &:last-of-type {
+
+                    border-radius: 0 10px 0 0 !important;
+                }
+
+                &:not(&:last-child) {
+                    border-right-color: #c1c1c1 !important;
+                }
+
+                &:last-child {
+                    border-right-color: transparent !important;
+                }
+
+                &:first-child {
+                    border-left-color: transparent !important;
+                }
+            }
+
+
+            & thead th:first-of-type {
+
+                border-radius: 10px 0 0 0 !important;
+            }
+
+            & tbody td {
+                border-bottom-width: 1px !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+
+            & tbody tr:last-of-type {
+                border-radius: 0 10px 0 0 !important;
+            }
+
+            & tbody tr:not(.even):not(.odd):last-of-type, & tbody tr:not(.even):not(.odd):last-of-type td[colspan="8"] {
+                border-radius: 0 0 10px 10px !important;
+            }
+
+            & tbody td:first-of-type {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:last-of-type td {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:not(:first-of-type) {
+                border-left: 0;
+
+            }
+
+            & tbody td:not(:last-of-type) {
+                padding: 0 25px 0 10px;
+                border-right: 0;
+            }
+
+            & tbody tr {
+                border-bottom: 1px solid #e2e1e1 !important;
+                border-right: 1px solid #e2e1e1 !important;
+                border-left: 1px solid #e2e1e1 !important;
+
+                &:last-of-type td:first-of-type {
+                    border-radius: 0 0 0 10px !important;
+
+                }
+
+                &:last-of-type td:last-of-type {
+                    border-radius: 0 0 10px 0 !important;
+
+                }
+            }
+
+        }
+
+        .search-bar {
+            height: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+            margin-top: 1px;
+        }
+
+        .dt-buttons, #table_length {
+            display: inline-flex;
+            max-width: 50%;
+            flex: 0 0 50%;
+            width: 50%;
+        }
+
+        .dt-buttons button {
+            color: #ffffff !important;
+            background-color: #24c38b;
+            border-color: #24c38b;
+            box-shadow: none;
+            border-style: none;
+            margin-right: 5px;
+            padding: 5px;
+            border-radius: 7px !important;
+        }
+
+        #table_length label {
+            margin-left: auto;
+        }
+
+        .no-sort:before, .no-sort:after {
+            display: none !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+
+            {% comment %} <div class="float-left mb-3 m-0 main-title">
+                {{ title | safe }}
+            </div> {% endcomment %}
+
+            {% comment %} {% if user.is_superuser or user|has_group:"Admin" %}
+                <div class="float-right mb-3">
+                    <a href="{% url 'dashboard:news:create' %}"
+                       class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-plus mr-2"></i>
+                        {% translate "Create Facilitator" %}
+                    </a>
+                </div>
+                <div class="float-right mb-3">&nbsp;&nbsp;</div>
+            {% endif %} {% endcomment %}
+
+            {% comment %} <div class="clearfix"></div> {% endcomment %}
+            <div class="card">
+                <div class="p-2 row news-filter">
+                    <div class="col-12 col-lg input-group search-bar mb-2 mb-lg-0">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.categories show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.tags show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.cantons show_label=False %}
+                    </div>
+                    <div class="col-6 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.villages show_label=False %}
+                    </div>
+                    <div class="col-lg-1 col-6 mb-2 mb-lg-0">
+                        <a class="btn fs12 text-bold-family text-primary pull-right pr-0 p-lg-0"
+                           id="clear_all_filters">
+                            {% translate "Clear all filters" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <div id="news-list"></div>
+                    <div class="text-right">
+                        <a id="previous" class="btn text-primary hidden">
+                            <i class="fa fa-chevron-left fs20 align-middle"></i>
+                        </a>
+                        <div id="current-page" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                        <a id="next" class="btn text-primary hidden">
+                            <i class="fa fa-chevron-right fs20 align-middle"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="overlay" id="spin">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script type="text/javascript">
+        let index = 0;
+        const default_offset = 20;
+        let offset = default_offset;
+        let previous = $('#previous');
+        let next = $('#next');
+        var total_news = 0;
+        let current_page = $('#current-page');
+
+
+        let ids = ["id_cantons", "id_villages"]
+        var type_field = "";
+        let spin = $('#spin');
+        let news = $('#news-list');
+        let administrative_level = $('#id_administrative_level');
+        let id_categories = $('#id_categories');
+        let id_tags = $('#id_tags');
+        
+        let id_cantons = $('#id_cantons');
+        let id_villages = $('#id_villages');
+
+
+        function loadNews(type_field = "") {
+            if ($("#id_" + type_field).val() || type_field == "all") {
+
+                $(".news-filter select").attr('disabled', true);
+                $.ajax({
+                    type: 'GET',
+                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                    data: {
+                        parent_id: $("#id_" + type_field).val()
+                    },
+                    success: function (data) {
+                        if (type_field == "cantons") {
+                            set_datas_administrative_level(id_villages, data.villages);
+                        }
+
+                    },
+                    error: function (data) {
+                        alert(error_server_message + "Error " + data.status);
+                        $(".news-filter select").attr('disabled', false);
+                    }
+                }).done(function () {
+                        $(".news-filter select").attr('disabled', false);
+                    }
+                );
+            }
+
+                spin.show();
+                news.html('');
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:news:news_list' %}",
+                    data: {
+                        index: index,
+                        offset: offset,
+                        id_categories: id_categories.val(),
+                        id_tags: id_tags.val(),
+                        id_cantons: id_cantons.val(),
+                        id_villages: id_villages.val(),
+                        type_field: type_field,
+                    },
+                    success: function (response) {
+                        news.html(response);
+                        if (index - offset >= 0) {
+                            previous.show();
+                        } else {
+                            previous.hide();
+                        }
+                        if (index + offset < total_news) {
+                            next.show();
+                        } else {
+                            next.hide();
+                        }
+                        if (response.trim()) {
+                            current_page.html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_news / offset));
+                        } else {
+                            current_page.html("")
+                        }
+                        spin.hide();
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                });
+
+
+
+        }
+
+        loadNews("all");
+
+        previous.click(function () {
+            index -= offset;
+            loadNews(type_field);
+        });
+
+        next.click(function () {
+            index += offset;
+            loadNews(type_field);
+        });
+
+        $('.news-filter select').on('change', function () {
+            type_field = "";
+            if ($(this).attr('id') && $(this).val() && ids.includes($(this).attr('id'))) {
+                type_field = $(this).attr('id').split('_')[1];
+            }
+            loadNews(type_field);
+        });
+
+        $("#clear_all_filters").on("click", function () {
+            $('.news-filter input').val('');
+            $('.news-filter select').val(null).trigger('change.select2');
+            loadNews("all");
+        });
+
+    </script>
+
+
+
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_categories").select2({
+            placeholder: "{% translate 'Category' %}",
+            allowClear: true
+        });
+        $("#id_tags").select2({
+            placeholder: "{% translate 'Tag' %}",
+            allowClear: true,
+        });
+        $("#id_cantons").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true,
+        });
+        $("#id_villages").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

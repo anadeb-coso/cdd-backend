@@ -165,7 +165,7 @@
                 " {% endif %}>
                 {% for fl in files %}
                 <img {% if files_count == 1 %}width="98%"{% elif files_count == 2 %}width="49%"{% else %}width="32%"{% endif %}
-                    src="{{ fl.url|imgAWSS3Filter }}" alt="Image 1">
+                    src="{{ fl.url|imgAWSS3Filter }}" alt="{{ fl.name }}">
                 {% endfor %}
             </div>
             {% endif %}
@@ -232,7 +232,7 @@
 
         {% if news.latitude and news.longitude %}
         <div>
-            <a href="https://www.google.com/maps?q={{ news.latitude }},{{ news.longitude }}&z=12" >
+            <a href="https://www.google.com/maps?q={{ news.latitude|replace:',r|.' }},{{ news.longitude|replace:',r|.' }}&z=12" >
                 Voir l'emplacement
             </a>
         </div>

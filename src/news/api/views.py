@@ -25,10 +25,17 @@ class RestSaveNews(APIView):
         try:
             id = request.data.get('id')
             files_saving = request.data.get('files')
+            publication_date = None
+            publication_date_existed = False
 
 
             if id:
-                serializer = self.serializer_class(News.objects.get(id=id), data=request.data, context={'request': request})
+                news = News.objects.get(id=id)
+                serializer = self.serializer_class(news, data=request.data, context={'request': request})
+                if not news.publish and request.data.get('publish'):
+                    publication_date = timezone.now()
+                if news.publication_date:
+                    publication_date_existed = True
             else:
                 serializer = self.serializer_class(data=request.data, context={'request': request})
                 
@@ -63,16 +70,14 @@ class RestSaveNews(APIView):
                 file.principal = principal
                 file.save()
 
-            if id:
-                if not news.publish and request.data.get('publish'):
-                    news.publication_date = timezone.now()
-            else:
-                if news.publish:
-                    news.publication_date = timezone.now()
+            if not id and news.publish:
+                news.publication_date = timezone.now()
+            if publication_date:
+                news.publication_date = publication_date
 
             news = news.save_and_return_object()
             
-            if news.publish:
+            if (not id and news.publish) or (not publication_date_existed and publication_date):
                 try:
                     
                     locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
@@ -96,7 +101,7 @@ class RestSaveNews(APIView):
                             (subscrib.user.email if subscrib.user else subscrib.facilitator.email) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
                         ],
                         [
-                            "businesspayvincent@gmail.com"
+                            "cosotogosig@gmail.com"
                         ]
                     )
                     

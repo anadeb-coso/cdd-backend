@@ -1,0 +1,257 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block extracss %}
+{{ block.super }}
+<style>
+    p {
+        color: #555;
+    }
+
+    .tags {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .tag {
+        background-color: #e0e0e0;
+        color: #555;
+        border-radius: 20px;
+        margin: 1px;
+        font-size: 0.6em;
+    }
+
+    .tag-custom {
+        background-color: #e0e0e0;
+        color: #555;
+        border-radius: 20px;
+        margin: 1px;
+        font-size: 0.8em;
+        padding: 1px 2px;
+    }
+
+
+    .tag-img {
+        background-color: #e0e0e0;
+        color: #555;
+        border-radius: 20px;
+        margin: 1px;
+        font-size: 0.8em;
+        padding: 1px 2px;
+    }
+
+    .green {
+        background-color: #5cb85c;
+        color: white;
+    }
+
+    .red {
+        background-color: #d9534f;
+        color: white;
+    }
+
+    .pink {
+        background-color: #f78da7;
+        color: white;
+    }
+
+    .light-green {
+        background-color: #81c784;
+        color: white;
+    }
+
+    .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .footer-user {}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-9 mx-auto">
+
+        <div class="card">
+
+            {% if new.get_file %}
+            <img class="card-img-top mx-auto" src="{{ new.get_file.url|imgAWSS3Filter }}" alt="{{ new.title }}"
+                style="width: 80%!important;height: 30rem;" id="img-principal">
+
+            <div class="footer" style="margin-left: 20px;">
+                <div class="tags">
+                    {% for fl in new.get_files %}
+                    <img class="card-img-top tag-img mx-auto" src="{{ fl.url|imgAWSS3Filter }}" alt="{{ fl.name }}"
+                        style="width: 3rem;height: 3rem;cursor:pointer;">
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title" style="margin-bottom: 7px;">
+                    <span style="font-weight: bold;">{{ new.title }}</span>
+                    <span class="tags" style="display: inline">
+                        {% for pr in new.projects %}
+                        <span class="tag-custom light-green" style="border-radius: 20px;">{{ pr.name }}</span>
+                        {% endfor %}
+                    </span>
+                </h5>
+                <p class="card-text">
+                    {{ new.description|safe }}
+                </p>
+                <span class="card-text tag-custom light-green">
+                    {{ new.category.name }}
+                </span>
+
+                <div class="footer">
+                    <div class="tags">
+                        {% for t in new.tags.all %}
+                        <span class="tag-custom">#{{ t.name }}</span>
+                        {% endfor %}
+                    </div>
+                    <div class="tags">
+                        <div class="tags">
+                            {% for ad in new.administrative_levels %}{% if ad.type == "Canton" %}
+                            <span class="tag-custom light-green">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+
+                            {% for ad in new.administrative_levels %}{% if ad.type == "Village" %}
+                            <span class="tag-custom red">{{ ad.name }}</span>
+                            {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+
+                <div class=""> 
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">{% translate "Wording" %}</th>
+                                <th colspan="4" >{% translate "Men" %}</th>
+                                <th colspan="4" >{% translate "Women" %}</th>
+                                <th rowspan="2">{% translate "Total" %}</th>
+                            </tr>
+                            <tr>
+                                <th><=10</th>
+                                <th>{% translate "Between 10 and 35" %}</th>
+                                <th><=35</th>
+                                <th>>35</th>
+                                <th><=10</th>
+                                <th>{% translate "Between 10 and 35" %}</th>
+                                <th><=35</th>
+                                <th>>35</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% if new.total_people_present %}
+                            <tr>
+                                <td>{% translate "Present" %}</td>
+                                <td> - </td>
+                                <td> - </td>
+                                <td>{{ new.total_men_present_under_35 }}</td>
+                                <td>{{ new.total_men_present_over_35 }}</td>
+                                <td> - </td>
+                                <td> - </td>
+                                <td>{{ new.total_women_present_under_35 }}</td>
+                                <td>{{ new.total_women_present_over_35 }}</td>
+                                <td>{{ new.total_people_present }}</td>
+                            </tr>
+                            {% endif %}
+
+                            {% if new.total_people_injured %}
+                            <tr>
+                                <td>{% translate "Injured" %}</td>
+                                <td>{{ new.total_men_under_10_injured }}</td>
+                                <td>{{ new.total_men_between_10_35_injured }}</td>
+                                <td> - </td>
+                                <td>{{ new.total_men_over_35_injured }}</td>
+                                <td>{{ new.total_women_under_10_injured }}</td>
+                                <td>{{ new.total_women_between_10_35_injured }}</td>
+                                <td> - </td>
+                                <td>{{ new.total_women_over_35_injured }}</td>
+                                <td>{{ new.total_people_injured }}</td>
+                            </tr>
+                            {% endif %}
+
+                            {% if new.total_people_died %}
+                            <tr>
+                                <td>{% translate "Died" %}</td>
+                                <td>{{ new.total_men_under_10_died }}</td>
+                                <td>{{ new.total_men_between_10_35_died }}</td>
+                                <td> - </td>
+                                <td>{{ new.total_men_over_35_died }}</td>
+                                <td>{{ new.total_women_under_10_died }}</td>
+                                <td>{{ new.total_women_between_10_35_died }}</td>
+                                <td> - </td>
+                                <td>{{ new.total_women_over_35_died }}</td>
+                                <td>{{ new.total_people_died }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+            </div>
+
+            <div class="card-footer">
+                
+                <div class="">
+                    <div class="">
+                        {% if new.event_date %}
+                        <span style="display: block;color:grey;">{% translate "Event date" %}: {{ new.event_date|date:"Y/m/d" }}</span>
+                        {% endif %}
+                        {% if new.publication_date %}
+                        <span style="display: block;color:grey;">{% translate "Publication date" %}: {{ new.publication_date|date:"d/m/Y à H:i" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <div class="">
+                        <i class="fa fa-user"></i> <span class="">
+                            {% if new.user %}
+                            {{ new.user.last_name }} {{ new.user.first_name }}
+                            {% elif new.facilitator %}
+                            {{ new.facilitator.name }}
+                            {% else %}
+                            {% translate "not define" %}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="">
+                        {% if new.latitude and new.longitude %}
+                        <a href="https://www.google.com/maps?q={{ new.latitude|replace:',r|.' }},{{ new.longitude|replace:',r|.' }}&z=12"
+                            target="_blank">
+                            <i class="fa fa-map-marker text-danger"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('.tag-img').click(function () {
+            $('#img-principal').attr('src', $(this).attr('src'));
+        });
+    });
+</script>
+
+{% endblock %}
