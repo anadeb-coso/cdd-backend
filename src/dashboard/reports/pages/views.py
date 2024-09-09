@@ -5,6 +5,8 @@ from django.utils.translation import gettext_lazy
 from .forms import ReportsFacilitatorsStatusForm
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FilterFacilitatorForm
+from ...facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from ...facilitators.repository.facilitator_criteria import FacilitatorCriteria
 
 
 class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
@@ -40,7 +42,16 @@ class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
         context = super().get_context_data(**kwargs)
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
-        context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], active=True))
+        context['form_f'] = ReportsFacilitatorsStatusForm(
+            FacilitatorRepository(
+                FacilitatorCriteria(
+                    develop_mode=context['is_develop'],
+                    training_mode=context['is_training'],
+                    active=True,
+                    projects__id=[self.request.session.get('project_id')]
+                )
+            )
+        )
 
         return context
 

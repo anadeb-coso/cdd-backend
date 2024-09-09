@@ -2,9 +2,9 @@ from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
 
-from authentication.models import Facilitator
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 
 
 class AuthMixinSerializer(serializers.Serializer):
@@ -15,7 +15,8 @@ class AuthMixinSerializer(serializers.Serializer):
         username = attrs.get('no_sql_user')
         password = attrs.get('no_sql_pass')
         print(username, password)
-        facilitator = Facilitator.objects.filter(no_sql_user=username, no_sql_pass=password)
+        criteria = FacilitatorCriteria(no_sql_user=username, no_sql_pass=password)
+        facilitator = FacilitatorRepository().find_by_criteria(criteria)
         if not facilitator:
             raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
 

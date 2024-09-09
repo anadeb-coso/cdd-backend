@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import redirect
 from django.views import generic
 from django.db.models import Q
 from datetime import datetime
@@ -6,9 +7,9 @@ from django.utils.translation import gettext_lazy
 from django.urls import reverse_lazy
 from django.conf import settings
 
-from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
+from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
-from process_manager.models import Task, Phase, Activity
+from process_manager.models import Task, Phase, Activity, Project
 from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
 from cdd.my_librairies.sms.send_sms import send_sms
@@ -269,3 +270,37 @@ class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             status = "error"
 
         return self.render_to_json_response({"message": message, "status": status}, safe=False)
+
+class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
+    model = Project
+    template_name = 'process_manager/list.html'
+    context_object_name = 'projects'
+    title = gettext_lazy('Projects')
+    active_level1 = 'projects'
+    breadcrumb = [
+       {
+                'url': '',
+                'title': title
+            },
+    ]
+
+    def get(self, request, *args, **kwargs):
+        projects = self.get_queryset()
+        project_id = self.request.GET.get('project_id')
+        if project_id is not None:
+            projects = projects.filter(id=int(project_id))
+        if len(projects) == 1:
+            self.request.session['project_id'] = projects[0].id
+            self.request.session['project_couch_id'] = projects[0].couch_id
+            return redirect('dashboard:facilitators:list')
+        return super().get(request)
+
+
+    def get_queryset(self):
+        return super().get_queryset()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['projects'] = list(self.object_list)
+
+        return context
