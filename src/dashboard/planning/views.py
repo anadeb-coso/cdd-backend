@@ -112,6 +112,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         show_my_calendar = self.request.GET.get('show_my_calendar')
         task_status = self.request.GET.get('task_status', 'All')
         id_facilitator = self.request.GET.get('id_facilitator', 'All')
+        is_training = bool(self.request.GET.get('is_training', "False") == "True")
+        is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
         
         if (id_village in (None, 'null', '', 'All') and current_week in (None, 'null', '', 'All') and \
             task_status in (None, 'null', '', 'All') and id_facilitator in (None, 'null', '', 'All')):
@@ -168,12 +170,10 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                     develop_mode=False, training_mode=False, active=True
                 )
             else:
-                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=True)
+                _facilitators = Facilitator.objects.filter(develop_mode=is_training, training_mode=is_training, active=True)
 
             facilitators = _facilitators
         else:
-            is_training = bool(self.request.GET.get('is_training', "False") == "True")
-            is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
             facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=True))
 
         if id_facilitator not in  ('All', ''):
