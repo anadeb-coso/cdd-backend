@@ -295,12 +295,6 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             return redirect('dashboard:facilitators:list')
         return super().get(request)
 
-
-    def get_queryset(self):
-        if self.request.user.is_staff or self.request.user.is_superuser:
-            return super().get_queryset()
-        return super().get_queryset().filter(facilitators__id=self.request.user.id)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['projects'] = list(self.object_list)
@@ -308,7 +302,7 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
         return context
 
 
-class UserProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
+class FacilitatorProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Project
     template_name = 'process_manager/list.html'
     context_object_name = 'projects'
