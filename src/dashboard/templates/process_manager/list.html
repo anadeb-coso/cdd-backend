@@ -30,7 +30,7 @@
 
 <body class="hold-transition login-page">
     {%  if OTHER_LANGUAGES %}
-        <nav class="main-header navbar navbar-expand">
+        <nav class="main-header navbar navbar-expand b-0">
             <ul class="navbar-nav ml-auto">
                 {% include 'layouts/language_dropdown.html' %}
             </ul>
@@ -65,7 +65,12 @@
       </div>
     </div>
     <!-- /.login-box -->
-
+    <div class="navbar">
+        <a class="nav-link" href="{% url 'dashboard:authentication:logout' %}" title="{% translate 'Logout' %}"
+                   role="button">
+            {% translate 'Logout' %}
+        </a>
+    </div>
     <!-- jQuery -->
     <script src="{% static 'AdminLTE/plugins/jquery/jquery.min.js' %}"></script>
     <!-- Bootstrap 4 -->

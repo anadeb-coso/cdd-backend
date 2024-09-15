@@ -297,7 +297,32 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
 
     def get_queryset(self):
-        return super().get_queryset()
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return super().get_queryset()
+        return super().get_queryset().filter(facilitators__id=self.request.user.id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['projects'] = list(self.object_list)
+
+        return context
+
+
+class UserProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
+    model = Project
+    template_name = 'process_manager/list.html'
+    context_object_name = 'projects'
+    title = gettext_lazy('Projects')
+    active_level1 = 'projects'
+    breadcrumb = [
+       {
+                'url': '',
+                'title': title
+            },
+    ]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(facilitators__id=self.request.user.id)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
