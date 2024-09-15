@@ -1,11 +1,12 @@
-from drf_spectacular.utils import extend_schema
-from rest_framework import parsers, renderers, status
+from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from process_manager.serializers import SaveFormDatasSerializer, ProjectSerializer
 from no_sql_client import NoSQLClient
 from process_manager.models import Project
+
+from rest_framework.generics import ListAPIView
+from rest_framework.views import APIView
 
 
 class SaveFormDatas(APIView):
@@ -99,3 +100,11 @@ class RestGetProjects(APIView):
                 {'error': exc.__str__()}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class FacilitatorProjectListView(ListAPIView):
+    serializer_class = ProjectSerializer
+    queryset = Project.objects.all()
+    def get_queryset(self):
+        return super().get_queryset().filter(facilitators__username=self.request.GET.get('username'))
+

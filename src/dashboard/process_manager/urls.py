@@ -11,5 +11,4 @@ urlpatterns = [
          name='get_choices_for_next_phases_activities_tasks_by_id'),
      path('validate_invalidate-task', views.ValidateTaskView.as_view(), name='validate_invalidate_task'),
      path('complete-uncomplete-task', views.CompleteTaskView.as_view(), name='complete_uncomplete_task'),
-    path('get-facilitator-projects', views.FacilitatorProjectListView.as_view(), name='facilitator_project')
 ]

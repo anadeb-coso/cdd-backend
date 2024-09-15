@@ -300,26 +300,3 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['projects'] = list(self.object_list)
 
         return context
-
-
-class FacilitatorProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
-    model = Project
-    template_name = 'process_manager/list.html'
-    context_object_name = 'projects'
-    title = gettext_lazy('Projects')
-    active_level1 = 'projects'
-    breadcrumb = [
-       {
-                'url': '',
-                'title': title
-            },
-    ]
-
-    def get_queryset(self):
-        return super().get_queryset().filter(facilitators__id=self.request.user.id)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['projects'] = list(self.object_list)
-
-        return context
