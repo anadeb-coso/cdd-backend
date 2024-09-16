@@ -3,6 +3,7 @@ from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import User
 
 from authentication.models import Facilitator
 
@@ -14,10 +15,15 @@ class AuthMixinSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs.get('no_sql_user')
         password = attrs.get('no_sql_pass')
-        print(username, password)
-        facilitator = Facilitator.objects.filter(no_sql_user=username, no_sql_pass=password)
-        if not facilitator:
-            raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
+        # print(username, password)
+        # user = Facilitator.objects.filter(no_sql_user=username, no_sql_pass=password).first()
+
+		# user = User.objects.filter(Q(email=username) | Q(username=username)).first()
+		# user = Facilitator.objects.filter(Q(email=username) | Q(username=username)).first() if not user else user
+
+
+        # if not user:
+        #     raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
 
         return super().validate(attrs)
 
