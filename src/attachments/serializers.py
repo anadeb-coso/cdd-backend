@@ -5,7 +5,9 @@ from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 
-from authentication.models import Facilitator
+
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 
 
 class AuthMixinSerializer(serializers.Serializer):
@@ -15,15 +17,14 @@ class AuthMixinSerializer(serializers.Serializer):
     def validate(self, attrs):
         username = attrs.get('no_sql_user')
         password = attrs.get('no_sql_pass')
+
         # print(username, password)
-        # user = Facilitator.objects.filter(no_sql_user=username, no_sql_pass=password).first()
 
-		# user = User.objects.filter(Q(email=username) | Q(username=username)).first()
-		# user = Facilitator.objects.filter(Q(email=username) | Q(username=username)).first() if not user else user
-
-
-        # if not user:
+        # criteria = FacilitatorCriteria(no_sql_user=username, no_sql_pass=password)
+        # facilitator = FacilitatorRepository().find_by_criteria(criteria)
+        # if not facilitator:
         #     raise serializers.ValidationError(self.default_error_messages.get('credentials'), code='authorization')
+
 
         return super().validate(attrs)
 

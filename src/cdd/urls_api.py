@@ -9,4 +9,5 @@ urlpatterns = [
     path('supportmaterial/', include('supportmaterial.api.urls')),
     path('news/', include('news.api.urls')),
     path('administrative-levels/', include('administrativelevels.urls')),
+    path('projects/', include('process_manager.urls')),
 ]

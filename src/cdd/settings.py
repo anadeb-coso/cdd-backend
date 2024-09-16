@@ -184,7 +184,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/'
 
-LOGIN_REDIRECT_URL = 'dashboard:facilitators:list'
+LOGIN_REDIRECT_URL = 'dashboard:process_manager:list'
 
 LOGOUT_REDIRECT_URL = '/'
 

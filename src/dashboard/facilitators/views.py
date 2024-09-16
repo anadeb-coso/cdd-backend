@@ -16,26 +16,29 @@ from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, Update
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
 from dashboard.utils import (
-    sync_geographicalunits_with_cvd_on_facilittor, sync_tasks
+    sync_geographicalunits_with_cvd_on_facilittor
 )
 from authentication.permissions import (
-    CDDSpecialistPermissionRequiredMixin, SuperAdminPermissionRequiredMixin,
+    CDDSpecialistPermissionRequiredMixin,
     AdminPermissionRequiredMixin
     )
 from .functions import (
-    get_cvds, get_cvd_name_by_village_id, is_village_principal, single_task_by_cvd,
-    clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db)
+    get_cvds, single_task_by_cvd,
+    )
 from administrativelevels import models as administrativelevels_models
 from assignments.models import AssignAdministrativeLevelToFacilitator
-from dashboard.administrative_levels.functions import get_administrative_levels_under_json, get_cascade_villages_by_administrative_level_id
+from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from cdd.functions import datetime_complet_str, exists_id_in_a_dict
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.functions import get_assign_adl_by_facilitatr
 from dashboard.tasks import sync_celery_tasks_re
+from .repository.db_facilitator_repository import FacilitatorRepository
+from .repository.facilitator_criteria import FacilitatorCriteria
+
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = [] #Facilitator.objects.filter(active=True)
+    queryset = []
     template_name = 'facilitators/list.html'
     context_object_name = 'facilitators'
     title = gettext_lazy('Facilitators')
@@ -48,7 +51,9 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
     ]
 
     def get_queryset(self):
-        return super().get_queryset()
+        return FacilitatorRepository().find_by_criteria(
+            FacilitatorCriteria(active=True, projects__id=[self.request.session.get('project_id')])
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -78,7 +83,10 @@ class FacilitatorMixin:
         try:
             self.facilitator_db_name = kwargs['id']
             self.facilitator_db = nsc.get_db(self.facilitator_db_name)
-            query_result = self.facilitator_db.get_query_result({"type": 'facilitator'})[:]
+            query_result = self.facilitator_db.get_query_result({
+                "type": 'facilitator',
+                'project_id': request.session.get('project_couch_id')
+            })[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
             self.cvds = get_cvds(self.doc)
@@ -104,6 +112,8 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         facilitators = []
 
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
+            criteria = FacilitatorCriteria()
+
             _type = None
             if id_region and type_field == "region":
                 _type = "region"
@@ -121,44 +131,6 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 _type = "village"
                 _id = id_village
 
-            nsc = NoSQLClient()
-            liste_prefectures = []
-            liste_communes = []
-            liste_cantons = []
-            liste_villages = []
-            # administrative_levels = nsc.get_db("administrative_levels").all_docs(include_docs=True)['rows']
-
-            # if _type == "region":
-            ##    region = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_region)
-            ##    region = region[:][0]
-            #     _type = "prefecture"
-            #     liste_prefectures = get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), region['administrative_id'])[:]
-
-            # if _type == "prefecture":
-            #     if not liste_prefectures:
-            #         liste_prefectures = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_prefecture)[:]
-            #     _type = "commune"
-            #     for prefecture in liste_prefectures:
-            #         [liste_communes.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), prefecture['administrative_id'])[:]]
-
-            # if _type == "commune":
-            #     if not liste_communes:
-            #         liste_communes = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_commune)[:]
-            #     _type = "canton"
-            #     for commune in liste_communes:
-            #         [liste_cantons.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), commune['administrative_id'])[:]]
-
-            # if _type == "canton":
-            #     if not liste_cantons:
-            #         liste_cantons = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_canton)[:]
-            #     _type = "village"
-            #     for canton in liste_cantons:
-            #         [liste_villages.append(elt) for elt in get_all_docs_administrative_levels_by_type_and_parent_id(administrative_levels, _type.title(), canton['administrative_id'])[:]]
-
-            # if _type == "village":
-            #     if not liste_villages:
-            #         liste_villages = get_all_docs_administrative_levels_by_type_and_administrative_id(administrative_levels, _type.title(), id_village)[:]
-
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
 
             if type(_id) is not list:
@@ -167,39 +139,33 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                     project_id=1,
                     activated=True
                 )
-
-                _facilitators = Facilitator.objects.filter(
+                criteria = FacilitatorCriteria(
                     id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True)
+                    develop_mode=False,
+                    training_mode=False,
+                    active=(False if type_facilitator=='inactive' else True),
+                    projects__id=[self.request.session.get('project_id')]
                 )
+
             else:
-                _facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True))
+                criteria = FacilitatorCriteria(
+                    develop_mode=False,
+                    training_mode=False,
+                    active=(False if type_facilitator=='inactive' else True),
+                    projects__id=[self.request.session.get('project_id')]
+                )
 
-            facilitators = _facilitators
-            # for f in _facilitators:
-            #         already_count_facilitator = False
-            #         facilitator_db = nsc.get_db(f.no_sql_db_name)
-
-            #         query_result = facilitator_db.get_query_result({
-            #             "type": 'facilitator'
-            #             })[:]
-            #         if query_result:
-            #             doc = query_result[0]
-            #             for _village in doc['administrative_levels']:
-
-            #                 if str(_village['id']).isdigit(): #Verify if id contain only digit
-
-            #                     for village in liste_villages:
-            #                         if str(_village['id']) == str(village['administrative_id']):
-            #                             if not already_count_facilitator:
-            #                                 facilitators.append(f)
-            #                                 already_count_facilitator = True
         else:
-            # facilitators = list(Facilitator.objects.all())
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
-            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=(False if type_facilitator=='inactive' else True)))
+            criteria = FacilitatorCriteria(
+                develop_mode=is_develop,
+                training_mode=is_training,
+                active=(False if type_facilitator=='inactive' else True),
+                projects__id=[self.request.session.get('project_id')]
+            )
 
+        facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
         _facilitators = []
         for f in facilitators:
             for assign in get_assign_adl_by_facilitatr(f.id, project_id=1, activated=True):
@@ -212,12 +178,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         return _facilitators
 
     def get_queryset(self):
-
         return self.get_results()
-
-    # def get_context_data(self, **kwargs):
-    #     context = super().get_context_data(**kwargs)
-    #     return context
 
 
 

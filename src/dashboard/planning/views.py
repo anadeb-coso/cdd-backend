@@ -8,6 +8,8 @@ from django.shortcuts import render
 from django.http import Http404
 
 from authentication.models import Facilitator
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from no_sql_client import NoSQLClient
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin, ModalFormMixin
 from dashboard.facilitators.forms import FilterFacilitatorForm
@@ -99,7 +101,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         return context
 
     def get_results(self):
-        
+
         id_region = self.request.GET.get('id_region')
         id_prefecture = self.request.GET.get('id_prefecture')
         id_commune = self.request.GET.get('id_commune')
@@ -112,15 +114,16 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         show_my_calendar = self.request.GET.get('show_my_calendar')
         task_status = self.request.GET.get('task_status', 'All')
         id_facilitator = self.request.GET.get('id_facilitator', 'All')
+
         is_training = bool(self.request.GET.get('is_training', "False") == "True")
         is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
-        
+
         if (id_village in (None, 'null', '', 'All') and current_week in (None, 'null', '', 'All') and \
-            task_status in (None, 'null', '', 'All') and id_facilitator in (None, 'null', '', 'All')):
+                task_status in (None, 'null', '', 'All') and id_facilitator in (None, 'null', '', 'All')):
             id_canton = id_canton if id_canton != '' else '1973'
             type_field = type_field if type_field != 'all' else 'canton'
-        
-        
+
+
         if current_week and current_week != 'null':
             current_week = current_week
             current_monday_date_object = datetime.strptime(current_monday_date, "%Y/%m/%d").date()
@@ -165,16 +168,31 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                     activated=True
                 )
 
-                _facilitators = Facilitator.objects.filter(
+                criteria = FacilitatorCriteria(
                     id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False, training_mode=False, active=True
+                    develop_mode=is_develop,
+                    training_mode=is_training,
+                    active=True,
+                    projects__id=[self.request.session.get('project_id')]
                 )
             else:
-                _facilitators = Facilitator.objects.filter(develop_mode=is_training, training_mode=is_training, active=True)
-
-            facilitators = _facilitators
+                criteria = FacilitatorCriteria(
+                    develop_mode=is_develop,
+                    training_mode=is_training,
+                    active=True,
+                    projects__id=[self.request.session.get('project_id')]
+                )
         else:
-            facilitators = (Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, active=True))
+            is_training = bool(self.request.GET.get('is_training', "False") == "True")
+            is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
+            criteria = FacilitatorCriteria(
+                develop_mode=is_develop,
+                training_mode=is_training,
+                active=True,
+                projects__id=[self.request.session.get('project_id')]
+            )
+
+        facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
 
         if id_facilitator not in  ('All', ''):
             facilitators = facilitators.filter(id=int(id_facilitator))
@@ -191,7 +209,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                 # }
             ]
         }
-        
+
         nsc = NoSQLClient()
         for f in facilitators:
             facilitator_database = nsc.get_db(f.no_sql_db_name)
@@ -207,7 +225,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             _f = None
             if query_result and query_result[:]:
                 tasks_planed = []
-                
+
                 for task in query_result[:]:
                     tasks_planed += [
                         {
@@ -220,7 +238,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                             "task__id": task.get('_id'),
                             "no_sql_db_name": f.no_sql_db_name
                         } for p in task['planning'] if p['planned_date'] in week_dates and (
-                            (task_status == 'completed' and (p.get('completed') or p.get('is_another'))) or (task_status == 'pending' and (not p.get('completed') and not p.get('is_another'))) or (task_status in  ('All', ''))
+                                (task_status == 'completed' and (p.get('completed') or p.get('is_another'))) or (task_status == 'pending' and (not p.get('completed') and not p.get('is_another'))) or (task_status in  ('All', ''))
                         )
                     ]
 
@@ -228,7 +246,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                     # 'facilitator': f, 
                     'person': f.name, 'tasks': tasks_planed}
 
-            
+
             if _f:
                 _facilitators[str(current_week)].append(_f)
 

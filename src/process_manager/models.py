@@ -1,7 +1,8 @@
 from django.db import models
+
+from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
-from authentication.models import Facilitator
 
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
@@ -27,7 +28,7 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     couch_id = models.CharField(max_length=255, blank=True)
-
+    facilitators = models.ManyToManyField(Facilitator, related_name="projects")
     def __str__(self):
         return self.name
 
@@ -307,7 +308,7 @@ class FacilitatorWave(BaseModel):
     begin = models.DateField(blank=True, null=True)
     end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    
+
     class Meta:
         unique_together = ['facilitator', 'wave', 'project']
     
