@@ -64,6 +64,7 @@
         border-right: 1px solid;
         display: inline-flex;
         justify-content: center;
+        align-items: center;
     }
 
     .information {
@@ -207,7 +208,6 @@
     .phase--pink {
         background-color: #E9B9C2;
     }
-
 </style>
 
 <div class="card">
@@ -231,7 +231,7 @@
                     <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
                 </div>
                 <div class="header__item header__completed">
-                    <span class="mr-2">{% translate 'En cours de validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+                    <span class="mr-2">{% translate 'En validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
                 </div>
                 <div class="header__item header__rejected">
                     <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>

@@ -32636,7 +32636,7 @@ a.text-muted:hover {
     padding: 10px;
     text-align: left;
     color: #24c38b;
-    display: block;
+    display: inline-block;
     width: fit-content;
     background-color: #f7f7f7;
 }
