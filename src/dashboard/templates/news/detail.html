@@ -77,8 +77,11 @@
         <div class="card">
 
             {% if new.get_file %}
-            <img class="card-img-top mx-auto" src="{{ new.get_file.url|imgAWSS3Filter }}" alt="{{ new.title }}"
-                style="width: 80%!important;height: 30rem;" id="img-principal">
+            <a class="mx-auto" href="{{ new.get_file.url|imgAWSS3Filter }}" target="_blank">
+                <img class="card-img-top" src="{{ new.get_file.url|imgAWSS3Filter }}" alt="{{ new.title }}"
+                style="height: 30rem;" id="img-principal">
+            </a>
+            {% comment %} width: 80%!important; {% endcomment %}
 
             <div class="footer" style="margin-left: 20px;">
                 <div class="tags">

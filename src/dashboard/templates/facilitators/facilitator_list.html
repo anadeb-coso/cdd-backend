@@ -123,6 +123,11 @@
             }
         });
 
+        if ($.fn.DataTable.isDataTable('#table')) {
+            $('#table').DataTable().destroy();
+            $('#table').empty(); 
+        }
+
         let table = $('#table').DataTable({
             language: {
                 url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
