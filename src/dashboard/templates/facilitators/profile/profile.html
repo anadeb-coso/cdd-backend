@@ -4,7 +4,7 @@
 {% block content %}
 
     <style>
-    .expand-icon {
+    .expand-icon, .expand-act-icon {
         cursor: pointer;
     }
     .progress-bar {
@@ -193,34 +193,38 @@
         font-weight: bolder;
     }
 
-    .phase--green {
+    .phase--green, .phase--1 {
         background-color: #63D3AC;
     }
 
-    .phase--red {
+    .phase--red, .phase--2 {
         background-color: #F0788E;
     }
 
-    .phase--yellow {
+    .phase--yellow, .phase--3 {
         background-color: #F2CD86;
     }
 
-    .phase--purple {
+    .phase--purple, .phase--4 {
         background-color: #9095FF;
     }
 
-    .phase--dark-green {
+    .phase--dark-green, .phase--5 {
         background-color: #44967D;
     }
 
-    .phase--purple-pink {
+    .phase--purple-pink, .phase--6 {
         background-color: #BA79B7;
     }
 
-    .phase--pink {
+    .phase--pink, .phase--7 {
         background-color: #E9B9C2;
     }
 
+    .task-card {
+        background-color: #00000017;
+        color: white;
+    }
 </style>
 <div class="card">
     <div class="col-12 pt-4">
@@ -409,229 +413,67 @@
                     </div>
                      <strong class="col-auto" style="cursor: pointer;" id="allStatus" onclick="filterBy('all')">{% translate 'All' %}</strong>
                 </div>
+                    {%  for phase in phases %}
+                       <div class="card phase phase--{{ phase.order }} flex-column col-12">
+                            <div class="w-100 p-0 row align-items-start">
+                                <div class="flex-column col mb-2">
+                                    <div class="phase__title">
+                                        {% translate 'Phase' %} {{ phase.order }}
+                                    </div>
+                                    <div class="phase__description">
+                                        {{ phase.name }}
+                                    </div>
+                                </div>
+                                <div class="ml-auto pointer-event fs20 expand-icon" id="icon{{ phase.order }}">
+                                    <i class="fas fa-chevron-right cursor"></i>
+                                </div>
+                            </div>
 
-                <div class="card phase phase--green flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 1
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Visites préalables' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon1">
-                            <i class="fas fa-chevron-right cursor"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner1">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail1"></div>
-                        <div id="pagination1" class="text-right">
-                            <a id="previous1" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage1" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next1" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                            <div class="w-100">
+                                <div id="content{{ phase.order }}">
+                                    {% for activity in activities_per_phase|get:phase.order %}
+                                        <div class="card-item task-card">
+                                            <div class="row">
+                                                <div class="col-12">
+                                                 <div class="w-100 p-0 row align-items-start">
+                                                    <div class="flex-column col mb-2">
+                                                        <div class="phase__title">
+                                                            {% translate 'Etape' %} {{ activity.order }}: {{ activity.name }}
+                                                        </div>
 
-                <div class="card phase phase--red flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 2
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Mobilisation Communautaire' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon2">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner2">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail2"></div>
-                        <div id="pagination2" class="text-right">
-                            <a id="previous2" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage2" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next2" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card phase phase--yellow flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 3
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Planification' %}
+                                                    </div>
+                                                    <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
+                                                        <i class="fas fa-chevron-right cursor"></i>
+                                                    </div>
+                                                 </div>
+                                                 <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
+                                                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                                 </div>
+                                                 <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
+                                                     <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
+                                                     <br>
+                                                     <br>
+                                                 </div>
+                                                 <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
+                                                       <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
+                                                            <a id="previous{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                                <i class="fa fa-chevron-left fs20 align-middle"></i>
+                                                            </a>
+                                                            <div id="currentPage{{ phase.order }}{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                                                            <a id="next{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                                <i class="fa fa-chevron-right fs20 align-middle"></i>
+                                                            </a>
+                                                        </div>
+                                                 </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
                             </div>
                         </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon3">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner3">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail3"></div>
-                        <div id="pagination3" class="text-right">
-                            <a id="previous3" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage3" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next3" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card phase phase--purple flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 4
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Préparation des sous-projets' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon4">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner4">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail4"></div>
-                        <div id="pagination4" class="text-right">
-                            <a id="previous4" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage4" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next4" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card phase phase--dark-green flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 5
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Consultation et examen des sous-projects' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon5">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner5">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail5"></div>
-                        <div id="pagination5" class="text-right">
-                            <a id="previous5" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage5" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next5" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
+                    {% endfor %}
 
                 </div>
-
-                <div class="card phase phase--purple-pink flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 6
-                            </div>
-                            <div class="phase__description">
-                                {% trans 'Mise en oeuuvre du sous-projet' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event  fs20 expand-icon" id="icon6">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner6">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail6"></div>
-                        <div id="pagination6" class="text-right">
-                            <a id="previous6" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage6" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next6" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card phase phase--pink flex-column col-12">
-                    <div class="w-100 p-0 row align-items-start">
-                        <div class="flex-column col mb-2">
-                            <div class="phase__title">
-                                {% translate 'Phase' %} 7
-                            </div>
-                            <div class="phase__description">
-                                {% translate 'Clotúre et replanification du sous-projets' %}
-                            </div>
-                        </div>
-                        <div class="ml-auto pointer-event fs20 expand-icon" id="icon7">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </div>
-                    <div class="w-100">
-                        <div class="phase__detail mt-1 text-center" id="phaseSpinner7">
-                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                        </div>
-                        <div class="phase__detail" id="phaseDetail7"></div>
-                        <div id="pagination7" class="text-right">
-                            <a id="previous7" class="btn hidden">
-                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                            </a>
-                            <div id="currentPage7" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                            <a id="next7" class="btn hidden">
-                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-
-
 
             </div>
 
@@ -666,7 +508,6 @@
         const offset = 2;
         let previous = $('#previous');
         let next = $('#next');
-        var total_tasks = parseInt("{{ total_tasks }}");
         let current_page = $('#current-page');
         let administrative_level = $('#id_administrative_level');
         let phase = $('#id_phase');
@@ -676,50 +517,57 @@
         let admin_level_selected = $('#admin_level_selected');
         let admin_level_selected_detail = $('#admin_level_selected_detail');
         let is_validated = $('#id_is_validated');
-
-
-        function hideTask(hideContent=false) {
-            for(let i  = 1; i < 8; i++) {
-                $('#phaseDetail' + i).hide();
-                $('#phaseSpinner' + i).hide();
-                $('#previous' + i).hide();
-                $('#next' + i).hide();
-                $('#currentPage' + i).hide();
-                $('#pagination' + i).hide();
-                if(hideContent) {
-                    $('#icon' + i + ' .fas')[0].classList = 'expand-icon fas fa-chevron-right';
-                }
-            }
-        }
-
-        hideTask();
-        for(let i  = 1; i < 8; i++) {
-            $('#previous' + i).click(function () {
-                $('#pagination' + phaseNumber).hide();
-                index -= offset;
-                loadTasks();
-            });
-
-            $('#next' + i).click(function () {
-                $('#pagination' + phaseNumber).hide();
-                index += offset;
-                loadTasks();
-            });
-        }
-        admin_level_selected.hide();
-        spin.hide();
         let adminLevelId = null;
         let isValidated = null;
         let isCompleted = null;
         let isPending = null;
         let isRejected = null;
         let phaseFilter = null;
-        let phaseNumber = null;
+        let phaseNumber = 1;
+        let activityNumber = null;
+        let activityFilter = null;
+
+        function hideTask(hideContent=false) {
+            document.querySelectorAll('[id^=phaseDetail]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=activityDescription]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=content]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=previous]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=next]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=currentPage]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=pagination]').forEach(element => element.hidden = true);
+            document.querySelectorAll('[id^=phaseSpinner]').forEach(element => element.hidden = true);
+            if(hideContent) {
+                document.querySelectorAll('[id^=icon] .fas').forEach(element => element.classList = 'fas fa-chevron-right');
+                document.querySelectorAll('[id^=iconActivity] .fas').forEach(element => element.classList = 'fas fa-chevron-right');
+            }
+        }
+
+        hideTask(true);
+
+        document.querySelectorAll('[id^=next' + phaseNumber + ']').forEach(element => {
+            element.addEventListener('click', () => {
+                document.querySelectorAll('[id^=pagination' + phaseNumber + ']').forEach(element => element.hidden = true);
+                index += offset;
+                loadTasks();
+            })
+        });
+
+        document.querySelectorAll('[id^=previous' + phaseNumber + ']').forEach(element => {
+            element.addEventListener('click', () => {
+                document.querySelectorAll('[id^=pagination' + phaseNumber + ']').forEach(element => element.hidden = true);
+                index -= offset;
+                loadTasks();
+            })
+        });
+
+        admin_level_selected.hide();
+        spin.hide();
+
 
     function filterByVillage(village_name, admin_level_id) {
         no_admin_level_selected.hide();
         admin_level_selected.hide();
-        hideTask();
+        hideTask(true);
         isValidated = null;
         isCompleted = null;
         isPending = null;
@@ -743,54 +591,61 @@
              admin_level_selected_detail.show();
         }
     }
-    function iconClick() {
+    function iconPhaseClick() {
         hideTask(true);
         let id = +this.id.split('icon')[1];
         if($('#icon' + id + ' .fas')[0].classList.contains('fa-chevron-down') == false) {
-            $('#icon' + id + ' .fas')[0].classList = 'expand-icon fas fa-chevron-down';
+            $('#icon' + id + ' .fas')[0].classList = 'fas fa-chevron-down';
             loadPhaseTasks(id);
         }
     }
-    document.querySelectorAll('.expand-icon')[0].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[1].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[2].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[3].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[4].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[5].addEventListener('click', iconClick);
-    document.querySelectorAll('.expand-icon')[6].addEventListener('click', iconClick);
+
+    function iconActivityPhase() {
+        document.querySelectorAll('[id^=phaseDetail]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=activityDescription]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=previous]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=next]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=currentPage]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=pagination]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=phaseSpinner]').forEach(element => element.hidden = true);
+        document.querySelectorAll('[id^=iconActivity] .fas').forEach(element => element.classList = 'fas fa-chevron-right');
+
+        let id = +this.id.split('iconActivity')[1];
+
+        document.querySelectorAll('[id^=iconActivity' + phaseNumber + ']' + ' .fas').forEach(element => element.classList = 'fas fa-chevron-right');
+
+        if($('#iconActivity' +  id + ' .fas')[0].classList.contains('fa-chevron-down') == false) {
+            $('#iconActivity' + id + ' .fas')[0].classList = 'fas fa-chevron-down';
+            let activity = id.toString().split(phaseNumber.toString());
+            activity.shift()
+            activity = activity.join('');
+            if (activity == '') {
+                activity = 1;
+            }
+            loadActivityTasks(activity);
+        }
+    }
+
+    document.querySelectorAll('.expand-icon').forEach(element => element.addEventListener('click', iconPhaseClick));
+    document.querySelectorAll('.expand-act-icon').forEach(element => element.addEventListener('click', iconActivityPhase));
 
     function loadPhaseTasks(number) {
-        phaseFilter = null;
+        phaseFilter = number;
         phaseNumber = number;
         index = 0;
         hideTask();
-        if (phaseNumber == 1 ) {
-            phaseFilter = 'VISITES PREALABLES'
-        }
-        else if (phaseNumber == 2 ) {
-            phaseFilter = 'MOBILISATION COMMUNAUTAIRE'
-        }
-        else if (phaseNumber == 3 ) {
-            phaseFilter = 'PLANIFICATION'
-        }
-        else if (phaseNumber == 4 ) {
-            phaseFilter = 'PRÉPARATION SOUS-PROJET'
-        }
-        else if (phaseNumber == 5 ) {
-            phaseFilter = 'CONSULTATION ET EXAMEN SOUS-PROJET'
-        }
-        else if (phaseNumber == 6 ) {
-            phaseFilter = 'MISE EN ŒUVRE DU SOUS-PROJET'
-        }
-        else if (phaseNumber == 7 ) {
-            phaseFilter = 'CLOTURE ET REPLANIFICATION DU SOUS-PROJET'
-        }
-        loadTasks();
+        $('#content' + phaseNumber)[0].hidden = false;
     }
 
+    
+    function loadActivityTasks(number) {
+        activityFilter = number;
+        activityNumber = number;
+        loadTasks();
+    }
+    
      function loadTasks() {
-            $('#phaseSpinner' + phaseNumber).show();
-            $('#phaseDetail' + phaseNumber).hide();
+            $('#phaseSpinner' + phaseNumber + activityNumber)[0].hidden = false;
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:facilitators:task_list' facilitator_db_name %}",
@@ -799,7 +654,7 @@
                     offset: offset,
                     administrative_level: adminLevelId,
                     phase: phaseFilter,
-                    activity: activity.val(),
+                    activity: activityFilter,
                     task: task.val(),
                     is_validated: isValidated,
                     is_completed: isCompleted,
@@ -807,33 +662,34 @@
                     is_rejected: isRejected
                 },
                 success: function (response) {
-                    $('#phaseDetail' + phaseNumber).html(response);
-                    $('#phaseDetail' + phaseNumber).show();
-                    $('#phaseSpinner' + phaseNumber).hide();
+                    $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = response;
+                    $('#phaseDetail' + phaseNumber + activityNumber)[0].hidden = false;
+                    $('#activityDescription' + phaseNumber + activityNumber)[0].hidden = false;
+                    $('#phaseSpinner' + phaseNumber + activityNumber)[0].hidden = true;
+                    total_tasks = $('#totalActTasks')[0].value;
                     admin_level_selected_detail.hide();
                     no_admin_level_selected.hide();
                     admin_level_selected.show();
-
                     if (index - offset >= 0) {
-                        $('#previous' + phaseNumber).show();
+                        $('#previous' + phaseNumber + activityNumber)[0].hidden = true;
                     } else {
-                        $('#previous' + phaseNumber).hide();
+                        $('#previous' + phaseNumber + activityNumber)[0].hidden = false;
                     }
                     if (index + offset < total_tasks) {
-                        $('#next' + phaseNumber).show();
+                        $('#next' + phaseNumber + activityNumber)[0].hidden = true;
                     } else {
-                        $('#next' + phaseNumber).hide();
+                        $('#next' + phaseNumber + activityNumber)[0].hidden = false;
                     }
                     if (response.trim()) {
-                        if (total_tasks == 0) {
-                            $('#phaseDetail' + phaseNumber).html('<div class="text-center">{% translate 'No tasks found' %} </div>');
-                            $('#pagination' + phaseNumber).hide();
+                        if (total_tasks == '0') {
+                            $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = '<div class="text-center">{% translate 'No tasks found' %} </div>';
+                            $('#pagination' + phaseNumber + activityNumber)[0].hidden = false
                         } else {
-                            $('#currentPage' + phaseNumber).html(Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset));
-                            $('#pagination' + phaseNumber).show();
+                            $('#currentPage' + phaseNumber + activityNumber)[0].innerHTML = Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset);
+                            $('#pagination' + phaseNumber + activityNumber)[0].hidden = true
                         }
                     } else {
-                        $('#currentPage' + phaseNumber).html("");
+                        $('#currentPage' + phaseNumber + activityNumber)[0].innerHTML = "";
                     }
                     spin.hide();
                     admin_level_selected_detail.show();

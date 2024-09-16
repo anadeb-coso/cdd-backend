@@ -1,5 +1,6 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.shortcuts import get_object_or_404
@@ -305,12 +306,20 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
         context['breadcrumb'] = False
-
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks = 0
+        phases =  Phase.objects.all()
+        context['phases'] = phases
+
+        activities_per_phase = {}
+        for phase in phases:
+            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order).values('name', 'phase', 'description', 'order').order_by('order')
+
+        context["activities_per_phase"] = activities_per_phase
         for doc in facilitator_docs:
             doc = doc.get('doc')
+
             if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
                 last_activity_date = datetime_complet_str(doc.get('last_updated'))
             total_tasks += 1
@@ -442,7 +451,6 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context['total_tasks_validated'] = total_tasks_validated
         context['total_tasks_rejected'] = total_tasks_rejected
         context['total_task_pending'] = total_task_pending
-        context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed / total_tasks) * 100) if total_tasks else 0
         context['nbr_villages'] = 0
 
@@ -464,8 +472,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
-        phase_name = self.request.GET.get('phase')
-        activity_name = self.request.GET.get('activity')
+        phase_id = self.request.GET.get('phase')
+        activity_id = self.request.GET.get('activity')
         task_name = self.request.GET.get('task')
         is_validated = self.request.GET.get('is_validated', None)
         is_pending = self.request.GET.get('is_pending', None)
@@ -478,10 +486,10 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
-        if phase_name:
-            selector["phase_name"] = phase_name
-        if activity_name:
-            selector["activity_name"] = activity_name
+        if phase_id:
+            selector["order"] = int(phase_id)
+        if activity_id:
+            selector["activity_id"] = Activity.objects.filter(order=activity_id, phase__order=phase_id)[0].couch_id
         if task_name:
             selector["name"] = task_name
 
@@ -511,12 +519,12 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                 _["phase_order"] = 0
                 _["activity_order"] = 0
                 for phase_obj in phases:
-                    if phase_obj.name == _["phase_name"]:
+                    if phase_obj.order == _["order"]:
                         _["phase_order"]=phase_obj.order
                         break
                 for activity_obj in activities:
-                    if activity_obj.name == _["activity_name"]:
-                        _["activity_order"]=activity_obj.order
+                    if activity_obj.couch_id == _["activity_id"]:
+                        _["activity_name"]=activity_obj.name
                         break
         return sorted(object_list, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
 
@@ -530,7 +538,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
         index = int(self.request.GET.get('index'))
         offset = int(self.request.GET.get('offset'))
-        context['total_tasks'] = len(self.object_list)
+        context['total_act_tasks'] = len(self.object_list)
         context['tasks'] = self.object_list[index: index + offset]
         return context
 
