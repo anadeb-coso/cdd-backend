@@ -29,8 +29,8 @@ class Project(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     couch_id = models.CharField(max_length=255, blank=True)
-    facilitators = models.ManyToManyField(Facilitator, related_name="projects")
-    users = models.ManyToManyField(User, related_name="projects")
+    facilitators = models.ManyToManyField(Facilitator, related_name="projects", default=[], blank=True)
+    users = models.ManyToManyField(User, related_name="projects", default=[], blank=True)
     def __str__(self):
         return self.name
 
