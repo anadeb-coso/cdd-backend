@@ -8,6 +8,7 @@ from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity, Project
 from cloudant.document import Document
+from django.contrib.auth.models import User
 
 from administrativelevels import models as administrativelevels_models
 from dashboard.facilitators.functions import get_cvds
@@ -460,6 +461,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     
                     _fc_task['phase_sql_id'] = task_model.phase.id
                     _fc_task['activity_sql_id'] = task_model.activity.id
+                    _fc_task['project_name'] = task_model.project.name
 
                     if canton_sql_id:
                         _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
@@ -1344,22 +1346,37 @@ def test():
 def default_project_to_assign(name="COSO"):
     project = Project.objects.filter(name=name).first()
     facilitators = Facilitator.objects.filter(projects__isnull=True)
-    
-    if project and facilitators:
-        project.facilitators.add(*facilitators)
+    users = User.objects.filter(projects__isnull=True)
+
+    if project and (facilitators or users):
+
+        if facilitators:
+            project.facilitators.add(*facilitators)
+        if users:
+            project.users.add(*users)
         project.save()
 
-        nsc = NoSQLClient()
-        for f in facilitators:
-            print(f.name)
-            db = nsc.get_db(f.no_sql_db_name)
+        if facilitators:
+            nsc = NoSQLClient()
+            for f in facilitators:
+                print(f.name)
+                db = nsc.get_db(f.no_sql_db_name)
 
-            docs = db.get_query_result({"type": "facilitator"})[0]
+                docs = db.get_query_result({"type": "facilitator"})[0]
 
-            if len(docs) > 0:
-                doc = docs[0].copy()
-                doc["project_id"] = project.couch_id
-                doc["projects_ids"] = [project.couch_id]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    doc["project_id"] = project.couch_id
+                    doc["project_name"] = project.name
+                    doc["projects_ids"] = [project.couch_id]
 
-                nsc.update_cloudant_document(db,  doc["_id"], doc)
-                
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+    
+
+                fc_docs = db.all_docs(include_docs=True)['rows']
+                for _doc in fc_docs:
+                    doc = _doc.get('doc')
+                    if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
+                        doc["project_name"] = project.name
+                        doc["project_id"] = project.couch_id
+                        nsc.update_cloudant_document(db,  doc["_id"], doc)
