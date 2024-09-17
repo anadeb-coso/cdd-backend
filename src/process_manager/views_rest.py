@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from process_manager.serializers import SaveFormDatasSerializer, ProjectSerializer
 from no_sql_client import NoSQLClient
 from process_manager.models import Project
+from django.db.models import Q
 
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
@@ -106,5 +107,6 @@ class FacilitatorProjectListView(ListAPIView):
     serializer_class = ProjectSerializer
     queryset = Project.objects.all()
     def get_queryset(self):
-        return super().get_queryset().filter(facilitators__username=self.request.GET.get('username'))
+        username = self.request.GET.get('username')
+        return list(set(list(super().get_queryset().filter(Q(facilitators__username=username) | Q(users__username=username)))))
 

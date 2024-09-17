@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
@@ -29,6 +30,7 @@ class Project(models.Model):
     description = models.TextField()
     couch_id = models.CharField(max_length=255, blank=True)
     facilitators = models.ManyToManyField(Facilitator, related_name="projects")
+    users = models.ManyToManyField(User, related_name="projects")
     def __str__(self):
         return self.name
 
