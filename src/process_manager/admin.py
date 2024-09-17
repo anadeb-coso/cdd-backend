@@ -83,10 +83,74 @@ class FacilitatorDeploymentAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request) #.select_related('user')
 
-admin.site.register(Project)
-admin.site.register(Phase)
-admin.site.register(Activity)
-admin.site.register(Task)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'name',
+        'description',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'description',
+    )
+
+class PhaseAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'name',
+        'description',
+        'project',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'description',
+        'project__name',
+        'project__description',
+    )
+
+
+class ActivityAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'phase',
+        'name',
+        'description',
+        'project',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'phase_name',
+        'phase_description',
+        'project__name',
+        'project__description',
+    )
+    
+class TaskAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'activity',
+        'name',
+        'project',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'description',
+        'activity_name',
+        'activity_description',
+        'phase_name',
+        'phase_description',
+        'project__name',
+        'project__description',
+    )
+
+admin.site.register(Project, ProjectAdmin)
+admin.site.register(Phase, PhaseAdmin)
+admin.site.register(Activity, ActivityAdmin)
+admin.site.register(Task, TaskAdmin)
 
 
 admin.site.register(Wave)

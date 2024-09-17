@@ -80,7 +80,7 @@ class Phase(models.Model):
     order = models.IntegerField()
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.project.name})"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -135,7 +135,7 @@ class Activity(models.Model):
     couch_id = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return self.phase.name + '-' + self.name
+        return  f"{self.phase.name} - {self.name} ({self.project.name})"
 
 
     def save(self, *args, **kwargs):
@@ -194,7 +194,7 @@ class Task(models.Model):
     couch_id = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return self.phase.name + '-' + self.activity.name + '-' + self.name
+        return f"{self.phase.name} - {self.activity.name} - {self.name} ({self.project.name})"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
