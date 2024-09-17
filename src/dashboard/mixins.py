@@ -1,4 +1,7 @@
 from django.http import Http404, JsonResponse
+from django.contrib.auth import logout as auth_logout
+from django.shortcuts import redirect
+from django.http import HttpResponseRedirect
 
 
 class PageMixin(object):
@@ -9,11 +12,20 @@ class PageMixin(object):
 
     def get_context_data(self, **kwargs):
         ctx = super(PageMixin, self).get_context_data(**kwargs)
+        
+        
         ctx.setdefault('title', self.title)
         ctx.setdefault('active_level1', self.active_level1)
         ctx.setdefault('active_level2', self.active_level2)
         ctx.setdefault('breadcrumb', self.breadcrumb)
         return ctx
+    
+    def dispatch(self, request, *args, **kwargs):
+        
+        if "/process-manager/" not in self.request.get_full_path() and self.request.user.is_authenticated and not self.request.session.get('project_id'): # If the user is authenticated and no project selected
+            # auth_logout(self.request) #log out user
+            return redirect('dashboard:process_manager:list')
+        return super().dispatch(request, *args, **kwargs)
 
 
 class ModalFormMixin(object):
