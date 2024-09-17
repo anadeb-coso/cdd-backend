@@ -63,7 +63,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
         if facilitator_db_name:
             fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
         else:
-            fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+            fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[request.session.get('project_id')])
         for f in fs.order_by("name", "username"):
             dict_administrative_levels_with_infos = {}
             already_count_facilitator = False
@@ -194,7 +194,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
         if facilitator_db_name:
             fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, no_sql_db_name=facilitator_db_name)
         else:
-            fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training)
+            fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, projects__in=[request.session.get('project_id')])
         for f in fs.order_by("name", "username"):
             dict_administrative_levels_with_infos = {}
             already_count_facilitator = False
@@ -439,7 +439,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
     if facilitator_db_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
     else:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
         ("MONOGRAPHIE", "N°", "N°", "N°", "ind_0"),
@@ -766,7 +766,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
     if facilitator_db_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
     else:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
         ("MONOGRAPHIE", "N°", "N°", "N°", "ind_0"),
@@ -967,7 +967,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
     if facilitator_db_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
     else:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
         ("MONOGRAPHIE", "N°", "N°", "N°", "N°"),

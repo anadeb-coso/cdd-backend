@@ -292,6 +292,7 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
         if len(projects) == 1:
             self.request.session['project_id'] = projects[0].id
             self.request.session['project_couch_id'] = projects[0].couch_id
+            self.request.session['project_name'] = projects[0].name
             return redirect('dashboard:facilitators:list')
         return super().get(request)
 

@@ -47,7 +47,7 @@ class PlanMixin:
 
 class PlanningListView(PageMixin, LoginRequiredMixin, generic.ListView):
     model = Facilitator
-    queryset = Facilitator.objects.filter(active=True)
+    queryset = [] #Facilitator.objects.filter(active=True)
     template_name = 'planning/list.html'
     context_object_name = 'facilitators'
     title = gettext_lazy('Planning')
@@ -209,7 +209,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                 # }
             ]
         }
-
+        print(facilitators)
         nsc = NoSQLClient()
         for f in facilitators:
             facilitator_database = nsc.get_db(f.no_sql_db_name)

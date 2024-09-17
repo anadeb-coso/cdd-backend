@@ -80,12 +80,16 @@ class FacilitatorMixin:
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
+        
         try:
             self.facilitator_db_name = kwargs['id']
             self.facilitator_db = nsc.get_db(self.facilitator_db_name)
             query_result = self.facilitator_db.get_query_result({
                 "type": 'facilitator',
-                'project_id': request.session.get('project_couch_id')
+                "$or": [
+                    {"project_id": request.session.get('project_couch_id')},
+                    {"projects_ids": {"$in": [request.session.get('project_couch_id')]}}
+                ]
             })[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
@@ -447,10 +451,10 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
-        if phase_id:
-            selector["order"] = int(phase_id)
+        # if phase_id:
+        #     selector["order"] = int(phase_id)
         if activity_id:
-            selector["activity_id"] = Activity.objects.filter(order=activity_id, phase__order=phase_id)[0].couch_id
+            selector["activity_name"] = Activity.objects.filter(order=activity_id, phase__order=phase_id)[0].name
         if task_name:
             selector["name"] = task_name
 
@@ -466,7 +470,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         if is_rejected == 'true':
             selector["completed"] = True
             selector["validated"] = False
-
+            
         return self.facilitator_db.get_query_result(selector)
 
     def get_queryset(self):
@@ -474,7 +478,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         activities = Activity.objects.all()
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
-
+        
         if object_list:
             for _ in object_list:
                 _["phase_order"] = 0
@@ -566,7 +570,11 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "type": "facilitator",
             "develop_mode": facilitator.develop_mode,
             "training_mode": facilitator.training_mode,
-            "sql_id": int(facilitator.pk)
+            "sql_id": int(facilitator.pk),
+            "project_id": self.request.session.get('project_id'),
+            "projects_ids": [
+                self.request.session.get('project_id')
+            ]
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)

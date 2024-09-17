@@ -247,11 +247,11 @@ def get_documents_by_type(db, _type, empty_choice=True, attrs={}):
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[], projects_ids=[]):
+def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[], project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     nsc_database = nsc.get_db(database)
@@ -458,6 +458,9 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     #End management of the dates of the last update and completed
 
                     
+                    _fc_task['phase_sql_id'] = task_model.phase.id
+                    _fc_task['activity_sql_id'] = task_model.activity.id
+
                     if canton_sql_id:
                         _fc_task['canton_sql_id'] = canton_sql_id #Add canton_sql_id 
 
@@ -489,7 +492,7 @@ def over_documents(develop_mode=False, training_mode=False, project_id=None):
     phases = Phase.objects.filter(project_id=project_id)
     activities = Activity.objects.filter(project_id=project_id)
     tasks = Task.objects.filter(project_id=project_id).prefetch_related()
-    projects = Project.objects.all()
+    projects = Project.objects.filter(id=project_id)
 
     print("Syncing: phases - process_design")
     add_news_attr_to_doc("process_design", phases)
@@ -505,20 +508,20 @@ def over_documents(develop_mode=False, training_mode=False, project_id=None):
 
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        create_task_all_facilitators("process_design", task, develop_mode, training_mode, projects_ids=[project_id])
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, project_id=project_id)
 
 
 def over_documents_to_add_completed_date_and_last_updated_attrs(develop_mode=False, training_mode=False, project_id=None):
     """Method to override the documents by adding 'completed_date' and 'last_updated' attributes"""
 
-    tasks = Task.objects.all().prefetch_related()
+    tasks = Task.objects.filter(project_id=project_id).prefetch_related()
 
     print("Syncing: tasks - process_design")
     add_news_attr_to_doc("process_design", tasks, ["completed_date", "last_updated"])
 
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        create_task_all_facilitators("process_design", task, develop_mode, training_mode, projects_ids=[project_id])
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, project_id=project_id)
 
 
 def add_news_attrs_to_facilitators():
@@ -625,24 +628,24 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, adminis
     if tasks_ids:
         tasks = Task.objects.filter(id__in=tasks_ids).prefetch_related()
     else:
-        tasks = Task.objects.all().prefetch_related()
+        tasks = Task.objects.filter(project_id=project_id).prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
         # if no_sql_db:
         #     create_task_one_facilitator("process_design", task, no_sql_db)
         # else:
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
-        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids, projects_ids=[project_id])
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids, project_id=project_id)
 
-    add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=no_sql_db, projects_ids=[project_id])
+    add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=no_sql_db, project_id=project_id)
 
 
-def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
    
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -734,12 +737,12 @@ def delete_training_facilitators():
     return True
 
 
-def clear_facilitator_database(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def clear_facilitator_database(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     # facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode)
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
 
     nsc = NoSQLClient()
@@ -807,12 +810,12 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
 
 
 
-def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -887,7 +890,7 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
                 print()
 
         doc_facilitator["geographical_units"] = geographical_units
-        doc_facilitator['total_number_of_tasks'] = Task.objects.all().count()
+        doc_facilitator['total_number_of_tasks'] = Task.objects.filter(project_id=project_id).count()
         
         nsc.update_cloudant_document(facilitator_database, doc_facilitator['_id'], doc_facilitator)
 
@@ -898,12 +901,12 @@ def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_m
         print()
 
 
-def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -953,12 +956,12 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_cvd(develop
     
 
 
-def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_only_canton_tasks(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_only_canton_tasks(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -998,11 +1001,11 @@ def copy_village_datas_completed_to_other_villages_belonging_to_same_canton_for_
     
 
 
-def clear_facilitators_documents_tasks_administrative_level_not_headquarters(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def clear_facilitators_documents_tasks_administrative_level_not_headquarters(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
     
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -1020,11 +1023,11 @@ def clear_facilitators_documents_tasks_administrative_level_not_headquarters(dev
         clear_facilitator_documents_tasks_by_administrativelevels(facilitator.no_sql_db_name, administrative_level_not_headquarters, False)
 
 
-def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
     nsc = NoSQLClient()
     count = 0
     for facilitator in facilitators:
@@ -1086,11 +1089,11 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
 
 
 
-def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
     nsc = NoSQLClient()
     
     for facilitator in facilitators:
@@ -1119,11 +1122,11 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
         print(f"CVD : {nbr_cvd} ; Tasks : {nbr_tasks} ; {nbr_tasks/nbr_cvd if nbr_cvd else 0}")
 
 
-def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=False,projects_ids=[]):
+def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=False,project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
     nsc = NoSQLClient()
     nsc_database = nsc.get_db("_users")
     for facilitator in facilitators:
@@ -1145,16 +1148,16 @@ def sync_clear_reponse_data_set_task_on_uncomplete(develop_mode, training_mode, 
     if tasks_ids:
         tasks = Task.objects.filter(id__in=tasks_ids).prefetch_related()
     else:
-        tasks = Task.objects.all().prefetch_related()
+        tasks = Task.objects.filter(project_id=project_id).prefetch_related()
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
-        clear_reponse_data_set_task_on_uncomplete(task, develop_mode, training_mode, no_sql_db, administrativelevel_ids, projects_ids=[project_id])
+        clear_reponse_data_set_task_on_uncomplete(task, develop_mode, training_mode, no_sql_db, administrativelevel_ids, project_id=project_id)
 
-def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[], projects_ids=[]):
+def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, trainning_mode=False, no_sql_db=False, administrativelevel_ids=[], project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -1200,12 +1203,12 @@ def clear_reponse_data_set_task_on_uncomplete(task_model, develop_mode=False, tr
 
                     
 
-def copy_village_pac_completed_to_other_villages_belonging_to_same_canton(develop_mode=False, training_mode=False, no_sql_db=False, projects_ids=[]):
+def copy_village_pac_completed_to_other_villages_belonging_to_same_canton(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
     
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     for facilitator in facilitators:
@@ -1250,11 +1253,11 @@ def copy_village_pac_completed_to_other_villages_belonging_to_same_canton(develo
 
 
 
-def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=False, projects_ids=[]):
+def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=False, project_id=None):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
     else:
-        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=projects_ids)
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project_id])
 
     nsc = NoSQLClient()
     nsc_database = nsc.get_db("process_design")
@@ -1336,3 +1339,27 @@ def test():
     resultats = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=liste_A)
     
     print(len(resultats[:]))
+
+
+def default_project_to_assign(name="COSO"):
+    project = Project.objects.filter(name=name).first()
+    facilitators = Facilitator.objects.filter(projects__isnull=True)
+    
+    if project and facilitators:
+        project.facilitators.add(*facilitators)
+        project.save()
+
+        nsc = NoSQLClient()
+        for f in facilitators:
+            print(f.name)
+            db = nsc.get_db(f.no_sql_db_name)
+
+            docs = db.get_query_result({"type": "facilitator"})[0]
+
+            if len(docs) > 0:
+                doc = docs[0].copy()
+                doc["project_id"] = project.couch_id
+                doc["projects_ids"] = [project.couch_id]
+
+                nsc.update_cloudant_document(db,  doc["_id"], doc)
+                

@@ -41,11 +41,11 @@ def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, cou
 
 
 @app.task
-def sync_celery_tasks():
+def sync_celery_tasks(project_id):
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False).order_by('id'):
+    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project_id]).order_by('id'):
         print()
         print()
         print()
@@ -231,11 +231,11 @@ def sync_aggregated_status_on_adl():
                       
     #End Canton|Commune|Prefecture|Region
 
-def sync_celery_tasks_re():
+def sync_celery_tasks_re(project_id):
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False).order_by('id'):
+    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project_id]).order_by('id'):
         print()
         print()
         print()

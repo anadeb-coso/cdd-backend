@@ -39,7 +39,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
     if facilitator_db_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
     else:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0"),

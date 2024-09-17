@@ -2,7 +2,7 @@
 
 
 <style>
-.modal-title {
+.modal-title, label, p {
         color: black;
     }
 
@@ -29,7 +29,41 @@
     }
 }
 
+    .fieldset {
+        border: solid 2px gray;
+        margin-bottom: 10px !important;
+    }
+    .fieldset fieldset .content {
+        width: 95% !important;
+    }
+    .fieldset fieldset .content:last-of-type {
+        margin-left: auto;
+    }
+    fieldset {
+    background-color: #eeeeee;
+    }
+
+    legend {
+    background-color: gray;
+    color: white;
+    padding: 5px 10px;
+    }
+
+    input {
+    margin: 5px;
+    }
+
+    .attach-file a {
+        float: right !important;
+        margin-right: 45px !important;
+    }
+    .attach-file p {
+        margin-left: 15px !important;
+        margin-top: 8px !important;
+    }
 </style>
+
+
 
 <div class="col-12 p-0">
     <input id="totalActTasks" hidden="true" value="{{ total_act_tasks }}">

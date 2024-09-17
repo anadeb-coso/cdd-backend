@@ -65,7 +65,7 @@
 
                 {% if new.get_file %}
                 <img class="card-img-top" src="{{ new.get_file.url|imgAWSS3Filter }}" alt="{{ new.title }}"
-                    style="height: 13rem;">
+                    style="height: 15rem;">
                 {% endif %}
                 <div class="card-body">
                     <h5 class="card-title">
@@ -158,9 +158,6 @@
         console.log(e);
     }
     $(document).ready(function() {
-        {
-            %
-            get_current_language as lang %
-        }
+        {% get_current_language as lang %}
     });
 </script>

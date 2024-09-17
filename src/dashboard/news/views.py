@@ -114,7 +114,7 @@ class NewsListTableView(LoginRequiredMixin, generic.ListView):
         if id_tags:
             news = news.filter(tags__id__in=[int(cId) for cId in id_tags if cId not in ('', 'null', 'None')])
             
-        return news
+        return news.order_by('-publication_date')
 
     def get_queryset(self):
 

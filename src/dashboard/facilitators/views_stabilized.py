@@ -102,7 +102,7 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         
         def get_all_facilitators_stabilized():
             facilitators_stabilized_all_docs = eadls.all_docs(include_docs=True)['rows']
-            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True))]
+            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True), projects__in=[self.request.session.get('project_id')])]
             
             return [
                 doc.get('doc') for doc in facilitators_stabilized_all_docs \

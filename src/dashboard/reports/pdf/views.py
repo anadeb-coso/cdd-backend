@@ -53,7 +53,7 @@ class Generate(View):
             if facilitator_db_name:
                 fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
             else:
-                fs = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+                fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[self.request.session.get('project_id')])
             for f in fs.order_by("name", "username"):
                 dict_administrative_levels_with_infos = {}
                 already_count_facilitator = False
@@ -184,7 +184,7 @@ class Generate(View):
             if facilitator_db_name:
                 fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, no_sql_db_name=facilitator_db_name)
             else:
-                fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training)
+                fs = Facilitator.objects.filter(develop_mode=is_develop, training_mode=is_training, projects__in=[self.request.session.get('project_id')])
             for f in fs.order_by("name", "username"):
                 dict_administrative_levels_with_infos = {}
                 already_count_facilitator = False

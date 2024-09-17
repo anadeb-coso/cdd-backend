@@ -321,7 +321,7 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
     context_object_name = 'adl_doc'
     title = gettext_lazy('CVD')
     active_level1 = 'administrative_levels'
-    model = Facilitator
+    model = None #Facilitator
     # breadcrumb = [
     #     {
     #         'url': reverse_lazy('dashboard:facilitators:list'),
@@ -342,6 +342,7 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
 
         return self.facilitator_db.get_query_result(selector)
     def get_context_data(self, **kwargs):
+        print(77777)
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
