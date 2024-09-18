@@ -1380,3 +1380,51 @@ def default_project_to_assign(name="COSO"):
                         doc["project_name"] = project.name
                         doc["project_id"] = project.couch_id
                         nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+
+def search_facilitators_db_with_villages_stabilized():
+    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+    nsc = NoSQLClient()
+    eadls = nsc.get_db('eadls')
+    docs_eadls = eadls.all_docs(include_docs=True)['rows']
+    """
+    "3805",
+    "3804"
+    """
+    for _doc in docs_eadls:
+        no_sql_dbs_names = []
+        doc = _doc.get('doc')
+        if doc.get('type') == "adl" and doc.get('administrative_regions_objects'):
+            print(doc['representative'].get('name'), doc['representative'].get('email'))
+
+            villages = []
+            for c in doc['administrative_regions_objects']:
+                villages += c['villages']
+            
+
+            if villages:
+                for f in facilitators:
+                    if f.email != doc['representative'].get('email'):
+                        print(f.name)
+                        db = nsc.get_db(f.no_sql_db_name)
+                        docs = db.get_query_result({"type": "facilitator"})[0]
+                        if len(docs) > 0:
+                            for adl in docs[0]['administrative_levels']:
+                                if  len([v for v in villages if str(v.get('id')) == adl.get('id')]) > 0:
+                                    no_sql_dbs_names.append(f.no_sql_db_name)
+                                    break
+                
+        print(no_sql_dbs_names)
+        if no_sql_dbs_names:
+            facilitator = Facilitator.objects.filter(email=doc['representative'].get('email'), develop_mode=False, training_mode=False).first()
+            if facilitator:
+                facilitator.no_sql_dbs_names = no_sql_dbs_names
+                facilitator = facilitator.save_and_return_object()
+
+                db = nsc.get_db(facilitator.no_sql_db_name)
+                docs = db.get_query_result({"type": "facilitator"})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    doc["no_sql_dbs_names"] = no_sql_dbs_names
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)

@@ -36,6 +36,7 @@ class AuthenticateAPIView(APIView):
             'no_sql_user': serializer.validated_data['no_sql_user'],
             'no_sql_pass': serializer.validated_data['no_sql_pass'],
             'no_sql_db_name': serializer.validated_data['no_sql_db_name'],
+            'no_sql_dbs_names': serializer.validated_data['no_sql_dbs_names'],
             'username': settings.NO_SQL_USER, 
             'password': settings.NO_SQL_PASS,
             'first_name': serializer.validated_data['first_name'],

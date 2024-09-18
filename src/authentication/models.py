@@ -18,6 +18,7 @@ class Facilitator(models.Model):
     no_sql_user = models.CharField(max_length=150, unique=True)
     no_sql_pass = models.CharField(max_length=128)
     no_sql_db_name = models.CharField(max_length=150, unique=True)
+    no_sql_dbs_names = models.JSONField(null=True, blank=True)
     username = models.CharField(max_length=150, unique=True, verbose_name=_('username'))
     password = models.CharField(max_length=128, verbose_name=_('password'))
     code = models.CharField(max_length=100, unique=True, verbose_name=_('code'))
@@ -226,6 +227,16 @@ class Facilitator(models.Model):
             "percent": percent, 
             "cvd": f"{self.cvds_number}/{self.villages_number}"
         }
+    
+    def get_facilitators_with_no_sql_dbs_names(self):
+        return Facilitator.objects.filter(
+            no_sql_db_name__in=self.no_sql_dbs_names
+        )
+    
+    def get_facilitators_with_no_sql_db_name(self):
+        return Facilitator.objects.filter(
+            no_sql_dbs_names__contains=self.no_sql_db_name
+        )
         
         
     # def get_all_infos(self):
