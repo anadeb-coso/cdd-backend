@@ -94,6 +94,13 @@ class ProjectAdmin(admin.ModelAdmin):
         'name',
         'description',
     )
+    
+    raw_id_fields = (
+        'facilitators',
+        'users',
+    )
+
+
 
 class PhaseAdmin(admin.ModelAdmin):
     list_display = (

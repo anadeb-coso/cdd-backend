@@ -29,7 +29,7 @@ class RestSaveNews(APIView):
             files_saving = request.data.get('files')
             publication_date = None
             publication_date_existed = False
-
+            user = None
 
             if id:
                 news = News.objects.get(id=id)
@@ -52,13 +52,13 @@ class RestSaveNews(APIView):
                 user = User.objects.filter(username=request.data.get('username')).first()
                 user = FacilitatorRepository(FacilitatorCriteria(
                     username=request.data.get('username'),
-                    projects__id=[self.request.session.get('project_id')]
+                    # projects__id=[self.request.session.get('project_id')]
                 )).first() if not user else user
-            elif request.data.get('email'):
+            if not user and request.data.get('email'):
                 user = User.objects.filter(email=request.data.get('email')).first()
                 user = FacilitatorRepository(FacilitatorCriteria(
                         email=request.data.get('email'),
-                        projects__id=[self.request.session.get('project_id')]
+                        # projects__id=[self.request.session.get('project_id')]
                     )
                 ).first() if not user else user
             
