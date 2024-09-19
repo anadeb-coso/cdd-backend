@@ -8,7 +8,8 @@ from datetime import datetime
 import locale
 
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
-from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
+# from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
+from authentication.models import Facilitator
 from news.serializers import *
 from news.models import *
 from .custom import CustomPagination
@@ -50,17 +51,16 @@ class RestSaveNews(APIView):
             
             if request.data.get('username'):
                 user = User.objects.filter(username=request.data.get('username')).first()
-                user = FacilitatorRepository(FacilitatorCriteria(
+                user = Facilitator.objects.filter(
                     username=request.data.get('username'),
                     # projects__id=[self.request.session.get('project_id')]
-                )).first() if not user else user
+                ).first() if not user else user
             if not user and request.data.get('email'):
                 user = User.objects.filter(email=request.data.get('email')).first()
-                user = FacilitatorRepository(FacilitatorCriteria(
+                user = Facilitator.objects.filter(
                         email=request.data.get('email'),
                         # projects__id=[self.request.session.get('project_id')]
-                    )
-                ).first() if not user else user
+                    ).first() if not user else user
             
             if user and not hasattr(user, 'no_sql_user'):
                 news.user = user
