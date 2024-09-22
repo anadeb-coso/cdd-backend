@@ -16,7 +16,7 @@ from django.db.models import Q, QuerySet
 import re as re_module
 from functools import reduce
 
-from process_manager.models import Phase, Activity, Task
+from process_manager.models import Phase, Activity, Task, Project
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
@@ -44,6 +44,7 @@ from dashboard.facilitators.views import FacilitatorMixin
 from dashboard.administrative_levels.forms import AttachmentFilterForm
 from cdd.my_librairies.functions import strip_accents, get_datas_dict
 from dashboard.reports.constants import IGNORES, PEULS
+from subprojects.models import Project as MisProject
 
 
 
@@ -186,6 +187,11 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         return resp
 
     def get_queryset(self):
+        
+        project = Project.objects.get(id=self.request.session.get('project_id'))
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+
         queryset = []
         nsc = NoSQLClient()
         selector = {
@@ -207,7 +213,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         liste_villages = get_cascade_villages_by_administrative_level_id(administrative_level_id)
         assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
             administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
-            project_id=1
+            project_id=project_mis_id
         )
         no_sql_db_names = [
             f.no_sql_db_name for f in Facilitator.objects.filter(
@@ -267,7 +273,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                             "no_sql_db_name": Facilitator.objects.get(
                                     id=mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
                                         administrative_level_id=int(_["administrative_level_id"]),
-                                        project_id=1
+                                        project_id=project_mis_id
                                     ).last().facilitator_id
                                 ).no_sql_db_name
                         })

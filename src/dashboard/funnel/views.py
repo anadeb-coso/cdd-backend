@@ -67,9 +67,11 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
                 }
 
         status = []
+
+        aggregated_status_project = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'))
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
-            status = AggregatedStatus.objects.filter(administrative_level_id=int(sql_id))
+            status = aggregated_status_project.filter(administrative_level_id=int(sql_id))
             if val_p_a_t and type_p_a_t:
                 tasks = []
                 if type_p_a_t == "phase":
@@ -91,13 +93,13 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
 
             if val_ad_level:
                 for t in tasks:
-                    [status.append(o) for o in AggregatedStatus.objects.filter(task_id=t.id) if o.administrative_level_id == int(val_ad_level)]
+                    [status.append(o) for o in aggregated_status_project.filter(task_id=t.id) if o.administrative_level_id == int(val_ad_level)]
             else:
                 for t in tasks:
-                    [status.append(o) for o in AggregatedStatus.objects.filter(task_id=t.id) if o.administrative_level_id in regions_id]
+                    [status.append(o) for o in aggregated_status_project.filter(task_id=t.id) if o.administrative_level_id in regions_id]
         else:
             for r_id in regions_id:
-                [status.append(o) for o in AggregatedStatus.objects.filter(administrative_level_id=r_id)]
+                [status.append(o) for o in aggregated_status_project.filter(administrative_level_id=r_id)]
                 
         # for key, value in dict_phases.items():
         #     if type(value) is dict:

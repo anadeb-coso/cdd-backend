@@ -39,9 +39,11 @@ class AuthenticateAPIView(APIView):
             'no_sql_dbs_names': serializer.validated_data['no_sql_dbs_names'],
             'username': settings.NO_SQL_USER, 
             'password': settings.NO_SQL_PASS,
+            'name': serializer.validated_data['name'],
             'first_name': serializer.validated_data['first_name'],
             'last_name': serializer.validated_data['last_name'],
-            'email': serializer.validated_data['email']
+            'email': serializer.validated_data['email'],
+            'is_superuser': serializer.validated_data['is_superuser']
         }
         credential_serializer = CredentialSerializer(data=credentials)
         credential_serializer.is_valid(raise_exception=True)

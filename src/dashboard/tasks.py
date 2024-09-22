@@ -14,18 +14,19 @@ from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
 
 
-def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, ad: AdministrativeLevel, _task: dict):
+def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, ad: AdministrativeLevel, _task: dict, project_id: int):
     if ad.parent:
         parent = ad.parent
         _ok = True
         try:
-            a = AggregatedStatus.objects.get(administrative_level_id=parent.id, task_id=int(_task["sql_id"]))
+            a = AggregatedStatus.objects.get(administrative_level_id=parent.id, task_id=int(_task["sql_id"]), project_id=project_id)
             if count_facilitator == 1 and count_facilitator_cvd == 1:
                 a.total_tasks_completed = 0
                 a.total_tasks = 0
         except AggregatedStatus.DoesNotExist as exc:
             a = AggregatedStatus()
             a.administrative_level_id = parent.id
+            a.project_id = project_id
             a.task_id = int(_task["sql_id"])
         except Exception as exc:
             print(exc)
@@ -35,17 +36,17 @@ def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, cou
             a.total_tasks += 1
             a.save()
         
-        return recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, parent, _task) #call recursive function
+        return recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, parent, _task, project_id) #call recursive function
     
     return None
 
 
 @app.task
-def sync_celery_tasks(project_id):
+def sync_celery_tasks(project_id, develop_mode=False, training_mode=False):
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project_id]).order_by('id'):
+    for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
         print()
         print()
         print()
@@ -88,10 +89,11 @@ def sync_celery_tasks(project_id):
                             a = None
                             _ok = True
                             try:
-                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]))
+                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id)
                             except AggregatedStatus.DoesNotExist as exc:
                                 a = AggregatedStatus()
                                 a.administrative_level_id = int(ad_id['id'])
+                                a.project_id = project_id
                                 a.task_id = int(_task["sql_id"])
                             # except Exception as exc:
                             #     print(exc)
@@ -105,7 +107,7 @@ def sync_celery_tasks(project_id):
                         try:
                             _village_cvd = AdministrativeLevel.objects.using('mis').get(id=int(_village['id']))
                             if _village_cvd.type == "Village":
-                                recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, _village_cvd, _task)
+                                recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, _village_cvd, _task, project_id)
                         except:
                             pass
                         # _ok = True
@@ -180,10 +182,10 @@ def test_one():
 #     sender.add_periodic_task(10.0, test.s(4, 8), name='add every 10')
 
 
-def sync_aggregated_status_on_adl():
+def sync_aggregated_status_on_adl(project_id: int):
     
     for adl in mis_objects_call.filter_objects(AdministrativeLevel, type="Village"):
-        aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+        aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id)
         aggreg_last_activity = aggregs.order_by('last_activity').last()
         if aggreg_last_activity:
             adl.last_activity = aggreg_last_activity.last_activity
@@ -202,15 +204,16 @@ def sync_aggregated_status_on_adl():
                 _adls_ids = [adm.id for adm in adl.children]
             
             for task in Task.objects.all().order_by('id'):
-                children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids)
+                children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id)
 
                 a = None
                 _ok = True
                 try:
-                    a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=task.id)
+                    a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=task.id, project_id=project_id)
                 except AggregatedStatus.DoesNotExist as exc:
                     a = AggregatedStatus()
                     a.administrative_level_id = adl.id
+                    a.project_id = project_id
                     a.task_id = task.id
                 except Exception as exc:
                     print(exc)
@@ -221,7 +224,7 @@ def sync_aggregated_status_on_adl():
                     a.save()
             
             
-            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
+            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id)
             aggreg_last_activity = aggregs.order_by('last_activity').last()
             if aggreg_last_activity:
                 adl.last_activity = aggreg_last_activity.last_activity
@@ -231,11 +234,11 @@ def sync_aggregated_status_on_adl():
                       
     #End Canton|Commune|Prefecture|Region
 
-def sync_celery_tasks_re(project_id):
+def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-    for f in Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project_id]).order_by('id'):
+    for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
         print()
         print()
         print()
@@ -275,10 +278,11 @@ def sync_celery_tasks_re(project_id):
                             a = None
                             _ok = True
                             try:
-                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]))
+                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id)
                             except AggregatedStatus.DoesNotExist as exc:
                                 a = AggregatedStatus()
                                 a.administrative_level_id = int(ad_id['id'])
+                                a.project_id = project_id
                                 a.task_id = int(_task["sql_id"])
                             except Exception as exc:
                                 print(exc)
@@ -318,10 +322,11 @@ def sync_celery_tasks_re(project_id):
                     a = None
                     _ok = True
                     try:
-                        a = AggregatedStatus.objects.get(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]))
+                        a = AggregatedStatus.objects.get(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]), project_id=project_id)
                     except AggregatedStatus.DoesNotExist as exc:
                         a = AggregatedStatus()
                         a.administrative_level_id = adl_o.id
+                        a.project_id = project_id
                         a.task_id = int(_task["sql_id"])
                     except Exception as exc:
                         print(exc)
@@ -331,6 +336,6 @@ def sync_celery_tasks_re(project_id):
                         a.total_tasks = 1
                         a.save()
     
-    sync_aggregated_status_on_adl()
+    sync_aggregated_status_on_adl(project_id)
     
     print("End")

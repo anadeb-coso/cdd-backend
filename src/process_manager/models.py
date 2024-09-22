@@ -50,6 +50,13 @@ class Project(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
+        else:
+            if len(new_document) > 0:
+                new_document = new_document[0].copy()
+                new_document['name'] = self.name
+                new_document['description'] = self.description
+                nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+        super().save(*args, **kwargs)
 
         return self
 
@@ -78,18 +85,22 @@ class Phase(models.Model):
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     couch_id = models.CharField(max_length=255, blank=True)
     order = models.IntegerField()
+    capacity_attachments = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.project.name})"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        capacity_attachments = []
+        if self.capacity_attachments:
+            capacity_attachments = self.capacity_attachments
         data = {
             "name": self.name,
             "type": "phase",
             "description": self.description,
             "order": self.order,
-            "capacity_attachments": [],
+            "capacity_attachments": capacity_attachments,
             "project_id": self.project.couch_id,
             "sql_id": self.id
         }
@@ -101,6 +112,17 @@ class Phase(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
+        else:
+            if len(new_document) > 0:
+                new_document = new_document[0].copy()
+                new_document['project_id'] = self.project.couch_id
+                new_document['name'] = self.name
+                new_document['order'] = self.order
+                new_document['description'] = self.description
+                new_document['capacity_attachments'] = capacity_attachments
+                nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+
+        super().save(*args, **kwargs)
         return self
 
 
@@ -133,6 +155,7 @@ class Activity(models.Model):
     total_tasks = models.IntegerField()
     order = models.IntegerField()
     couch_id = models.CharField(max_length=255, blank=True)
+    capacity_attachments = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return  f"{self.phase.name} - {self.name} ({self.project.name})"
@@ -140,12 +163,15 @@ class Activity(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        capacity_attachments = []
+        if self.capacity_attachments:
+            capacity_attachments = self.capacity_attachments
         data = {
             "name": self.name,
             "type": "activity",
             "description": self.description,
             "order": self.order,
-            "capacity_attachments": [],
+            "capacity_attachments": capacity_attachments,
             "project_id": self.project.couch_id,
             "phase_id": self.phase.couch_id,
             "total_tasks": self.total_tasks,
@@ -160,6 +186,20 @@ class Activity(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
+        else:
+            if len(new_document) > 0:
+                new_document = new_document[0].copy()
+                new_document['project_id'] = self.project.couch_id
+                new_document['phase_id'] = self.phase.couch_id
+                new_document['phase_name'] = self.phase.name
+                new_document['name'] = self.name
+                new_document['order'] = self.order
+                new_document['description'] = self.description
+                new_document['total_tasks'] = self.total_tasks
+                new_document['capacity_attachments'] = capacity_attachments
+                nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+
+        super().save(*args, **kwargs)
         return self
 
 
@@ -191,6 +231,8 @@ class Task(models.Model):
     activity = models.ForeignKey("Activity", on_delete=models.CASCADE)
     order = models.IntegerField()
     form = models.JSONField(null=True, blank=True)
+    attachments = models.JSONField(null=True, blank=True)
+    capacity_attachments = models.JSONField(null=True, blank=True)
     couch_id = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
@@ -201,6 +243,12 @@ class Task(models.Model):
         form = []
         if self.form:
             form = self.form
+        attachments = []
+        if self.attachments:
+            attachments = self.attachments
+        capacity_attachments = []
+        if self.capacity_attachments:
+            capacity_attachments = self.capacity_attachments
         data = {
             "type": "task",
             "project_id": self.project.couch_id,
@@ -213,8 +261,9 @@ class Task(models.Model):
             "description": self.description,
             "completed": False,
             "completed_date": "",
-            "capacity_attachments": [],
-            "attachments": [],
+            "capacity_attachments": capacity_attachments,
+            "support_attachments": True if attachments else False,
+            "attachments": attachments,
             "form": form,
             "form_response": [],
             "sql_id": self.id
@@ -227,8 +276,25 @@ class Task(models.Model):
         if not new_document:
             new_document = nsc.create_document(nsc_database, data)
             self.couch_id = new_document['_id']
-        # else:
+        else:
+            if len(new_document) > 0:
+                new_document = new_document[0].copy()
+                new_document['project_id'] = self.project.couch_id
+                new_document['phase_id'] = self.phase.couch_id
+                new_document['phase_name'] = self.phase.name
+                new_document['activity_id'] = self.activity.couch_id
+                new_document['activity_name'] = self.activity.name
+                new_document['name'] = self.name
+                new_document['order'] = self.order
+                new_document['description'] = self.description
+                new_document['support_attachments'] = True if attachments else False
+                new_document['attachments'] = attachments
+                new_document['capacity_attachments'] = capacity_attachments
+                new_document['form'] = form
+                nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
         #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)
+
+        super().save(*args, **kwargs)
         return self
 
 
@@ -236,6 +302,7 @@ class Task(models.Model):
 class AggregatedStatus(BaseModel):
     administrative_level_id = models.IntegerField()
     task = models.ForeignKey("Task", on_delete=models.CASCADE)
+    project = models.ForeignKey("Project", on_delete=models.SET_NULL, null=True)
     total_tasks = models.IntegerField(default=0)
     total_tasks_completed = models.IntegerField(default=0)
     last_activity = models.DateTimeField(blank=True, null=True)

@@ -57,6 +57,7 @@ CREATED_APPS = [
     'storeapp',
     'supportmaterial',
     'news',
+    'subprojects',
 ]
 
 THIRD_PARTY_APPS = [

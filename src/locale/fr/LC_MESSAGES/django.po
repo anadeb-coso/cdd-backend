@@ -59,6 +59,10 @@ msgstr "active"
 msgid "test mode"
 msgstr "mode test"
 
+#: .\authentication\models.py:19 .\authentication\models.py:20
+msgid "develop mode"
+msgstr "mode develop"
+
 #: .\authentication\models.py:190
 msgid "Facilitator"
 msgstr "Animateur communautaire"

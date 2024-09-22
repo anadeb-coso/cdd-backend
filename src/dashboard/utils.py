@@ -6,7 +6,7 @@ from django.template.defaultfilters import date as _date
 from django.contrib.auth.hashers import make_password
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
-from process_manager.models import Task, Phase, Activity, Project
+from process_manager.models import Task, Phase, Activity, Project, AggregatedStatus
 from cloudant.document import Document
 from django.contrib.auth.models import User
 
@@ -697,7 +697,8 @@ def reset_tasks():
         task.save()
 
 
-def create_training_facilitators(start=1, amount=1):
+def create_training_facilitators(project_name, start=1, amount=1):
+    project = Project.objects.get(name=project_name)
     count = start
     while count <= amount:
         facilitator = Facilitator(
@@ -705,27 +706,69 @@ def create_training_facilitators(start=1, amount=1):
             password="123learn",
             active=True,
             training_mode=True,
+            name=f"Training{count} Acccount",
+            email=f"training{count}@test.com",
+            phone=f"123456{count}",
+            sex="M.",
         )
-        facilitator.save(replicate_design=False)
+        facilitator = facilitator.save(replicate_design=False)
         password = make_password(facilitator.password, salt=None, hasher='default')
         query_facilitator = Facilitator.objects.filter(id=facilitator.id).update(password=password)
+        project.facilitators.add(facilitator)
+        
         doc = {
-            "name": "Training Acccount",
-            "email": "training@test.com",
-            "phone": "123456",
+            "name": f"Training{count} Acccount",
+            "email": f"training{count}@test.com",
+            "phone": f"123456{count}",
+            "sex": "M.",
             "administrative_levels": [
                 {
-                    "name": "SANFATOUTE CENTRE",
-                    "id": "7e15f10d6da4ede08fa6a6810300c9ad"
+                "name": "SANFATOUTE CENTRE",
+                "id": "3805",
+                "is_headquarters_village": True
+                },
+                {
+                "name": "SANFATOUTE 2",
+                "id": "3804"
                 }
             ],
-            "type": "facilitator"
+            "type": "facilitator",
+            "geographical_units": [
+                {
+                    "sql_id": "133",
+                    "name": "SANFATOUTE 2/SANFATOUTE CENTRE",
+                    "villages": [
+                        "3805",
+                        "3804"
+                    ],
+                    "cvd_groups": [
+                        {
+                        "sql_id": "141",
+                        "name": "CVD SANFATOUTE CENTRE",
+                        "village_cvd": 3805,
+                        "villages": [
+                            "3805",
+                            "3804"
+                        ]
+                        }
+                    ]
+                }
+            ],
+            "develop_mode": False,
+            "training_mode": True,
+            "sql_id": facilitator.id,
+            "project_id": project.couch_id,
+            "project_name": project.name,
+            "projects_ids": [
+                project.couch_id
+            ]
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         nsc.create_document(facilitator_database, doc)
-        count = count + 1
         print(count)
+        count = count + 1
+    project.save()
     return True
 
 # TODO: Test this well
@@ -1345,41 +1388,48 @@ def test():
 
 def default_project_to_assign(name="COSO"):
     project = Project.objects.filter(name=name).first()
-    facilitators = Facilitator.objects.filter(projects__isnull=True)
-    users = User.objects.filter(projects__isnull=True)
 
-    if project and (facilitators or users):
+    aggregated_status_null = AggregatedStatus.objects.filter(project__isnull=True)
 
-        if facilitators:
-            project.facilitators.add(*facilitators)
-        if users:
-            project.users.add(*users)
-        project.save()
+    if project and aggregated_status_null:
+        aggregated_status_null.update(project=project)
 
-        if facilitators:
-            nsc = NoSQLClient()
-            for f in facilitators:
-                print(f.name)
-                db = nsc.get_db(f.no_sql_db_name)
 
-                docs = db.get_query_result({"type": "facilitator"})[0]
+    # facilitators = Facilitator.objects.filter(projects__isnull=True)
+    # users = User.objects.filter(projects__isnull=True)
 
-                if len(docs) > 0:
-                    doc = docs[0].copy()
-                    doc["project_id"] = project.couch_id
-                    doc["project_name"] = project.name
-                    doc["projects_ids"] = [project.couch_id]
+    # if project and (facilitators or users):
 
-                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+    #     if facilitators:
+    #         project.facilitators.add(*facilitators)
+    #     if users:
+    #         project.users.add(*users)
+    #     project.save()
+
+    #     if facilitators:
+    #         nsc = NoSQLClient()
+    #         for f in facilitators:
+    #             print(f.name)
+    #             db = nsc.get_db(f.no_sql_db_name)
+
+    #             docs = db.get_query_result({"type": "facilitator"})[0]
+
+    #             if len(docs) > 0:
+    #                 doc = docs[0].copy()
+    #                 doc["project_id"] = project.couch_id
+    #                 doc["project_name"] = project.name
+    #                 doc["projects_ids"] = [project.couch_id]
+
+    #                 nsc.update_cloudant_document(db,  doc["_id"], doc)
     
 
-                fc_docs = db.all_docs(include_docs=True)['rows']
-                for _doc in fc_docs:
-                    doc = _doc.get('doc')
-                    if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
-                        doc["project_name"] = project.name
-                        doc["project_id"] = project.couch_id
-                        nsc.update_cloudant_document(db,  doc["_id"], doc)
+    #             fc_docs = db.all_docs(include_docs=True)['rows']
+    #             for _doc in fc_docs:
+    #                 doc = _doc.get('doc')
+    #                 if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
+    #                     doc["project_name"] = project.name
+    #                     doc["project_id"] = project.couch_id
+    #                     nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
 
@@ -1428,3 +1478,59 @@ def search_facilitators_db_with_villages_stabilized():
                     doc = docs[0].copy()
                     doc["no_sql_dbs_names"] = no_sql_dbs_names
                     nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+def add_couchdb_id_on_objects(project_name="PURS"):
+    nsc = NoSQLClient()
+    
+    project = Project.objects.filter(name=project_name).first()
+    if project:
+        db = nsc.get_db("process_design")
+        docs = db.get_query_result({"sql_id": project.id, 'type': 'project'})[0]
+        if len(docs) > 0:
+            doc = docs[0].copy()
+            project.couch_id = doc['_id']
+            project.save()
+
+            phases = Phase.objects.filter(project_id=project.id)
+
+            for phase in phases:
+                docs = db.get_query_result({'type': 'phase', 'project_id': project.couch_id, 'sql_id': phase.id})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    phase.couch_id = doc['_id']
+                    phase.save()
+
+                    doc['project_id'] = project.couch_id
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+            activities = Activity.objects.filter(project_id=project.id)
+
+            for activity in activities:
+                docs = db.get_query_result({'type': 'activity', 'project_id': project.couch_id, 'sql_id': activity.id})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    activity.couch_id = doc['_id']
+                    activity.save()
+
+                    doc['project_id'] = project.couch_id
+                    doc['phase_id'] = activity.phase.couch_id
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+            tasks = Task.objects.filter(project_id=project.id)
+
+            for task in tasks:
+                docs = db.get_query_result({'type': 'task', 'project_id': project.couch_id, 'sql_id': task.id})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    task.couch_id = doc['_id']
+                    task.save()
+
+                    doc['project_id'] = project.couch_id
+                    doc['phase_id'] = task.phase.couch_id
+                    doc['activity_id'] = task.activity.couch_id
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+

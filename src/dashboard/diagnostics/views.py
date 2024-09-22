@@ -11,10 +11,11 @@ from dashboard.diagnostics.forms import DiagnosticsForm
 from no_sql_client import NoSQLClient
 from dashboard.administrative_levels.functions import (get_cascade_villages_by_administrative_level_id,
                                                        get_administrative_level_under_json)
-from process_manager.models import Task, Phase, Activity, AggregatedStatus
+from process_manager.models import Task, Phase, Activity, AggregatedStatus, Project
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from administrativelevels.models import CVD, AdministrativeLevel
 from cdd.call_objects_from_other_db import mis_objects_call
+from subprojects.models import Project as MisProject
 
 class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
     
@@ -61,6 +62,11 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
 
 class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, GenericView):
     def get(self, request, *args, **kwargs):
+        
+        project = Project.objects.get(id=self.request.session.get('project_id'))
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+
         _type = request.GET.get('type')
         type_header = _type
         sql_id = request.GET.get('sql_id')
@@ -87,7 +93,8 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 "nbr_villages": 0
             }
         
-        assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=1)
+        assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=project_mis_id)
+        aggregated_status_project = AggregatedStatus.objects.filter(project_id=project.id)
 
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
@@ -96,7 +103,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             
             assign_facilitators = assigns.filter(
                 administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
-                # project_id=1,
+                project_id=project_mis_id,
                 # activated=True
             )
 
@@ -115,7 +122,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                                         #  if ass.activated==True
                                          ]))
                 cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
-                aggrs_status = AggregatedStatus.objects.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
+                aggrs_status = aggregated_status_project.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
                 
                 nbr_cvds += cvds.count()
                 nbr_villages += len(villages_ids)
@@ -161,7 +168,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             else:
                 tasks = Task.objects.all()
             
-            aggrs_status = AggregatedStatus.objects.filter(task_id__in=[t.id for t in tasks])
+            aggrs_status = aggregated_status_project.filter(task_id__in=[t.id for t in tasks])
 
             for k, v in regions.items():
                 villages_ids = list(set([
@@ -182,7 +189,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 
                 assign_facilitators = assigns.filter(
                     administrative_level_id__in=villages_ids,
-                    # project_id=1,
+                    project_id=project_mis_id,
                     activated=True
                 )
                 criteria = FacilitatorCriteria(

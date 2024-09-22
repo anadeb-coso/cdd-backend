@@ -323,7 +323,7 @@ class DeleteNewsAPIView(APIView):
             user = serializer.validated_data
 
         
-            if user and hasattr(user, 'is_superuser') and user.is_superuser:
+            if user: #and hasattr(user, 'is_superuser') and user.is_superuser
                 _ = News.objects.get(id=request.data['id']).delete()
                 return Response(
                     {'success': 'deleted'}, 

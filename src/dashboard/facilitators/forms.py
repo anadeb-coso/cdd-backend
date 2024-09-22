@@ -7,7 +7,7 @@ from authentication.models import Facilitator
 from dashboard.utils import get_administrative_level_choices, get_administrative_levels_by_level, get_choices
 from no_sql_client import NoSQLClient
 from .functions import get_cvds
-from process_manager.models import Task, Phase, Activity
+from process_manager.models import Task, Phase, Activity, Project
 from administrativelevels.models import AdministrativeLevel
 
 
@@ -115,6 +115,12 @@ class FacilitatorForm(forms.Form):
     administrative_level = forms.ChoiceField(required=False)
     administrative_levels = forms.JSONField(label='', required=False)
     sex = forms.ChoiceField(choices=(("M.", "M."), ("Mme", "Mme")))
+    
+    projects = forms.ModelMultipleChoiceField(
+        queryset=Project.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=True
+    )
 
     def clean_password2(self):
         password1 = self.cleaned_data.get("password1")
@@ -150,6 +156,8 @@ class FacilitatorForm(forms.Form):
         return super().clean()
 
     def __init__(self, *args, **kwargs):
+        initial = kwargs.get('initial')
+        project_id = initial.get('project_id', None)
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -162,6 +170,9 @@ class FacilitatorForm(forms.Form):
         self.fields['administrative_level'].choices = administrative_level_choices
         self.fields['administrative_level'].widget.attrs['class'] = "region"
         self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
+
+        if project_id is not None:
+            self.fields['projects'].initial = Project.objects.filter(id=project_id)
 
 
 
@@ -178,6 +189,12 @@ class UpdateFacilitatorForm(forms.ModelForm):
     administrative_level = forms.ChoiceField(required=False)
     administrative_levels = forms.JSONField(label='', required=False)
     sex = forms.ChoiceField(choices=(("M.", "M."), ("Mme", "Mme")))
+    
+    projects = forms.ModelMultipleChoiceField(
+        queryset=Project.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=True
+    )
 
     def clean(self):
         administrative_levels = self.cleaned_data['administrative_levels']
@@ -186,6 +203,9 @@ class UpdateFacilitatorForm(forms.ModelForm):
         return super().clean()
 
     def __init__(self, *args, **kwargs):
+        initial = kwargs.get('initial')
+        facilitator_doc = initial.get('facilitator_doc', None)
+        facilitator_projects = initial.get('facilitator_projects', None)
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -198,6 +218,14 @@ class UpdateFacilitatorForm(forms.ModelForm):
         self.fields['administrative_level'].choices = administrative_level_choices
         self.fields['administrative_level'].widget.attrs['class'] = "region"
         self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
+
+        if facilitator_doc:
+            self.fields['email'].initial = facilitator_doc['email']
+            self.fields['phone'].initial = facilitator_doc['phone']
+            self.fields['name'].initial = facilitator_doc['name']
+            self.fields['sex'].initial = facilitator_doc['sex']
+        if facilitator_projects:
+            self.fields['projects'].initial = facilitator_projects
 
 
     class Meta:

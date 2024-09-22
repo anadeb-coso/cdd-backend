@@ -21,7 +21,8 @@ from cdd.call_objects_from_other_db import mis_objects_call
 from cdd.constants import PHASES_COLORS, PHASES_WITH_THEIR_NUMBERS
 from cdd.utils import elements_communs
 from dashboard.planning.forms import TaskPlanCommentForm
-
+from subprojects.models import Project as MisProject
+from process_manager.models import Project
 
 
 class PlanMixin:
@@ -101,6 +102,10 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         return context
 
     def get_results(self):
+        
+        project = Project.objects.get(id=self.request.session.get('project_id'))
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         id_region = self.request.GET.get('id_region')
         id_prefecture = self.request.GET.get('id_prefecture')
@@ -164,7 +169,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             if type(_id) is not list:
                 assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                     administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
-                    project_id=1,
+                    project_id=project_mis_id,
                     activated=True
                 )
 

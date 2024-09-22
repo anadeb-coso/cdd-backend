@@ -10,7 +10,7 @@ from django.views import generic
 from datetime import datetime
 from django.contrib.auth.models import User
 
-from process_manager.models import Phase, Activity
+from process_manager.models import Phase, Activity, Project
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
@@ -34,6 +34,7 @@ from authentication.functions import get_assign_adl_by_facilitatr
 from dashboard.tasks import sync_celery_tasks_re
 from .repository.db_facilitator_repository import FacilitatorRepository
 from .repository.facilitator_criteria import FacilitatorCriteria
+from subprojects.models import Project as MisProject
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -77,6 +78,7 @@ class FacilitatorMixin:
     facilitator_db = None
     facilitator_db_name = None
     cvds = None
+    project_mis_id = None
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
@@ -94,6 +96,11 @@ class FacilitatorMixin:
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
             self.cvds = get_cvds(self.doc)
+
+            project = Project.objects.get(id=self.request.session.get('project_id'))
+            project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+            self.project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
@@ -114,6 +121,10 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         type_facilitator = self.request.GET.get('type_facilitator')
         _id = 0
         facilitators = []
+
+        project = Project.objects.get(id=self.request.session.get('project_id'))
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             criteria = FacilitatorCriteria()
@@ -140,7 +151,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             if type(_id) is not list:
                 assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                     administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
-                    project_id=1,
+                    project_id=project_mis_id,
                     activated=True
                 )
                 criteria = FacilitatorCriteria(
@@ -172,7 +183,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
         _facilitators = []
         for f in facilitators:
-            for assign in get_assign_adl_by_facilitatr(f.id, project_id=1, activated=True):
+            for assign in get_assign_adl_by_facilitatr(f.id, project_id=project_mis_id, activated=True):
                 adl = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id=assign.administrative_level_id).first()
                 f.villages_number += 1
                 if adl and adl.cvd and adl.cvd.headquarters_village and adl.cvd.headquarters_village.id == adl.id:
@@ -528,6 +539,11 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         }
     ]
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = FacilitatorForm(initial={'project_id': self.request.session.get('project_id')})
+        return context
+
     def form_valid(self, form):
         data = form.cleaned_data
         password = make_password(data['password1'], salt=None, hasher='default')
@@ -537,6 +553,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.phone = data['phone']
         facilitator.sex = data['sex']
         facilitator.save(replicate_design=False)
+
+        project = Project.objects.get(id=self.request.session.get('project_id'))
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         _administrative_levels = []
         if 'administrative_levels' in data and data['administrative_levels']:
@@ -548,14 +568,14 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
 
         #Assign ADL
         for adl in _administrative_levels:
-            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True).first()
             print(_assign)
             if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
                     try:
                         assign = AssignAdministrativeLevelToFacilitator()
                         assign.administrative_level_id = int(adl['id'])
                         assign.facilitator_id = facilitator.id
-                        assign.project_id = 1
+                        assign.project_id = project_mis_id
                         assign.save(using='mis')
                     except Exception as exc:
                         print(exc)
@@ -571,9 +591,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "develop_mode": facilitator.develop_mode,
             "training_mode": facilitator.training_mode,
             "sql_id": int(facilitator.pk),
-            "project_id": self.request.session.get('project_id'),
+            "project_id": self.request.session.get('project_couch_id'),
+            "project_name": self.request.session.get('project_name'),
             "projects_ids": [
-                self.request.session.get('project_id')
+                self.request.session.get('project_couch_id')
             ]
         }
         nsc = NoSQLClient()
@@ -605,6 +626,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             user.save()
         except:
             pass
+        
+        if 'projects' in data and data['projects']:
+            for p in data['projects']:
+                p.facilitator.add(facilitator)
 
         return super().form_valid(form)
 
@@ -633,6 +658,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
     facilitator = None
     doc = None
     facilitator_db_name = None
+    project_mis_id = None
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
@@ -642,6 +668,10 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             self.facilitator_db = nsc.get_db(self.facilitator_db_name)
             query_result = self.facilitator_db.get_query_result({"type": "facilitator"})[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
+
+            project = Project.objects.get(id=self.request.session.get('project_id'))
+            project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+            self.project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
@@ -653,11 +683,16 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         form = ctx.get('form')
         ctx.setdefault('facilitator_doc', self.doc)
         if self.doc:
+            ctx['form'] = UpdateFacilitatorForm(initial={'facilitator_doc': self.doc, 'facilitator_projects': self.facilitator.projects.all()})
             if form:
                 for label, field in form.fields.items():
                     try:
-                        form.fields[label].value = self.doc[label]
+                        if label == "projects":
+                            form.fields[label].initial = self.facilitator.projects.all()
+                        else:
+                            form.fields[label].value = self.doc[label]
                     except Exception as exc:
+                        print(exc)
                         pass
 
                 ctx.setdefault('form', form)
@@ -712,13 +747,13 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
         #Assign ADL
         for adl in administrative_levels_new:
-            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=self.project_mis_id, activated=True).first()
             if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
                     try:
                         assign = AssignAdministrativeLevelToFacilitator()
                         assign.administrative_level_id = int(adl['id'])
                         assign.facilitator_id = facilitator.id
-                        assign.project_id = 1
+                        assign.project_id = self.project_mis_id
                         assign.save(using='mis')
                     except Exception as exc:
                         print(exc)
@@ -726,7 +761,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
         #Unassign ADL
         for adl in administrative_levels_remove:
-            assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=1, activated=True).first()
+            assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=self.project_mis_id, activated=True).first()
             if adl.get('id') and str(adl.get('id')).isdigit() and assign:
                     try:
                         assign.activated = False
@@ -779,7 +814,12 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             user.save()
         except:
             pass
-
+        
+        
+        if 'projects' in data and data['projects']:
+            for p in data['projects']:
+                p.facilitator.add(facilitator)
+    
         return redirect('dashboard:facilitators:list')
 
 class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.ListView):

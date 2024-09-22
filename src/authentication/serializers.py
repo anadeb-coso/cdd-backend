@@ -48,11 +48,14 @@ class CredentialSerializer(serializers.Serializer):
     no_sql_user = serializers.CharField(allow_blank=True, allow_null=True)
     no_sql_pass = serializers.CharField(allow_blank=True, allow_null=True)
     no_sql_db_name = serializers.CharField(allow_blank=True, allow_null=True)
+    no_sql_dbs_names = serializers.JSONField(allow_null=True)
     username = serializers.CharField(allow_blank=True, allow_null=True)
     password = serializers.CharField(allow_blank=True, allow_null=True)
     first_name = serializers.CharField(allow_blank=True, allow_null=True)
     last_name = serializers.CharField(allow_blank=True, allow_null=True)
     email = serializers.CharField(allow_blank=True, allow_null=True)
+    name = serializers.CharField(allow_blank=True, allow_null=True)
+    is_superuser = serializers.BooleanField(allow_null=True)
     
 class UserAuthSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -88,16 +91,20 @@ class UserAuthSerializer(serializers.Serializer):
         attrs['first_name'] = None
         attrs['last_name'] = None
         attrs['email'] = None
+        attrs['name'] = None
+        attrs['is_superuser'] = None
         if hasattr(user, 'no_sql_user'):
             attrs['no_sql_user'] = user.no_sql_user
             attrs['no_sql_pass'] = user.no_sql_pass
             attrs['no_sql_db_name'] = user.no_sql_db_name
             attrs['email'] = user.email
+            attrs['name'] = user.name
             attrs['no_sql_dbs_names'] = user.no_sql_dbs_names
         else:
             attrs['first_name'] = user.first_name
             attrs['last_name'] = user.last_name
             attrs['email'] = user.email
+            attrs['is_superuser'] = user.is_superuser
             
             
         return attrs

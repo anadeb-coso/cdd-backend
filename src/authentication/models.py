@@ -23,7 +23,7 @@ class Facilitator(models.Model):
     password = models.CharField(max_length=128, verbose_name=_('password'))
     code = models.CharField(max_length=100, unique=True, verbose_name=_('code'))
     active = models.BooleanField(default=False, verbose_name=_('active'))
-    develop_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+    develop_mode = models.BooleanField(default=False, verbose_name=_('develop mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     
     name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))
@@ -94,7 +94,9 @@ class Facilitator(models.Model):
         if self.password and self.password != self.__current_password:
             self.password = make_password(self.password, salt=None, hasher='default')
 
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+        
+        return self
 
     def hash_password(self, *args, **kwargs):
         self.password = make_password(self.password, salt=None, hasher='default')
