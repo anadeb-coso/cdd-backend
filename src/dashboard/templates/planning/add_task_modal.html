@@ -1,0 +1,449 @@
+{% load bootstrap4 i18n static custom_tags %}
+<script src="{% static 'js/disableOnSubmit.js' %}"></script>
+<style>
+    .fieldset {
+        border: solid 2px gray;
+        margin-bottom: 10px !important;
+    }
+    .fieldset fieldset .content {
+        width: 95% !important;
+    }
+    .fieldset fieldset .content:last-of-type {
+        margin-left: auto;
+    }
+    fieldset {
+    background-color: #eeeeee;
+    }
+
+    legend {
+    background-color: gray;
+    color: white;
+    padding: 5px 10px;
+    }
+
+    input, textarea {
+    margin: 5px;
+    }
+
+    textarea {
+        text-align: left !important;
+    }
+
+    .attach-file a {
+        float: right !important;
+        margin-right: 45px !important;
+    }
+    .attach-file p {
+        margin-left: 15px !important;
+        margin-top: 8px !important;
+    }
+
+    
+
+    .custom-file-upload {
+        display: inline-block;
+        padding: 6px 12px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+    .custom-file-upload:hover {
+        background-color: #0056b3;
+    }
+</style>
+
+<div class="modal-dialog modal-confirmation modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% if task %}
+                    {{ task.name }}
+                {% else %}
+                    {% translate 'Add activity' %}
+                {% endif %}
+            </h5>
+            <button type="button" class="border-0 bg-transparent close-modal" data-dismiss="modal" aria-label="Close">
+                <div class="circle-icon bg-gray">
+                    <div class="center-27">
+                        <i class="fas fa-times"></i>
+                    </div>
+                </div>
+            </button>
+        </div>
+        <form id="{{ id_form }}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="overlay-wrapper">
+                    {% if picture %}
+                        <div class="text-center">
+                            <img id="modal_form_picture" src="{{ picture }}" class="{{ picture_class }}">
+                        </div>
+                    {% endif %}
+                    
+                    <div class="fieldset">
+                        <fieldset>
+                            <div class="content">
+
+                                
+                                <form class="form_add" id="add_task_form">
+                                    <br />
+                                    <div class="form-group row" id="id_plan_date_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Date" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-3">
+                                            <input 
+                                                type="date" id="id_plan_date" name="trip-start" class="form-control" 
+                                                {% if task %}value="{{ task.planned_date|date:'Y-m-d' }}"{% endif %}
+                                                />
+                                        </div>
+                                        <span style="margin: 8px; margin-top: 20px;"> {% translate 'de' %} </span>
+                                        <select class="col-sm-2 form-control custom-select" name="start_time_selected" id="id_start_time_selected" >
+                                            {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                            {% for t_h in times_split %}
+                                                <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_start|date:'Y-m-d H:i' %}selected{% endif %} >{{ t_h.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <span style="margin: 8px; margin-top: 20px;"> {% translate 'at' %} </span>
+                                        <select class="col-sm-2 form-control custom-select" name="end_time_selected" id="id_end_time_selected" style="margin-top: 25px !important;">
+                                            {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                            {% for t_h in times_split %}
+                                                <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_end|date:'Y-m-d H:i' %}selected{% endif %}>{{ t_h.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    
+
+
+
+                                    <div class="form-group row" id="id_administrative_levels_selected_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Select the location" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <select class="col-sm-7 form-control custom-select" name="administrative_levels_selected" id="id_administrative_levels_selected" multiple>
+                                                {% for administrativelevl in administrativelevls %}
+                                                    <option 
+                                                        value="{{ administrativelevl.id }}"
+                                                        {% if administrativelevl.id in task.administrative_level_ids %}selected{% endif %}
+                                                        >{{ administrativelevl }} ({{ administrativelevl.parent.name }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    <div class="form-group row" style="margin-top: 12px !important; margin-left: 27px;"  id="id_is_free_activity_content">
+                                        <label class="col-sm-3 col-form-label"></label>
+                                        <div class="col-sm-9">
+                                            <input class="form-check-input" type="checkbox" value="" id="id_is_free_activity">
+                                            <label class="form-check-label" for="id_is_free_activity">
+                                                {% translate "Free activity?" %} 
+                                            </label>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    
+                                    <div class="form-group row" id="id_free_activity_title_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Activity title" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input 
+                                                type="text" class="form-control" id="id_free_activity_title" 
+                                                {% if task and task.type == "free_task" %}value="{{ task.name }}"{% endif %}
+                                             />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    
+
+                                    <div class="form-group row" id="id_phase_selected_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Phase" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <select class="col-sm-7 form-control custom-select" name="phase_selected" id="id_phase_selected">
+                                                {% if task.type != "task" %}<option value="0" selected>------------</option>{% endif %}
+                                                {% for phase in phases %}
+                                                    <option value="{{ phase.id }}" {% if task and task.phase.id == phase.id %}selected{% endif %} >{{ phase.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    
+
+                                    <div class="form-group row" id="id_activity_selected_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Activity" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <select class="col-sm-7 form-control custom-select" name="activity_selected" id="id_activity_selected">
+                                                {% if task != "task" %}<option value="0" selected>------------</option>{% endif %}
+                                                {% for acticity in activities %}
+                                                    <option value="{{ acticity.id }}" {% if task and task.acticity.id == acticity.id %}selected{% endif %}>{{ acticity.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    
+                                    <div class="form-group row" id="id_description_activity_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Description of activity" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <textarea class="form-control" id="id_description_activity" rows="6" value="{% if task %}{{ task.description }}{% endif %}">{% if task %}{{ task.description }}{% endif %}</textarea>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
+                                    <br />
+
+
+                                    <button type="button" name="id_save_completed_activity" id="id_save_completed_activity" 
+                                        class="btn btn-primary save_invalidate" required>
+                                        {% translate 'Save' %}
+                                    </button>
+                                </form>
+                                <hr />
+
+
+
+
+                                
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="overlay submit-spin">
+                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                    </div>
+                </div>
+                
+
+                <button type="button" class="btn bg-transparent close-modal bg-gray" data-dismiss="modal" aria-label="Close" style="float: left;">
+                    {% translate 'Close' %}
+                </button>
+
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        /*let activities_dict = "{{ activities_dict|escapejs }}".replace(/'/g, '"');;
+        console.log(activities_dict)
+        activities_dict = JSON.parse(activities_dict);
+        console.log(activities_dict)*/
+
+        let activities_dict = {{ activities_dict|safe }};
+        
+        //Report VAR
+        let id_is_free_activity = $("#id_is_free_activity");
+        let id_administrative_levels_selected = $("#id_administrative_levels_selected");
+        let id_free_activity_title = $("#id_free_activity_title");
+        let id_phase_selected = $("#id_phase_selected");
+        let id_activity_selected = $("#id_activity_selected");
+        let id_description_activity = $("#id_description_activity");
+        let id_plan_date = $("#id_plan_date");
+        let id_start_time_selected = $("#id_start_time_selected");
+        let id_end_time_selected = $("#id_end_time_selected");
+        
+        let id_is_free_activity_content = $("#id_is_free_activity_content");
+        let id_administrative_levels_selected_content = $("#id_administrative_levels_selected_content");
+        let id_free_activity_title_content = $("#id_free_activity_title_content");
+        let id_phase_selected_content = $("#id_phase_selected_content");
+        let id_activity_selected_content = $("#id_activity_selected_content");
+        let id_description_activity_content = $("#id_description_activity_content");
+
+        let id_save_completed_activity = $("#id_save_completed_activity");
+        id_save_completed_activity.prop('disabled', true);
+        //End Report VAR
+
+
+
+
+        //Report
+        
+
+        {% if task %}
+            {% if task.type == "free_task" %}
+                id_is_free_activity.prop('checked', true).val(true);
+                id_phase_selected_content.hide();
+                id_activity_selected_content.hide();
+            {% else %}
+                id_free_activity_title_content.hide();
+            {% endif %}
+        {% else %}
+            id_is_free_activity.prop('checked', true).val(true);
+            id_phase_selected_content.hide();
+            id_activity_selected_content.hide();
+        {% endif %}
+
+        id_start_time_selected.change(function(){
+            let value = this.value;
+            if(!['', null].includes(value)){
+                $('#id_end_time_selected option').each(function(){
+                    var optionValue = $(this).val();
+                    var optionText = $(this).text();
+                    if(!['', null].includes(optionValue) && parseInt(value) <= parseInt(optionValue)){
+                        $(this).prop('disabled', false).trigger('change.select2');
+                    }else{
+                        $(this).prop('disabled', true).trigger('change.select2');
+                    }
+                });
+                $('#id_end_time_selected').trigger('change.select2');
+            }
+        })
+
+        id_is_free_activity.click(function(){
+            if(id_is_free_activity.is(':checked')){
+                id_free_activity_title_content.show();
+                id_phase_selected_content.hide();
+                id_activity_selected_content.hide();
+                
+                id_phase_selected.val(null).trigger('change.select2');
+                id_activity_selected.val(null).trigger('change.select2');
+                id_description_activity.prop('readonly', false);
+            }else{
+                id_free_activity_title_content.hide();
+                id_phase_selected_content.show();
+                id_activity_selected_content.show();
+                
+                id_free_activity_title.val(null);
+                id_description_activity.prop('readonly', true);
+            }
+        });
+
+        
+        function disabled_undisabled_btn() {
+            if(
+                (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val())) || 
+                (!id_is_free_activity.is(':checked') && (['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_description_activity.val()))) || 
+                (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val())))
+            ){
+                id_save_completed_activity.prop('disabled', true);
+            }else{
+                id_save_completed_activity.prop('disabled', false);
+            }
+        }
+        $('form input').on('change keyup', function () {
+            disabled_undisabled_btn();
+        });
+        $('form textarea').on('change keyup', function () {
+            disabled_undisabled_btn();
+        });
+        $('form select').on('change keyup', function () {
+            disabled_undisabled_btn();
+
+            if(this.id == "id_activity_selected"){
+                id_description_activity.val(activities_dict.find(elt => elt.id == id_activity_selected.val())?.descrition);
+            }
+        });
+
+        let task_id = null;
+        {% if task %}
+        task_id = parseInt("{{ task.id }}");
+        {% endif %}
+
+        id_save_completed_activity.click(function(){
+            id_save_completed_activity.text(`{% translate "Recording in progress..." %}`);
+            $.ajax({
+                type: "POST",
+                url: "{% url 'dashboard:planning:save_activity_to_plan_task' %}",
+                data: {
+                    task__id: task_id,
+                    is_free_task: id_is_free_activity.is(':checked'),
+                    free_task_title: id_free_activity_title.val(),
+                    administrative_level_ids: id_administrative_levels_selected.val(),
+                    phase_id: id_phase_selected.val(),
+                    process_activity_id: id_activity_selected.val(),
+                    description_activity: id_description_activity.val(),
+                    plan_date: id_plan_date.val(),
+                    start_time: id_start_time_selected.val(),
+                    end_time: id_end_time_selected.val(),
+                    type_action: 'edit',
+                },
+                success: function (response) {
+                    add_task_plan_modal.modal('hide');
+                    loadFacilitators(type_field);
+                },
+                error: function (data, status, error) {
+                    if(error == "Forbidden"){
+                        alert(`{% translate "You don't have permission to request this request." %}` + " Error " + data.status);
+                    }else{
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                }
+            });
+        });
+
+        
+
+
+
+
+        /*let dp1 = '<div class="input-group-prepend" data-target="#{id}" data-toggle="datetimepicker">' +
+            '<div class="input-group-text"><i class="fa fa-calendar text-primary"></i></div></div>';
+        let dp2 = '<div class="input-group date" id="{id}" data-target-input="nearest"></div>';
+        $('#id_plan_date').before(dp1.replace('{id}', 'plan_date')).parent().wrapInner(
+            dp2.replace('{id}', 'plan_date'));
+
+        //Datemask dd/mm/yyyy
+        $('.datetimepicker-input').inputmask({alias: "datetime", inputFormat: "dd/mm/yyyy"});
+
+        let options = {
+            //maxDate: Date.now(),
+            useCurrent: false,
+            format: "DD/MM/YYYY",
+            widgetPositioning: {
+                vertical: 'bottom',
+            }
+        };
+
+        function dateChanged(e) {
+            if (e.oldDate !== e.date) {
+                //
+            }
+        }
+
+        $('#plan_date').datetimepicker(options);
+        $('#plan_date').on("change.datetimepicker", dateChanged);*/
+
+
+
+
+    });
+</script>
+
+    <script type="text/javascript">
+        $("#id_administrative_levels_selected").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_phase_selected").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_activity_selected").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_start_time_selected").select2({
+            placeholder: "{% translate 'Start time' %}",
+            allowClear: true
+        });
+        $("#id_end_time_selected").select2({
+            placeholder: "{% translate 'End time' %}",
+            allowClear: true
+        });
+
+        $('b[role="presentation"]').hide();
+        $('#add_plan_task .select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>

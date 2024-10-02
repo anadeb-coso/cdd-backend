@@ -50,6 +50,8 @@
 
 
         <div id="taskPlanDetailModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
+        <div id="addTaskPlanModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
+        <div id="deleteTaskPlanModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 
 
 
@@ -85,7 +87,16 @@
             }
         }
         let task_plan_detail_form_ajax = new TaskPlanDetailFormAjaxSubmit();
-        let task_plan_detail_modal = $('#taskPlanDetailModalForm');
+        task_plan_detail_modal = $('#taskPlanDetailModalForm');
+
+        class AddTaskPlanFormAjaxSubmit extends FormAjaxSubmit {
+            submitted_form() {
+                
+            }
+        }
+        let add_task_plan_form_ajax = new AddTaskPlanFormAjaxSubmit();
+        add_task_plan_modal = $('#addTaskPlanModalForm');
+
 
         const weekInfo = document.getElementById('weekInfo');
         const calendarContent = document.getElementById('calendarContent');
@@ -103,14 +114,15 @@
         let task_plan_detail_spin = $('#task-plan-detail-spin');
         task_plan_detail_spin.hide();
         
-        const tasks = convert_array_request_to_js_array(
+        const tasks = {{ planning|safe }};
+        /*convert_array_request_to_js_array(
             "{{ planning }}"
             .replaceAll("&#x27;", "'")
             .replaceAll("&quot;", '"')
             .replaceAll("None", null)
             .replaceAll("True", true)
             .replaceAll("False", false)
-        )
+        )*/
         
         function updateDates(mondayDate) {
             for (let i = 0; i < 7; i++) {
@@ -134,11 +146,12 @@
             language: {
                 url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
             },
-            dom: '',
-            ordering: false,
-            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
-            pageLength: 10,
-            order: []
+            "paging": true,
+            "pageLength": 10,
+            "lengthMenu":[10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            "searching": true,
+            "ordering": true,
+            "info": true,
         });
         
     function renderTask (taskData) {
@@ -194,10 +207,10 @@ function renderCalendar(week) {
                     `<div style="width: 100% !important;">&nbsp;</div>`, 
                     `<div style="width: 100% !important;">&nbsp;</div>`,
                     `<div style="width: 100% !important;">&nbsp;</div>`,
+                    /*`<div style="width: 100% !important;">&nbsp;</div>`,
                     `<div style="width: 100% !important;">&nbsp;</div>`,
                     `<div style="width: 100% !important;">&nbsp;</div>`,
-                    `<div style="width: 100% !important;">&nbsp;</div>`,
-                    `<div style="width: 100% !important;">&nbsp;</div>`,
+                    `<div style="width: 100% !important;">&nbsp;</div>`,*/
                 ]
                 tasksData.sort((a, b) => (a.datetime ? a.datetime : "").localeCompare(b.datetime ? b.datetime : ""));
                 
@@ -208,7 +221,7 @@ function renderCalendar(week) {
                     let dateObject = new Date(tasksData[a].datetime);
                     let hours = dateObject.getHours();
                     
-                    if(12 > hours && i_12 < 3){
+                    /*if(12 > hours && i_12 < 3){
                         _taskCell[i_12] = renderTask(tasksData[a]);
                         i_12 += 1;
                     }
@@ -222,6 +235,16 @@ function renderCalendar(week) {
                             _taskCell[a] = renderTask(tasksData[a]);
                         }
                         
+                    }*/
+                    if(12 > hours && i_12 < 3){
+                        _taskCell[i_12] = renderTask(tasksData[a]);
+                        i_12 += 1;
+                    }
+                    else if(16 > hours && i_16 < 6){
+                        _taskCell[i_16] = renderTask(tasksData[a]);
+                        i_16 += 1;
+                    }else{
+                        _taskCell[a] = renderTask(tasksData[a]);
                     }
 
 
@@ -260,10 +283,24 @@ renderCalendar(currentWeek);
             let task_plan_datetime = elt_id[2];
             let url = `{% url 'dashboard:planning:plan_task_detail' "no_sql_db_name" "task__id" "task_plan_datetime" %}`;
             url = url.replace('no_sql_db_name', no_sql_db_name).replace('task__id', task_id).replace('task_plan_datetime', task_plan_datetime);
-            task_plan_detail_form_ajax.load_form('#open_reason_form', task_plan_detail_modal, url).then(r => {
+            task_plan_detail_form_ajax.load_form('#plan_task_detail', task_plan_detail_modal, url).then(r => {
                 task_plan_detail_spin.hide();
             }).catch(e => {
                 task_plan_detail_spin.hide();
+            });
+            
+        });
+
+        $("#id_call_add_task_modal").on('click', function () {
+            $("#id_call_add_task_modal").prop('disabled', true);
+            task_plan_detail_spin.show();
+            let url = `{% url 'dashboard:planning:add_plan_task' %}`;
+            add_task_plan_form_ajax.load_form('#add_plan_task', add_task_plan_modal, url).then(r => {
+                task_plan_detail_spin.hide();
+                $("#id_call_add_task_modal").prop('disabled', false);
+            }).catch(e => {
+                task_plan_detail_spin.hide();
+                $("#id_call_add_task_modal").prop('disabled', false);
             });
             
         });

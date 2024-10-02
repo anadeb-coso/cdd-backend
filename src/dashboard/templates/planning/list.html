@@ -145,6 +145,22 @@
             font-size: 18px;
         }
 
+        #id_call_add_task_modal {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            position: fixed;
+            bottom: 20px; /* Distance from the bottom */
+            right: 20px;  /* Distance from the right */
+        }
     </style>
 {% endblock %}
 
@@ -182,6 +198,10 @@
                                 <option value="All" >{% translate 'All' %}</option>
                                 <option value="pending">{% translate 'Pending' %}</option>
                                 <option value="completed">{% translate 'Completed' %}</option>
+                                <option value="validated">{% translate 'Validated' %}</option>
+                                <option value="not_validated">{% translate 'Not validated' %}</option>
+                                <option value="undo">{% translate 'Undo' %}</option>
+                                <option value="deadline_passed">{% translate 'Deadline passed' %}</option>
                             </select>
                         </div>
                     </div>
@@ -226,6 +246,16 @@
 
         </div>
     </div>
+
+
+    <button type="button" name="call_add_task_modal" class="btn btn-primary save_comment float-md-right"
+        style="margin-top: 25px; margin: auto;"
+        id="id_call_add_task_modal">
+        +
+    </button>
+
+
+
 {% endblock %}
 
 {% block javascript %}
@@ -237,6 +267,8 @@
 
 
     <script type="text/javascript">
+        var task_plan_detail_modal = null;
+        var add_task_plan_modal = null;
         
         const prevWeek = document.getElementById('prevWeek');
         const nextWeek = document.getElementById('nextWeek');
@@ -276,6 +308,8 @@
         let id_facilitator = $('#id_facilitator');
         let id_task_status = $('#id_task_status');
         let show_my_calendar = $('#show_my_calendar');
+
+        show_my_calendar.prop('checked', true).val(true);
         
         var currentWeek = null;
         var currentMondayDate = null;
@@ -372,6 +406,12 @@
                         current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
                     },
                     success: function (response) {
+                        if(task_plan_detail_modal){
+                            task_plan_detail_modal.modal('hide');
+                        }
+                        if(add_task_plan_modal){
+                            add_task_plan_modal.modal('hide');
+                        }
                         spin.hide();
 
                         facilitators.html(response);
@@ -457,6 +497,20 @@
             });
         }
 
+        function loadFiles(no_sql_db_name, task__id) {
+            $('#load-files-spin').show();
+            $('#files').load(
+                "{% url 'dashboard:planning:task_plan_files' 'no_sql_db_name' 'task__id' %}"
+                .replace('no_sql_db_name', no_sql_db_name)
+                .replace('task__id', task__id), 
+                function (response, status, xhr) {
+                if (status === "error") {
+                    alert(error_server_message + "Error " + response.status);
+                }
+                $('#load-files-spin').hide();
+            });
+        }
+
 
     </script>
 
@@ -480,15 +534,15 @@
             placeholder: "{% translate 'Canton' %}",
             allowClear: true,
         });
-        $('#id_canton option[value="1973"]').attr("selected",true);
-        $('#id_canton').val("1973").trigger('change.select2');
+        {% comment %} $('#id_canton option[value="1973"]').attr("selected",true);
+        $('#id_canton').val("1973").trigger('change.select2'); {% endcomment %}
         $("#id_village").select2({
             placeholder: "{% translate 'Village' %}",
             allowClear: true,
         });
 
         $('b[role="presentation"]').hide();
-        $('.select2-selection__arrow').append(
+        $('.facilitators-filter .select2-selection__arrow').append(
             '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
 
     </script>
