@@ -68,3 +68,28 @@ function convert_array_request_to_js_array (data_django_safe_str) {
         .replaceAll("['", '["')
     );
 }
+
+
+async function uploadFile (file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('csrfmiddlewaretoken', "{{ csrf_token }}");
+    formData.append('no_sql_user', "");
+    formData.append('no_sql_pass', "");
+    let response;
+    try {
+        response = await axios.post('/attachments/upload-to-issue', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    } catch (error) {
+        if (error.response) {
+            console.error('Error:', error.response.data);
+        } else {
+            console.error('Error:', error.message);
+        }
+        response = error;
+    }
+    return response;
+};

@@ -20,7 +20,7 @@ class CascadeForm(forms.Form):
     village = forms.ChoiceField(label=gettext_lazy("Village"))
 
 
-    def __init__(self, ad_id, phase_id, activity_id, task_id, *args, **kwargs):
+    def __init__(self, ad_id, phase_id, activity_id, task_id, project_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         query_result_phases = [('', '')]
@@ -49,14 +49,14 @@ class CascadeForm(forms.Form):
                 else:
                     [query_result_villages.append((o.get('administrative_id'), o.get('name'))) for o in v]
                     
-        for k, v in get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id).items():
+        for k, v in get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, project_id).items():
             if k == "activities":
                 [query_result_activities.append(o) for o in v]
             if k == "tasks":
                 [query_result_tasks.append(o) for o in v]
 
 
-        [query_result_phases.append((o.id, o.name)) for o in Phase.objects.all().order_by("order")]
+        [query_result_phases.append((o.id, o.name)) for o in Phase.objects.filter(project_id=project_id).order_by("order")] 
 
         [query_result_regions.append((o.id, o.name)) for o in AdministrativeLevel.objects.using('mis').filter(type="Region").order_by("name")]
         
@@ -81,7 +81,7 @@ class CascadeForm(forms.Form):
                 self.fields['phase'].initial = (_t[0].phase_id, _t[0].phase.name)
         elif activity_id:
             self.fields['activity'].initial = self.get_item_by_id(query_result_activities, activity_id)
-            _a = Activity.objects.filter(id=int(activity_id))
+            _a = Activity.objects.filter(id=int(activity_id), project_id=project_id)
             if _a:
                 self.fields['phase'].initial = (_a[0].phase_id, _a[0].phase.name)
         elif phase_id:

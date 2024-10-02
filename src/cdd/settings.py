@@ -58,6 +58,7 @@ CREATED_APPS = [
     'supportmaterial',
     'news',
     'subprojects',
+    'planning',
 ]
 
 THIRD_PARTY_APPS = [

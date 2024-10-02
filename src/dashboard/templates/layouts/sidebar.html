@@ -17,7 +17,10 @@
             <div class="info">
                 <a href="#" class="d-block name">{{ user.first_name }} {{ user.last_name }}</a>
                 <p class="email">{{ user.email }}</p>
-                <p class="">{{ user|get_group_high }}</p>
+                <p class="email">{{ user|get_group_high }}</p>
+                {% if PROJECT_NAME %}
+                <p class="email">{{ PROJECT_NAME }}</p>
+                {% endif %}
             </div>
         </div>
 

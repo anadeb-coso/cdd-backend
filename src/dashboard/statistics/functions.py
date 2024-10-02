@@ -42,7 +42,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
-        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture","Préfecture", "ind_2"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3"),
@@ -277,7 +277,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                                     _ok = True
                                     break
                         if _ok:
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0")][count] = count + 1
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
@@ -1397,7 +1397,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                         _ok = True
                         break
             if _ok:
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0")][count] = count + 1
+                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
                 datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
@@ -2502,9 +2502,9 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                 
                 
     # All sum
-    datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0")][count] = "Total"
+    datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = "Total"
     columns_skip = [
-        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "N°", "N°", "N°", "N°", "N°", "ind_0"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")
     ]
     for k_data in datas.keys():

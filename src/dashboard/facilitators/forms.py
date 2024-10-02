@@ -21,6 +21,7 @@ class FilterTaskForm(forms.Form):
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
         facilitator_db_name = initial.get('facilitator_db_name')
+        project_id = initial.get('project_id')
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -65,9 +66,9 @@ class FilterTaskForm(forms.Form):
         # query_result_activities = sorted(query_result_activities, key=lambda obj: (str(obj["phase_order"])+str(obj["order"])))
         # query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
         # query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
-        [query_result_phases.append((o.name, o.name)) for o in Phase.objects.all().order_by("order")]
-        [query_result_activities.append((o.name, o.name)) for o in Activity.objects.all().order_by("phase__order", "order")]
-        [query_result_tasks.append((o.name, o.name)) for o in Task.objects.all().order_by("phase__order", "activity__order", "order")]
+        [query_result_phases.append((o.name, o.name)) for o in Phase.objects.filter(project_id=project_id).order_by("order")]
+        [query_result_activities.append((o.name, o.name)) for o in Activity.objects.filter(project_id=project_id).order_by("phase__order", "order")]
+        [query_result_tasks.append((o.name, o.name)) for o in Task.objects.filter(project_id=project_id).order_by("phase__order", "activity__order", "order")]
         cvds = sorted(get_cvds(facilitator_doc), key=lambda obj: obj.get('name'))
 
         # self.fields['administrative_level'].widget.choices = get_choices(

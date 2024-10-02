@@ -1,20 +1,22 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
+from cdd.models_base import BaseModel
 
-class BaseModel(models.Model):
-    created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
-    updated_date = models.DateTimeField(auto_now = True, blank=True, null=True)
+# class BaseModel(models.Model):
+#     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
+#     updated_date = models.DateTimeField(auto_now = True, blank=True, null=True)
 
-    class Meta:
-        abstract = True
+#     class Meta:
+#         abstract = True
     
-    def save_and_return_object(self):
-        super().save()
-        return self
+#     def save_and_return_object(self):
+#         super().save()
+#         return self
     
 # Create your models here.
 # The project object on couch looks like this
@@ -411,3 +413,35 @@ class FacilitatorDeployment(BaseModel):
         
         return _str
     
+
+
+
+
+# def post_project(sender, instance, **kwargs):
+    
+#     # if kwargs['created']:
+        
+#     # else:
+#     try:
+#         facilitators = instance.facilitators.all()
+#         print(facilitators)
+#         if facilitators:
+#             nsc = NoSQLClient()
+#             for f in facilitators:
+#                 print(f.name)
+#                 db = nsc.get_db(f.no_sql_db_name)
+
+#                 docs = db.get_query_result({"type": "facilitator"})[0]
+
+#                 if len(docs) > 0:
+#                     doc = docs[0].copy()
+#                     projects_ids = doc["projects_ids"] if 'projects_ids' in doc else []
+#                     doc["projects_ids"] = list(set(projects_ids + [instance.couch_id]))
+
+#                     nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+#     except Exception as exc:
+#         print(exc)
+
+
+# post_save.connect(post_project, sender=Project)

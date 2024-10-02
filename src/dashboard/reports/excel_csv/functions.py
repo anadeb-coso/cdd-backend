@@ -316,6 +316,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
         (gettext_lazy('Sex').__str__(), gettext_lazy('Sex').__str__()),
         (gettext_lazy('Phone').__str__(), gettext_lazy('Phone').__str__()),
         (gettext_lazy('CVD').__str__(), gettext_lazy('Nbr').__str__()),
+        (gettext_lazy('CVD').__str__(), gettext_lazy('ID CVD').__str__()),
         (gettext_lazy('CVD').__str__(), gettext_lazy('CVD').__str__()),
         (gettext_lazy('Village(s)').__str__(), gettext_lazy('Nbr').__str__()),
         (gettext_lazy('Village(s)').__str__(), gettext_lazy('Village(s)').__str__()),
@@ -357,6 +358,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     datas[(gettext_lazy('Phone').__str__(), gettext_lazy('Phone').__str__())][index_f] = facilitator['phone']
                     datas[(gettext_lazy('CVD').__str__(), gettext_lazy('Nbr').__str__())][index_f] = len(facilitator['dict_administrative_levels_with_infos'])
 
+                    datas[(gettext_lazy('CVD').__str__(), gettext_lazy('ID CVD').__str__())][index_f] = int(v_c['cvd']['sql_id'])
                     datas[(gettext_lazy('CVD').__str__(), gettext_lazy('CVD').__str__())][index_f] = _cvds
                     datas[(gettext_lazy('Village(s)').__str__(), gettext_lazy('Nbr').__str__())][index_f] = count_v - 1
                     datas[(gettext_lazy('Village(s)').__str__(), gettext_lazy('Village(s)').__str__())][index_f] = _villages
@@ -447,6 +449,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
         ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2"),
         ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3"),
         ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "ID CVD", "ind_5.0"),
         ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5"),
         ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6"),
         ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7"),
@@ -515,6 +518,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "ID CVD", "ind_5.0")][count] = administrativelevel_obj.cvd.id
                             datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
@@ -774,6 +778,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
         ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2"),
         ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3"),
         ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "ID CVD", "ind_5.0"),
         ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5"),
         ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6"),
         ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7"),
@@ -822,6 +827,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                             datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "ID CVD", "ind_5.0")][count] = administrativelevel_obj.cvd.id
                             datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
@@ -975,6 +981,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
         ("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "Préfecture"),
         ("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "Commune"),
         ("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "Canton"),
+        ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ID CVD"),
         ("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "CVD"),
         ("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "Villages"),
         ("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique"),
@@ -1071,6 +1078,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                             datas[("MONOGRAPHIE", "LOCALITE", "Préfecture", "Préfecture", "Préfecture")][count] = administrativelevel_obj.parent.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Commune", "Commune", "Commune")][count] = administrativelevel_obj.parent.parent.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Canton", "Canton", "Canton")][count] = administrativelevel_obj.parent.name
+                            datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "ID CVD")][count] = administrativelevel_obj.cvd.id
                             datas[("MONOGRAPHIE", "LOCALITE", "CVD", "CVD", "CVD")][count] = administrativelevel_obj.cvd.name
                             datas[("MONOGRAPHIE", "LOCALITE", "Villages", "Villages", "Villages")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton

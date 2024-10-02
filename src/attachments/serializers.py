@@ -11,8 +11,8 @@ from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCr
 
 
 class AuthMixinSerializer(serializers.Serializer):
-    no_sql_user = serializers.CharField()
-    no_sql_pass = serializers.CharField()
+    no_sql_user = serializers.CharField(allow_blank=True)
+    no_sql_pass = serializers.CharField(allow_blank=True)
 
     def validate(self, attrs):
         username = attrs.get('no_sql_user')

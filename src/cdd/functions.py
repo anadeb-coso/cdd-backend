@@ -1,4 +1,4 @@
-
+from datetime import datetime
 
 def exists_id(liste, id):
     for o in liste:
@@ -30,3 +30,20 @@ def datetime_complet_str(d_str: str):
             get_number_under_two_letter(h_m_s[2])
         )
     return d_str
+
+
+def is_datetime_in_past_or_now(input_datetime):
+    date_time_to_check = input_datetime #datetime.strptime(input_datetime, '%Y-%m-%dT%H:%M:%SZ')
+    
+    now = datetime.utcnow()
+    
+    return date_time_to_check <= now
+
+
+def times_split(hours=24, minutes=60, minutes_between=15):
+    times = []
+    for h in range(hours):
+        for m in range(0, minutes, minutes_between):
+            time_str = f"{h:02}:{m:02}"
+            times.append(time_str)
+    return times

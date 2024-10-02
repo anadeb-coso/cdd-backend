@@ -47,7 +47,7 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
             raise Exception("The value of the element must be not null!!!")
         
         search_by_locality = False
-        phases = Phase.objects.all()
+        phases = Phase.objects.filter(project_id=self.request.session.get('project_id'))
         regions = AdministrativeLevel.objects.using('mis').filter(type='Region')
         regions_id = []
         [regions_id.append(elt.id) for elt in regions]
@@ -173,4 +173,4 @@ class GetFunnelsFieldsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
             else:
                 task_id = int(val_p_a_t)
         
-        return CascadeForm(ad_id, phase_id, activity_id, task_id)
+        return CascadeForm(ad_id, phase_id, activity_id, task_id, self.request.session.get('project_id'))

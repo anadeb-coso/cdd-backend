@@ -31,25 +31,25 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
                 activity_id = int(activity_name)
         
         if activity_name and phase_name:
-            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id))
-            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id))
-            phases = Phase.objects.all().order_by("order")
+            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
+            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
+            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
             activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
             tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         elif phase_name:
-            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id))
-            phases = Phase.objects.all().order_by("order")
+            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
+            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
             activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
             tasks = phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         elif activity_name:
-            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id))
-            phases = Phase.objects.all().order_by("order")
-            activies = Activity.objects.all().order_by("phase__order", "order")
+            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
+            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
+            activies = Activity.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "order")
             tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         else:
-            phases = Phase.objects.all().order_by("order")
-            activies = Activity.objects.all().order_by("phase__order", "order")
-            tasks = Task.objects.all().order_by("phase__order", "activity__order", "order")
+            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
+            activies = Activity.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "order")
+            tasks = Task.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "activity__order", "order")
 
         datas = {'phases': [], 'activities': [], 'tasks': []}
 
@@ -120,7 +120,7 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         # return self.render_to_json_response(datas, safe=False)
 
         return self.render_to_json_response(
-            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id), 
+            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id')), 
             safe=False
         )
 

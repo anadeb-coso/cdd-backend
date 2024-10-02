@@ -298,6 +298,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 new_phase['administrative_level_id'] = administrative_level['id']
                 new_phase['project_id'] = project[0]['_id']
                 new_phase['sql_id'] = task_model.phase.id #Add sql_id 
+                new_phase['project_name'] = task_model.project.name
                 # fc_phase = facilitator_database.get_query_result(new_phase)[0]
 
                 #Search phase include id
@@ -328,6 +329,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     _fc_phase['description'] = task_model.phase.description
                     _fc_phase['order'] = task_model.phase.order
                     _fc_phase['sql_id'] = task_model.phase.id #update doc by adding sql_id 
+                    _fc_phase['project_name'] = task_model.project.name
 
                     nsc.update_cloudant_document(facilitator_database,  _fc_phase["_id"], _fc_phase) # Update phase for the facilitator
 
@@ -342,6 +344,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 new_activity['project_id'] = project[0]['_id']
                 new_activity['phase_id'] = fc_phase[0]['_id']
                 new_activity['sql_id'] = task_model.activity.id #Add sql_id 
+                new_activity['project_name'] = task_model.project.name
 
                 # fc_activity = facilitator_database.get_query_result(new_activity)[0]
 
@@ -373,6 +376,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     _fc_activity['order'] = task_model.activity.order
                     _fc_activity['total_tasks'] = task_model.activity.total_tasks
                     _fc_activity['sql_id'] = task_model.activity.id #update doc by adding sql_id 
+                    _fc_activity['project_name'] = task_model.project.name
                     
                     nsc.update_cloudant_document(facilitator_database,  _fc_activity["_id"], _fc_activity) # Update activity for the facilitator
 
@@ -626,11 +630,18 @@ def create_task_one_facilitator(database, task_model, no_sql_db):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, administrativelevel_ids=[], tasks_ids=[], project_id=None):
-    if tasks_ids:
+def sync_tasks(project_id, develop_mode=False, training_mode=False, no_sql_db=False, administrativelevel_ids=[], tasks_ids=[], attachmentsPresented=None):
+    
+    if attachmentsPresented in (False, True):
+        if tasks_ids:
+            tasks = Task.objects.filter(id__in=tasks_ids, attachments__isnull=(not attachmentsPresented)).prefetch_related()
+        else:
+            tasks = Task.objects.filter(project_id=project_id, attachments__isnull=(not attachmentsPresented)).prefetch_related()
+    elif tasks_ids:
         tasks = Task.objects.filter(id__in=tasks_ids).prefetch_related()
     else:
         tasks = Task.objects.filter(project_id=project_id).prefetch_related()
+
     for task in tasks:
         print('syncing: ', task.phase.order, task.activity.order, task.order)
         # if no_sql_db:
@@ -638,8 +649,11 @@ def sync_tasks(develop_mode=False, training_mode=False, no_sql_db=False, adminis
         # else:
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
         create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_db, administrativelevel_ids, project_id=project_id)
+    
+    print("Sync done!")
 
     add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_db=no_sql_db, project_id=project_id)
+    print("Done!")
 
 
 def sync_tasks_by_putting_unfinished_those_which_do_not_have_the_attachments(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
@@ -761,7 +775,8 @@ def create_training_facilitators(project_name, start=1, amount=1):
             "project_name": project.name,
             "projects_ids": [
                 project.couch_id
-            ]
+            ],
+            "total_number_of_tasks": Task.objects.filter(project_id=project.id).count()
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
@@ -1386,13 +1401,53 @@ def test():
     print(len(resultats[:]))
 
 
-def default_project_to_assign(name="COSO"):
+def default_project_to_assign(name="COSO", develop_mode=False, training_mode=False):
     project = Project.objects.filter(name=name).first()
 
-    aggregated_status_null = AggregatedStatus.objects.filter(project__isnull=True)
+    nsc = NoSQLClient()
+    db = nsc.get_db("backup_db_facilitators_docs")
+    fc_docs = db.all_docs(include_docs=True)['rows']
+    for _doc in fc_docs:
+        doc = _doc.get('doc')
+        if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
+            doc["project_name"] = project.name
+            doc["project_id"] = project.couch_id
+            nsc.update_cloudant_document(db,  doc["_id"], doc)
 
-    if project and aggregated_status_null:
-        aggregated_status_null.update(project=project)
+    # facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project.id])
+
+    # if project and facilitators:
+
+    #     if facilitators:
+    #         nsc = NoSQLClient()
+    #         for f in facilitators:
+    #             print(f.name)
+    #             db = nsc.get_db(f.no_sql_db_name)
+
+    #             docs = db.get_query_result({"type": "facilitator"})[0]
+
+    #             if len(docs) > 0:
+    #                 doc = docs[0].copy()
+    #                 doc["project_id"] = project.couch_id
+    #                 doc["project_name"] = project.name
+    #                 doc["projects_ids"] = [project.couch_id]
+
+    #                 nsc.update_cloudant_document(db,  doc["_id"], doc)
+    
+
+    #             fc_docs = db.all_docs(include_docs=True)['rows']
+    #             for _doc in fc_docs:
+    #                 doc = _doc.get('doc')
+    #                 if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
+    #                     doc["project_name"] = project.name
+    #                     doc["project_id"] = project.couch_id
+    #                     nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+    # aggregated_status_null = AggregatedStatus.objects.filter(project__isnull=True)
+
+    # if project and aggregated_status_null:
+    #     aggregated_status_null.update(project=project)
 
 
     # facilitators = Facilitator.objects.filter(projects__isnull=True)
@@ -1433,8 +1488,10 @@ def default_project_to_assign(name="COSO"):
 
 
 
-def search_facilitators_db_with_villages_stabilized():
-    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+def search_facilitators_db_with_villages_stabilized(name="COSO"):
+    project = Project.objects.filter(name=name).first()
+    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project.id])
+
     nsc = NoSQLClient()
     eadls = nsc.get_db('eadls')
     docs_eadls = eadls.all_docs(include_docs=True)['rows']
@@ -1466,18 +1523,17 @@ def search_facilitators_db_with_villages_stabilized():
                                     break
                 
         print(no_sql_dbs_names)
-        if no_sql_dbs_names:
-            facilitator = Facilitator.objects.filter(email=doc['representative'].get('email'), develop_mode=False, training_mode=False).first()
-            if facilitator:
-                facilitator.no_sql_dbs_names = no_sql_dbs_names
-                facilitator = facilitator.save_and_return_object()
+        facilitator = Facilitator.objects.filter(email=doc['representative'].get('email'), develop_mode=False, training_mode=False).first()
+        if facilitator:
+            facilitator.no_sql_dbs_names = no_sql_dbs_names
+            facilitator = facilitator.save_and_return_object()
 
-                db = nsc.get_db(facilitator.no_sql_db_name)
-                docs = db.get_query_result({"type": "facilitator"})[0]
-                if len(docs) > 0:
-                    doc = docs[0].copy()
-                    doc["no_sql_dbs_names"] = no_sql_dbs_names
-                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+            db = nsc.get_db(facilitator.no_sql_db_name)
+            docs = db.get_query_result({"type": "facilitator"})[0]
+            if len(docs) > 0:
+                doc = docs[0].copy()
+                doc["no_sql_dbs_names"] = no_sql_dbs_names
+                nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
 def add_couchdb_id_on_objects(project_name="PURS"):
@@ -1534,3 +1590,22 @@ def add_couchdb_id_on_objects(project_name="PURS"):
                     nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
+def add_attr_total_number_of_tasks_on_facilitators_doc(name="COSO", develop_mode=False, trainning_mode=False):
+    project = Project.objects.filter(name=name).first()
+
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project.id])
+
+    if project and facilitators:
+            
+        nsc = NoSQLClient()
+        for f in facilitators:
+            print(f.name)
+            db = nsc.get_db(f.no_sql_db_name)
+
+            docs = db.get_query_result({"type": "facilitator"})[0]
+
+            if len(docs) > 0:
+                doc = docs[0].copy()
+                doc["total_number_of_tasks"] = Task.objects.filter(project_id=project.id).count()
+
+                nsc.update_cloudant_document(db,  doc["_id"], doc)

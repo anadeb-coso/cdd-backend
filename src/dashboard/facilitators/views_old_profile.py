@@ -57,7 +57,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
         context['breadcrumb'] = False
 
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
@@ -127,8 +127,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
     def get_queryset(self):
         index = int(self.request.GET.get('index'))
         offset = int(self.request.GET.get('offset'))
-        phases = Phase.objects.all()
-        activities = Activity.objects.all()
+        phases = Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        activities = Activity.objects.filter(project_id=self.request.session.get('project_id'))
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
 

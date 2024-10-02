@@ -5,7 +5,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <div class="modal-title mx-auto">
-                <div class="fs29 text-bold-family text-primary">
+                <div class="fs29 text-bold-family text-{% if form_class_color %}{{ form_class_color }}{% else %}primary{% endif %}">
                     {{ title }}
                 </div>
                 {% if subtitle %}
@@ -15,7 +15,7 @@
                 {% endif %}
             </div>
             <button type="button" class="border-0 bg-transparent close-modal" data-dismiss="modal" aria-label="Close">
-                <div class="circle-icon bg-primary">
+                <div class="circle-icon bg-{% if form_class_color %}{{ form_class_color }}{% else %}primary{% endif %}">
                     <div class="center-27">
                         <i class="fas fa-times"></i>
                     </div>
@@ -38,7 +38,7 @@
                 </div>
             </div>
             <div class="modal-footer border-0">
-                <button type="submit" class="btn btn-lg btn-primary padding-inline-60 text-right">
+                <button type="submit" class="btn btn-lg btn-{% if form_class_color %}{{ form_class_color }}{% else %}primary{% endif %} padding-inline-60 text-right">
                     {{ submit_button }}
                 </button>
             </div>

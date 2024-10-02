@@ -280,17 +280,17 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
         context['breadcrumb'] = False
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks = 0
-        phases =  Phase.objects.all()
+        phases =  Phase.objects.filter(project_id=self.request.session.get('project_id'))
         context['phases'] = phases
 
         activities_per_phase = {}
         for phase in phases:
-            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order).values('name', 'phase', 'description', 'order').order_by('order')
+            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order, project_id=self.request.session.get('project_id')).values('name', 'phase', 'description', 'order').order_by('order')
 
         context["activities_per_phase"] = activities_per_phase
         for doc in facilitator_docs:
@@ -465,7 +465,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         # if phase_id:
         #     selector["order"] = int(phase_id)
         if activity_id:
-            selector["activity_name"] = Activity.objects.filter(order=activity_id, phase__order=phase_id)[0].name
+            selector["activity_name"] = Activity.objects.filter(order=activity_id, phase__order=phase_id, project_id=self.request.session.get('project_id'))[0].name
         if task_name:
             selector["name"] = task_name
 
@@ -485,8 +485,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         return self.facilitator_db.get_query_result(selector)
 
     def get_queryset(self):
-        phases = Phase.objects.all()
-        activities = Activity.objects.all()
+        phases = Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        activities = Activity.objects.filter(project_id=self.request.session.get('project_id'))
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
         
@@ -506,7 +506,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
         context['adminLevelId'] = self.request.GET.get('administrative_level')
 
         context['facilitator_db_name'] = self.facilitator_db_name

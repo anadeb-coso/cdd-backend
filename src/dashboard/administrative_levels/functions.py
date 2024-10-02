@@ -23,13 +23,12 @@ def get_administrative_levels_under_json(administrative_levels):
 
 
 def get_cascade_villages_by_administrative_level_id(_ids):
-    print(_ids, "first")
+    
     if type(_ids) is not list:
         _ids = [_ids]
     if _ids:
-        print(_ids)
         ad_objects = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=[int(_id) for _id in _ids if _id])
-        print(ad_objects)
+        
         villages = []
         for ad_obj in ad_objects:
             if ad_obj:

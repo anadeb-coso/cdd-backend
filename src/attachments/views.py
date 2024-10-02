@@ -1,5 +1,6 @@
 import os
 from django.conf import settings
+import time
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import generics, parsers
@@ -33,7 +34,7 @@ class UploadIssueAttachmentAPIView(generics.GenericAPIView):
         file_directory_within_bucket = 'proof_of_work/'
         file_path_within_bucket = os.path.join(
             file_directory_within_bucket,
-            data['file'].name
+            f"{str(time.time())}-{data['file'].name}" #data['file'].name
         )
 
         media_storage = S3Boto3Storage()

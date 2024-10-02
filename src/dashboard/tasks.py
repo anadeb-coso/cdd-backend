@@ -203,7 +203,7 @@ def sync_aggregated_status_on_adl(project_id: int):
             else:
                 _adls_ids = [adm.id for adm in adl.children]
             
-            for task in Task.objects.all().order_by('id'):
+            for task in Task.objects.filter(project_id=project_id).order_by('id'):
                 children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id)
 
                 a = None

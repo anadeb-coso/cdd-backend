@@ -19,7 +19,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf.urls.i18n import i18n_patterns
 
-from .views import set_language
+from . import views
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
@@ -30,7 +30,7 @@ handler500 = 'dashboard.authentication.views.handler500'
 
 urlpatterns = [
     path('set-language/', 
-         set_language, 
+         views.set_language, 
          name='set_language'),
     path('i18n/', include('django.conf.urls.i18n')),
     path('attachments/', include('attachments.urls')),
@@ -45,6 +45,8 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
     path('', include('dashboard.urls')),
+
+    path('delete-object/<int:object_id>/<str:type>/<str:attr>/', views.DeleteObjectFormView.as_view(), name='object_deletion_form'),
 )
 
 

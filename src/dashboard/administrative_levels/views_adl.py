@@ -349,10 +349,9 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
 
         return self.facilitator_db.get_query_result(selector)
     def get_context_data(self, **kwargs):
-        print(77777)
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name})
+        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
         context['breadcrumb'] = False
         context['facilitator_db_name'] = self.facilitator_db_name
         context['administrative_level_id'] = self.request.GET.get('administrative_level')
@@ -732,7 +731,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             type='Village'
         )
 
-        context["phases"] = Phase.objects.all()
+        context["phases"] = Phase.objects.filter(project_id=self.request.session.get('project_id'))
         if "administrative_level" in self.request.GET and self.request.GET[
             "administrative_level"
         ] not in ["", None]:
@@ -741,13 +740,13 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             #     village__id=self.request.GET["administrative_level"]
             # )
 
-        context["activities"] = Activity.objects.all()
+        context["activities"] = Activity.objects.filter(project_id=self.request.session.get('project_id'))
         if "phase" in self.request.GET and self.request.GET["phase"] not in ["", None]:
             context["activities"] = context["activities"].filter(
                 phase__id=self.request.GET["phase"]
             )
 
-        context["tasks"] = Task.objects.all()
+        context["tasks"] = Task.objects.filter(project_id=self.request.session.get('project_id'))
         if "activities" in self.request.GET and self.request.GET["activities"] not in [
             "",
             None,
@@ -802,19 +801,19 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                     )
                 if key == "phase":
                     resp["Phases"] = ", ".join(
-                        Phase.objects.filter(id__in=[int(value)]).values_list(
+                        Phase.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
                             "name", flat=True
                         )
                     )
                 if key == "activities":
                     resp["Activities"] = ", ".join(
-                        Activity.objects.filter(id__in=[int(value)]).values_list(
+                        Activity.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
                             "name", flat=True
                         )
                     )
                 if key == "tasks":
                     resp["Tasks"] = ", ".join(
-                        Task.objects.filter(id__in=[int(value)]).values_list(
+                        Task.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
                             "name", flat=True
                         )
                     )
@@ -863,7 +862,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                 "",
                 None,
             ]:
-                selector["phase_name"] = Phase.objects.get(id=self.request.GET["phase"]).name
+                selector["phase_name"] = Phase.objects.get(id=self.request.GET["phase"], project_id=self.request.session.get('project_id')).name
         # else:
         #     if "phase" in self.request.GET and self.request.GET["phase"] not in [
         #         "",
@@ -959,13 +958,13 @@ class FillAttachmentSelectFilters(rest_generics.GenericAPIView):
         child_qs = list()
         if select_type == 'administrative_level':
             parent_obj = mis_objects_call.get_object(administrativelevels_models.AdministrativeLevel, id=request.POST['value'])
-            child_qs = Phase.objects.filter(village=parent_obj)
+            child_qs = Phase.objects.filter(village=parent_obj, project_id=self.request.session.get('project_id'))
         elif select_type == 'phase':
             parent_obj = Phase.objects.get(id=request.POST['value'])
-            child_qs = Activity.objects.filter(phase=parent_obj)
-        elif select_type == 'activity':
+            child_qs = Activity.objects.filter(phase=parent_obj, project_id=self.request.session.get('project_id'))
+        elif select_type == 'activity': 
             parent_obj = Activity.objects.get(id=request.POST['value'])
-            child_qs = Task.objects.filter(activity=parent_obj)
+            child_qs = Task.objects.filter(activity=parent_obj, project_id=self.request.session.get('project_id'))
 
         return response.Response({
             'values': [{'id': child.id, 'name': child.name} for child in child_qs]

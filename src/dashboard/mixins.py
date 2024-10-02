@@ -36,6 +36,7 @@ class ModalFormMixin(object):
     picture = None
     picture_class = None
     submit_button = None
+    form_class_color = 'primary'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -45,6 +46,7 @@ class ModalFormMixin(object):
         ctx.setdefault('picture', self.picture)
         ctx.setdefault('picture_class', self.picture_class)
         ctx.setdefault('submit_button', self.submit_button)
+        ctx.setdefault('form_class_color', self.form_class_color)
         return ctx
 
 

@@ -56,6 +56,7 @@ class CredentialSerializer(serializers.Serializer):
     email = serializers.CharField(allow_blank=True, allow_null=True)
     name = serializers.CharField(allow_blank=True, allow_null=True)
     is_superuser = serializers.BooleanField(allow_null=True)
+    groups = serializers.JSONField(allow_null=True)
     
 class UserAuthSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -93,6 +94,7 @@ class UserAuthSerializer(serializers.Serializer):
         attrs['email'] = None
         attrs['name'] = None
         attrs['is_superuser'] = None
+        attrs['groups'] = None
         if hasattr(user, 'no_sql_user'):
             attrs['no_sql_user'] = user.no_sql_user
             attrs['no_sql_pass'] = user.no_sql_pass
@@ -100,11 +102,13 @@ class UserAuthSerializer(serializers.Serializer):
             attrs['email'] = user.email
             attrs['name'] = user.name
             attrs['no_sql_dbs_names'] = user.no_sql_dbs_names
+            attrs['groups'] = ['Facilitator']
         else:
             attrs['first_name'] = user.first_name
             attrs['last_name'] = user.last_name
             attrs['email'] = user.email
             attrs['is_superuser'] = user.is_superuser
+            attrs['groups'] = ['Superuser'] + list(user.groups.all()) if user.is_superuser else list(user.groups.all())
             
             
         return attrs

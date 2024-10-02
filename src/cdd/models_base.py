@@ -1,4 +1,5 @@
 from django.db import models
+from django.forms.models import model_to_dict
 
 
 # Create your models here.
@@ -37,26 +38,26 @@ class BaseModel(models.Model):
         }
         """
         
-        user_json = user.__dict__ if user else {'is_superuser': True}
-        self_json = self.__dict__
+        # user_json = user.__dict__ if user else {'is_superuser': True}
+        # self_json = self.__dict__
 
-        if user_json.get('is_superuser'):
-            user_json['type'] = "user"
-        else:
-            user_json['type'] = "facilitator"
-        user_json['date'] = self.updated_date
-        user_json['data'] = self_json
+        # if user_json.get('is_superuser'):
+        #     user_json['type'] = "user"
+        # else:
+        #     user_json['type'] = "facilitator"
+        # user_json['date'] = self.updated_date
+        # user_json['data'] = self_json
 
 
-        users_involved = self.users_involved if self.users_involved else []
+        # users_involved = self.users_involved if self.users_involved else []
 
-        if self.created_date == self.updated_date:
-            self.create_by_user = user_json
+        # if self.created_date == self.updated_date:
+        #     self.create_by_user = user_json
             
-        self.update_by_user = user_json
+        # self.update_by_user = user_json
         
-        users_involved.append(user_json)
+        # users_involved.append(user_json)
 
-        self.users_involved = users_involved
+        # self.users_involved = users_involved
 
         super().save()

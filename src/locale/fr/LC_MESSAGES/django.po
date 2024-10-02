@@ -1237,3 +1237,167 @@ msgstr "Entre 10 et 35"
 #: .\dashboard
 msgid "Died"
 msgstr "Morts"
+
+#: .\dashboard
+msgid "Not validated"
+msgstr "Non validé"
+
+#: .\dashboard
+msgid "Undo"
+msgstr "Non fait"
+
+#: .\dashboard
+msgid "Deadline passed"
+msgstr "Délai dépassé"
+
+#: .\dashboard
+msgid "Planned by"
+msgstr "Planifiée par"
+
+#: .\dashboard
+msgid "Description not mentioned"
+msgstr "Description non mentionée"
+
+#: .\dashboard
+msgid "Activity validated"
+msgstr "Activité validée"
+
+#: .\dashboard
+msgid "Activity not validated"
+msgstr "Activité non validée"
+
+#: .\dashboard
+msgid "Activity pending validation"
+msgstr "Activité en attente de validation"
+
+#: .\dashboard
+msgid "I invalidate"
+msgstr "J'invalide"
+
+#: .\dashboard
+msgid "I validate"
+msgstr "Je valide"
+
+#: .\dashboard
+msgid "I confirm that I have read all the details about this activity"
+msgstr "Je confirme d'avoir lu toutes les détails sur cette activité"
+
+#: .\dashboard
+msgid "Add your comment here"
+msgstr "Mettre votre commentaire ici"
+
+#: .\dashboard
+msgid "Activity completed?"
+msgstr "Activité achevée ?"
+
+#: .\dashboard
+msgid "I was unable to complete the task"
+msgstr "Je n'ai pas pu effectuer la tâche"
+
+#: .\dashboard
+msgid "Put here the reason why you were unable to perform the activity (this is compulsory)"
+msgstr "Mettez ici la raison du pourquoi vous n'aviez pas pu éffectuer l'activité (ceci est obligatoire)"
+
+#: .\dashboard
+msgid "I did another activity instead"
+msgstr "J'ai éffectué une autre activité à la place"
+
+#: .\dashboard
+msgid "Is the activity performed a free activity?"
+msgstr "L'activité éffectuée est une activité libre ?"
+
+#: .\dashboard
+msgid "Activity title"
+msgstr "Titre de l'activité"
+
+#: .\dashboard
+msgid "Description of activity / Report"
+msgstr "Description de l'activité éffectuée/Compte rendu"
+
+#: .\dashboard
+msgid "Select location"
+msgstr "Sélectionner un lieu"
+
+#: .\dashboard
+msgid "Select the location"
+msgstr "Sélectionner le lieu"
+
+#: .\dashboard
+msgid "The file was successfully saved."
+msgstr "Le fichier a été enregistré avec succès."
+
+#: .\dashboard
+msgid "The file was not successfully saved."
+msgstr "Le fichier n'a pas été enregistré avec succès."
+
+#: .\dashboard
+msgid "No files found"
+msgstr "Aucun fichier trouvé"
+
+#: .\dashboard
+msgid "The file was successfully deleted."
+msgstr "Le fichier a été supprimé avec succès."
+
+#: .\dashboard
+msgid "The file was not successfully deleted."
+msgstr "Le fichier n'a pas été supprimé avec succès."
+
+#: .\dashboard
+msgid "Seletion in progress..."
+msgstr "Suppression en cours..."
+
+#: .\dashboard
+msgid "The activity was successfully saved."
+msgstr "L'activité a été sauvegardée avec succès."
+
+#: .\dashboard
+msgid "The activity was not successfully saved."
+msgstr "Le activitié n'a pas été enregistrée avec succès."
+
+#: .\dashboard
+msgid "Free activity?"
+msgstr "Activité libre ?"
+
+#: .\dashboard
+msgid "Description of activity"
+msgstr "Description de l'activité à faire"
+
+#: .\dashboard
+msgid "Add activity"
+msgstr "Planifiez une activité"
+
+#: .\dashboard
+msgid "End time"
+msgstr "Heure de fin"
+
+#: .\dashboard
+msgid "Start time"
+msgstr "Heure de début"
+
+#: .\dashboard
+msgid "You don't have permission to request this request."
+msgstr "Vous n'avez pas la permission de faire cette demande."
+
+#: .\dashboard
+msgid "Villages"
+msgstr "Villages"
+
+#: .\dashboard
+msgid "Confirm deletion"
+msgstr "Confirmation de la suppression"
+
+#: .\dashboard
+msgid "Please check this box and click the confirmation button for validation."
+msgstr "Veuillez cocher cette câche et cliquez sur le bouton de confirmation pour la validation."
+
+#: .\dashboard
+msgid "Confirm"
+msgstr "Confirmer"
+
+#: .\dashboard
+msgid "The object was successfully removed."
+msgstr "L'objet a été retiré avec succès."
+
+#: .\dashboard
+msgid "An error has occurred..."
+msgstr "Une erreur s'est produite..."
