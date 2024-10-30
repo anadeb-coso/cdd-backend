@@ -33,6 +33,13 @@ class ActivityValidateSerializer(serializers.ModelSerializer):
 		model = ActivityValidate
 		fields = '__all__'
 
+class SaveActivityValidateSerializer(serializers.ModelSerializer):
+	class Meta:
+		"""docstring for Meta"""
+		model = ActivityValidate
+		fields = '__all__'
+
+
 class ActivityFileSerializer(serializers.ModelSerializer):
 	class Meta:
 		"""docstring for Meta"""
@@ -42,6 +49,12 @@ class ActivityFileSerializer(serializers.ModelSerializer):
 class ActivityCommentSerializer(serializers.ModelSerializer):
 	facilitator = FacilitatorSerializer(many=False)
 	user = UserSerializer(many=False)
+	class Meta:
+		"""docstring for Meta"""
+		model = ActivityComment
+		fields = '__all__'
+
+class SaveActivityCommentSerializer(serializers.ModelSerializer):
 	class Meta:
 		"""docstring for Meta"""
 		model = ActivityComment
@@ -60,8 +73,12 @@ class ActivitySerializer(serializers.ModelSerializer):
 		data = super().to_representation(instance)
 
 		data['files'] = ActivityFileSerializer(instance.get_files(), many=True).data
-		data['activities_validates'] = ActivityValidateSerializer(instance.get_activities_validate(), many=True).data
-		data['comments'] = ActivityFileSerializer(instance.get_comments(), many=True).data
+		activities_validates = ActivityValidateSerializer(instance.get_activities_validate(), many=True).data
+		comments = ActivityCommentSerializer(instance.get_comments(), many=True).data
+
+		data['comments'] = sorted(
+			(list(comments) + list(activities_validates)), key=lambda obj: obj.get('created_date'), reverse=True
+		)
 
 		return data
 

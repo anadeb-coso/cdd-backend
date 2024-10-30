@@ -26,6 +26,12 @@ def get_cascade_villages_by_administrative_level_id(_ids):
     
     if type(_ids) is not list:
         _ids = [_ids]
+
+    if '' in _ids:
+        del _ids[_ids.index('')]
+    if None in _ids:
+        del _ids[_ids.index(None)]
+        
     if _ids:
         ad_objects = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=[int(_id) for _id in _ids if _id])
         
@@ -131,6 +137,77 @@ def get_cascade_administrative_levels_by_administrative_level_id(_id):
         # datas["cantons"] = get_administrative_levels_under_json(datas["cantons"])
         # datas["villages"] = get_administrative_levels_under_json(datas["villages"])
         
+        
+    datas["prefectures"] = get_administrative_levels_under_json(prefectures)
+    datas["communes"] = get_administrative_levels_under_json(communes)
+    datas["cantons"] = get_administrative_levels_under_json(cantons)
+    datas["villages"] = get_administrative_levels_under_json(villages)
+
+
+    return datas
+
+
+
+
+def get_cascade_administrative_levels_by_administrative_level_ids(_ids):
+    datas = {}
+    if type(_ids) is not list:
+        _ids = [_ids]
+    
+    if '' in _ids:
+        del _ids[_ids.index('')]
+    if None in _ids:
+        del _ids[_ids.index(None)]
+
+    if _ids:
+        ad_objects = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=[int(_id) for _id in _ids if _id])
+
+        ads = []
+        for ad_obj in ad_objects:
+            ads += list(ad_obj.administrativelevel_set.get_queryset())
+        _type = ad_objects[0].type
+
+        if _type == "Region":
+            # regions = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Region")
+            prefectures = ads
+            communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in prefectures])
+            cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in communes])
+            villages = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in cantons])
+        elif _type == "Prefecture":
+            # regions = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Region")
+            prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+            communes = ads
+            cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in communes])
+            villages = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in cantons])
+        elif _type == "Commune":
+            # regions = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Region")
+            prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+            communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Commune")
+            cantons = ads
+            villages = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[o.id for o in cantons])
+        elif _type == "Canton":
+            # regions = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Region")
+            prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+            communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Commune")
+            cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Canton")
+            villages = ads
+        elif _type == "Village":
+            # regions = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Region")
+            prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+            communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Commune")
+            cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Canton")
+            villages = ad_objects
+        else:
+            prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+            communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Commune")
+            cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Canton")
+            villages = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Village")
+    else:
+        prefectures = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Prefecture")
+        communes = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Commune")
+        cantons = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Canton")
+        villages = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(type="Village")
+
         
     datas["prefectures"] = get_administrative_levels_under_json(prefectures)
     datas["communes"] = get_administrative_levels_under_json(communes)

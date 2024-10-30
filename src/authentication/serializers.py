@@ -108,7 +108,7 @@ class UserAuthSerializer(serializers.Serializer):
             attrs['last_name'] = user.last_name
             attrs['email'] = user.email
             attrs['is_superuser'] = user.is_superuser
-            attrs['groups'] = ['Superuser'] + list(user.groups.all()) if user.is_superuser else list(user.groups.all())
+            attrs['groups'] = ['Superuser'] + list([g.name for g in user.groups.all()]) if user.is_superuser else list([g.name for g in user.groups.all()])
             
             
         return attrs

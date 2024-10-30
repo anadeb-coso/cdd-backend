@@ -84,7 +84,7 @@ class RestSaveNews(APIView):
             if publication_date:
                 news.publication_date = publication_date
 
-            news = news.save_and_return_object()
+            news = news.save_and_return_object(user=self.request.user)
             
             if (not id and news.publish) or (not publication_date_existed and publication_date):
                 try:
@@ -205,8 +205,32 @@ class RestGetNews(APIView):
     
     def post(self, request, *args, **kwargs):
         try:
+            username = self.request.GET.get('username', None)
+            email = self.request.GET.get('email', None)
+            project_name = self.request.GET.get('project_name', None)
+            type_news = self.request.GET.get('type_news', None)
+
+            query = Q()
+            if type_news and 'my_' in type_news:
+                if username:
+                    query |= Q(facilitator__username=username)
+                    query |= Q(user__username=username)
+                elif email:
+                    query |= Q(facilitator__email=email)
+                    query |= Q(user__email=email)
+                    
+                if type_news == 'my_unpublish':
+                    query &= Q(publish=False)
+                elif type_news == 'my_publish':
+                    query &= Q(publish=True)
+                
+            else:
+                query = Q(publish=True)
+            print(query)
+            _ = News.objects.filter(query)
+            print(_.count())
             paginator = CustomPagination()
-            paginated_data = paginator.paginate_queryset(News.objects.all().order_by('-created_date'), request)
+            paginated_data = paginator.paginate_queryset(News.objects.filter(query).order_by('-created_date'), request)
             serializer = NewsSerializer(paginated_data, many=True)
             
             return paginator.get_paginated_response(serializer.data)
@@ -392,7 +416,7 @@ class SubscriptionAPIView(APIView):
                 else:
                     subscription.user = user
                 subscription.category_id = request.data['category']
-                subscription = subscription.save_and_return_object()
+                subscription = subscription.save_and_return_object(user=self.request.user)
                 return Response(
                     SubscriptionSerializer(
                         Subscription.objects.get(id=subscription.pk),

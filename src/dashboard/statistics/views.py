@@ -4,7 +4,7 @@ from dashboard.mixins import PageMixin
 from django.utils.translation import gettext_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.http import Http404
+from django.http import Http404, HttpResponse
 
 from dashboard.reports.pages.forms import ReportsFacilitatorsStatusForm
 from authentication.models import Facilitator
@@ -12,6 +12,7 @@ from dashboard.facilitators.forms import FilterFacilitatorFormMultiChoices
 from cdd.my_librairies import download_file, convert_file_to_dict
 from .functions import get_global_statistic_under_file_excel_or_csv, save_csv_datas_in_db
 from authentication.permissions import AdminPermissionRequiredMixin
+from .functions_reports import priorities_pav_pac_situation, priorities_situation
 
 
 class StatisticView(PageMixin, LoginRequiredMixin, FormView):
@@ -45,6 +46,7 @@ class StatisticView(PageMixin, LoginRequiredMixin, FormView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['breadcrumb'] = False
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], projects__in=[self.request.session.get('project_id')]))
@@ -147,3 +149,87 @@ class UploadCSVView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin,
         
 
         raise Http404
+    
+
+
+class PrioritiesPAVPACSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
+    """Class to download statistic under excel file"""
+
+    template_name = 'statistics/statistic.html'
+    context_object_name = 'Download'
+    title = gettext_lazy("Download")
+    active_level1 = 'statistics'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def _get_ids_list(self, elt: str):
+        if type(elt) is str:
+            return [_elt for _elt in elt.split(',') if _elt]
+        return []
+
+    def get(self, request, *args, **kwargs):
+
+        file_path = ""
+        try:
+            file_path = priorities_pav_pac_situation(
+                params={"session_project_id": self.request.session.get('project_id'), "session_project_name": self.request.session.get('project_name')}
+            )
+        except Exception as exc:
+            print(exc)
+            messages.info(request, gettext_lazy("An error has occurred..."))
+
+        if not file_path:
+            return redirect('dashboard:facilitators:list')
+        else:
+            # return download_file.download(
+            #     request, 
+            #     file_path,
+            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            # )
+            
+            return HttpResponse(file_path)
+        
+
+class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
+    """Class to download statistic under excel file"""
+
+    template_name = 'statistics/statistic.html'
+    context_object_name = 'Download'
+    title = gettext_lazy("Download")
+    active_level1 = 'statistics'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def _get_ids_list(self, elt: str):
+        if type(elt) is str:
+            return [_elt for _elt in elt.split(',') if _elt]
+        return []
+
+    def get(self, request, *args, **kwargs):
+
+        file_path = ""
+        try:
+            file_path = priorities_situation(
+                params={"session_project_id": self.request.session.get('project_id'), "session_project_name": self.request.session.get('project_name')}
+            )
+
+        except Exception as exc:
+            messages.info(request, gettext_lazy("An error has occurred..."))
+
+        if not file_path:
+            return redirect('dashboard:facilitators:list')
+        else:
+            # return download_file.download(
+            #     request, 
+            #     file_path,
+            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            # )
+            return HttpResponse(file_path)

@@ -2,6 +2,10 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from django.db.models.signals import post_save
 from django.utils.translation import gettext_lazy as _
+from itertools import chain
+from django.db.models import F
+from django.db.models.functions import Coalesce
+from django.forms.models import model_to_dict
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
@@ -18,11 +22,14 @@ class Activity(BaseModel):
     activity = models.ForeignKey(ProcessActivity, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     name = models.CharField(max_length=255, verbose_name=_('Activity'))
     description = models.TextField(verbose_name=_('Description'))
+    component = models.TextField(null=True, blank=True, verbose_name=_('Component'))
+    vacation_type = models.CharField(max_length=100, verbose_name=_('Vacation type'), null=True, blank=True)
     administrative_level_ids = models.JSONField(null=True, blank=True, verbose_name=_("Locality ID"))
     administrative_levels = models.JSONField(null=True, blank=True, verbose_name=_("Localities"))
-    planned_date = models.DateField(verbose_name=_("Plan date"))
+    planned_date = models.DateField(verbose_name=_("Plan date"), blank=True, null=True)
     planned_datetime_start = models.DateTimeField(blank=True, null=True, verbose_name=_("Start"))
     planned_datetime_end = models.DateTimeField(blank=True, null=True, verbose_name=_("End"))
+    vacation_return_datetime = models.DateTimeField(blank=True, null=True, verbose_name=_("Return date"))
     completed = models.BooleanField(blank=True, null=True, verbose_name=_("Completed"))
     undo = models.BooleanField(blank=True, null=True, verbose_name=_("Undo"))
     is_another = models.BooleanField(blank=True, null=True, verbose_name=_("Another activity"))
@@ -32,6 +39,7 @@ class Activity(BaseModel):
     undo_comment = models.TextField(blank=True, null=True, verbose_name=_('Report (Undo)'))
     comment = models.TextField(blank=True, null=True, verbose_name=_('Report'))
     validated = models.BooleanField(default=None, blank=True, null=True, verbose_name=_("Validated"))
+    edit_after_invalidation = models.BooleanField(blank=True, null=True)
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="planning_activities")
@@ -45,12 +53,20 @@ class Activity(BaseModel):
     def get_comments(self):
         return self.activitycomment_set.get_queryset().order_by("-created_date")
     
-    
+    def get_activities_and_comments(self):
+        # activities = self.activityvalidate_set.get_queryset().annotate(created_date_final=F('created_date'))
+        # comments = self.activitycomment_set.get_queryset().annotate(created_date_final=F('created_date'))
+
+        # combined_qs = activities.union(comments).order_by("-created_date_final")
+
+        # return combined_qs
+        return sorted((list(self.get_comments()) + list(self.get_activities_validate())), key=lambda obj: obj.created_date, reverse=True)
 
 class ActivityValidate(BaseModel):
     activity = models.ForeignKey(Activity, null=True, blank=True, on_delete=models.SET_NULL)
     validated = models.BooleanField(default=None, verbose_name=_("Validated"))
-    comment = models.TextField(verbose_name=_('Report'))
+    comment = models.TextField(null=True, blank=True, verbose_name=_('Report'))
+    comment_read = models.BooleanField(default=False)
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities_validates")
     facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities_validates")
 

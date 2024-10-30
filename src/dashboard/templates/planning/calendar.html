@@ -11,16 +11,42 @@
         border-radius: 11px;
         color: #fff;
         text-align: center;
+        //border: solid 4px black;
     }
 
     thead th {
         font-weight: bold;
+    }
+
+    #id_download_tasks_file {
+        font-size: 14px;
+        cursor: pointer;
     }
     
 </style>
 
 
 
+
+        <span>{{ currentMondayDate|date:'F Y' }}</span>
+
+        <span id="id_download_tasks_file" class="float-md-right text-primary text-bold"><i class="fas fa-file-excel"></i></span>
+
+        <span class="float-md-right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        <span id="download-message" class="float-md-right" style="display:none;">{% translate "Download in progress..." %}</span>
+        <span id="download-complete-message" class="float-md-right" style="display:none;">{% translate "Download complete!" %}</span>
+
+        <span class="float-md-right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        
+        <div class="float-md-right"  style="margin-top: -5px;">
+            <span style="margin-top: 5px;margin-left: 5px;" >&nbsp;&nbsp;&nbsp;{% translate "End" %} : &nbsp; </span><span id="id_plan_date_end" type="date" ></span> <span id="id_plan_date_end_selected" style="margin-top: 5px;margin-left: 5px;" >YYYY/MM/DD</span>
+        </div>
+        
+        <div class="float-md-right"  style="margin-top: -5px;">
+            <span style="margin-top: 5px;margin-left: 5px;" >{% translate "Arguments for export" %} <i class="fas fa-hand-point-right"></i> &nbsp;&nbsp; {% translate "Start" %} : &nbsp; </span><span id="id_plan_date_start" type="date" ></span> <span id="id_plan_date_start_selected" style="margin-top: 5px;margin-left: 5px;" >YYYY/MM/DD</span>
+        </div>
+
+        <div class="clearfix"></div>
 
         <div class="card">
             <div class="card-body table-responsive">
@@ -50,33 +76,36 @@
 
 
         <div id="taskPlanDetailModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
-        <div id="addTaskPlanModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
         <div id="deleteTaskPlanModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 
 
 
 
 <script type="text/javascript">
+
     var task_planed_detail=null;
-        currentWeek = parseInt("{{ currentWeek }}");
-        currentMondayDate = new Date('{{ currentMondayDate|date:"Y/m/d" }}');
+    currentWeek = parseInt("{{ currentWeek }}");
+    currentMondayDate = new Date('{{ currentMondayDate|date:"Y/m/d" }}');
+
+    
+    var date_start_selected = currentMondayDate ? formatDate(currentMondayDate) : null;
+    $("#id_plan_date_start_selected").html(date_start_selected);
+    var date_end_selected=null;
 
 
-        function couperChaine(chaine, longueurMax) {
-            if (chaine.length > longueurMax) {
-                return chaine.substring(0, longueurMax) + "...";
-            } else {
-                return chaine;
-            }
+    function couperChaine(chaine, longueurMax) {
+        if (chaine.length > longueurMax) {
+            return chaine.substring(0, longueurMax) + "...";
+        } else {
+            return chaine;
         }
+    }
 
 
-        function get_current_task_planed (t){
-            console.log(typeof t)
-            console.log(t)
-            task_planed_detail = t;
-            //const taskData = JSON.parse(taskDataStr);
-        }
+    function get_current_task_planed (t){
+        task_planed_detail = t;
+        //const taskData = JSON.parse(taskDataStr);
+    }
 
     $(document).ready(function () {
         {% get_current_language as lang %}
@@ -88,14 +117,6 @@
         }
         let task_plan_detail_form_ajax = new TaskPlanDetailFormAjaxSubmit();
         task_plan_detail_modal = $('#taskPlanDetailModalForm');
-
-        class AddTaskPlanFormAjaxSubmit extends FormAjaxSubmit {
-            submitted_form() {
-                
-            }
-        }
-        let add_task_plan_form_ajax = new AddTaskPlanFormAjaxSubmit();
-        add_task_plan_modal = $('#addTaskPlanModalForm');
 
 
         const weekInfo = document.getElementById('weekInfo');
@@ -153,14 +174,14 @@
             "ordering": true,
             "info": true,
         });
-        
+    
     function renderTask (taskData) {
         return `
             <div class="task" style="width: 100%;background-color: ${taskData.color} !important; ">
                 <div style="text-align: left; width: 83%; float: left; cursor: pointer;" class="task-plan" id="${taskData.no_sql_db_name}__${taskData.task__id}__${taskData.datetime}"
                     {% comment %} onclick="get_current_task_planed(\'${taskData.datetime}\')" {% endcomment %}
                     >` +
-                    `<span style="font-size: 8px; text-align: left; font-weight: bold;"> {% translate "Task" %}: ${taskData.task_order} ${couperChaine(taskData.task, 35)}</span>` +
+                    `<span style="font-size: 8px; text-align: left; font-weight: bold; color: ${taskData.text_color};">${couperChaine(taskData.task, 35)}</span>` +
                 `</div>
                 <div style="width: 17%; float: right;">
                     ${(taskData.planning.completed ? true : (taskData.planning.is_another ? true : false)) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
@@ -291,20 +312,111 @@ renderCalendar(currentWeek);
             
         });
 
-        $("#id_call_add_task_modal").on('click', function () {
-            $("#id_call_add_task_modal").prop('disabled', true);
-            task_plan_detail_spin.show();
-            let url = `{% url 'dashboard:planning:add_plan_task' %}`;
-            add_task_plan_form_ajax.load_form('#add_plan_task', add_task_plan_modal, url).then(r => {
-                task_plan_detail_spin.hide();
-                $("#id_call_add_task_modal").prop('disabled', false);
-            }).catch(e => {
-                task_plan_detail_spin.hide();
-                $("#id_call_add_task_modal").prop('disabled', false);
-            });
-            
-        });
 
+
+
+        $("#id_download_tasks_file").on("click", function(event) {
+            event.preventDefault(); // Empêche le comportement par défaut du lien
+      
+            $("#download-message").show();
+            $("#download-complete-message").hide();
+
+            data = {
+                id_region: id_region.val(),
+                id_prefecture: id_prefecture.val(),
+                id_commune: id_commune.val(),
+                id_canton: id_canton.val(),
+                id_village: id_village.val(),
+                type_field: type_field,
+                is_training: "{{ is_training }}",
+                is_develop: "{{ is_develop }}",
+                show_my_calendar: show_my_calendar.is(':checked'),
+                task_status: id_task_status.val(),
+                task_type: id_task_type.val(),
+                username_facilitator_user: id_username_facilitator_user.val(),
+                
+                current_week: currentWeek ? currentWeek : null,
+                current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
+                date_start_selected: date_start_selected,
+                date_end_selected: date_end_selected,
+            }
+            console.log(data)
+      
+            var url = "{% url 'dashboard:planning:app_excel_reports_planning' %}"; // L'URL de téléchargement
+            
+            $.ajax({
+              url: url,
+              type: 'GET',
+              data: data,
+              success: function(response) {
+                console.log("response")
+                console.log(response)
+                let path = response.replaceAll('/', '___').replaceAll('\\', '___');
+                let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
+                window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
+                
+    
+                $("#download-message").hide();
+                $("#download-complete-message").show();
+
+
+                setTimeout(function() {
+                    $("#download-message").hide();
+                    $("#download-complete-message").hide();
+                  }, 5000);
+              },
+              error: function(xhr, status, error) {
+                alert("Erreur lors du téléchargement du fichier.");
+              }
+            });
+          });
+
+
+
+          
+            let dp1 = '<div class="input-group-prepend" data-target="#{id}" data-toggle="datetimepicker">' +
+            '<div class="input-group-text"><i class="fa fa-calendar text-primary"></i></div></div>';
+            let dp2 = '<div class="input-group date" id="{id}" data-target-input="nearest"></div>';
+            $('#id_plan_date_start').before(dp1.replace('{id}', 'plan_date_start')).parent().wrapInner(
+                dp2.replace('{id}', 'plan_date_start'));
+            $('#id_plan_date_end').before(dp1.replace('{id}', 'plan_date_end')).parent().wrapInner(
+                dp2.replace('{id}', 'plan_date_end'));
+
+            //Datemask dd/mm/yyyy
+            $('.datetimepicker-input').inputmask({alias: "datetime", inputFormat: "dd/mm/yyyy"});
+
+            let options = {
+                //maxDate: Date.now(),
+                useCurrent: false,
+                format: "DD/MM/YYYY",
+                widgetPositioning: {
+                    vertical: 'bottom',
+                }
+            };
+
+            function dateChanged(e) {
+                if (e.oldDate !== e.date) {
+                    date_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_plan_date_start_selected").html(date_selected);
+                }
+            }
+
+            $('#plan_date_start').datetimepicker(options);
+            $('#plan_date_start').on("change.datetimepicker", function (e) {
+                if (e.oldDate !== e.date) {
+                    date_start_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_plan_date_start_selected").html(date_start_selected);
+                }
+            });
+
+            
+            $('#plan_date_end').datetimepicker(options);
+            $('#plan_date_end').on("change.datetimepicker", function (e) {
+                if (e.oldDate !== e.date) {
+                    date_end_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_plan_date_end_selected").html(date_end_selected);
+                }
+            });
 
     });
 

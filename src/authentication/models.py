@@ -61,6 +61,10 @@ class Facilitator(models.Model):
         return super().save(*args, **kwargs)
     
     def save_and_return_object(self, *args, **kwargs):
+        if "user" in kwargs:
+            user = kwargs.pop("user")
+            print(user)
+            self.users_history(user)
         super().save(*args, **kwargs)
         return self
 
@@ -68,6 +72,9 @@ class Facilitator(models.Model):
         replicate_design = True
         if "replicate_design" in kwargs:
             replicate_design = kwargs.pop("replicate_design")
+        if "user" in kwargs:
+            user = kwargs.pop("user")
+            self.users_history(user)
 
         if not self.id:
 
@@ -97,6 +104,41 @@ class Facilitator(models.Model):
         super().save(*args, **kwargs)
         
         return self
+
+    def users_history(self, user):
+        """
+        Save users stories
+        user_json = {
+            "type": "facilitator", # or user
+            "date": self.updated_date,
+            "data": self
+        }
+        """
+        
+        # user_json = user.__dict__ if user else {'is_superuser': True}
+        # self_json = self.__dict__
+
+        # if user_json.get('is_superuser'):
+        #     user_json['type'] = "user"
+        # else:
+        #     user_json['type'] = "facilitator"
+        # user_json['date'] = self.updated_date
+        # user_json['data'] = self_json
+
+
+        # users_involved = self.users_involved if self.users_involved else []
+
+        # if self.created_date == self.updated_date:
+        #     self.create_by_user = user_json
+            
+        # self.update_by_user = user_json
+        
+        # users_involved.append(user_json)
+
+        # self.users_involved = users_involved
+
+        super().save()
+
 
     def hash_password(self, *args, **kwargs):
         self.password = make_password(self.password, salt=None, hasher='default')

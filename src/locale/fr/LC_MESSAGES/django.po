@@ -1401,3 +1401,191 @@ msgstr "L'objet a été retiré avec succès."
 #: .\dashboard
 msgid "An error has occurred..."
 msgstr "Une erreur s'est produite..."
+
+#: .\dashboard
+msgid "Validation action"
+msgstr "Action de validation"
+
+#: .\dashboard
+msgid "Invalidation action"
+msgstr "Action d'invalidation"
+
+#: .\dashboard
+msgid "Priorities & PAV situation"
+msgstr "Situation Priorités & PAV"
+
+#: .\dashboard
+msgid "AC & Priorities situation"
+msgstr "Situation AC & Priorités"
+
+#: .\dashboard
+msgid "Plan a vacation"
+msgstr "Planifier un congé"
+
+#: .\dashboard
+msgid "Return date"
+msgstr "Date de retour"
+
+#: .\dashboard
+msgid "Vacation type"
+msgstr "Type de congé"
+
+#: .\dashboard
+msgid "Absence date"
+msgstr "Date d'absence"
+
+#: .\dashboard
+msgid "To"
+msgstr "au"
+
+#: .\dashboard
+msgid "Annual vacation"
+msgstr "Congé annuel"
+
+#: .\dashboard
+msgid "Maternity/Paternity"
+msgstr "Maternité/Paternité"
+
+#: .\dashboard
+msgid "Disease"
+msgstr "Maladie"
+
+#: .\dashboard
+msgid "Exceptional permission: death"
+msgstr "Permission exceptionnelle : décés"
+
+#: .\dashboard
+msgid "Exceptional permission: wedding"
+msgstr "Permission exceptionnelle : mariage"
+
+#: .\dashboard
+msgid "Exceptional permission: birth"
+msgstr "Permission exceptionnelle : naissance"
+
+#: .\dashboard
+msgid "Other"
+msgstr "Autre"
+
+#: .\dashboard
+msgid "Vacation type precision"
+msgstr "Précision de type de congé"
+
+#: .\dashboard
+msgid "For me"
+msgstr "Pour moi"
+
+#: .\dashboard
+msgid "Free tasks"
+msgstr "Tâches libre"
+
+#: .\dashboard
+msgid "Existing tasks"
+msgstr "Tâches existantes"
+
+#: .\dashboard
+msgid "Vacations"
+msgstr "Congés"
+
+#: .\dashboard
+msgid "Task type"
+msgstr "Type de tâche"
+
+#: .\dashboard
+msgid "Download in progress..."
+msgstr "Téléchargement en cours..."
+
+#: .\dashboard
+msgid "Download complete!"
+msgstr "Téléchargement terminé !"
+
+#: .\dashboard
+msgid "Component"
+msgstr "Composante"
+
+#: .\dashboard
+msgid "COMPONENT 1.1"
+msgstr "COMPOSANTE 1.1"
+
+#: .\dashboard
+msgid "COMPONENT 1.2"
+msgstr "COMPOSANTE 1.2"
+
+#: .\dashboard
+msgid "COMPONENT 1.2a"
+msgstr "COMPOSANTE 1.2a"
+
+#: .\dashboard
+msgid "COMPONENT 1.2b"
+msgstr "COMPOSANTE 1.2b"
+
+#: .\dashboard
+msgid "COMPONENT 1.3"
+msgstr "COMPOSANTE 1.3"
+
+#: .\dashboard
+msgid "COMPONENT 2"
+msgstr "COMPOSANTE 2"
+
+#: .\dashboard
+msgid "COMPONENT 3"
+msgstr "COMPOSANTE 3"
+
+#: .\dashboard
+msgid "COMPONENT 4"
+msgstr "COMPOSANTE 4"
+
+#: .\dashboard
+msgid "COMPONENT 5"
+msgstr "COMPOSANTE 5"
+
+#: .\dashboard
+msgid "Arguments for export"
+msgstr "Arguments pour l'exportation"
+
+#: .\dashboard
+msgid "Another activity is done instead: "
+msgstr "Autre activité est faite à la place : "
+
+#: .\dashboard
+msgid "Not defined"
+msgstr "Non défini(e)"
+
+#: .\dashboard
+msgid "Download my planning"
+msgstr "Télécharger mon planning"
+
+#: .\dashboard
+msgid "Planned activity on"
+msgstr "Activité planifiée sur"
+
+#: .\dashboard
+msgid "Planned on"
+msgstr "planifiée sur"
+
+#: .\dashboard
+msgid "Comment date"
+msgstr "Date de commentaire"
+
+#: .\dashboard
+msgid "Date of decision"
+msgstr "Date de la décision"
+
+#: .\dashboard
+msgid "Planner"
+msgstr "Planificateur"
+
+#: .\dashboard
+msgid "Activity Invalided"
+msgstr "Activité invalidée"
+
+#: .\dashboard
+msgid "Invalidated activity modified by planner"
+msgstr "Activité invalidée modifiée par le(la) planificateur(trice)"
+
+#: .\dashboard
+msgid "Updated on"
+msgstr "Modifiée le"
+
+#: .\dashboard
+msgid "Subject "
+msgstr "Objet "

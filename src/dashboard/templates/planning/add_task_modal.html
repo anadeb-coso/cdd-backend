@@ -88,110 +88,208 @@
 
                                 
                                 <form class="form_add" id="add_task_form">
-                                    <br />
-                                    <div class="form-group row" id="id_plan_date_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Date" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-3">
-                                            <input 
-                                                type="date" id="id_plan_date" name="trip-start" class="form-control" 
-                                                {% if task %}value="{{ task.planned_date|date:'Y-m-d' }}"{% endif %}
-                                                />
-                                        </div>
-                                        <span style="margin: 8px; margin-top: 20px;"> {% translate 'de' %} </span>
-                                        <select class="col-sm-2 form-control custom-select" name="start_time_selected" id="id_start_time_selected" >
-                                            {% if not task %}<option value="" selected>------------</option>{% endif %}
-                                            {% for t_h in times_split %}
-                                                <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_start|date:'Y-m-d H:i' %}selected{% endif %} >{{ t_h.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <span style="margin: 8px; margin-top: 20px;"> {% translate 'at' %} </span>
-                                        <select class="col-sm-2 form-control custom-select" name="end_time_selected" id="id_end_time_selected" style="margin-top: 25px !important;">
-                                            {% if not task %}<option value="" selected>------------</option>{% endif %}
-                                            {% for t_h in times_split %}
-                                                <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_end|date:'Y-m-d H:i' %}selected{% endif %}>{{ t_h.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <div class="clearfix"></div>
-                                    </div>
-
                                     
-
-
-
-                                    <div class="form-group row" id="id_administrative_levels_selected_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Select the location" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-9">
-                                            <select class="col-sm-7 form-control custom-select" name="administrative_levels_selected" id="id_administrative_levels_selected" multiple>
-                                                {% for administrativelevl in administrativelevls %}
-                                                    <option 
-                                                        value="{{ administrativelevl.id }}"
-                                                        {% if administrativelevl.id in task.administrative_level_ids %}selected{% endif %}
-                                                        >{{ administrativelevl }} ({{ administrativelevl.parent.name }})</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="clearfix"></div>
-                                    </div>
-
-                                    <div class="form-group row" style="margin-top: 12px !important; margin-left: 27px;"  id="id_is_free_activity_content">
+                                    <br />
+                                    <div class="form-group row" style="margin-top: 12px !important; margin-left: 27px;"  id="id_is_vacation_content">
                                         <label class="col-sm-3 col-form-label"></label>
                                         <div class="col-sm-9">
-                                            <input class="form-check-input" type="checkbox" value="" id="id_is_free_activity">
-                                            <label class="form-check-label" for="id_is_free_activity">
-                                                {% translate "Free activity?" %} 
+                                            <input class="form-check-input" type="checkbox" value="" id="id_is_vacation">
+                                            <label class="form-check-label" for="id_is_vacation">
+                                                {% translate "Plan a vacation" %} 
                                             </label>
                                         </div>
                                         <div class="clearfix"></div>
                                     </div>
-
-                                    
-                                    <div class="form-group row" id="id_free_activity_title_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Activity title" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-9">
-                                            <input 
-                                                type="text" class="form-control" id="id_free_activity_title" 
-                                                {% if task and task.type == "free_task" %}value="{{ task.name }}"{% endif %}
-                                             />
+                                    <br />
+                                    <div id="id_vacation_content">
+                                        <div class="form-group row" id="id_vacation_type_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Vacation type" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-4">
+                                                <select class="form-control custom-select" name="vacation_type" id="id_vacation_type_selected" >
+                                                    {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                    {% for k, v in TYPES_VACATION.items %}
+                                                        <option value="{{ k }}" {% if k == task.vacation_type %}selected{% endif %} >{{ v }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
                                         </div>
-                                        <div class="clearfix"></div>
+                                        
+                                        <div class="form-group row" id="id_vacation_type_precision_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Vacation type precision" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <input 
+                                                    type="text" class="form-control" id="id_vacation_type_precision" 
+                                                    {% if is_another_vacation_type and task and task.vacation_type %}value="{{ task.vacation_type }}"{% endif %}
+                                                />
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        <div class="form-group row" id="id_absence_date_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Absence date" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-4">
+                                                <input 
+                                                    type="date" id="id_absence_date_start" name="trip-start" class="form-control" 
+                                                    {% if task %}value="{{ task.planned_datetime_start|date:'Y-m-d' }}"{% endif %}
+                                                    />
+                                            </div>
+                                            <span style="margin: 8px; margin-top: 20px;"> {% translate 'To' %} </span>
+                                            <div class="col-sm-4">
+                                                <input 
+                                                    type="date" id="id_absence_date_end" name="trip-start" class="form-control" 
+                                                    {% if task %}value="{{ task.planned_datetime_end|date:'Y-m-d' }}"{% endif %}
+                                                    />
+                                            </div>
+                                            
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        <div class="form-group row" id="id_return_date_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Return date" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-6">
+                                                <input 
+                                                    type="date" id="id_return_date" name="trip-start" class="form-control" 
+                                                    {% if task %}value="{{ task.vacation_return_datetime|date:'Y-m-d' }}"{% endif %}
+                                                    />
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
                                     </div>
 
-                                    
-
-                                    <div class="form-group row" id="id_phase_selected_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Phase" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-9">
-                                            <select class="col-sm-7 form-control custom-select" name="phase_selected" id="id_phase_selected">
-                                                {% if task.type != "task" %}<option value="0" selected>------------</option>{% endif %}
-                                                {% for phase in phases %}
-                                                    <option value="{{ phase.id }}" {% if task and task.phase.id == phase.id %}selected{% endif %} >{{ phase.name }}</option>
+                                    <div id="id_activity_content">
+                                        <div class="form-group row" id="id_plan_date_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Date" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-3">
+                                                <input 
+                                                    type="date" id="id_plan_date" name="trip-start" class="form-control" 
+                                                    {% if task %}value="{{ task.planned_date|date:'Y-m-d' }}"{% endif %}
+                                                    />
+                                            </div>
+                                            <span style="margin: 8px; margin-top: 20px;"> {% translate 'of' %} </span>
+                                            <select class="col-sm-2 form-control custom-select" name="start_time_selected" id="id_start_time_selected" >
+                                                {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                {% for t_h in times_split %}
+                                                    <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_start|date:'Y-m-d H:i' %}selected{% endif %} >{{ t_h.name }}</option>
                                                 {% endfor %}
                                             </select>
-                                        </div>
-                                        <div class="clearfix"></div>
-                                    </div>
-
-                                    
-
-                                    <div class="form-group row" id="id_activity_selected_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Activity" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-9">
-                                            <select class="col-sm-7 form-control custom-select" name="activity_selected" id="id_activity_selected">
-                                                {% if task != "task" %}<option value="0" selected>------------</option>{% endif %}
-                                                {% for acticity in activities %}
-                                                    <option value="{{ acticity.id }}" {% if task and task.acticity.id == acticity.id %}selected{% endif %}>{{ acticity.name }}</option>
+                                            <span style="margin: 8px; margin-top: 20px;"> {% translate 'at' %} </span>
+                                            <select class="col-sm-2 form-control custom-select" name="end_time_selected" id="id_end_time_selected" style="margin-top: 25px !important;">
+                                                {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                {% for t_h in times_split %}
+                                                    <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_end|date:'Y-m-d H:i' %}selected{% endif %}>{{ t_h.name }}</option>
                                                 {% endfor %}
                                             </select>
+                                            <div class="clearfix"></div>
                                         </div>
-                                        <div class="clearfix"></div>
-                                    </div>
-                                    
-                                    <div class="form-group row" id="id_description_activity_content">
-                                        <label class="col-sm-3 col-form-label">{% translate "Description of activity" %} <i class="fas fa-hand-point-right"></i></label>
-                                        <div class="col-sm-9">
-                                            <textarea class="form-control" id="id_description_activity" rows="6" value="{% if task %}{{ task.description }}{% endif %}">{% if task %}{{ task.description }}{% endif %}</textarea>
+
+                                        
+
+
+                                        <div class="form-group row" id="id_cantons_selected_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Select the canton" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <select class="col-sm-7 form-control custom-select" name="cantons_selected" id="id_cantons_selected" multiple>
+                                                    {% for canton in cantons %} 
+                                                        <option 
+                                                            value="{{ canton.id }}"
+                                                            {% if canton.id in task_cantons_ids %}selected{% endif %}
+                                                            >{{ canton }} ({{ canton.parent.name }})</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
                                         </div>
-                                        <div class="clearfix"></div>
+
+                                        <div class="form-group row" id="id_administrative_levels_selected_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Select the location" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <select class="col-sm-7 form-control custom-select" name="administrative_levels_selected" id="id_administrative_levels_selected" multiple>
+                                                    {% for administrativelevl in administrativelevls %} 
+                                                        <option 
+                                                            value="{{ administrativelevl.id }}"
+                                                            {% if administrativelevl.id in task.administrative_level_ids %}selected{% endif %}
+                                                            >{{ administrativelevl }}{% if administrativelevl.parent and administrativelevl.parent.name not in administrativelevl.name  %} ({{ administrativelevl.parent.name }}){% endif %}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        <div class="form-group row" style="margin-top: 12px !important; margin-left: 27px;"  id="id_is_free_activity_content">
+                                            <label class="col-sm-3 col-form-label"></label>
+                                            <div class="col-sm-9">
+                                                <input class="form-check-input" type="checkbox" value="" id="id_is_free_activity">
+                                                <label class="form-check-label" for="id_is_free_activity">
+                                                    {% translate "Free activity?" %} 
+                                                </label>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        
+                                        <div class="form-group row" id="id_free_activity_title_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Activity title" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <input 
+                                                    type="text" class="form-control" id="id_free_activity_title" 
+                                                    {% if task and task.type == "free_task" %}value="{{ task.name }}"{% endif %}
+                                                />
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        
+
+                                        <div class="form-group row" id="id_phase_selected_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Phase" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <select class="col-sm-7 form-control custom-select" name="phase_selected" id="id_phase_selected">
+                                                    {% if task.type != "task" %}<option value="0" selected>------------</option>{% endif %}
+                                                    {% for phase in phases %}
+                                                        <option value="{{ phase.id }}" {% if task and task.phase.id == phase.id %}selected{% endif %} >{{ phase.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        
+                                        <div class="form-group row" id="id_activity_selected_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Activity" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <select class="col-sm-7 form-control custom-select" name="activity_selected" id="id_activity_selected">
+                                                    {% if task != "task" %}<option value="0" selected>------------</option>{% endif %}
+                                                    {% for activity in activities %}
+                                                        <option value="{{ activity.id }}" {% if task and task.activity.id == activity.id %}selected{% endif %}>{{ activity.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        
+                                        <div class="form-group row" id="id_description_activity_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Description of activity" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <textarea class="form-control" id="id_description_activity" rows="6" value="{% if task %}{{ task.description }}{% endif %}">{% if task %}{{ task.description }}{% endif %}</textarea>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
+                                        
+                                        <div class="form-group row" id="id_component_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Component" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-4">
+                                                <select class="form-control custom-select" name="component" id="id_component_selected" >
+                                                    {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                    {% for k, v in COMPONENTS.items %}
+                                                        <option value="{{ k }}" {% if k == task.component %}selected{% endif %} >{{ v }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+
                                     </div>
 
                                     <br />
@@ -228,19 +326,17 @@
 </div>
 
 
-
 <script type="text/javascript">
 
     $(document).ready(function () {
-        /*let activities_dict = "{{ activities_dict|escapejs }}".replace(/'/g, '"');;
-        console.log(activities_dict)
-        activities_dict = JSON.parse(activities_dict);
-        console.log(activities_dict)*/
 
         let activities_dict = {{ activities_dict|safe }};
         
         //Report VAR
+        let id_vacation_content = $("#id_vacation_content");
+        let id_activity_content = $("#id_activity_content");
         let id_is_free_activity = $("#id_is_free_activity");
+        let id_cantons_selected = $("#id_cantons_selected");
         let id_administrative_levels_selected = $("#id_administrative_levels_selected");
         let id_free_activity_title = $("#id_free_activity_title");
         let id_phase_selected = $("#id_phase_selected");
@@ -249,36 +345,171 @@
         let id_plan_date = $("#id_plan_date");
         let id_start_time_selected = $("#id_start_time_selected");
         let id_end_time_selected = $("#id_end_time_selected");
+        let id_is_vacation = $("#id_is_vacation");
+        let id_absence_date_content = $("#id_absence_date_content");
+        let id_vacation_type_selected = $("#id_vacation_type_selected");
+        let id_return_date = $("#id_return_date");
+        let id_absence_date_start = $("#id_absence_date_start");
+        let id_absence_date_end = $("#id_absence_date_end");
+        let id_vacation_type_precision = $("#id_vacation_type_precision");
+        let id_component_selected = $("#id_component_selected");
         
         let id_is_free_activity_content = $("#id_is_free_activity_content");
         let id_administrative_levels_selected_content = $("#id_administrative_levels_selected_content");
+        let id_cantons_selected_content = $("#id_cantons_selected_content");
         let id_free_activity_title_content = $("#id_free_activity_title_content");
         let id_phase_selected_content = $("#id_phase_selected_content");
         let id_activity_selected_content = $("#id_activity_selected_content");
         let id_description_activity_content = $("#id_description_activity_content");
+        let id_plan_date_content = $("#id_plan_date_content");
+        let id_is_vacation_content = $("#id_is_vacation_content");
+        let id_vacation_type_precision_content = $("#id_vacation_type_precision_content");
 
         let id_save_completed_activity = $("#id_save_completed_activity");
         id_save_completed_activity.prop('disabled', true);
         //End Report VAR
 
 
+        function toggle_fields (is_vacation, is_free_activity){
+            if(is_vacation){
+                id_activity_content.hide();
+            }else{
+                id_activity_content.show();
+            }
+        }
+
+
+        function set__datas(element, data, ids_selected=[]){
+            v = element.val();
+            element.html('');
+            $(element).next().find('b[role="presentation"]').hide();
+            
+            let options = '';
+        
+            options += '<option value=""></option>';
+        
+            $.each(data, function (index, value) {
+                let option = '<option value="' + (value.administrative_id ?? value.id) + '"';
+                if(
+                    (ids_selected && ids_selected.length != ids_selected && ids_selected.map(elt=>String(elt)).includes(String(value.administrative_id ?? value.id))) 
+                    || 
+                    (v == value.name)
+                ){
+                    option += ' selected>';
+                }else{
+                    option += '>';
+                }
+                
+                option += value.name + '</option>';
+                options += option
+            });
+        
+        
+            element.html(options);
+            element.trigger('change');
+            let element_val = element.val();
+            if (element_val !== '') {
+                element.val(element_val)
+            }
+        }
+
+        function select_villages (first=false) {
+            id_cantons_selected.prop('disabled', true);
+            id_administrative_levels_selected.prop('disabled', true);
+            $.ajax({
+                type: 'GET',
+                url: "{% url 'dashboard:administrative_levels:get_choices_villages_all' %}",
+                data: {
+                    parents_id: id_cantons_selected.val()
+                },
+                success: function (data) {
+                    let adls = id_administrative_levels_selected.val();
+                    if(data && data.length != 0){
+                        set__datas(id_administrative_levels_selected, data, (!first && adls) ? adls : {{ administrativelevls_ids|safe }});
+                        id_administrative_levels_selected_content.show();
+                    }else{
+                        id_administrative_levels_selected_content.hide();
+                        id_administrative_levels_selected.val([]).trigger('change.select2');
+                    }
+                },
+                error: function (data) {
+                    alert(error_server_message + "Error " + data.status);
+                    id_cantons_selected.prop('disabled', false);
+                    id_administrative_levels_selected.prop('disabled', false);
+                }
+            }).done(function () {
+                    id_cantons_selected.prop('disabled', false);
+                    id_administrative_levels_selected.prop('disabled', false);
+                }
+            );
+
+        }
+
+        function select_activities (first=false) {
+            id_phase_selected.prop('disabled', true);
+            id_activity_selected.prop('disabled', true);
+            $.ajax({
+                type: 'GET',
+                url: "{% url 'dashboard:process_manager:get_choices_for_next_phases_activities_tasks_by_id' %}",
+                data: {
+                    phase_name: id_phase_selected.val(),
+                    show_all_if_none: 'false'
+                },
+                success: function (data) {
+                    if(data && data.activities && data.activities.length != 0){
+                        set__datas(id_activity_selected, data.activities.map(elt => {return {id: elt[0], name: elt[1]};}), (!first) ? null : ["{{ task.activity.id }}"]);
+                        id_activity_selected_content.show();
+                    }else{
+                        id_activity_selected_content.hide();
+                    }
+                    if(!first){
+                        id_activity_selected.val(null).trigger('change.select2');
+                    }
+                },
+                error: function (data) {
+                    alert(error_server_message + "Error " + data.status);
+                    id_phase_selected.prop('disabled', false);
+                    id_activity_selected.prop('disabled', false);
+                }
+            }).done(function () {
+                    id_phase_selected.prop('disabled', false);
+                    id_activity_selected.prop('disabled', false);
+                }
+            );
+
+        }
 
 
         //Report
         
-
+        id_vacation_type_precision_content.hide();
         {% if task %}
-            {% if task.type == "free_task" %}
-                id_is_free_activity.prop('checked', true).val(true);
-                id_phase_selected_content.hide();
-                id_activity_selected_content.hide();
+            id_is_vacation_content.hide();
+            {% if task.type == "vacation" %}
+                id_is_vacation.prop('checked', true).val(true);
+                id_vacation_content.show();
+                id_activity_content.hide();
+                {% if is_another_vacation_type %}
+                    id_vacation_type_precision_content.show();
+                {% endif %}
             {% else %}
-                id_free_activity_title_content.hide();
+                id_vacation_content.hide();
+                {% if task.type == "free_task" %}
+                    id_is_free_activity.prop('checked', true).val(true);
+                    id_phase_selected_content.hide();
+                    id_activity_selected_content.hide();
+                {% else %}
+                    id_free_activity_title_content.hide();
+                    select_activities(true)
+                {% endif %}
+                select_villages(true);
             {% endif %}
         {% else %}
+            id_vacation_content.hide();
             id_is_free_activity.prop('checked', true).val(true);
             id_phase_selected_content.hide();
             id_activity_selected_content.hide();
+            id_administrative_levels_selected_content.hide();
         {% endif %}
 
         id_start_time_selected.change(function(){
@@ -309,7 +540,7 @@
             }else{
                 id_free_activity_title_content.hide();
                 id_phase_selected_content.show();
-                id_activity_selected_content.show();
+                //id_activity_selected_content.show();
                 
                 id_free_activity_title.val(null);
                 id_description_activity.prop('readonly', true);
@@ -319,9 +550,18 @@
         
         function disabled_undisabled_btn() {
             if(
-                (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val())) || 
-                (!id_is_free_activity.is(':checked') && (['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_description_activity.val()))) || 
-                (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val())))
+                (id_is_vacation.is(':checked') && (
+                    ['', null].includes(id_vacation_type_selected.val()) || 
+                    (id_vacation_type_selected.val() == "Autre" && ['', null].includes(id_vacation_type_precision.val())) || 
+                    ['', null].includes(id_absence_date_start.val()) || 
+                    ['', null].includes(id_absence_date_end.val()) || ['', null].includes(id_return_date.val())
+                )) || 
+                (!id_is_vacation.is(':checked') && (
+                    ['', null].includes(id_component_selected.val()) || 
+                    (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val())) || 
+                    (!id_is_free_activity.is(':checked') && (['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_description_activity.val()))) || 
+                    (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val())))
+                ))
             ){
                 id_save_completed_activity.prop('disabled', true);
             }else{
@@ -335,11 +575,18 @@
             disabled_undisabled_btn();
         });
         $('form select').on('change keyup', function () {
-            disabled_undisabled_btn();
-
             if(this.id == "id_activity_selected"){
-                id_description_activity.val(activities_dict.find(elt => elt.id == id_activity_selected.val())?.descrition);
+                id_description_activity.val(activities_dict.find(elt => elt.id == id_activity_selected.val())?.description);
+            }else if(this.id == "id_vacation_type_selected"){
+                if(id_vacation_type_selected.val() == "Autre"){
+                    id_vacation_type_precision_content.show();
+                }else{
+                    id_vacation_type_precision_content.hide();
+                    id_vacation_type_precision.val(null);
+                }
+                
             }
+            disabled_undisabled_btn();
         });
 
         let task_id = null;
@@ -348,7 +595,8 @@
         {% endif %}
 
         id_save_completed_activity.click(function(){
-            id_save_completed_activity.text(`{% translate "Recording in progress..." %}`);
+            id_save_completed_activity.html(`{% translate "Recording in progress..." %}`);
+            id_save_completed_activity.prop('disabled', true);
             $.ajax({
                 type: "POST",
                 url: "{% url 'dashboard:planning:save_activity_to_plan_task' %}",
@@ -363,11 +611,20 @@
                     plan_date: id_plan_date.val(),
                     start_time: id_start_time_selected.val(),
                     end_time: id_end_time_selected.val(),
+                    component: id_component_selected.val(),
+                    
+                    is_vacation: id_is_vacation.is(':checked'),
+                    vacation_type: id_vacation_type_selected.val(),
+                    absence_date_start: id_absence_date_start.val(),
+                    absence_date_end: id_absence_date_end.val(),
+                    return_date: id_return_date.val(),
+                    vacation_type_precision: id_vacation_type_precision.val(),
+
                     type_action: 'edit',
                 },
                 success: function (response) {
                     add_task_plan_modal.modal('hide');
-                    loadFacilitators(type_field);
+                    loadFacilitators(type_field, true);
                 },
                 error: function (data, status, error) {
                     if(error == "Forbidden"){
@@ -375,10 +632,30 @@
                     }else{
                         alert(error_server_message + "Error " + data.status);
                     }
+                    id_save_completed_activity.html("{% translate 'Save' %}");
+                    id_save_completed_activity.prop('disabled', false);
                 }
             });
         });
+        
+        id_cantons_selected.on('change', function (){
+            select_villages(false);
+        });
+        id_phase_selected.on('change', function (){
+            select_activities(false);
+        });
 
+
+        id_is_vacation.click(function(){
+            //toggle_fields(id_is_vacation.is(':checked'), id_is_free_activity.is(':checked'));
+            if(id_is_vacation.is(':checked')){
+                id_activity_content.hide();
+                id_vacation_content.show();
+            }else{
+                id_activity_content.show();
+                id_vacation_content.hide();
+            }
+        });
         
 
 
@@ -423,6 +700,11 @@
             allowClear: true,
             width: '100%'
         });
+        $("#id_cantons_selected").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true,
+            width: '100%'
+        });
         $("#id_phase_selected").select2({
             placeholder: "{% translate 'Phase' %}",
             allowClear: true,
@@ -430,6 +712,11 @@
         });
         $("#id_activity_selected").select2({
             placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_component_selected").select2({
+            placeholder: "{% translate 'Component' %}",
             allowClear: true,
             width: '100%'
         });

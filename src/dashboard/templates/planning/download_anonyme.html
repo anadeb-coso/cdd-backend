@@ -1,0 +1,192 @@
+{% extends 'layouts/base_without_sidebar.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+
+{% block extracss %}
+    {{ block.super }}
+<style>
+    .planning-table {
+        width: 100% !important;
+    }
+    
+    .task {
+        margin-bottom: 2px;
+        padding: 2px;
+        border-radius: 11px;
+        color: #fff;
+        text-align: center;
+        //border: solid 4px black;
+    }
+
+    thead th {
+        font-weight: bold;
+    }
+
+    #id_download_tasks_file {
+        font-size: 14px;
+        cursor: pointer;
+    }
+    
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="hold-transition login-page">
+    <div class="login-box">
+        {% comment %} <div class="login-logo"><b>{% translate 'CDD' %}</b></div> {% endcomment %}
+        <!-- /.login-logo -->
+        <div class="card">
+            <div class="card-body login-card-body">
+                <p class="login-box-msg">
+                    {% translate "Download my planning" %}
+                </p>
+
+                <form method="post">
+
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="col-12 col-lg mb-2 mb-lg-0">
+                                {% bootstrap_field form.date_start show_label=False %}
+                            </div>
+                            <div class="col-12 col-lg mb-2 mb-lg-0">
+                                {% bootstrap_field form.date_end show_label=False %}
+                            </div>
+            
+            
+                            <button id="id_download_tasks_file" class="btn btn-primary text-bold"><i class="fas fa-file-excel"></i> {% translate 'Download' %}</button>
+            
+                            <span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+                            <span id="download-message" class="" style="display:none;">{% translate "Download in progress..." %}</span>
+                            <span id="download-complete-message" class="" style="display:none;">{% translate "Download complete!" %}</span>
+            
+                            
+                        </div>
+                    </div>
+
+
+                </form>
+        </div>
+        <!-- /.login-card-body -->
+      </div>
+    </div>
+    <!-- /.login-box -->
+
+  </div>
+
+
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+    <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
+<script type="text/javascript">
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
+    }
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        $("#id_date_start").val('{{ currentMondayDate|date:"d/m/Y" }}');
+        $("#id_download_tasks_file").on("click", function(event) {
+            event.preventDefault(); // Empêche le comportement par défaut du lien
+            
+            $("#download-message").show();
+            $("#download-complete-message").hide();
+
+            data = {
+                username_facilitator_user: ["{{ username_facilitator_user }}"],
+                
+                date_start_selected: $('#id_date_start').val(),
+                date_end_selected: $('#id_date_end').val(),
+            }
+      
+            var url = "{% url 'dashboard:planning:app_excel_reports_planning' %}"; // L'URL de téléchargement
+            
+            $.ajax({
+              url: url,
+              type: 'GET',
+              data: data,
+              success: function(response) {
+                
+                let path = response.replaceAll('/', '___').replaceAll('\\', '___');
+                let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
+                window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
+                
+    
+                $("#download-message").hide();
+                $("#download-complete-message").show();
+
+
+                setTimeout(function() {
+                    $("#download-message").hide();
+                    $("#download-complete-message").hide();
+                  }, 5000);
+              },
+              error: function(xhr, status, error) {
+                alert("Erreur lors du téléchargement du fichier.");
+              }
+            });
+          });
+
+
+
+          
+            let dp1 = '<div class="input-group-prepend" data-target="#{id}" data-toggle="datetimepicker">' +
+            '<div class="input-group-text"><i class="fa fa-calendar text-primary"></i></div></div>';
+            let dp2 = '<div class="input-group date" id="{id}" data-target-input="nearest"></div>';
+            $('#id_date_start').before(dp1.replace('{id}', 'date_start')).parent().wrapInner(
+                dp2.replace('{id}', 'date_start'));
+            $('#id_date_end').before(dp1.replace('{id}', 'date_end')).parent().wrapInner(
+                dp2.replace('{id}', 'date_end'));
+
+            //Datemask dd/mm/yyyy
+            $('.datetimepicker-input').inputmask({alias: "datetime", inputFormat: "dd/mm/yyyy"});
+
+            let options = {
+                //maxDate: Date.now(),
+                useCurrent: false,
+                format: "DD/MM/YYYY",
+                widgetPositioning: {
+                    vertical: 'bottom',
+                }
+            };
+
+            function dateChanged(e) {
+                if (e.oldDate !== e.date) {
+                    date_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_date_start_selected").html(date_selected);
+                }
+            }
+
+            $('#date_start').datetimepicker(options);
+            //$('#date_start').on("change.datetimepicker", dateChanged);
+
+            
+            $('#date_end').datetimepicker(options);
+            //$('#date_end').on("change.datetimepicker", dateChanged);
+
+    });
+
+
+</script>
+
+{% endblock %}
+
+{% block select2 %}
+<script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
+    <script type="text/javascript">
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

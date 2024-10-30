@@ -161,6 +161,7 @@
             bottom: 20px; /* Distance from the bottom */
             right: 20px;  /* Distance from the right */
         }
+
     </style>
 {% endblock %}
 
@@ -175,18 +176,29 @@
                         
                         <div class="header">
                             <i id="prevWeek" class="nav-icon fa fa-chevron-left text-success" style="cursor: pointer;"></i>
-                            <div ><span class="font-weight-bold">{% translate "Week" %} </span> <span id="weekInfo">??</span></div>
+                            <div  style="font-size: 13px; text-align: center;"><span class="font-weight-bold">{% translate "Week" %} </span> <span id="weekInfo">??</span></div>
                             <i id="nextWeek" class="nav-icon fa fa-chevron-right text-success" style="cursor: pointer;"></i>
                         </div>
                     </div>
 
 
-                    <div class="col-2 col-lg mb-2 mb-lg-0">
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
                         <div class="form-check justify-content-center" style="margin-top: 12px !important; margin-left: 13px;">
                             <input class="form-check-input" type="checkbox" value="" id="show_my_calendar">
                             <label class="form-check-label" for="show_my_calendar">
-                                {% translate "Show my calendar" %} 
+                                {% translate "For me" %} 
                             </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_task_type">
+                            <select class="form-control" id="id_task_type" name="task_type" style="width: 100%;">
+                                <option value="All" >{% translate 'All' %}</option>
+                                <option value="free_tasks">{% translate 'Free tasks' %}</option>
+                                <option value="existing_tasks">{% translate 'Existing tasks' %}</option>
+                                <option value="vacations">{% translate 'Vacations' %}</option>
+                            </select>
                         </div>
                     </div>
                           
@@ -210,10 +222,10 @@
                     
                     <div class="col-1 col-lg mb-2 mb-lg-0">
                         <div class="form-group" id="group_facilitators">
-                            <select class="form-control" id="id_facilitator" name="facilitato" style="width: 100%;">
-                                <option value="All" >{% translate 'All' %}</option>
-                                {% for facilitator in facilitators %}
-                                    <option value="{{ facilitator.id }}">{{ facilitator.name }}</option>
+                            <select class="form-control" id="id_username_facilitator_user" name="facilitato" style="width: 100%;" multiple>
+                                <option value="All" selected>{% translate 'All' %}</option>
+                                {% for facilitator_user in facilitators_users %}
+                                    <option value="{{ facilitator_user.username }}">{{ facilitator_user.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -248,13 +260,15 @@
     </div>
 
 
-    <button type="button" name="call_add_task_modal" class="btn btn-primary save_comment float-md-right"
+    <button type="button" name="call_add_task_modal" class="btn btn-primary float-md-right"
         style="margin-top: 25px; margin: auto;"
         id="id_call_add_task_modal">
         +
     </button>
+    
+    {% comment %} save_comment {% endcomment %}
 
-
+    <div id="addTaskPlanModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 
 {% endblock %}
 
@@ -305,14 +319,17 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
 
-        let id_facilitator = $('#id_facilitator');
+        let id_username_facilitator_user = $('#id_username_facilitator_user');
         let id_task_status = $('#id_task_status');
+        let id_task_type = $('#id_task_type');
         let show_my_calendar = $('#show_my_calendar');
 
         show_my_calendar.prop('checked', true).val(true);
         
         var currentWeek = null;
         var currentMondayDate = null;
+        var query_data = null;
+        var old_query_data = null;
 
 
         function show_facilitators_table(url) {
@@ -342,18 +359,39 @@
         }
 
 
-        function loadFacilitators(type_field = "") {
-            if ($("#id_" + type_field).val() || ["all", "clear"].includes(type_field)) {
+        function loadFacilitators(type_field = "", refresh_auto=false) {
+            query_data = {
+                id_region: id_region.val(),
+                id_prefecture: id_prefecture.val(),
+                id_commune: id_commune.val(),
+                id_canton: id_canton.val(),
+                id_village: id_village.val(),
+                is_training: "{{ is_training }}",
+                is_develop: "{{ is_develop }}",
+                show_my_calendar: show_my_calendar.is(':checked'),
+                task_status: id_task_status.val(),
+                task_type: id_task_type.val(),
+                username_facilitator_user: id_username_facilitator_user.val(),
                 
-
+                current_week: currentWeek ? currentWeek : null,
+                current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
+            };
+            
+            if (
+                    refresh_auto ||
+                    (
+                        ($("#id_" + type_field).val() || ["all", "clear"].includes(type_field)) && 
+                        (!old_query_data || (old_query_data && JSON.stringify(old_query_data) !== JSON.stringify(query_data)))
+                    )
+                ) {
+                
                 $(".facilitators-filter select").attr('disabled', true);
-
-                if(ids.includes($("#id_" + type_field).val())){
+                if(ids.includes(("id_" + type_field))){
                     $.ajax({
                         type: 'GET',
-                        url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                        url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_levels_all' %}",
                         data: {
-                            parent_id: $("#id_" + type_field).val()
+                            parents_id: $("#id_" + type_field).val()
                         },
                         success: function (data) {
                             if (type_field == "region") {
@@ -386,32 +424,33 @@
 
                 spin.show();
                 facilitators.html('');
+                old_query_data = {
+                    id_region: id_region.val(),
+                    id_prefecture: id_prefecture.val(),
+                    id_commune: id_commune.val(),
+                    id_canton: id_canton.val(),
+                    id_village: id_village.val(),
+                    is_training: "{{ is_training }}",
+                    is_develop: "{{ is_develop }}",
+                    show_my_calendar: show_my_calendar.is(':checked'),
+                    task_status: id_task_status.val(),
+                    task_type: id_task_type.val(),
+                    username_facilitator_user: id_username_facilitator_user.val(),
+                    
+                    current_week: currentWeek ? currentWeek : null,
+                    current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
+                };
                 $.ajax({
                     type: "GET",
                     url: "{% url 'dashboard:planning:planning_list' %}",
-                    data: {
-                        id_region: id_region.val(),
-                        id_prefecture: id_prefecture.val(),
-                        id_commune: id_commune.val(),
-                        id_canton: id_canton.val(),
-                        id_village: id_village.val(),
-                        type_field: type_field,
-                        is_training: "{{ is_training }}",
-                        is_develop: "{{ is_develop }}",
-                        show_my_calendar: show_my_calendar.is(':checked'),
-                        task_status: id_task_status.val(),
-                        id_facilitator: id_facilitator.val(),
-                        
-                        current_week: currentWeek ? currentWeek : null,
-                        current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
-                    },
+                    data: {...old_query_data, type_field: type_field},
                     success: function (response) {
-                        if(task_plan_detail_modal){
+                        /*if(task_plan_detail_modal){
                             task_plan_detail_modal.modal('hide');
                         }
                         if(add_task_plan_modal){
                             add_task_plan_modal.modal('hide');
-                        }
+                        }*/
                         spin.hide();
 
                         facilitators.html(response);
@@ -512,6 +551,29 @@
         }
 
 
+
+        
+        class AddTaskPlanFormAjaxSubmit extends FormAjaxSubmit {
+            submitted_form() {
+                
+            }
+        }
+        let add_task_plan_form_ajax = new AddTaskPlanFormAjaxSubmit();
+        add_task_plan_modal = $('#addTaskPlanModalForm');
+
+        $("#id_call_add_task_modal").on('click', function () {
+            $("#id_call_add_task_modal").prop('disabled', true);
+            $('#task-plan-detail-spin').show();
+            let url = `{% url 'dashboard:planning:add_plan_task' %}`;
+            add_task_plan_form_ajax.load_form('#add_plan_task', add_task_plan_modal, url).then(r => {
+                $('#task-plan-detail-spin').hide();
+                $("#id_call_add_task_modal").prop('disabled', false);
+            }).catch(e => {
+                $('#task-plan-detail-spin').hide();
+                $("#id_call_add_task_modal").prop('disabled', false);
+            });
+            
+        });
     </script>
 
 
@@ -526,7 +588,11 @@
             placeholder: "{% translate 'Task Status' %}",
             allowClear: true
         });
-        $("#id_facilitator").select2({
+        $("#id_task_type").select2({
+            placeholder: "{% translate 'Task type' %}",
+            allowClear: true
+        });
+        $("#id_username_facilitator_user").select2({
             placeholder: "{% translate 'Facilitators' %}",
             allowClear: true,
         });

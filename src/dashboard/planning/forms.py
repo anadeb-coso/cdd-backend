@@ -10,3 +10,9 @@ class TaskPlanCommentForm(forms.Form):
         # initial = kwargs.get('initial')
         # super().__init__(*args, **kwargs)
         pass
+
+
+
+class DownloadAnonymePlanningForm(forms.Form):
+    date_start = forms.DateField()
+    date_end = forms.DateField()

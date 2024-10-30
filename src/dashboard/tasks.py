@@ -4,6 +4,7 @@ from celery import shared_task
 from datetime import datetime
 import pytz
 from django.db.models import Sum
+from django.utils.dateparse import parse_datetime
 
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
@@ -29,7 +30,7 @@ def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, cou
             a.project_id = project_id
             a.task_id = int(_task["sql_id"])
         except Exception as exc:
-            print(exc)
+            # print(exc)
             _ok = False
         if _ok:
             a.total_tasks_completed = ((a.total_tasks_completed+1) if _task['completed'] else a.total_tasks_completed)
@@ -48,8 +49,8 @@ def sync_celery_tasks(project_id, develop_mode=False, training_mode=False):
     print("Start")
     for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
         print()
-        print()
-        print()
+        # print()
+        # print()
         print(count_facilitator, f.no_sql_db_name, f.username)
         count_facilitator += 1
         nbr_tasks_completed = 0
@@ -84,7 +85,7 @@ def sync_celery_tasks(project_id, develop_mode=False, training_mode=False):
                             last_activity_date = last_updated
 
                         #By village
-                        print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
+                        # print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
                         for ad_id in cvd['villages']:
                             a = None
                             _ok = True
@@ -129,7 +130,7 @@ def sync_celery_tasks(project_id, develop_mode=False, training_mode=False):
                         #     a_canton.total_tasks =  a_canton.total_tasks + 1
                         #     a_canton.save()
                         
-            print(count_facilitator_cvd)
+            # print(count_facilitator_cvd)
 
             f.name = facilitator_doc.get('name')
             f.email = facilitator_doc.get('email')
@@ -141,7 +142,9 @@ def sync_celery_tasks(project_id, develop_mode=False, training_mode=False):
             if last_activity_date == "0000-00-00 00:00:00":
                 last_activity_date = None
             else:
-                last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+                last_activity_date = parse_datetime(last_activity_date) #datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+                if last_activity_date is not None:
+                    last_activity_date = last_activity_date.replace(tzinfo=pytz.UTC)
                 # _date = last_activity_date.split()[0]
                 # _hours = last_activity_date.split()[1]
                 # last_activity_date = datetime(
@@ -216,7 +219,7 @@ def sync_aggregated_status_on_adl(project_id: int):
                     a.project_id = project_id
                     a.task_id = task.id
                 except Exception as exc:
-                    print(exc)
+                    # print(exc)
                     _ok = False
                 if _ok:
                     a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
@@ -240,8 +243,8 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
     print("Start")
     for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
         print()
-        print()
-        print()
+        # print()
+        # print()
         print(count_facilitator, f.no_sql_db_name, f.username)
         count_facilitator += 1
         nbr_tasks_completed = 0
@@ -273,7 +276,7 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
                             last_activity_date = last_updated
 
                         #By village
-                        print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
+                        # print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
                         for ad_id in cvd['villages']:
                             a = None
                             _ok = True
@@ -285,13 +288,16 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
                                 a.project_id = project_id
                                 a.task_id = int(_task["sql_id"])
                             except Exception as exc:
-                                print(exc)
+                                # print(exc)
                                 _ok = False
                             if _ok:
                                 a.total_tasks_completed = 1 if _task['completed'] else 0
                                 a.total_tasks = 1
                                 _l_act = datetime_complet_str(_task.get('last_updated'))
-                                a.last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
+                                a_last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else parse_datetime(_l_act) #datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
+                                if a_last_activity is not None:
+                                    a_last_activity = a_last_activity.replace(tzinfo=pytz.UTC)
+                                a.last_activity = a_last_activity
                                 a.save()
                     
 
@@ -305,7 +311,9 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
             if last_activity_date == "0000-00-00 00:00:00":
                 last_activity_date = None
             else:
-                last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+                last_activity_date = parse_datetime(last_activity_date) #datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+                if last_activity_date is not None:
+                    last_activity_date = last_activity_date.replace(tzinfo=pytz.UTC)
             f.last_activity = last_activity_date
 
             f.save()
@@ -329,7 +337,7 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
                         a.project_id = project_id
                         a.task_id = int(_task["sql_id"])
                     except Exception as exc:
-                        print(exc)
+                        # print(exc)
                         _ok = False
                     if _ok:
                         a.total_tasks_completed = 1 if _task['completed'] else 0

@@ -238,22 +238,60 @@
                         {% endif %}
                     </div>
                 </div>
+
+                {% if user.is_superuser or user|has_group:"Admin" %}
+                <div class="footer">
+                    <div class="">
+                        <i class="fas fa-trash text-danger call_delete_news_modal" style="cursor: pointer;"></i>
+                    </div>
+                </div>
+                {% endif %}
+               
+
             </div>
 
         </div>
 
     </div>
 </div>
+
+<div id="deleteNewsModalForm" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 {% endblock %}
 
 {% block javascript %}
 {{ block.super }}
+
+{% if user.is_superuser or user|has_group:"Admin" %}
+<script src="{% static 'js/axios.min.js' %}"></script>
+<script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+<script src="{% static 'js/formAjaxSubmit.js' %}"></script>
+{% endif %}
 
 <script type="text/javascript">
     $(document).ready(function() {
         $('.tag-img').click(function () {
             $('#img-principal').attr('src', $(this).attr('src'));
         });
+
+
+        {% if user.is_superuser or user|has_group:"Admin" %}
+        class DeleteNewsPlanFormAjaxSubmit extends FormAjaxSubmit {
+            submitted_form() {
+                window.location.href = "{% url 'dashboard:news:list' %}";
+            }
+        }
+        let delete_news_form_ajax = new DeleteNewsPlanFormAjaxSubmit();
+        delete_news_modal = $('#deleteNewsModalForm');
+        $(".call_delete_news_modal").on('click', function() {
+            delete_news_form_ajax.load_form('#cdd_deletion_object_form', delete_news_modal, "{% url 'object_deletion_form' new.id 'News' 'tags' %}").then(r => {
+                //
+            }).catch(e => {
+                //
+            });
+        });
+        {% endif %}
+
+        
     });
 </script>
 

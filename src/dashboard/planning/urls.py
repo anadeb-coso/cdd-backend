@@ -15,5 +15,8 @@ urlpatterns = [
     path('delete-file-to-plan-task/', views.DeleteFileView.as_view(), name='delete_file_to_plan_task'),
     path('task-plan-files/<str:no_sql_db_name>/<str:task__id>/', views.TaskPlanFilesListView.as_view(), name='task_plan_files'),
     path('save-activity-to-plan-task/', views.SaveActivityView.as_view(), name='save_activity_to_plan_task'),
+    
+    path('download-anonyme-planning/', views.PlanningDownloadAnonymeView.as_view(), name='download_anonyme_planning'),
+    path('reports/', views.PlanningCSVView.as_view(), name="app_excel_reports_planning"),
 
 ]

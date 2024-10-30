@@ -5,7 +5,10 @@ from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
 from dashboard.utils import get_child_administrative_levels, get_parent_administrative_level
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
-from .functions import get_administrative_levels_under_json, get_cascade_administrative_levels_by_administrative_level_id
+from .functions import (
+    get_administrative_levels_under_json, get_cascade_administrative_levels_by_administrative_level_id, 
+    get_cascade_villages_by_administrative_level_id, get_cascade_administrative_levels_by_administrative_level_ids
+)
 
 class GetChoicesForNextAdministrativeLevelView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -116,3 +119,20 @@ class GetChoicesForNextAdministrativeLevelAllView(AJAXRequestMixin, LoginRequire
             get_cascade_administrative_levels_by_administrative_level_id(request.GET.get('parent_id')), 
             safe=False
         )
+    
+
+class GetChoicesForNextAdministrativeLevelsAllView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def get(self, request, *args, **kwargs):
+        return self.render_to_json_response(
+            get_cascade_administrative_levels_by_administrative_level_ids(self.request.GET.getlist('parents_id[]')), 
+            safe=False
+        )
+    
+
+class GetChoicesVillagesAllView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def get(self, request, *args, **kwargs):
+        return self.render_to_json_response(
+            get_cascade_villages_by_administrative_level_id(self.request.GET.getlist('parents_id[]')), 
+            safe=False
+        )
+    

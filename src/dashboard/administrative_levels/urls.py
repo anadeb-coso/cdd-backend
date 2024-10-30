@@ -10,6 +10,10 @@ urlpatterns = [
          name='get_ancestor_administrative_levels'),
      path('get-choices-for-next-administrative-level-all', views.GetChoicesForNextAdministrativeLevelAllView.as_view(),
          name='get_choices_for_next_administrative_level_all'),
+     path('get-choices-for-next-administratives-level-all', views.GetChoicesForNextAdministrativeLevelsAllView.as_view(),
+         name='get_choices_for_next_administrative_levels_all'),
+     path('get-choices-villages-all', views.GetChoicesVillagesAllView.as_view(),
+         name='get_choices_villages_all'),
      
      
     path('', views_adl.AdministrativeLevelListView.as_view(), name='list'),

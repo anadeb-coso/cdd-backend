@@ -81,6 +81,7 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         phase_id = int(request.GET.get('phase_name') if request.GET.get('phase_name') else 0)
         activity_id = int(request.GET.get('activity_name') if request.GET.get('activity_name') else 0)
         task_id = int(request.GET.get('task_name') if request.GET.get('task_name') else 0)
+        show_all_if_none = request.GET.get('show_all_if_none') in ('true', True)
 
         # nsc = NoSQLClient()
         
@@ -120,7 +121,7 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         # return self.render_to_json_response(datas, safe=False)
 
         return self.render_to_json_response(
-            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id')), 
+            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id'), show_all_if_none), 
             safe=False
         )
 

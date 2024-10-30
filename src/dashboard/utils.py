@@ -390,6 +390,9 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                 new_task['phase_id'] = fc_phase[0]['_id']
                 new_task['activity_id'] = fc_activity[0]['_id']
                 new_task['sql_id'] = task_model.id #Add sql_id 
+                new_task['phase_sql_id'] = task_model.phase.id
+                new_task['activity_sql_id'] = task_model.activity.id
+                new_task['project_name'] = task_model.project.name
 
                 # fc_task = facilitator_database.get_query_result(new_task)[0]
 
@@ -787,10 +790,12 @@ def create_training_facilitators(project_name, start=1, amount=1):
     return True
 
 # TODO: Test this well
-def delete_training_facilitators():
-    training_facilitators = Facilitator.objects.filter(training_mode=True)
+def delete_training_facilitators(project_name, start, amount):
+    project = Project.objects.get(name=project_name)
+    training_facilitators = Facilitator.objects.filter(training_mode=True, username__in=["training" + str(count) for count in range(start, amount+1)], projects__in=[project.id])
     nsc = NoSQLClient()
     for facilitator in training_facilitators:
+        print(facilitator.name, facilitator.username)
         nsc.delete_db(facilitator.no_sql_db_name)
         nsc.delete_user(facilitator.no_sql_user)
         facilitator.delete()
@@ -1083,7 +1088,7 @@ def clear_facilitators_documents_tasks_administrative_level_not_headquarters(dev
         clear_facilitator_documents_tasks_by_administrativelevels(facilitator.no_sql_db_name, administrative_level_not_headquarters, False)
 
 
-def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
+def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None, clear_no_form_response=False):
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
     else:
@@ -1105,7 +1110,8 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
                 facilitator_doc = doc
                 cvds = get_cvds(facilitator_doc)
                 for a in facilitator_doc['administrative_levels']:
-                    administrative_levels_id.append(a['id'])
+                    if a.get('is_headquarters_village'):
+                        administrative_levels_id.append(a['id'])
                 # for ad in doc.get('administrative_levels'):
                 #     if ad.get('is_headquarters_village'):
                 #         nbr_cvd += 1
@@ -1113,7 +1119,7 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
         print(administrative_levels_id)
         for _doc in fc_docs:
             doc = _doc.get('doc')
-            if doc.get('type') == 'task':
+            if doc.get('type') in ('task', 'free_task') and doc.get('administrative_level_id') != None:
                 try:
                     # for cvd in cvds:
                     #     docs = nsc_database.get_query_result({"type": "task", "administrative_level_id": cvd["village_id"], "sql_id": doc["sql_id"]})
@@ -1132,6 +1138,13 @@ def clear_facilitator_documents_tasks_not_sql_id(develop_mode=False, training_mo
                         nsc.delete_document(nsc_database, doc["_id"])
                         count += 1
                         print(doc)
+
+                    if clear_no_form_response and not doc.get('form_response'):
+                        nsc.delete_document(nsc_database, doc["_id"])
+                        count += 1
+                        print(doc)
+
+
                 except Exception as e:
                     print(2, e)
                 try:
@@ -1157,8 +1170,6 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
     nsc = NoSQLClient()
     
     for facilitator in facilitators:
-        print()
-        print(facilitator.no_sql_db_name, facilitator.username)
         nsc_database = nsc.get_db(facilitator.no_sql_db_name)
         fc_docs = nsc_database.all_docs(include_docs=True)['rows']
         facilitator_doc = None
@@ -1178,8 +1189,12 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
                 doc = _doc.get('doc')
                 if doc.get('type') == 'task':
                     nbr_tasks += 1
-                    
-        print(f"CVD : {nbr_cvd} ; Tasks : {nbr_tasks} ; {nbr_tasks/nbr_cvd if nbr_cvd else 0}")
+        
+        n_task = nbr_tasks/nbr_cvd if nbr_cvd else 0
+        if n_task != Task.objects.filter(project_id=project_id).count():
+            print()
+            print(facilitator.no_sql_db_name, facilitator.username)
+            print(f"CVD : {nbr_cvd} ; Tasks : {nbr_tasks} ; {n_task}")
 
 
 def map_users_to_their_db(develop_mode=False, training_mode=False, no_sql_db=False,project_id=None):
@@ -1414,15 +1429,15 @@ def default_project_to_assign(name="COSO", develop_mode=False, training_mode=Fal
             doc["project_id"] = project.couch_id
             nsc.update_cloudant_document(db,  doc["_id"], doc)
 
-    # facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project.id])
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project.id])
 
-    # if project and facilitators:
+    if project and facilitators:
 
-    #     if facilitators:
-    #         nsc = NoSQLClient()
-    #         for f in facilitators:
-    #             print(f.name)
-    #             db = nsc.get_db(f.no_sql_db_name)
+        if facilitators:
+            nsc = NoSQLClient()
+            for f in facilitators:
+                print(f.name)
+                db = nsc.get_db(f.no_sql_db_name)
 
     #             docs = db.get_query_result({"type": "facilitator"})[0]
 
@@ -1435,13 +1450,17 @@ def default_project_to_assign(name="COSO", develop_mode=False, training_mode=Fal
     #                 nsc.update_cloudant_document(db,  doc["_id"], doc)
     
 
-    #             fc_docs = db.all_docs(include_docs=True)['rows']
-    #             for _doc in fc_docs:
-    #                 doc = _doc.get('doc')
-    #                 if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
-    #                     doc["project_name"] = project.name
-    #                     doc["project_id"] = project.couch_id
-    #                     nsc.update_cloudant_document(db,  doc["_id"], doc)
+                fc_docs = db.all_docs(include_docs=True)['rows']
+                for _doc in fc_docs:
+                    doc = _doc.get('doc')
+                    # if not doc.get('project_name') and doc.get('type') in ["phase", "activity", "task", "free_task"]:
+                    #     doc["project_name"] = project.name
+                    #     doc["project_id"] = project.couch_id
+                    #     nsc.update_cloudant_document(db,  doc["_id"], doc)
+                    if not doc.get('project_name') and doc.get('type') == "task":
+                        doc["project_name"] = project.name
+                        doc["project_id"] = project.couch_id
+                        nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
     # aggregated_status_null = AggregatedStatus.objects.filter(project__isnull=True)
@@ -1502,7 +1521,7 @@ def search_facilitators_db_with_villages_stabilized(name="COSO"):
     for _doc in docs_eadls:
         no_sql_dbs_names = []
         doc = _doc.get('doc')
-        if doc.get('type') == "adl" and doc.get('administrative_regions_objects'):
+        if doc.get('type') == "adl" and doc.get('representative') and doc.get('administrative_regions_objects'):
             print(doc['representative'].get('name'), doc['representative'].get('email'))
 
             villages = []
@@ -1522,18 +1541,18 @@ def search_facilitators_db_with_villages_stabilized(name="COSO"):
                                     no_sql_dbs_names.append(f.no_sql_db_name)
                                     break
                 
-        print(no_sql_dbs_names)
-        facilitator = Facilitator.objects.filter(email=doc['representative'].get('email'), develop_mode=False, training_mode=False).first()
-        if facilitator:
-            facilitator.no_sql_dbs_names = no_sql_dbs_names
-            facilitator = facilitator.save_and_return_object()
+            print(no_sql_dbs_names)
+            facilitator = Facilitator.objects.filter(email=doc['representative'].get('email'), develop_mode=False, training_mode=False).first()
+            if facilitator:
+                facilitator.no_sql_dbs_names = no_sql_dbs_names
+                facilitator = facilitator.save_and_return_object()
 
-            db = nsc.get_db(facilitator.no_sql_db_name)
-            docs = db.get_query_result({"type": "facilitator"})[0]
-            if len(docs) > 0:
-                doc = docs[0].copy()
-                doc["no_sql_dbs_names"] = no_sql_dbs_names
-                nsc.update_cloudant_document(db,  doc["_id"], doc)
+                db = nsc.get_db(facilitator.no_sql_db_name)
+                docs = db.get_query_result({"type": "facilitator"})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    doc["no_sql_dbs_names"] = no_sql_dbs_names
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
 def add_couchdb_id_on_objects(project_name="PURS"):

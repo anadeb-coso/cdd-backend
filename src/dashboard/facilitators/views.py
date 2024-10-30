@@ -723,7 +723,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         facilitator.email = data['email']
         facilitator.phone = data['phone']
         facilitator.sex = data['sex']
-        facilitator = facilitator.save_and_return_object()
+        facilitator = facilitator.save_and_return_object(user=self.request.user)
         administrative_levels_old = self.doc.get('administrative_levels')
         administrative_levels_remove = []
         _administrative_levels = []

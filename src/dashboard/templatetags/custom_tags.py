@@ -2,6 +2,7 @@ from datetime import datetime
 from django import template
 from django.utils.translation import gettext_lazy
 from django.db.models import Sum
+from django.contrib.auth.models import Group
 
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
@@ -10,7 +11,7 @@ from process_manager.models import AggregatedStatus
 from dashboard.utils import structure_the_words as utils_structure_the_words
 from dashboard.functions import order_dict
 from authentication.models import Facilitator
-from planning.models import Activity as PlanActivity
+from planning.models import Activity as PlanActivity, ValidationGroupsProcess
 
 register = template.Library()
 
@@ -439,51 +440,37 @@ def facilitator_on_this_cvd(adl):
 @register.filter
 def check_if_activity_is_enable_to_report(activity, user):
     activity_user = activity.get('user') if activity.get('user') else activity.get('facilitator')
-    # return (
-    #         _user and _user.get('email') == user.email and (
-    #             not (activity.get('completed') or activity.get('is_another') or activity.get('undo'))
-    #         )
-    #     )
     return (
-             activity_user and activity_user.get('email') == user.email and activity.get('validated') and 
+             activity_user and (activity_user.get('email') == user.email or  activity_user.get('username') == user.username) and 
+             activity.get('validated') and 
             (
                 not (activity.get('completed') or activity.get('is_another') or activity.get('undo'))
             )
         )
 
 @register.filter
+def check_if_activity_is_for_user_auth(activity, user):
+    activity_user = activity.get('user') if activity.get('user') else activity.get('facilitator')
+    return (
+             activity_user and (activity_user.get('email') == user.email or  activity_user.get('username') == user.username)
+        )
+
+@register.filter
 def check_if_activity_is_enable_to_validate(activity, user):
     activity = PlanActivity.objects.get(id=activity.get('id'))
-    activity_user = activity.user if activity.user else activity.facilitator
-    """
-        if user.groups.filter(name="Admin").exists():
-        return gettext_lazy("Administrator").__str__()
-    if user.groups.filter(name="CDDSpecialist").exists():
-        return gettext_lazy("CDD Specialist").__str__()
-    if user.groups.filter(name="Evaluator").exists():
-        return gettext_lazy("Evaluator").__str__()
-    if user.groups.filter(name="Accountant").exists():
-        return gettext_lazy("Accountant").__str__()
-    if user.groups.filter(name="RegionalCoordinator").exists():
-        return gettext_lazy("Regional Coordinator").__str__()
-    if user.groups.filter(name="NationalCoordinator").exists():
-        return gettext_lazy("National Coordinator").__str__()
-    if user.groups.filter(name="GeneralManager").exists():
-        return gettext_lazy("General Manager").__str__()
-    if user.groups.filter(name="Director").exists():
-        return gettext_lazy("Director").__str__()
-    if user.groups.filter(name="Advisor").exists():
-        return gettext_lazy("Advisor").__str__()
-    if user.groups.filter(name="Minister").exists():
-        return gettext_lazy("Minister").__str__()
-    if user.groups.filter(name="Supervisor").exists():
-        return gettext_lazy("Supervisor").__str__()
-    if user.groups.filter(name="Validator").exists():
-        return gettext_lazy("Validator").__str__()
-    """
-    if hasattr(activity_user, 'groups'):
-        pass
-    return [
+    user_auth_groups = [g.id for g in user.groups.all()]
 
-    ]
-    
+    user_planner_groups = [g.id for g in Group.objects.filter(name="Facilitator")]
+    if activity.user:
+        user_planner_groups = [g.id for g in activity.user.groups.all()]
+        
+    return ValidationGroupsProcess.objects.filter(
+        planners_groups__in=user_planner_groups,
+        validators_groups__in=user_auth_groups,
+        project__in=user.projects.all()
+    ).exists()
+
+
+@register.filter
+def check_if_user_auth_is_in_project(user, project_id):
+    return user.projects.filter(id=project_id).exists()
