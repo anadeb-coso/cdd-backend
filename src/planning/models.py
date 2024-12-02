@@ -12,6 +12,7 @@ from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
 from cdd.models_base import BaseModel
 from process_manager.models import Phase, Activity as ProcessActivity, Project
+from planning.vars import TIMES, DAYS
 
 
 
@@ -27,6 +28,7 @@ class Activity(BaseModel):
     administrative_level_ids = models.JSONField(null=True, blank=True, verbose_name=_("Locality ID"))
     administrative_levels = models.JSONField(null=True, blank=True, verbose_name=_("Localities"))
     planned_date = models.DateField(verbose_name=_("Plan date"), blank=True, null=True)
+    is_period_dates = models.BooleanField(blank=True, null=True, verbose_name=_("Date range?"))
     planned_datetime_start = models.DateTimeField(blank=True, null=True, verbose_name=_("Start"))
     planned_datetime_end = models.DateTimeField(blank=True, null=True, verbose_name=_("End"))
     vacation_return_datetime = models.DateTimeField(blank=True, null=True, verbose_name=_("Return date"))
@@ -96,3 +98,11 @@ class ValidationGroupsProcess(BaseModel):
     planners_groups = models.ManyToManyField(Group , related_name="planners_groups", default=[])
     validators_groups = models.ManyToManyField(Group , related_name="validators_groups", default=[])
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="validation_group")
+    
+
+class ActivityDeadline(BaseModel):
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Name"))
+    day = models.IntegerField(choices=DAYS, default=0, verbose_name=_("Day"))
+    hour = models.CharField(max_length=10, choices=TIMES, default='00:00', verbose_name=_("Hour"))
+    activities_deadline_groups = models.ManyToManyField(Group , related_name="activities_deadline_groups", default=[])
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="activity_deadline_group")
