@@ -414,7 +414,9 @@ class FacilitatorDeployment(BaseModel):
         return _str
     
 
-
+class EmailAddressesWhichSendEmails(models.Model):
+    name = models.CharField(max_length=255)
+    email_addresses = models.JSONField()
 
 
 # def post_project(sender, instance, **kwargs):
