@@ -199,7 +199,11 @@
                                 <div class="form-group row">
                                     <label class="col-sm-3 col-form-label">{% translate "Planned on" %}</label>
                                     <div class="col-sm-9">
+                                        {% if task.is_period_dates %}
+                                        <input type="text" readonly value="{{ task_plan.planned_datetime_start|date:"l" }}, {% translate 'the' %} {{ task_plan.planned_datetime_start|date:"d F Y" }} {% translate 'to' %} {{ task_plan.planned_datetime_end|date:"l" }}, {% translate 'the' %} {{ task_plan.planned_datetime_end|date:"d F Y" }} {% translate 'of' %} {{ task_plan.planned_datetime_start|date:"P" }} {% translate 'at' %} {{ task_plan.planned_datetime_end|date:"P" }}" class="form-control" />
+                                        {% else %}
                                         <input type="text" readonly value="{{ task_plan.planned_datetime_start|date:"l" }}, {% translate 'the' %} {{ task_plan.planned_datetime_start|date:"d F Y" }} {% translate 'of' %} {{ task_plan.planned_datetime_start|date:"P" }} {% translate 'at' %} {{ task_plan.planned_datetime_end|date:"P" }}" class="form-control" />
+                                        {% endif %}
                                     </div>
                                     <div class="clearfix"></div>
                                 </div>
@@ -439,7 +443,7 @@
 
                                 {% if task.comment %}
                                 <div class="form-group row">
-                                    <label class="col-sm-3 col-form-label">{% translate "Comment" %}</label>
+                                    <label class="col-sm-3 col-form-label">{% translate "Description of activity / Report" %}</label>
                                     <div class="col-sm-9">
                                         
                                         <textarea readonly class="form-control" rows="5">{% if task.comment %}{{ task.comment }}{% else %}{% translate 'Comment not mentioned' %}{% endif %}</textarea>

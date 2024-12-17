@@ -22,7 +22,7 @@ from cdd.functions import get_dates_between
 
 def planning_csv(request):
     project = Project.objects.get(id=request.session.get('project_id'))
-    project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+    project_mis = mis_objects_call.filter_objects(MisProject, name=request.session.get('project_name'))
     project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
     id_region = request.GET.get('id_region')
@@ -177,7 +177,8 @@ def planning_csv(request):
     for _date in planned_datetime_list:
         planned_datetime_list_query |= (Q(planned_datetime_start__lte=_date) & Q(planned_datetime_end__gte=_date))
 
-    activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | Q(Q(type="vacation") & planned_datetime_list_query), project_id=project.id)
+    # activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | Q(Q(type="vacation") & planned_datetime_list_query), project_id=project.id)
+    activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | planned_datetime_list_query, project_id=project.id)
     
     if show_my_calendar:
         activities = activities.filter(Q(facilitator_id=request.user.id) | Q(user_id=request.user.id))

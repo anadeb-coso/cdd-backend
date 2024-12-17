@@ -158,30 +158,70 @@
                                     </div>
 
                                     <div id="id_activity_content">
-                                        <div class="form-group row" id="id_plan_date_content">
-                                            <label class="col-sm-3 col-form-label">{% translate "Date" %} <i class="fas fa-hand-point-right"></i></label>
-                                            <div class="col-sm-3">
-                                                <input 
-                                                    type="date" id="id_plan_date" name="trip-start" class="form-control" 
-                                                    {% if task %}value="{{ task.planned_date|date:'Y-m-d' }}"{% endif %}
-                                                    />
+
+                                        
+                                        <div class="form-group row" style="margin-top: 12px !important; margin-left: 27px;"  id="id_is_period_dates_content">
+                                            <label class="col-sm-3 col-form-label"></label>
+                                            <div class="col-sm-9">
+                                                <input class="form-check-input" type="checkbox" id="id_is_period_dates" {% if task.is_period_dates %}checked{% endif %}>
+                                                <label class="form-check-label" for="id_is_period_dates">
+                                                    {% translate "Activity covering several dates?" %} 
+                                                </label>
                                             </div>
-                                            <span style="margin: 8px; margin-top: 20px;"> {% translate 'of' %} </span>
-                                            <select class="col-sm-2 form-control custom-select" name="start_time_selected" id="id_start_time_selected" >
-                                                {% if not task %}<option value="" selected>------------</option>{% endif %}
-                                                {% for t_h in times_split %}
-                                                    <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_start|date:'Y-m-d H:i' %}selected{% endif %} >{{ t_h.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <span style="margin: 8px; margin-top: 20px;"> {% translate 'at' %} </span>
-                                            <select class="col-sm-2 form-control custom-select" name="end_time_selected" id="id_end_time_selected" style="margin-top: 25px !important;">
-                                                {% if not task %}<option value="" selected>------------</option>{% endif %}
-                                                {% for t_h in times_split %}
-                                                    <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_end|date:'Y-m-d H:i' %}selected{% endif %}>{{ t_h.name }}</option>
-                                                {% endfor %}
-                                            </select>
                                             <div class="clearfix"></div>
                                         </div>
+
+                                        
+                                        <div class="form-group row" id="id_plan_date_content">
+                                            <label class="col-sm-3 cls_several_dates_planned_dates_content">{% translate "Dates (Mention the dates of the activity here with times if possible. Times are not require)" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <label class="col-sm-3 cls_single_date_planned_date_content">{% translate "Date" %} <i class="fas fa-hand-point-right"></i></label>
+
+                                            <div class="col-sm-9 form-group row" >
+
+                                                <div class="col-sm-8 form-group row cls_several_dates_planned_dates_content">
+                                                    <div class="col-sm-5">
+                                                        <input 
+                                                            type="date" id="id_planned_datetime_start" name="trip-start" class="form-control" 
+                                                            {% if task and task.is_period_dates %}value="{{ task.planned_datetime_start|date:'Y-m-d' }}"{% endif %}
+                                                            />
+                                                    </div>
+
+                                                    <span style="margin: 8px; margin-top: 20px;"> {% translate 'To' %} </span>
+
+                                                    <div class="col-sm-5">
+                                                        <input 
+                                                            type="date" id="id_planned_datetime_end" name="trip-start" class="form-control" 
+                                                            {% if task and task.is_period_dates %}value="{{ task.planned_datetime_end|date:'Y-m-d' }}"{% endif %}
+                                                            />
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-sm-4 cls_single_date_planned_date_content">
+                                                    <input 
+                                                        type="date" id="id_plan_date" name="trip-start" class="form-control" 
+                                                        {% if task and not task.is_period_dates %}value="{{ task.planned_date|date:'Y-m-d' }}"{% endif %}
+                                                        />
+                                                </div>
+
+
+                                                <span style="margin: 8px; margin-top: 20px;"> {% translate 'of' %} </span>
+                                                <select class="col-sm-2 form-control custom-select" name="start_time_selected" id="id_start_time_selected" >
+                                                    {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                    {% for t_h in times_split %}
+                                                        <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_start|date:'Y-m-d H:i' %}selected{% endif %} >{{ t_h.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <span style="margin: 8px; margin-top: 20px;"> {% translate 'at' %} </span>
+                                                <select class="col-sm-2 form-control custom-select" name="end_time_selected" id="id_end_time_selected" style="margin-top: 25px !important;">
+                                                    {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                    {% for t_h in times_split %}
+                                                        <option value="{{ t_h.id }}" {% if t_h.name in task.planned_datetime_end|date:'Y-m-d H:i' %}selected{% endif %}>{{ t_h.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        <br />
 
                                         
 
@@ -353,6 +393,9 @@
         let id_absence_date_end = $("#id_absence_date_end");
         let id_vacation_type_precision = $("#id_vacation_type_precision");
         let id_component_selected = $("#id_component_selected");
+        let id_planned_datetime_start = $("#id_planned_datetime_start");
+        let id_planned_datetime_end = $("#id_planned_datetime_end");
+        let id_is_period_dates = $("#id_is_period_dates");
         
         let id_is_free_activity_content = $("#id_is_free_activity_content");
         let id_administrative_levels_selected_content = $("#id_administrative_levels_selected_content");
@@ -364,10 +407,18 @@
         let id_plan_date_content = $("#id_plan_date_content");
         let id_is_vacation_content = $("#id_is_vacation_content");
         let id_vacation_type_precision_content = $("#id_vacation_type_precision_content");
+        let cls_several_dates_planned_dates_content = $(".cls_several_dates_planned_dates_content");
+        let cls_single_date_planned_date_content = $(".cls_single_date_planned_date_content");
+
+        let id_label_several_dates_planned_dates = $("#id_label_several_dates_planned_dates");
+        let id_label_single_date_planned_date = $("#id_label_single_date_planned_date");
+        id_label_several_dates_planned_dates.hide();
+        id_label_single_date_planned_date.hide();
 
         let id_save_completed_activity = $("#id_save_completed_activity");
         id_save_completed_activity.prop('disabled', true);
         //End Report VAR
+
 
 
         function toggle_fields (is_vacation, is_free_activity){
@@ -494,6 +545,19 @@
                 {% endif %}
             {% else %}
                 id_vacation_content.hide();
+
+                {% if task.is_period_dates %}
+                    cls_several_dates_planned_dates_content.show();
+                    cls_single_date_planned_date_content.hide();
+                    id_label_several_dates_planned_dates.show();
+                    id_label_single_date_planned_date.hide();
+                {% else %}
+                    cls_several_dates_planned_dates_content.hide();
+                    cls_single_date_planned_date_content.show();
+                    id_label_several_dates_planned_dates.hide();
+                    id_label_single_date_planned_date.show();
+                {% endif %}
+
                 {% if task.type == "free_task" %}
                     id_is_free_activity.prop('checked', true).val(true);
                     id_phase_selected_content.hide();
@@ -507,9 +571,15 @@
         {% else %}
             id_vacation_content.hide();
             id_is_free_activity.prop('checked', true).val(true);
+            id_is_period_dates.prop('checked', false).val(false);
             id_phase_selected_content.hide();
             id_activity_selected_content.hide();
             id_administrative_levels_selected_content.hide();
+            cls_several_dates_planned_dates_content.hide();
+            cls_single_date_planned_date_content.show();
+            id_label_several_dates_planned_dates.hide();
+            id_label_single_date_planned_date.show();
+
         {% endif %}
 
         id_start_time_selected.change(function(){
@@ -527,6 +597,27 @@
                 $('#id_end_time_selected').trigger('change.select2');
             }
         })
+
+        id_is_period_dates.click(function(){
+            if(id_is_period_dates.is(':checked')){
+                cls_several_dates_planned_dates_content.show();
+                cls_single_date_planned_date_content.hide();
+                id_label_several_dates_planned_dates.show();
+                id_label_single_date_planned_date.hide();
+                
+                id_plan_date.val(null).trigger('change.select2');
+            }else{
+                cls_several_dates_planned_dates_content.hide();
+                cls_single_date_planned_date_content.show();
+                id_label_several_dates_planned_dates.hide();
+                id_label_single_date_planned_date.show();
+                
+                id_planned_datetime_start.val(null).trigger('change.select2');
+                id_planned_datetime_end.val(null).trigger('change.select2');
+            }
+            id_start_time_selected.val(null).trigger('change.select2');
+            id_end_time_selected.val(null).trigger('change.select2');
+        });
 
         id_is_free_activity.click(function(){
             if(id_is_free_activity.is(':checked')){
@@ -558,9 +649,10 @@
                 )) || 
                 (!id_is_vacation.is(':checked') && (
                     ['', null].includes(id_component_selected.val()) || 
-                    (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val())) || 
+                    (!id_is_period_dates.is(':checked') && (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val()))) || 
                     (!id_is_free_activity.is(':checked') && (['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_description_activity.val()))) || 
-                    (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val())))
+                    (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val()))) || 
+                    (id_is_period_dates.is(':checked') && (['', null].includes(id_planned_datetime_start.val()) || ['', null].includes(id_planned_datetime_end.val())))
                 ))
             ){
                 id_save_completed_activity.prop('disabled', true);
@@ -612,6 +704,9 @@
                     start_time: id_start_time_selected.val(),
                     end_time: id_end_time_selected.val(),
                     component: id_component_selected.val(),
+                    activity_date_start: id_planned_datetime_start.val(),
+                    activity_date_end: id_planned_datetime_end.val(),
+                    is_period_dates: id_is_period_dates.is(':checked'),
                     
                     is_vacation: id_is_vacation.is(':checked'),
                     vacation_type: id_vacation_type_selected.val(),

@@ -168,8 +168,8 @@
                 url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
             },
             "paging": true,
-            "pageLength": 10,
-            "lengthMenu":[10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            "pageLength": 1000,
+            "lengthMenu":[1, 2, 3, 5, 7, 10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 1000],
             "searching": true,
             "ordering": true,
             "info": true,
@@ -340,7 +340,6 @@ renderCalendar(currentWeek);
                 date_start_selected: date_start_selected,
                 date_end_selected: date_end_selected,
             }
-            console.log(data)
       
             var url = "{% url 'dashboard:planning:app_excel_reports_planning' %}"; // L'URL de téléchargement
             

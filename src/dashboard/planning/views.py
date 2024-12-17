@@ -39,6 +39,7 @@ from planning.models import Activity, ActivityComment, ActivityValidate, Activit
 from cdd.functions import is_datetime_in_past_or_now, times_split, get_dates_between
 from dashboard.planning.functions_reports import planning_csv
 from cdd.my_librairies.mail.send_mail import send_email
+from dashboard.templatetags.custom_tags import get_group_high
 
 
 class PlanMixin:
@@ -159,7 +160,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
     def get_results(self):
         
         project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
         project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         id_region = self.request.GET.get('id_region')
@@ -375,16 +376,20 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
 
                     for activity in activities_f:
 
-                        if activity.type == "vacation" and activity.planned_datetime_start and activity.planned_datetime_end:
+                        # if activity.type == "vacation" and activity.planned_datetime_start and activity.planned_datetime_end:
+                        if (
+                            activity.planned_datetime_start and activity.planned_datetime_end and 
+                            datetime.strftime(activity.planned_datetime_start, "%Y-%m-%dT%H:%M:%S.%fZ").split("T")[0] != datetime.strftime(activity.planned_datetime_end, "%Y-%m-%dT%H:%M:%S.%fZ").split("T")[0]
+                            ):
                             elt_dates = get_dates_between(activity.planned_datetime_start, activity.planned_datetime_end, planned_date_list)
                             
                             for current_date_elt in elt_dates:
                                 color_index = self.get_color_status_number(activity)
                                 tasks_planed.append(
                                     {
-                                        "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v) else v) for k, v in model_to_dict(activity).items()]),
+                                        "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v and k not in ('is_period_dates',)) else v) for k, v in model_to_dict(activity).items()]),
                                         "day": current_date_elt.weekday(),
-                                        "task": f"{activity.name} ({activity.vacation_type})",
+                                        "task": f"{activity.name} ({activity.vacation_type})" if activity.type == "vacation" else activity.name,
                                         "color": VALIDATION_PROCESS_COLORS[color_index],
                                         "text_color": "white" if color_index in [5, 6] else "black",
                                         "datetime": datetime.strftime(current_date_elt, "%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -397,7 +402,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                             color_index = self.get_color_status_number(activity)
                             tasks_planed.append(
                                 {
-                                    "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v) else v) for k, v in model_to_dict(activity).items()]),
+                                    "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v and k not in ('is_period_dates',)) else v) for k, v in model_to_dict(activity).items()]),
                                     "day": activity.planned_date.weekday(),
                                     "task": activity.name,
                                     "color": VALIDATION_PROCESS_COLORS[color_index],
@@ -426,16 +431,21 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                 tasks_planed = []
 
                 for activity in activities_u:
-                    if activity.type == "vacation" and activity.planned_datetime_start and activity.planned_datetime_end:
+                    # if activity.type == "vacation" and activity.planned_datetime_start and activity.planned_datetime_end:
+                    if (
+                        activity.planned_datetime_start and activity.planned_datetime_end and 
+                        datetime.strftime(activity.planned_datetime_start, "%Y-%m-%dT%H:%M:%S.%fZ").split("T")[0] != datetime.strftime(activity.planned_datetime_end, "%Y-%m-%dT%H:%M:%S.%fZ").split("T")[0]
+                        ):
+                            
                         elt_dates = get_dates_between(activity.planned_datetime_start, activity.planned_datetime_end, planned_date_list)
                         
                         for current_date_elt in elt_dates:
                             color_index = self.get_color_status_number(activity)
                             tasks_planed.append(
                                 {
-                                    "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v) else v) for k, v in model_to_dict(activity).items()]),
+                                    "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v and k not in ('is_period_dates',)) else v) for k, v in model_to_dict(activity).items()]),
                                     "day": current_date_elt.weekday(),
-                                    "task": f"{activity.name} ({activity.vacation_type})",
+                                    "task": f"{activity.name} ({activity.vacation_type})" if activity.type == "vacation" else activity.name,
                                     "color": VALIDATION_PROCESS_COLORS[color_index],
                                     "text_color": "white" if color_index in [5, 6] else "black",
                                     "datetime": datetime.strftime(current_date_elt, "%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -448,7 +458,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                         color_index = self.get_color_status_number(activity)
                         tasks_planed.append(
                             {
-                                "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v) else v) for k, v in model_to_dict(activity).items()]),
+                                "planning": dict([(k,datetime.strftime(v, "%Y-%m-%dT%H:%M:%S.%fZ") if ('date' in k and 'dated' not in k and v and k not in ('is_period_dates',)) else v) for k, v in model_to_dict(activity).items()]),
                                 "day": activity.planned_date.weekday(),
                                 "task": activity.name,
                                 "color": VALIDATION_PROCESS_COLORS[color_index],
@@ -722,7 +732,11 @@ class SaveValidationView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin
                             },
                             "user": {
                                 gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),
-                                gettext_lazy("Email"): activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None),
+                                gettext_lazy("Planner Email"): activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None),
+                                
+                                gettext_lazy("Validator"): f"{request.user.last_name} {request.user.first_name}",
+                                gettext_lazy("Validator Type"): get_group_high(request.user),
+                                gettext_lazy("Validator Email"): request.user.email,
                             },
                             "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:planning:list')}"
                         },
@@ -862,6 +876,7 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         completed = self.request.POST.get('completed') in ('true', True)
         undo = self.request.POST.get('undo') in ('true', True)
         is_another = self.request.POST.get('is_another') in ('true', True)
+        is_period_dates = self.request.POST.get('is_period_dates') in ('true', True)
         is_free_task = self.request.POST.get('is_free_task') in ('true', True)
         comment = self.request.POST.get('comment')
         undo_comment = self.request.POST.get('undo_comment')
@@ -873,6 +888,8 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         start_time = self.request.POST.get('start_time')
         end_time = self.request.POST.get('end_time')
         component = self.request.POST.get('component')
+        activity_date_start = self.request.POST.get('activity_date_start')
+        activity_date_end = self.request.POST.get('activity_date_end')
         
         is_vacation = self.request.POST.get('is_vacation') in ('true', True)
         vacation_type = self.request.POST.get('vacation_type')
@@ -896,104 +913,112 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         } for elt in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=administrative_level_ids)]
         
         files = []
-        try:
-            if activity_id not in (None, 'None', 'null', '') and type_action == "report":
-                # Report
+        # try:
+        if activity_id not in (None, 'None', 'null', '') and type_action == "report":
+            # Report
+            activity = Activity.objects.get(id=int(activity_id))
+            activity.completed = completed
+            activity.undo = undo
+            activity.is_another = is_another
+            activity.is_free_task = is_free_task
+
+            if is_another:
+                activity.another_detail = {
+                    "phase": model_to_dict(phase) if phase else None,
+                    "activity": model_to_dict(process_activity) if process_activity else None,
+                    "name": free_task_title if is_free_task else (process_activity.name if process_activity else None),
+                    "activty_sql_id": process_activity.id if process_activity else None,
+                    "component": component,
+
+                    "administrative_level_ids": administrative_level_ids,
+                    "administrative_levels": administrative_levels,
+                }
+
+            activity.comment = comment
+            activity.undo_comment = undo_comment
+        else:
+            if activity_id not in (None, 'None', 'null', '') and type_action == "edit":
                 activity = Activity.objects.get(id=int(activity_id))
-                activity.completed = completed
-                activity.undo = undo
-                activity.is_another = is_another
-                activity.is_free_task = is_free_task
-
-                if is_another:
-                    activity.another_detail = {
-                        "phase": model_to_dict(phase) if phase else None,
-                        "activity": model_to_dict(process_activity) if process_activity else None,
-                        "name": free_task_title if is_free_task else (process_activity.name if process_activity else None),
-                        "activty_sql_id": process_activity.id if process_activity else None,
-                        "component": component,
-
-                        "administrative_level_ids": administrative_level_ids,
-                        "administrative_levels": administrative_levels,
-                    }
-
-                activity.comment = comment
-                activity.undo_comment = undo_comment
-            else:
-                if activity_id not in (None, 'None', 'null', '') and type_action == "edit":
-                    activity = Activity.objects.get(id=int(activity_id))
-                    if activity.validated == False:
-                        activity.edit_after_invalidation = True
-                        activity = activity.save_and_return_object(user=self.request.user)
-                        
-                        try:
-                            locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-                            activity_plan_date = (
-                                f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")}' if activity.type != 'vacation' else \
-                                f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")} {gettext_lazy("to")} {activity.planned_datetime_end.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_end.strftime("%d %B %Y")}'
-                            )
-                            msg = send_email(
-                                f'{gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
-                                "mail/send/comment",
-                                {
-                                    "datas": {
-                                        gettext_lazy("Subject "): gettext_lazy("Invalidated activity modified by planner"), 
-                                        gettext_lazy("Activity"): activity.name,
-                                        gettext_lazy("Description"): activity.description,
-                                        gettext_lazy("Planned on"): activity_plan_date,
-                                        gettext_lazy("Updated on"): f'{activity.updated_date.strftime("%A")} {gettext_lazy("the")} {activity.updated_date.strftime("%d %B %Y")}',
-                                        gettext_lazy("Location"): ", ".join([v["name"] for v in activity.administrative_levels]) if activity.administrative_levels else "",
-                                    },
-                                    "user": {
-                                        gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),
-                                        gettext_lazy("Email"): activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None),
-                                    },
-                                    "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:planning:list')}"
+                if activity.validated == False:
+                    activity.edit_after_invalidation = True
+                    activity = activity.save_and_return_object(user=self.request.user)
+                    
+                    try:
+                        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+                        activity_plan_date = (
+                            f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")}' if activity.type != 'vacation' else \
+                            f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")} {gettext_lazy("to")} {activity.planned_datetime_end.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_end.strftime("%d %B %Y")}'
+                        )
+                        msg = send_email(
+                            f'{gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
+                            "mail/send/comment",
+                            {
+                                "datas": {
+                                    gettext_lazy("Subject "): gettext_lazy("Invalidated activity modified by planner"), 
+                                    gettext_lazy("Activity"): activity.name,
+                                    gettext_lazy("Description"): activity.description,
+                                    gettext_lazy("Planned on"): activity_plan_date,
+                                    gettext_lazy("Updated on"): f'{activity.updated_date.strftime("%A")} {gettext_lazy("the")} {activity.updated_date.strftime("%d %B %Y")}',
+                                    gettext_lazy("Location"): ", ".join([v["name"] for v in activity.administrative_levels]) if activity.administrative_levels else "",
                                 },
-                                [e for e in list([
-                                    activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None)
-                                ] + [(v.user.email if v.user else (v.facilitator.email if v.facilitator else None)) for v in activity.get_activities_validate()]) if e],
-                                []
-                            )
-                            mail_message = gettext_lazy("Mail sent successfully")
-                        except:
-                            mail_message = gettext_lazy("An error occurred while sending the email")
+                                "user": {
+                                    gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),
+                                    gettext_lazy("Email"): activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None),
+                            
+                                    gettext_lazy("Validator"): f"{request.user.last_name} {request.user.first_name}",
+                                    gettext_lazy("Validator Type"): get_group_high(request.user),
+                                    gettext_lazy("Validator Email"): request.user.email,
+                                },
+                                "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:planning:list')}"
+                            },
+                            [e for e in list([
+                                activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None)
+                            ] + [(v.user.email if v.user else (v.facilitator.email if v.facilitator else None)) for v in activity.get_activities_validate()]) if e],
+                            []
+                        )
+                        mail_message = gettext_lazy("Mail sent successfully")
+                    except:
+                        mail_message = gettext_lazy("An error occurred while sending the email")
 
 
-                else:
-                    activity = Activity()
+            else:
+                activity = Activity()
 
-                if is_vacation:
-                    activity.type = "vacation"
-                    activity.name = "Congé"
-                    activity.description = vacation_type_precision if vacation_type_precision else vacation_type
-                    activity.vacation_type = vacation_type_precision if vacation_type_precision else vacation_type
-                    activity.planned_datetime_start = parse_datetime(f"{absence_date_start}T00:00:00.000000Z").replace(tzinfo=pytz.UTC)
-                    activity.planned_datetime_end = parse_datetime(f"{absence_date_end}T00:00:00.000000Z").replace(tzinfo=pytz.UTC)
-                    activity.vacation_return_datetime = parse_datetime(f"{return_date}T00:00:00.000000Z").replace(tzinfo=pytz.UTC)
-                    activity.planned_date = None
-                else:
+            activity.is_period_dates = is_period_dates
+            
+            if is_vacation:
+                activity.type = "vacation"
+                activity.name = "Congé"
+                activity.description = vacation_type_precision if vacation_type_precision else vacation_type
+                activity.vacation_type = vacation_type_precision if vacation_type_precision else vacation_type
+                activity.planned_datetime_start = parse_datetime(f"{absence_date_start}T00:00:00.000000Z").replace(tzinfo=pytz.UTC)
+                activity.planned_datetime_end = parse_datetime(f"{absence_date_end}T23:45:00.000000Z").replace(tzinfo=pytz.UTC)
+                activity.vacation_return_datetime = parse_datetime(f"{return_date}T00:00:00.000000Z").replace(tzinfo=pytz.UTC)
+                activity.planned_date = None
+            else:
+                if start_time:
                     start_time = TIMES_H[int(start_time)]
+                if end_time:
                     end_time = TIMES_H[int(end_time)]
-                    # New
-                    activity.type = "free_task" if is_free_task else "task"
-                    activity.phase_id = phase.id if not is_free_task and phase else None
-                    activity.activity_id = process_activity.id if not is_free_task and process_activity else None
-                    activity.name = process_activity.name if not is_free_task and process_activity else free_task_title
-                    activity.description = process_activity.description if not is_free_task and process_activity else description_activity
-                    activity.component = component
-                    activity.administrative_level_ids = administrative_level_ids
-                    activity.administrative_levels = administrative_levels
-                    activity.planned_date = datetime.strptime(plan_date, '%Y-%m-%d').date()
-                    activity.planned_datetime_start = datetime.strptime(f"{plan_date} {start_time}", '%Y-%m-%d %H:%M')
-                    activity.planned_datetime_end = datetime.strptime(f"{plan_date} {end_time}", '%Y-%m-%d %H:%M')
-                activity.user = self.request.user
-                activity.project_id = self.request.session.get('project_id')
+                # New
+                activity.type = "free_task" if is_free_task else "task"
+                activity.phase_id = phase.id if not is_free_task and phase else None
+                activity.activity_id = process_activity.id if not is_free_task and process_activity else None
+                activity.name = process_activity.name if not is_free_task and process_activity else free_task_title
+                activity.description = process_activity.description if not is_free_task and process_activity else description_activity
+                activity.component = component
+                activity.administrative_level_ids = administrative_level_ids
+                activity.administrative_levels = administrative_levels
+                activity.planned_date = datetime.strptime(plan_date if plan_date else activity_date_start, '%Y-%m-%d').date()
+                activity.planned_datetime_start = parse_datetime(f"{activity_date_start}T{start_time if start_time else '00:00'}:00.000000Z").replace(tzinfo=pytz.UTC) if (is_period_dates and activity_date_start) else datetime.strptime(f"{plan_date} {start_time}", '%Y-%m-%d %H:%M')
+                activity.planned_datetime_end = parse_datetime(f"{activity_date_end}T{end_time if end_time else '23:45'}:00.000000Z").replace(tzinfo=pytz.UTC) if (is_period_dates and activity_date_end) else datetime.strptime(f"{plan_date} {end_time}", '%Y-%m-%d %H:%M')
+            activity.user = self.request.user
+            activity.project_id = self.request.session.get('project_id')
 
-            activity.save()
-        except Exception as exc:
-            print(exc)
-            raise Http404
+        activity.save()
+        # except Exception as exc:
+        #     print(exc)
+        #     raise Http404
         
         
         msg = gettext_lazy("The activity was successfully saved.")
@@ -1048,11 +1073,11 @@ class PlanningCSVView(PageMixin, LoginRequiredMixin, generic.TemplateView):
     def get(self, request, *args, **kwargs):
 
         file_path = ""
-        # try:
-        file_path = planning_csv(self.request)
+        try:
+            file_path = planning_csv(self.request)
 
-        # except Exception as exc:
-        #     messages.info(request, gettext_lazy("An error has occurred..."))
+        except Exception as exc:
+            messages.info(request, gettext_lazy("An error has occurred..."))
 
         if not file_path:
             return redirect('dashboard:facilitators:list')
