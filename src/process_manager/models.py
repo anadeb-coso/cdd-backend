@@ -414,10 +414,18 @@ class FacilitatorDeployment(BaseModel):
         return _str
     
 
-class EmailAddressesWhichSendEmails(models.Model):
+class EmailAddressesWhichSendEmails(BaseModel):
     name = models.CharField(max_length=255)
     email_addresses = models.JSONField()
 
+
+class ProcessAddOrRemoveADL(BaseModel):
+    name = models.CharField(max_length=150)
+    move_from = models.CharField(max_length=150)
+    move_to = models.CharField(max_length=150)
+    administrative_levels = models.JSONField()
+    executed = models.BooleanField(default=False)
+    query_action = models.CharField(max_length=25)
 
 # def post_project(sender, instance, **kwargs):
     
