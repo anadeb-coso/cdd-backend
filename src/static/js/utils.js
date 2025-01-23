@@ -1,5 +1,5 @@
 // <!-- Constants -->
-const error_server_message = "An error has occurred, please check your network connection and try again. ";
+var error_server_message = "An error has occurred, please check your network connection and try again. ";
 
 // <!-- Django messages -->
 /**

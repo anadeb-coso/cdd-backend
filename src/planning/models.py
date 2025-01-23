@@ -55,6 +55,9 @@ class Activity(BaseModel):
     def get_comments(self):
         return self.activitycomment_set.get_queryset().order_by("-created_date")
     
+    def get_geolocations(self):
+        return self.activitygeolocation_set.get_queryset().order_by("created_date")
+    
     def get_activities_and_comments(self):
         # activities = self.activityvalidate_set.get_queryset().annotate(created_date_final=F('created_date'))
         # comments = self.activitycomment_set.get_queryset().annotate(created_date_final=F('created_date'))
@@ -106,3 +109,20 @@ class ActivityDeadline(BaseModel):
     hour = models.CharField(max_length=10, choices=TIMES, default='00:00', verbose_name=_("Hour"))
     activities_deadline_groups = models.ManyToManyField(Group , related_name="activities_deadline_groups", default=[])
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="activity_deadline_group")
+
+
+class ActivityGeolocation(BaseModel):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE)
+
+    latitude_start = models.FloatField(null=True)
+    longitude_start = models.FloatField(null=True)
+    taking_datetime_start = models.DateTimeField(null=True)
+
+    latitude_end = models.FloatField(null=True, blank=True)
+    longitude_end = models.FloatField(null=True, blank=True)
+    taking_datetime_end = models.DateTimeField(null=True, blank=True)
+
+    geolocation_start = models.JSONField(null=True, blank=True)
+    geolocation_end = models.JSONField(null=True, blank=True)
+
+    planning_date = models.DateField(null=True)

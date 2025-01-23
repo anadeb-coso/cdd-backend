@@ -15,6 +15,7 @@ from planning.serializers import *
 from planning.models import *
 from authentication.api.auth.login import CheckUserSerializer
 from cdd.my_librairies.mail.send_mail import send_email
+from cdd.functions import get_dates_between
 
 
 
@@ -300,6 +301,68 @@ class RestSaveActivityComment(APIView):
     #             {'error': exc.__str__()}, 
     #             status=status.HTTP_404_NOT_FOUND
     #         )
+
+
+class RestSaveActivityGeolocation(APIView):
+    throttle_classes = ()
+    permission_classes = ()
+
+    def post(self, request):
+        _data = request.data
+        
+        if type(_data) is dict:
+            data = [v for k, v in list(_data.items()) if str(k).isdigit()]
+        else:
+            data = _data
+            
+        # Location
+        data_locations = [item for item in data if 'geolocation' not in item]
+        task_ids = [item.get('id') for item in data_locations if 'id' in item]
+        if task_ids:
+            existing_tasks = ActivityGeolocation.objects.filter(id__in=task_ids)
+
+            existing_tasks_dict = {task.id: task for task in existing_tasks}
+
+            serializers = []
+
+            for item in data_locations:
+                task_id = item.get('id')
+                task_instance = existing_tasks_dict.get(task_id) if task_id else None
+
+                serializer = SaveActivityGeolocationSerializer(instance=task_instance, data=item)
+                serializers.append(serializer)
+
+            if all(serializer.is_valid() for serializer in serializers):
+                for serializer in serializers:
+                    serializer.save()
+            else:
+                errors = [serializer.errors for serializer in serializers]
+        else:
+            serializer = SaveActivityGeolocationSerializer(data=data_locations, many=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                
+        s = []
+        if data and len(data) > 0 and 'activity' in data[0]:
+            a = Activity.objects.get(id=data[0]['activity'])
+            
+            if (a.planned_datetime_start and a.planned_datetime_end):
+                plage_dates = get_dates_between(a.planned_datetime_start, a.planned_datetime_end)
+                
+                locations = ActivityGeolocationSerializer([g for g in a.get_geolocations() if g.planning_date in plage_dates], many=True).data
+
+                s = locations
+                # sorted(
+                #     locations, key=lambda obj: obj.get('created_date'), reverse=True
+                # )
+
+        return Response(
+            s, 
+            status=status.HTTP_200_OK
+        )
+
+
 
 
 # =================================== Get =================================================================

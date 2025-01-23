@@ -60,6 +60,20 @@ class SaveActivityCommentSerializer(serializers.ModelSerializer):
 		model = ActivityComment
 		fields = '__all__'
 
+
+class ActivityGeolocationSerializer(serializers.ModelSerializer):
+	class Meta:
+		"""docstring for Meta"""
+		model = ActivityGeolocation
+		fields = '__all__'
+
+class SaveActivityGeolocationSerializer(serializers.ModelSerializer):
+	class Meta:
+		"""docstring for Meta"""
+		model = ActivityGeolocation
+		fields = '__all__'
+
+
 class ActivitySerializer(serializers.ModelSerializer):
 	phase = PhaseSerializer(many=False)
 	activity = ProcessActivitySerializer(many=False)
@@ -75,6 +89,7 @@ class ActivitySerializer(serializers.ModelSerializer):
 		data['files'] = ActivityFileSerializer(instance.get_files(), many=True).data
 		activities_validates = ActivityValidateSerializer(instance.get_activities_validate(), many=True).data
 		comments = ActivityCommentSerializer(instance.get_comments(), many=True).data
+		data['geolocations'] = ActivityGeolocationSerializer(instance.get_geolocations(), many=True).data
 
 		data['comments'] = sorted(
 			(list(comments) + list(activities_validates)), key=lambda obj: obj.get('created_date'), reverse=True
