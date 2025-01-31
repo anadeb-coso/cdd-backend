@@ -12,6 +12,7 @@ from cdd.functions import datetime_complet_str
 from administrativelevels import models as administrativelevels_models
 from dashboard.reports.constants import IGNORES
 from cdd.my_librairies.functions import strip_accents
+from dashboard.utils_functions import get_facilitators_on_adlor_dbs_name
 
 
 def get_datas_dict(reponses_datas, key, level: int = 1):
@@ -22,48 +23,70 @@ def get_datas_dict(reponses_datas, key, level: int = 1):
                 if k == key:
                     return v
 
+
+def _get_ids_list(elt: str):
+    if type(elt) is str:
+        return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
+    return []
+    
 def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_name=None):
     nsc = NoSQLClient()
 
-    id_region = request.GET.get('id_region')
-    id_prefecture = request.GET.get('id_prefecture')
-    id_commune = request.GET.get('id_commune')
-    id_canton = request.GET.get('id_canton')
-    id_village = request.GET.get('id_village')
+    # id_region = request.GET.get('id_region')
+    # id_prefecture = request.GET.get('id_prefecture')
+    # id_commune = request.GET.get('id_commune')
+    # id_canton = request.GET.get('id_canton')
+    # id_village = request.GET.get('id_village')
+    ids_region = _get_ids_list(request.GET.get('id_region'))
+    ids_prefecture = _get_ids_list(request.GET.get('id_prefecture'))
+    ids_commune = _get_ids_list(request.GET.get('id_commune'))
+    ids_canton = _get_ids_list(request.GET.get('id_canton'))
+    ids_village = _get_ids_list(request.GET.get('id_village'))
     type_field = request.GET.get('type_field', 'all')
     val_date_start = request.GET.get('val_date_start')
     val_date_end = request.GET.get('val_date_end')
     file_type = request.GET.get('file_type', 'excel')
     id_in_details = request.GET.get("id_in_details")
-    _id = 0
+    ids_administrative_level = _get_ids_list(request.GET.get('administrative_level_id'))
+    ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
+    print(ids_administrative_level)
+
+    # _id = 0
     facilitators = []
-    if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
-        _type = None
-        if id_region and type_field == "region":
-            _type = "region"
-            _id = id_region
-        elif id_prefecture and type_field == "prefecture":
-            _type = "prefecture"
-            _id = id_prefecture
-        elif id_commune and type_field == "commune":
-            _type = "commune"
-            _id = id_commune
-        elif id_canton and type_field == "canton":
-            _type = "canton"
-            _id = id_canton
-        elif id_village and type_field == "village":
-            _type = "village"
-            _id = id_village
-            
+    # if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
+    #     _type = None
+    #     if id_region and type_field == "region":
+    #         _type = "region"
+    #         _id = id_region
+    #     elif id_prefecture and type_field == "prefecture":
+    #         _type = "prefecture"
+    #         _id = id_prefecture
+    #     elif id_commune and type_field == "commune":
+    #         _type = "commune"
+    #         _id = id_commune
+    #     elif id_canton and type_field == "canton":
+    #         _type = "canton"
+    #         _id = id_canton
+    #     elif id_village and type_field == "village":
+    #         _type = "village"
+    #         _id = id_village
+    _ids = []
+    _type = "All"
+    if ids_administrative_level:
+
+        # liste_villages = get_cascade_villages_by_administrative_level_id(_id) 
+        # if facilitator_db_name:
+        #     fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
+        # else:
+        #     fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[request.session.get('project_id')])
         
-
-        liste_villages = []
-
-        liste_villages = get_cascade_villages_by_administrative_level_id(_id)
-        if facilitator_db_name:
-            fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
-        else:
-            fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[request.session.get('project_id')])
+        fs, liste_villages = get_facilitators_on_adlor_dbs_name(
+            request.session.get('project_name'),
+            request.session.get('project_id'),
+            ids_administrative_level,
+            [facilitator_db_name] if facilitator_db_name else []
+        )
+        
         for f in fs.order_by("name", "username"):
             dict_administrative_levels_with_infos = {}
             already_count_facilitator = False
@@ -87,107 +110,114 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     break
             
             if f_doc:
-                for _village in f_doc['administrative_levels']:
-                    
-                    if str(_village['id']).isdigit(): #Verify if id contain only digit
-                            
-                        for village in liste_villages:
-                            if str(_village['id']) == str(village['administrative_id']):
-                                if not already_count_facilitator:
+                for cvd in cvds:
+                    administrative_level_cvd = cvd
+                    administrative_level_cvd_village = cvd.get('village')
+                    if administrative_level_cvd_village:
+                        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
+                        if administrativelevel_obj.cvd:
+                            if (facilitator_db_name and (
+                                not ids_administrative_level or (ids_administrative_level and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+                            )) or (
+                                not ids_administrative_level or (ids_administrative_level and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+                            ):
+                                pass
+                            else:
+                                continue
 
-                                    total_tasks_completed = 0
-                                    total_tasks_uncompleted = 0
-                                    total_tasks = 0
-                                    total_tasks_completed_inter_date = 0
-                                    total_tasks_uncompleted_inter_date = 0
-                                    total_tasks_inter_date = 0
-                                    last_activity_date = "0000-00-00 00:00:00"
+                            if not already_count_facilitator:
 
-                                    for doc in query_result_docs:
-                                        _ = doc.get('doc')
-                                        if _.get('type') == "task":
-                                            last_updated = datetime_complet_str(_.get('last_updated'))
-                                            if last_updated and last_activity_date < last_updated:
-                                                last_activity_date = last_updated
+                                total_tasks_completed = 0
+                                total_tasks_uncompleted = 0
+                                total_tasks = 0
+                                total_tasks_completed_inter_date = 0
+                                total_tasks_uncompleted_inter_date = 0
+                                total_tasks_inter_date = 0
+                                last_activity_date = "0000-00-00 00:00:00"
 
-                                            for administrative_level_cvd in cvds:
-                                                village = administrative_level_cvd['village']
-                                                if village and str(village.get("id")) == str(_["administrative_level_id"]):
-                                                    if _.get("completed"):
-                                                        if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                            total_tasks_completed_inter_date += 1
-                                                        total_tasks_completed += 1
-                                                    else:
-                                                        if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                            total_tasks_uncompleted_inter_date += 1
-                                                        total_tasks_uncompleted += 1
+                                for doc in query_result_docs:
+                                    _ = doc.get('doc')
+                                    if _.get('type') == "task":
+                                        last_updated = datetime_complet_str(_.get('last_updated'))
+                                        if last_updated and last_activity_date < last_updated:
+                                            last_activity_date = last_updated
+
+                                        if administrative_level_cvd_village and str(administrative_level_cvd_village.get("id")) == str(_["administrative_level_id"]):
+                                            if _.get("completed"):
+                                                if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
+                                                    total_tasks_completed_inter_date += 1
+                                                total_tasks_completed += 1
+                                            else:
+                                                if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
+                                                    total_tasks_uncompleted_inter_date += 1
+                                                total_tasks_uncompleted += 1
+                                            if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
+                                                    total_tasks_inter_date += 1
+                                            total_tasks += 1
+
+
+                                            if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
+                                                if _.get("completed"):
                                                     if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                            total_tasks_inter_date += 1
-                                                    total_tasks += 1
+                                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed_inter_date'] += 1
+                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed'] += 1
+                                                else:
+                                                    if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
+                                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted_inter_date'] += 1
+                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted'] += 1
+                                                if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
+                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_inter_date'] += 1
+                                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] += 1
+                                            else:
+                                                if _.get("completed"):
+                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                                        'total_tasks_completed': 1,
+                                                        'total_tasks_uncompleted': 0,
+                                                        'total_tasks_completed_inter_date': 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0,
+                                                        'total_tasks_uncompleted_inter_date': 0
+                                                    }
+                                                else:
+                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                                        'total_tasks_completed': 0,
+                                                        'total_tasks_uncompleted': 1,
+                                                        'total_tasks_completed_inter_date': 0,
+                                                        'total_tasks_uncompleted_inter_date': 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0
+                                                    }
+                                                
+                                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_inter_date'] = 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0
+                                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
+                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
 
+                                nbr_villages = 0
+                                for key, value in dict_administrative_levels_with_infos.items():
+                                    dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
+                                    dict_administrative_levels_with_infos[key]["percentage_tasks_completed_inter_date"] = ((value["total_tasks_completed_inter_date"]/value["total_tasks"])*100) if value["total_tasks"] else 0
+                                    del dict_administrative_levels_with_infos[key]["total_tasks"]
 
-                                                    if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
-                                                        if _.get("completed"):
-                                                            if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed_inter_date'] += 1
-                                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed'] += 1
-                                                        else:
-                                                            if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted_inter_date'] += 1
-                                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted'] += 1
-                                                        if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end:
-                                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_inter_date'] += 1
-                                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] += 1
-                                                    else:
-                                                        if _.get("completed"):
-                                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                                                'total_tasks_completed': 1,
-                                                                'total_tasks_uncompleted': 0,
-                                                                'total_tasks_completed_inter_date': 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0,
-                                                                'total_tasks_uncompleted_inter_date': 0
-                                                            }
-                                                        else:
-                                                            dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                                                'total_tasks_completed': 0,
-                                                                'total_tasks_uncompleted': 1,
-                                                                'total_tasks_completed_inter_date': 0,
-                                                                'total_tasks_uncompleted_inter_date': 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0
-                                                            }
-                                                        
-                                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_inter_date'] = 1 if last_updated and val_date_start <= last_updated.split(' ')[0] <= val_date_end else 0
-                                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
-                                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
+                                    nbr_villages += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
 
-                                    nbr_villages = 0
-                                    for key, value in dict_administrative_levels_with_infos.items():
-                                        dict_administrative_levels_with_infos[key]["percentage_tasks_completed"] = ((value["total_tasks_completed"]/value["total_tasks"])*100) if value["total_tasks"] else 0
-                                        dict_administrative_levels_with_infos[key]["percentage_tasks_completed_inter_date"] = ((value["total_tasks_completed_inter_date"]/value["total_tasks"])*100) if value["total_tasks"] else 0
-                                        del dict_administrative_levels_with_infos[key]["total_tasks"]
+                                percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
+                                percent_inter_date = float("%.2f" % (((total_tasks_completed_inter_date/total_tasks)*100) if total_tasks else 0))
+                                if last_activity_date == "0000-00-00 00:00:00":
+                                    last_activity_date = None
+                                else:
+                                    last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
 
-                                        nbr_villages += len(dict_administrative_levels_with_infos[key]['cvd']['villages'])
-
-                                    percent = float("%.2f" % (((total_tasks_completed/total_tasks)*100) if total_tasks else 0))
-                                    percent_inter_date = float("%.2f" % (((total_tasks_completed_inter_date/total_tasks)*100) if total_tasks else 0))
-                                    if last_activity_date == "0000-00-00 00:00:00":
-                                        last_activity_date = None
-                                    else:
-                                        last_activity_date = datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
-
-                                    facilitators.append({
-                                        'facilitator': f_doc, "name_with_sex": name_with_sex, "name": name, "sex": sex,
-                                        "username": f.username, "phone": phone, 
-                                        "total_tasks_completed": total_tasks_completed,
-                                        "total_tasks_uncompleted": total_tasks_uncompleted,
-                                        "total_tasks": total_tasks,
-                                        "total_tasks_completed_inter_date": total_tasks_completed_inter_date,
-                                        "total_tasks_uncompleted_inter_date": total_tasks_uncompleted_inter_date,
-                                        "total_tasks_inter_date": total_tasks_inter_date,
-                                        'last_activity_date': last_activity_date, "percent": percent, 
-                                        "percent_inter_date": percent_inter_date, 
-                                        "dict_administrative_levels_with_infos": dict_administrative_levels_with_infos,
-                                        "nbr_villages": nbr_villages
-                                    })
-                                    already_count_facilitator = True
+                                facilitators.append({
+                                    'facilitator': f_doc, "name_with_sex": name_with_sex, "name": name, "sex": sex,
+                                    "username": f.username, "phone": phone, 
+                                    "total_tasks_completed": total_tasks_completed,
+                                    "total_tasks_uncompleted": total_tasks_uncompleted,
+                                    "total_tasks": total_tasks,
+                                    "total_tasks_completed_inter_date": total_tasks_completed_inter_date,
+                                    "total_tasks_uncompleted_inter_date": total_tasks_uncompleted_inter_date,
+                                    "total_tasks_inter_date": total_tasks_inter_date,
+                                    'last_activity_date': last_activity_date, "percent": percent, 
+                                    "percent_inter_date": percent_inter_date, 
+                                    "dict_administrative_levels_with_infos": dict_administrative_levels_with_infos,
+                                    "nbr_villages": nbr_villages
+                                })
+                                already_count_facilitator = True
     else:
         is_training = bool(request.GET.get('is_training', "False") == "True")
         is_develop = bool(request.GET.get('is_develop', "False") == "True")
@@ -750,7 +780,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
         pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
     else:
         file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
 
     if platform == "win32":
         # windows
@@ -946,7 +976,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
         pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
     else:
         file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
 
     if platform == "win32":
         # windows
@@ -1448,10 +1478,10 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
 
     if file_type == "csv":
         file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path, index=False)
     else:
         file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
 
     if platform == "win32":
         # windows

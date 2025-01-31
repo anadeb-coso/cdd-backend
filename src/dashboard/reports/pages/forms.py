@@ -16,3 +16,17 @@ class ReportsFacilitatorsStatusForm(forms.Form):
         [_facilitators.append((o.no_sql_db_name, o.name if o.name else o.username)) for o in facilitators.order_by("name", "username")]
 
         self.fields['facilitator'].widget.choices = _facilitators
+
+
+class FacilitatorsMultiForm(forms.Form):
+    
+    facilitator = forms.MultipleChoiceField(label=gettext_lazy("Facilitator"))
+
+
+    def __init__(self, facilitators,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        _facilitators = [('', '')]
+        [_facilitators.append((o.no_sql_db_name, o.name if o.name else o.username)) for o in facilitators.order_by("name", "username")]
+
+        self.fields['facilitator'].widget.choices = _facilitators
