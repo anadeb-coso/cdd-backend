@@ -1,289 +1,383 @@
 {% extends 'layouts/base.html' %}
-{% load bootstrap4 static i18n %}
+{% load static i18n bootstrap4 custom_tags %}
 {% block extracss %}
-    <style>
-        
+    {{ block.super }}
+    <link href="{% static 'AdminLTE/plugins/chart.js/Chart.css' %}" rel="stylesheet">
+{% endblock extracss %}
 
-    </style>
-{% endblock %}
 {% block content %}
     <div class="row">
-        <div class="col-md-12">
-            <div class="card transparent">
-                <div class="card-header">
-                    <div class="col-md-12">
-                        <div class="card">
-                            <div class="overlay" id="spin">
-                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                            </div>
-                            <div class="card-body">
-                            
-                                <div class="clearfix"></div>
-                                <div class="row facilitators-filter">
-                                    <div class="col-2">
-                                        {% bootstrap_field form.region show_label=False %}
-                                    </div>
-                                    <div class="col-2">
-                                        {% bootstrap_field form.prefecture show_label=False %}
-                                    </div>
-                                    <div class="col-2">
-                                        {% bootstrap_field form.commune show_label=False %}
-                                    </div>
-                                    <div class="col-2">
-                                        {% bootstrap_field form.canton show_label=False %}
-                                    </div>
-                                    <div class="col-2">
-                                        {% bootstrap_field form.village show_label=False %}
-                                    </div>
-                                    <div class="col-2">
-                                        <a class="btn fs12 text-bold-family text-primary pull-right p-0" style="margin-top: 8px;"
-                                        id="clear_all_filters">
-                                            {% translate "Clear all filters" %}
-                                        </a>
-                                    </div>
-                                </div>
-                                        
-                                <fieldset>
-                                    <legend  class="text-primary text-bold">{% translate "Select dates" %}</legend>
-
-                                    <div class="row">
-                                        <div class="col-2">
-                                            <div class="form-group">
-                                                <label for="id_date_start">{% translate "Start" %}</label>
-                                                <input type="date" name="date_start" class="form-control" 
-                                                    placeholder="{% translate 'Start' %}" required id="id_date_start" />
-                                            </div>
-                                        </div>
-
-                                        <div class="col-2">
-                                            <div class="form-group">
-                                                <label for="id_date_end">{% translate "End" %}</label>
-                                                <input type="date" name="date_end" class="form-control" 
-                                                    placeholder="{% translate 'End' %}" required id="id_date_end" />
-                                            </div>
-                                        </div>
-
-                                        <div class="col-5">
-                                            {% bootstrap_field form_f.facilitator %}
-                                        </div>
-
-                                        <div class="col-1">
-                                            <div class="form-group">
-                                                <label for="id_in_details">{% translate "Details" %}</label>
-                                                <input type="checkbox" name="in_details" class="form-control" 
-                                                    placeholder="{% translate 'End' %}" id="id_in_details" />
-                                            </div>
-                                        </div>
-
-                                        <div class="col-2">
-                                            <div class="form-group">
-                                                <input type="button" name="generate" class="btn btn-primary" 
-                                                    style="margin-top: 25px;"
-                                                    value="{% translate 'Generate the link' %}" required id="id_generate" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </fieldset>
-                                
-
-                            </div>
-                        </div>
-                    </div>
+        <div class="col-12">
+            <div class="clearfix"></div>
+            <div class="row">
+                <div class="col-1 administrative-level-filter">
+                    {% bootstrap_field form.region show_label=False %}
                 </div>
-               
-               
+                <div class="col-1 administrative-level-filter">
+                    {% bootstrap_field form.prefecture show_label=False %}
+                </div>
+                <div class="col-2 administrative-level-filter">
+                    {% bootstrap_field form.commune show_label=False %}
+                </div>
+                <div class="col-2 administrative-level-filter">
+                    {% bootstrap_field form.canton show_label=False %}
+                </div>
+                <div class="col-2 administrative-level-filter">
+                    {% bootstrap_field form.village show_label=False %}
+                </div>
+                
+                <div class="col-2">
+                    {% bootstrap_field form_f.facilitator show_label=False %}
+                </div>
+
+                <div class="col-2 administrative-level-filter">
+                    <a class="btn fs12 text-bold-family text-primary pull-right p-0" style="margin-top: 8px;"
+                        id="clear_all_filters">
+                        {% translate "Clear all filters" %}
+                    </a>
+                </div>
             </div>
+
 
 
 
 
             <div class="card">
-                <div class="card-body table-responsive">
-                    <div id="pdf-display">
-                        {% comment %} <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe> {% endcomment %}
+
+
+                <div class="container">
+                    <ul class="nav nav-tabs">
+                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link active nav-tab-toggle" data-toggle="tab" href="#statistics" >{% translate "Statistics" %}</a></li>
+                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#facilitators_evolutions" >{% translate "Evolutions des AC" %}</a></li>
+                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#priorities" >{% translate "Priorities" %}</a></li>
+                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#cdd_datas" >{% translate "CDD Datas" %}</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <div id="statistics" class="tab-pane active">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="statistics-list">
+                                        <h3>{% translate "Statistics" %}</h3>
+                                        <div class="tab-pane">
+                                            {% include 'common/under_construction_col.html' %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="overlay" id="statistics-spin">
+                                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                </div>
+                            </div>
+
+                        </div>
+                        
+                        <div id="facilitators_evolutions" class="tab-pane">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="facilitators_evolutions-list">
+                                        <h3>{% translate "Evolutions des AC" %}</h3>
+                                        <div class="tab-pane">
+                                            {% include 'common/under_construction_col.html' %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="overlay" id="facilitators_evolutions-spin">
+                                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="priorities" class="tab-pane">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="priorities-list">
+                                        <h3>{% translate "Priorities" %}</h3>
+                                        <div class="tab-pane">
+                                            {% include 'common/under_construction_col.html' %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="overlay" id="priorities-spin">
+                                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="cdd_datas" class="tab-pane">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div id="cdd_datas-list">
+                                        <h3>{% translate "CDD Datas" %}</h3>
+                                        <div class="tab-pane">
+                                            {% include 'common/under_construction_col.html' %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="overlay" id="cdd_datas-spin">
+                                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
+
+
                 </div>
-                <div class="overlay" id="spin-pdf">
-                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                </div>
+
+
+
+                    
             </div>
 
 
         </div>
-
     </div>
-
-<input type="hidden" name="type_field" id="id_type_field" value="" />
-
 {% endblock %}
-
-
-
-
 
 {% block javascript %}
     {{ block.super }}
-
-
+    
+    <script src="{% static 'AdminLTE/plugins/chart.js/Chart.js' %}"></script>
+    <script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+    <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
     <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script src="{% static 'js/utils.js' %}"></script>
+
     <script type="text/javascript">
-        let ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"]
-        var type_field = "";
-        let spin = $('#spin');
-        let administrative_level = $('#id_administrative_level');
+        var administrative_level_type = null;
+        var administrative_level_id = null;
         let id_region = $('#id_region');
         let id_prefecture = $('#id_prefecture');
         let id_commune = $('#id_commune');
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
-        let spin_pdf = $('#spin-pdf');
+        let id_facilitator = $('#id_facilitator');
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+            let administrative_level_ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"];
+            
+            
+            let statistics_spin = $('#statistics-spin');
+            let statistics_number = $('#statistics-list');
+            
+            let facilitators_evolutions_spin = $('#facilitators_evolutions-spin');
+            let facilitators_evolutions_number = $('#facilitators_evolutions-list');
+            let priorities_spin = $('#priorities-spin');
+            let priorities_number = $('#priorities-list');
+            let cdd_datas_spin = $('#cdd_datas-spin');
+            let cdd_datas_number = $('#cdd_datas-list');
+
+            var current_nav_link = 'statistics';
+            var current_nav_links = [];
 
 
-
-        function loadFacilitators(type_field="") {
-            if($("#id_"+type_field).val() || type_field == "all"){  
-                spin.show();
-                $(".facilitators-filter select").attr('disabled', true);
+            function loadStatistics(administrative_level_id=null, administrative_level_type=null) {
+                statistics_spin.show();
                 $.ajax({
-                    type: 'GET',
-                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
-                    data: {
-                        parent_id: $("#id_"+type_field).val()
-                    },
-                    success: function (data) {
-                        if(type_field == "region"){
-                            set_datas_administrative_level(id_prefecture, data.prefectures);
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "prefecture"){
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "commune"){
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        }else if(type_field == "canton"){
-                            set_datas_administrative_level(id_village, data.villages);
-                        }
-                        
-                    },
-                    error: function (data) {
-                        spin.hide();
-                        alert(error_server_message + "Error " + data.status);
-                        $(".facilitators-filter select").attr('disabled', false);
-                    }
-                }).done(function () {
-                        spin.hide();
-                        $(".facilitators-filter select").attr('disabled', false);
-                    }
-                );
-
-            }
-            
-
-
-
-
-            
-        }
-
-        loadFacilitators("all");
-
-
-        $('.facilitators-filter select').on('change', function () {
-            type_field = "";
-            if($(this).attr('id') && $(this).val()){
-                type_field = $(this).attr('id').split('_')[1];
-                $('#id_type_field').val(type_field);
-            }
-            loadFacilitators(type_field);
-            $('#pdf-display').html(``);
-        });
-
-        $("#clear_all_filters").on("click", function () {
-            $('.facilitators-filter input').val('');
-            $('.facilitators-filter select').val(null).trigger('change.select2');
-            loadFacilitators("all");
-        });
-
-
-        $('fieldset select').on('change', function () {
-            $('#pdf-display').html(``);
-        });
-        $('fieldset input').on('change', function () {
-            $('#pdf-display').html(``);
-        });
-
-
-        $("#id_generate").click(function(event){
-            event.preventDefault();
-            let val_date_start = $("#id_date_start").val();
-            let val_date_end = $("#id_date_end").val();
-            let val_facilitator = $("#id_facilitator").val();
-
-            if(val_date_end && val_date_start){
-                spin_pdf.show();
-                let href = "";
-                if(val_facilitator){
-                    //href = `{% url 'dashboard:reports:pdf:app_pdf_facilitator_status' '_var_' %}`;
-                    href = `{% url 'dashboard:reports:excel_csv:app_excel_csv_facilitator_status' '_var_' %}`;
-                    href = href.replace('_var_', val_facilitator);
-                }else{
-                    //href = `{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}`;
-                    href = `{% url 'dashboard:reports:excel_csv:app_excel_csv_facilitators_status' %}`;
-                }
-                
-                href += (`?id_region=` + id_region.val() +
-                `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
-                `&id_village=` + id_village.val() + `&type_field=` + $('#id_type_field').val() + 
-                `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}" + 
-                `&id_in_details=`+ (id_in_details.checked ? 1 : 0) + 
-                `&val_date_start=` + val_date_start + `&val_date_end=` + val_date_end);
-                
-                
-                {% comment %} $('#pdf-display').html(`
-                <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the PDF' %}</a>
-                `); {% endcomment %}
-                $('#pdf-display').html(`
-                <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the EXCEL' %}</a>
-                `);
-                
-                spin_pdf.hide();
-                {% comment %} $.ajax({
                     type: "GET",
-                    //url: "{% url 'dashboard:reports:pdf:app_pdf_facilitators_status' %}",
-                    url: "{% url 'dashboard:reports:pdf:app_excel_csv_facilitators_status' %}",
+                    url: "{% url 'dashboard:statistics:statistic' %}",
                     data: {
-                        id_region: id_region.val(),
-                        id_prefecture: id_prefecture.val(),
-                        id_commune: id_commune.val(),
-                        id_canton: id_canton.val(),
-                        id_village: id_village.val(),
-                        type_field: type_field,
-                        is_training: "{{ is_training }}",
-                        is_develop: "{{ is_develop }}",
-                        download: 1
+                        administrative_level_id: administrative_level_id,
+                        administrative_level_type: administrative_level_type
                     },
                     success: function (response) {
-                        spin_pdf.hide();
-                        $('#pdf-display').html(response);
+                        statistics_spin.hide();
+                        
+                        statistics_number.html(response);
+
+                        current_nav_links.push('statistics');
                     },
                     error: function (data) {
-                        spin_pdf.hide();
+                        statistics_spin.hide();
                         alert(error_server_message + "Error " + data.status);
                     }
-                }); {% endcomment %}
-            }else{
-                alert("{% translate 'You have to fill all the fields' %}");
+                });
+                
+                statistics_spin.hide();
             }
+            
+            //Financing
+            function loadFacilitatorsEvoluations(administrative_level_id=null, administrative_level_type=null) {
+                facilitators_evolutions_spin.show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:reports:pages:facilitators_evolution' %}",
+                    data: {
+                        administrative_level_id: administrative_level_id,
+                        administrative_level_type: administrative_level_type
+                    },
+                    success: function (response) {
+                        facilitators_evolutions_spin.hide();
+                        
+                        facilitators_evolutions_number.html(response);
+
+                        current_nav_links.push('facilitators_evolutions');
+                    },
+                    error: function (data) {
+                        facilitators_evolutions_spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                });
+                facilitators_evolutions_spin.hide();
+            }
+            
+            function loadPriorities(administrative_level_id=null, administrative_level_type=null) {
+                priorities_spin.show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:reports:pages:priorites' %}",
+                    data: {
+                        administrative_level_id: administrative_level_id,
+                        administrative_level_type: administrative_level_type
+                    },
+                    success: function (response) {
+                        priorities_spin.hide();
+                        
+                        priorities_number.html(response);
+
+                        current_nav_links.push('priorities');
+                    },
+                    error: function (data) {
+                        priorities_spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                });
+                priorities_spin.hide();
+            }
+            
+            function loadCDDDatas(administrative_level_id=null, administrative_level_type=null) {
+                cdd_datas_spin.show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:reports:pages:cdd_datas' %}",
+                    data: {
+                        administrative_level_id: administrative_level_id,
+                        administrative_level_type: administrative_level_type
+                    },
+                    success: function (response) {
+                        cdd_datas_spin.hide();
+                        
+                        cdd_datas_number.html(response);
+
+                        current_nav_links.push('cdd_datas');
+                    },
+                    error: function (data) {
+                        cdd_datas_spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                    }
+                });
+                cdd_datas_spin.hide();
+            }
+            //End Financing
+
+
+            
+            function callNavLinkPage(){
+                if(!current_nav_links.includes('statistics') && current_nav_link.includes('statistics')){
+                    loadStatistics(administrative_level_id, administrative_level_type);
+                }else if(!current_nav_links.includes('facilitators_evolutions') && current_nav_link.includes('facilitators_evolutions')){
+                    loadFacilitatorsEvoluations(administrative_level_id, administrative_level_type);
+                }else if(!current_nav_links.includes('priorities') && current_nav_link.includes('priorities')){
+                    loadPriorities(administrative_level_id, administrative_level_type);
+                }else if(!current_nav_links.includes('cdd_datas') && current_nav_link.includes('cdd_datas')){
+                    loadCDDDatas(administrative_level_id, administrative_level_type);
+                }
+            }
+            
+            callNavLinkPage();
+            
+            
+            var cascaded = false;
+            $('.administrative-level-filter select').on('change', function () {
+                if (!cascaded){
+                    cascaded = true;
+                
+                    let elt_id;
+                    for(let i=0; i<administrative_level_ids.length; i++){
+                        elt_id = administrative_level_ids[i];
+                        if($(this).attr('id') != elt_id) $(`#${elt_id}`).val([]).trigger('change.select2');
+                    }
+                    administrative_level_id = null;
+                    administrative_level_type = null;
+                    if($(this).attr('id')){// && $(this).val().length != 0){
+                        administrative_level_id = $(this).val();
+                        administrative_level_id = administrative_level_id && administrative_level_id.length != 0 ? administrative_level_id : null;
+                        administrative_level_type = administrative_level_id ? $(this).attr('id').split('_')[1] : null;
+                        current_nav_links = [];
+                        callNavLinkPage();
+                    }
+
+
+
+                    $(".administrative-level-filter select").attr('disabled', true);
+                    $.ajax({
+                        type: 'GET',
+                        url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_levels_all' %}",
+                        data: {
+                            parents_id: $("#id_"+administrative_level_type).val()
+                        },
+                        success: function (data) {
+                            if(!administrative_level_type || administrative_level_type == "region" || $("#id_"+administrative_level_type).val().length == 0){
+                                set_datas_administrative_level(id_prefecture, data.prefectures);
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            }else if(administrative_level_type == "prefecture"){
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            }else if(administrative_level_type == "commune"){
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            }else if(administrative_level_type == "canton"){
+                                set_datas_administrative_level(id_village, data.villages);
+                            }
+                            if(data.facilitators){
+                                set_datas_selected_fields(id_facilitator, data.facilitators)
+                            }
+                            cascaded = false;
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                            $(".administrative-level-filter select").attr('disabled', false);
+                            cascaded = false;
+                        }
+                    }).done(function () {
+                            $(".administrative-level-filter select").attr('disabled', false);
+                            cascaded = false;
+                        }
+                    );
+                }
+
+
+            });
+
+
+
+            $("#clear_all_filters").on("click", function () {
+                $('.administrative-level-filter input').val('');
+                $('.administrative-level-filter select').val(null).trigger('change.select2');
+                administrative_level_id = null;
+                administrative_level_type = null;
+                current_nav_links = [];
+                callNavLinkPage();
+            });
+
+            $('.nav-tab-toggle').on('click', function () {
+                current_nav_link = this.href;
+                callNavLinkPage();
+            });
+
+
         });
-        spin_pdf.hide();
     </script>
-    
+
+{% endblock %}
 
 
+
+{% block modals %}
+    <div id="detailsModalObjects" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
 {% endblock %}
 
 {% block select2 %}
@@ -309,14 +403,14 @@
             allowClear: true,
         });
 
-         $("#id_facilitator").select2({
-            placeholder: "{% translate 'Facilitator' %}",
-            allowClear: true,
-        });
+        $("#id_facilitator").select2({
+           placeholder: "{% translate 'Facilitator' %}",
+           allowClear: true,
+       });
 
         $('b[role="presentation"]').hide();
         $('.select2-selection__arrow').append(
             '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
-            
+
     </script>
 {% endblock select2 %}

@@ -1,0 +1,134 @@
+{% load bootstrap4 static i18n custom_tags %}
+
+    <div class="row">
+        <div class="col-md-12">
+
+
+            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                
+            <div class="row">
+
+                <div class="col-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="id_include_form_fields">
+                        <label class="form-check-label" for="id_include_form_fields">
+                            {% translate "Include form fields" %}
+                        </label>
+                      </div>
+                </div>
+
+                <div class="col-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="id_include_history">
+                        <label class="form-check-label" for="id_include_history">
+                            {% translate "Include history" %}
+                        </label>
+                      </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="float-right mb-3">
+                        <a href="{% url 'dashboard:statistics:app_excel_reports_cdd_dtas' %}"
+                        class="btn btn-primary btn-sm rounded-xl reports_prorities_situation" id="app_excel_reports_cdd_dtas">
+                            <i class="fa fa-file-excel-o mr-2"></i>
+                            {% translate "Download CDD data" %}
+                        </a>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+
+            
+            <div id="download-message" class="float-right mb-3" style="display:none;">
+                <p style="font-size: 25px;font-weight: bold;">{% translate "Download in progress. This download may take some time depending on the amount of data being downloaded!" %}</p>
+                <div class="clearfix"></div>
+            </div>
+            <div id="download-complete-message" class="float-right mb-3" style="display:none;">
+                <p style="font-size: 25px;font-weight: bold;">{% translate "Download complete!" %}</p>
+                <div class="clearfix"></div>
+            </div>
+            
+            {% endif %}
+            <div class="clearfix"></div>
+
+
+
+
+        </div>
+
+    </div>
+
+
+
+    {% comment %} <script src="{% static 'js/cascade_requests.js' %}"></script> {% endcomment %}
+    <script type="text/javascript">
+        var app_excel_reports_cdd_dtas = $('#app_excel_reports_cdd_dtas');
+        
+        $(document).ready(function() {
+            $(".reports_prorities_situation").on("click", function(event) {
+                event.preventDefault(); // Empêche le comportement par défaut du lien
+          
+                // Afficher le message de téléchargement en cours
+                $("#download-message").show();
+                $("#download-complete-message").hide();
+          
+                var url = $(this).attr('href'); // L'URL de téléchargement
+
+                let val_facilitator = $("#id_facilitator").val();
+
+                url += (`?id_region=` + id_region.val() +
+                `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
+                `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type + 
+                `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}") + 
+                `&include_form_fields=` + (id_include_form_fields.checked ? 1 : 0) + `&include_history=` + (id_include_history.checked ? 1 : 0);
+
+                if(!['', ' ', null, undefined, []].includes(val_facilitator)){
+                    url += `&facilitator_db_name=` + val_facilitator;
+                }
+                
+        
+
+                app_excel_reports_cdd_dtas.prop('disabled', true);
+                // Faire une requête AJAX pour vérifier si le fichier est disponible
+                $.ajax({
+                  url: url,
+                  type: 'GET',
+                  success: function(response) {
+                    // Quand la requête AJAX a réussi, déclencher le téléchargement
+                    let path = response.replaceAll('/', '___').replaceAll('\\', '___');
+                    let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
+                    window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
+                    
+          
+                    // Cacher le message de téléchargement en cours et afficher le message de fin
+                    $("#download-message").hide();
+                    $("#download-complete-message").show();
+
+                    
+                    app_excel_reports_cdd_dtas.prop('disabled', false);
+
+                    setTimeout(function() {
+                        $("#download-message").hide();
+                        $("#download-complete-message").hide();
+                      }, 5000);
+                  },
+                  error: function(xhr, status, error) {
+                    alert("Erreur lors du téléchargement du fichier.");
+                    $("#download-message").hide();
+                    $("#download-complete-message").hide();
+                  }
+                });
+              });
+          
+          });
+
+
+
+        
+        
+
+
+    </script>
+    
+
