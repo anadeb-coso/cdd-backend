@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import environ
 from django.utils.translation import gettext_lazy as _
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,6 +60,7 @@ CREATED_APPS = [
     'news',
     'subprojects',
     'planning',
+    'usermanager',
 ]
 
 THIRD_PARTY_APPS = [
@@ -66,6 +68,7 @@ THIRD_PARTY_APPS = [
     'drf_spectacular',
     'rest_framework',
     'django_celery_results',
+    'corsheaders',
 ]
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
@@ -74,6 +77,9 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware', #tries to determine user's language using URL language prefix
+    'cdd.config_functions.CORSMiddleware',
+    'cdd.config_functions.CustomCORSMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -108,10 +114,12 @@ WSGI_APPLICATION = 'cdd.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 EXTERNAL_DATABASE_NAME = 'mis'
+EXTERNAL_GRM_DATABASE_NAME = 'grm'
 
 DATABASES = {
     'default': env.db(),
-    EXTERNAL_DATABASE_NAME: env.db('LEGACY_DATABASE_URL')
+    EXTERNAL_DATABASE_NAME: env.db('LEGACY_DATABASE_URL'),
+    EXTERNAL_GRM_DATABASE_NAME: env.db('LEGACY_GRM_DATABASE_URL')
 }
 
 
@@ -134,7 +142,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
 
-LANGUAGE_CODE = 'en'
+LANGUAGE_CODE = 'fr'
 
 TIME_ZONE = 'UTC'
 
@@ -165,12 +173,12 @@ DATE_INPUT_FORMATS = [
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     BASE_DIR / "static"
     ]
-
+# STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_ROOT = BASE_DIR / 'media/'
 
@@ -268,3 +276,24 @@ TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN')
 TWILIO_FROM_NUMBER = env('TWILIO_FROM_NUMBER')
 TWILIO_REGION = env('TWILIO_REGION')
+
+CDD_URL_BASE = env('CDD_URL_BASE')
+MIS_URL_BASE = env('MIS_URL_BASE')
+GRM_URL_BASE = env('GRM_URL_BASE')
+
+CSRF_TRUSTED_ORIGINS = [
+    CDD_URL_BASE, MIS_URL_BASE, GRM_URL_BASE,
+    # "http://localhost",
+    # "http://localhost:8002",
+    # "http://localhost:8001",
+    # "http://localhost:8000",
+    # "http://127.0.0.1"
+]
+CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
+
+CORS_ALLOW_ALL_ORIGINS = False  # Assure que seules les origines spécifiées sont autorisées
+CORS_ALLOW_CREDENTIALS = True  # Autorise les cookies/session
+CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PATCH"]
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'Access-Control-Allow-Origin',
+]
