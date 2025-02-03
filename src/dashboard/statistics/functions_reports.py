@@ -10,6 +10,12 @@ from sys import platform
 from authentication.models import Facilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from administrativelevels.models import AdministrativeLevel
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
+from subprojects.models import Project as MisProject
+from cdd.call_objects_from_other_db import mis_objects_call
+from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 
 from no_sql_client import NoSQLClient
 
@@ -52,7 +58,7 @@ def get_cvd_index(datas_dict_havent_priorities_pav: dict, cvd_id: str):
     return g_index + 1
 
 
-def priorities_situation(params={"type":"All", "ids_administrativelevel":""}):
+def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_administrativelevel":""}):
     facilitators_havent_priorities = []
     facilitators_uncompleted = []
     villages_havent_priorities = []
@@ -85,7 +91,38 @@ def priorities_situation(params={"type":"All", "ids_administrativelevel":""}):
     count_havent = 0
     count_havent_three = 0
 
-    fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
+    
+    _type = params.get("type")
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
+    
+    project_mis = mis_objects_call.filter_objects(MisProject, name=project_name)
+    project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+    if facilitator_dbs_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
+    else:
+        if params.get("ids_administrativelevel"):
+            assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                project_id=project_mis_id,
+                activated=True
+            )
+            criteria = FacilitatorCriteria(
+                id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+
+        else:
+            criteria = FacilitatorCriteria(
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+        fs = FacilitatorRepository().find_by_criteria(criteria=criteria)
+
+
+    # fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     for facilitator in fs:
         villages_havent_priorities = []
@@ -221,8 +258,8 @@ def priorities_situation(params={"type":"All", "ids_administrativelevel":""}):
                 count_havent_three += 1
                         
             
-    print()
-    print("Done!")
+    # print()
+    # print("Done!")
 
 
     if not os.path.exists("media/statistics"):
@@ -250,10 +287,10 @@ def priorities_situation(params={"type":"All", "ids_administrativelevel":""}):
 
 
 
-def priorities_pav_pac_situation(params={"type":"All", "ids_administrativelevel":""}):
+def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "ids_administrativelevel":""}):
     facilitators_havent_priorities = []
     facilitators_uncompleted = []
-    villages_havent_priorities = []
+    villages_havent_priorities = [] 
     villages_uncompleted = []
     datas_dict_havent_priorities_pav = {
         "ID CVD": {},
@@ -289,11 +326,40 @@ def priorities_pav_pac_situation(params={"type":"All", "ids_administrativelevel"
     }
     project_name = params.get('session_project_name')
 
+    _type = params.get("type")
+    liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
+    
+    project_mis = mis_objects_call.filter_objects(MisProject, name=project_name)
+    project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+    if facilitator_dbs_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
+    else:
+        if params.get("ids_administrativelevel"):
+            assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                project_id=project_mis_id,
+                activated=True
+            )
+            criteria = FacilitatorCriteria(
+                id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+
+        else:
+            criteria = FacilitatorCriteria(
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+        fs = FacilitatorRepository().find_by_criteria(criteria=criteria)
+
     nsc = NoSQLClient()
 
     count = 0
     
-    fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
+    # fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
     # print(fs.count())
     for facilitator in fs:
         # print()
@@ -348,13 +414,13 @@ def priorities_pav_pac_situation(params={"type":"All", "ids_administrativelevel"
                                             
                                             datas_dict_havent_priorities_pav[f"Priorite {i}"][count] = priorite
                                             #datas_dict_havent_priorities_pav[f"Priorite {i}"][count] = f"{(prioritesDuVillage[i-1].get('') if prioritesDuVillage[i-1].get('priorite') not in ('', None) else prioritesDuVillage[i-1].get('priorite')) if prioritesDuVillage[i-1].get('priorite') == 'Autre' else prioritesDuVillage[i-1].get('priorite')} ({prioritesDuVillage[i-1].get('coutEstime')})"
-                                            print(priorite)
+                                            # print(priorite)
                                         except:
                                             datas_dict_havent_priorities_pav[f"Priorite {i}"][count] = ""
-                                        print(datas_dict_havent_priorities_pav[f"Priorite {i}"][count])
+                                        # print(datas_dict_havent_priorities_pav[f"Priorite {i}"][count])
 
-                            print("datas_dict_havent_priorities_pav 1")
-                            print(datas_dict_havent_priorities_pav)
+                            # print("datas_dict_havent_priorities_pav 1")
+                            # print(datas_dict_havent_priorities_pav)
                             try:
                                 sousComposante12a = dict(form_response[1]).get('sousComposante12a')
                             except Exception as exc:
@@ -545,8 +611,8 @@ def priorities_pav_pac_situation(params={"type":"All", "ids_administrativelevel"
                         datas_dict_havent_priorities_pav["PAC"][count] = ""
                         datas_dict_havent_priorities_pav["PAC correct"][count] = ""
 
-    print()
-    print("Done!")
+    # print()
+    # print("Done!")
     
 
     if not os.path.exists("media/statistics"):

@@ -7,6 +7,12 @@ from datetime import datetime, date as type_date
 import pandas as pd
 from dashboard.facilitators.functions import get_cvds
 from administrativelevels import models as administrativelevels_models
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
+from subprojects.models import Project as MisProject
+from cdd.call_objects_from_other_db import mis_objects_call
+
 
 def get_datas_dict(reponses_datas, key, level: int = 1):
     for i in range(len(reponses_datas)):
@@ -31,15 +37,43 @@ def sum_dict_value(d: dict):
     return _sum
 
 
-def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "ids_administrativelevel":""}):
+def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type="excel", params={"type":"All", "ids_administrativelevel":""}):
     nsc = NoSQLClient()
 
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
-    if facilitator_db_name:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name=facilitator_db_name)
+    
+    project_mis = mis_objects_call.filter_objects(MisProject, name=params.get('session_project_name'))
+    project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+    if facilitator_dbs_name:
+        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
     else:
-        fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
+        if params.get("ids_administrativelevel"):
+            assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                project_id=project_mis_id,
+                activated=True
+            )
+            criteria = FacilitatorCriteria(
+                id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+
+        else:
+            criteria = FacilitatorCriteria(
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[params.get('session_project_id')]
+            )
+        fs = FacilitatorRepository().find_by_criteria(criteria=criteria)
+
+
+    # if facilitator_dbs_name:
+    #     fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
+    # else:
+    #     fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[params.get('session_project_id')])
 
     d_cols = [ 
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0"),
@@ -52,6 +86,15 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Jeunes", "ind_9_3"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "H", "ind_9_4"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "F", "ind_9_5"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "T", "ind_9_6"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "H", "ind_9_7"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "F", "ind_9_8"),
+        ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "T", "ind_9_9"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10"),
 
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "Date de la séance", "Date de la séance", "ind_11"),
@@ -269,1113 +312,1258 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
                 if administrative_level_cvd_village:
                     administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
                     if administrativelevel_obj.cvd:
-                        _ok = True
-                        if liste_villages:
-                            _ok = False
-                            for village in liste_villages:
-                                if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
-                                    _ok = True
-                                    break
-                        if _ok:
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
-                            # villages = ""
-                            # for o in administrativelevel_obj.cvd.get_villages():
-                            #     villages += f'{o.name} ; '
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
-                            
-                            total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
-                            
-                            for doc in query_result_docs:
-                                _ = doc.get('doc')
-                                if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
-                                    form_response = _.get("form_response")
-                                    if form_response:
-                                        value = None
+                        # _ok = True
+                        # if liste_villages:
+                        #     _ok = False
+                        #     for village in liste_villages:
+                        #         if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
+                        #             _ok = True
+                        #             break
+                        # if _ok:
+                        if (facilitator_dbs_name and (
+                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+                        )) or (
+                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+                        ):
+                            pass
+                        else:
+                            continue
 
-                                        if _.get('sql_id') == 20: #Etablissement du profil du village
-                                            try:
-                                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
-                                            except Exception as exc:
-                                                if not value:
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
+                        # villages = ""
+                        # for o in administrativelevel_obj.cvd.get_villages():
+                        #     villages += f'{o.name} ; '
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+                        
+                        total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
+                        
+                        for doc in query_result_docs:
+                            _ = doc.get('doc')
+                            if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
+                                form_response = _.get("form_response")
+                                if form_response:
+                                    value = None
+
+                                    if _.get('sql_id') == 20: #Etablissement du profil du village
+                                        old_forms = _.get('old_forms')
+                                        old_form_response = old_forms[-1].get("form_response") if old_forms else []
+                                        try:
+                                            value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                        except Exception as exc:
+                                            if not value:
+                                                try:
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                                except:
                                                     try:
-                                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
                                                         value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
-                                            
-                                            try:
-                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
-
-                                        elif _.get('sql_id') == 13: #Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "Date de la séance", "Date de la séance", "ind_11")][count] = value
-                                            
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "H", "ind_12")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "F", "ind_13")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "T", "ind_14")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "H", "ind_15")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "F", "ind_16")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommes") if form_response[0].get("totalHommes") else 0) + (form_response[0].get("totalFemmes") if form_response[0].get("totalFemmes") else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "T", "ind_17")][count] = value
-
-
-                                        elif _.get('sql_id') == 17: #Présentation et clarification de votre mission
-                                            try:
-                                                value = get_datas_dict(form_response, "dateDeLaReunion", 1)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "Date de la séance", "Date de la séance", "ind_18")][count] = value
-
-
-                                            try:
-                                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "H", "ind_19")][count] = value
-
-                                            try:
-                                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "F", "ind_20")][count] = value
-
-                                            try:
-                                                value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] else 0)
-                                                if not value:
-                                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "T", "ind_21")][count] = value
-
-                                            try:
-                                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "H", "ind_22")][count] = value
-
-                                            try:
-                                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "F", "ind_23")][count] = value
-
-                                            try:
-                                                value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "T", "ind_24")][count] = value
-
-
-                                        elif _.get('sql_id') == 22: #Brève introduction de la réunion et de l'ANADEB
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "H", "ind_26")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "F", "ind_27")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "T", "ind_28")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "H", "ind_29")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "F", "ind_30")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "T", "ind_31")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_32")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_33")][count] = value
-
-
-                                        elif _.get('sql_id') == 27: #Ouverture de la deuxième réunion et vérification du quorum des participants
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Date de la séance", "Date de la séance", "ind_34")][count] = value
-                                            
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "H", "ind_35")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "F", "ind_36")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "T", "ind_37")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "H", "ind_38")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "F", "ind_39")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "T", "ind_40")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_41")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_42")][count] = value
-
-
-                                        elif _.get('sql_id') == 37: #Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD
-                                            try:
-                                                value = form_response[0]["DateDeLaFormation"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Date de la séance", "Date de la séance", "ind_43")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "H", "ind_44")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "F", "ind_45")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "T", "ind_46")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "H", "ind_47")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "F", "ind_48")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "T", "ind_49")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Nombre total de ménage", "Nombre total de ménage", "ind_50")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_51")][count] = value
-
-
-                                        elif _.get('sql_id') == 41: #Présenter les activités de la journée
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Date de la séance", "Date de la séance", "ind_52")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "H", "ind_53")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "F", "ind_54")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "T", "ind_55")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "H", "ind_56")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "F", "ind_57")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "T", "ind_58")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_59")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_60")][count] = value
-
-
-                                        elif _.get('sql_id') == 45: #Elaboration du plan d'action villageois (PAV)
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Date de la séance", "Date de la séance", "ind_61")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "H", "ind_62")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "F", "ind_63")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "T", "ind_64")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "H", "ind_65")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "F", "ind_66")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "T", "ind_67")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_68")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_69")][count] = value
-
-
-                                        elif _.get('sql_id') == 46: #Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Date de la séance", "Date de la séance", "ind_70")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "H", "ind_71")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "F", "ind_72")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "T", "ind_73")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "H", "ind_74")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "F", "ind_75")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "T", "ind_76")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Nombre total de ménage", "Nombre total de ménage", "ind_77")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = value
-
-
-                                        elif _.get('sql_id') == 47: #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "H", "ind_80")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "F", "ind_81")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "T", "ind_82")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "H", "ind_83")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "F", "ind_84")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "T", "ind_85")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Nombre total de ménage", "Nombre total de ménage", "ind_86")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = value
-
-
-                                        elif _.get('sql_id') == 48: #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "H", "ind_89")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "F", "ind_90")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "T", "ind_91")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "H", "ind_92")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "F", "ind_93")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "T", "ind_94")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_95")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_96")][count] = value
-
-
-                                        elif _.get('sql_id') == 49: #Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement
-                                            try:
-                                                value = form_response[0]["dateDeSeance"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Date de la séance", "Date de la séance", "ind_97")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "H", "ind_98")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "F", "ind_99")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "T", "ind_100")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "H", "ind_101")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "F", "ind_102")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "T", "ind_103")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Nombre total de ménage", "Nombre total de ménage", "ind_104")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Ethnies minoritaires", "Ethnies minoritaires", "ind_105")][count] = value
-
-
-                                        elif _.get('sql_id') == 50: #Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Date de la séance", "Date de la séance", "ind_106")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "H", "ind_107")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "F", "ind_108")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "T", "ind_109")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "H", "ind_110")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "F", "ind_111")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "T", "ind_112")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_113")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_114")][count] = value
-
-
-                                        elif _.get('sql_id') == 51: #Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA
-                                            try:
-                                                value = form_response[0]["dateDeSoumission"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Date de la séance", "Date de la séance", "ind_115")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "H", "ind_116")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "F", "ind_117")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "T", "ind_118")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "H", "ind_119")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "F", "ind_120")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "T", "ind_121")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Nombre total de ménage", "Nombre total de ménage", "ind_122")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_123")][count] = value
-
-
-                                        elif _.get('sql_id') == 52: #Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer
-                                            try:
-                                                value = form_response[0]["dateDeSeance"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Date de la séance", "Date de la séance", "ind_124")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "H", "ind_125")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "F", "ind_126")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "T", "ind_127")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "H", "ind_128")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "F", "ind_129")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "T", "ind_130")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Nombre total de ménage", "Nombre total de ménage", "ind_131")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Ethnies minoritaires", "Ethnies minoritaires", "ind_132")][count] = value
+                                        population = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
+
+                                        population_young_h = None
+                                        value = None
+                                        percent_young_h = None
+                                        try:
+                                            try:
+                                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                                percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                            except:
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                                percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+
+                                            if percent_young_f and percent_young_h:
+                                                t = percent_young_f+percent_young_f
+                                                if t == 100:
+                                                    value = ((value*percent_young_h)/100) if value and percent_young_h else None
+                                                else:
+                                                    value = percent_young_h
+                                        except Exception as exc:
+                                            if not value:
+                                                try:
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                                except:
+                                                    try:
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                                    except:
+                                                        value = None
+                                        population_young_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "H", "ind_9_4")][count] = value
+
+
+                                        value = None
+                                        percent_young_f = None
+                                        population_young_f = None
+                                        try:
+                                            try:
+                                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                                percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                            except:
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                                percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                                
+                                            if percent_young_f and percent_young_h:
+                                                t = percent_young_f+percent_young_f
+                                                if t == 100:
+                                                    value = ((value*percent_young_f)/100) if value and percent_young_f else None
+                                                else:
+                                                    value = percent_young_f
+                                        except Exception as exc:
+                                            if not value:
+                                                try:
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                                except:
+                                                    try:
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                                    except:
+                                                        value = None
+                                        population_young_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "F", "ind_9_5")][count] = value
+
+                                        
+                                        
+                                        young = None
+                                        value = None
+                                        try:
+                                            value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                        except Exception as exc:
+                                            try:
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                            except Exception as exc:
+                                                value = None
+                                        young = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Jeunes", "ind_9_3")][count] = young if young else (population_young_f + population_young_h if population_young_f and population_young_h else None)
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "T", "ind_9_6")][count] = young if young else (population_young_f + population_young_h if population_young_f and population_young_h else None)
+
+
+                                        population_old_h = None
+                                        try:
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                        except:
+                                            try:
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                            except:
+                                                value = None
+                                        population_old_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "H", "ind_9_7")][count] = value
+
+                                        population_old_f = None
+                                        try:
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                        except:
+                                            try:
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                            except:
+                                                value = None
+                                        population_old_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "F", "ind_9_8")][count] = value
 
 
-                                        elif _.get('sql_id') == 53: #Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Date de la séance", "Date de la séance", "ind_133")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "H", "ind_134")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "F", "ind_135")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "T", "ind_136")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "H", "ind_137")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "F", "ind_138")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "T", "ind_139")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Nombre total de ménage", "Nombre total de ménage", "ind_140")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Ethnies minoritaires", "Ethnies minoritaires", "ind_141")][count] = value
-
-
-                                        elif _.get('sql_id') == 54: #Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet
-                                            try:
-                                                value = form_response[0]["dateDeLaReunion"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Date de la séance", "Date de la séance", "ind_142")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "H", "ind_143")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "F", "ind_144")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "T", "ind_145")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "H", "ind_146")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "F", "ind_147")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "T", "ind_148")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Nombre total de ménage", "Nombre total de ménage", "ind_149")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_150")][count] = value
-
-
-                                        elif _.get('sql_id') == 55: #Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet
-                                            try:
-                                                value = form_response[0]["dateDeSeance"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Date de la séance", "Date de la séance", "ind_151")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "H", "ind_152")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "F", "ind_153")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "T", "ind_154")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "H", "ind_155")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmes"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "F", "ind_156")][count] = value
-
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "T", "ind_157")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Nombre total de ménage", "Nombre total de ménage", "ind_158")][count] = value
-
-                                            try:
-                                                value = form_response[0]["nombreEthniques"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Ethnies minoritaires", "Ethnies minoritaires", "ind_159")][count] = value
-
-
-                                        elif _.get('sql_id') == 56: #Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage
-                                            try:
-                                                value = form_response[0]["dateDeSensibilisation"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Date de la sensibilisation", "Date de la sensibilisation", "ind_160")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalHommesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "H", "ind_161")][count] = value
-
-                                            try:
-                                                value = form_response[0]["totalFemmesMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "F", "ind_162")][count] = value
-
-                                            try:
-                                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                                if not value:
-                                                    value = form_response[0]["totalMoins35"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "T", "ind_163")][count] = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "T", "ind_9_9")][count] = (population_old_f+population_old_h) if population_old_f and population_old_h else (population - young if population and young else None)
 
+                                        
+                                        value = None
+                                        try:
+                                            value = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
+                                        except Exception as exc:
                                             try:
-                                                value = form_response[0]["totalHommes"]
+                                                value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
                                             except Exception as exc:
                                                 value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "H", "ind_164")][count] = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = value if value else (population_old_h + population_young_h if population_old_h and population_young_h else None)
 
+                                        value = None
+                                        try:
+                                            value = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
+                                        except Exception as exc:
                                             try:
-                                                value = form_response[0]["totalFemmes"]
+                                                value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
                                             except Exception as exc:
                                                 value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "F", "ind_165")][count] = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = value if value else (population_old_f + population_young_f if population_old_f and population_young_f else None)
 
-                                            try:
-                                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "T", "ind_166")][count] = value
-              
-                                            try:
-                                                value = form_response[0]["totalMenages"]
-                                            except Exception as exc:
-                                                value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Nombre total de ménage", "Nombre total de ménage", "ind_167")][count] = value
 
+
+                                        try:
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                        except Exception as exc:
                                             try:
-                                                value = form_response[0]["nombreEthniques"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                                             except Exception as exc:
                                                 value = None
-                                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Ethnies minoritaires", "Ethnies minoritaires", "ind_168")][count] = value
-
-
-                            #
-                            for d_k, d_v in datas.items():
-                                if d_k[4] == "NON JEUNES" and d_k[5] == "H" and d_v.get(count):
-                                    if d_v[count] > total_H:
-                                        total_H = d_v[count]
-                                elif d_k[4] == "NON JEUNES" and d_k[5] == "F" and d_v.get(count):
-                                    if d_v[count] > total_F:
-                                        total_F = d_v[count]
-                                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "H" and d_v.get(count):
-                                    if d_v[count] > total_JEUNES_H:
-                                        total_JEUNES_H = d_v[count]
-                                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "F" and d_v.get(count):
-                                    if d_v[count] > total_JEUNES_F:
-                                        total_JEUNES_F = d_v[count]
-                                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "T" and d_v.get(count):
-                                    if d_v[count] > total_JEUNES:
-                                        total_JEUNES = d_v[count]
-                                elif d_k[4] == "Nombre total de ménage" and d_k[5] == "Nombre total de ménage" and d_v.get(count):
-                                    if d_v[count] > total_MENAGES:
-                                        total_MENAGES = d_v[count]
-                                elif d_k[4] == "Ethnies minoritaires" and  d_k[5] == "Ethnies minoritaires" and d_v.get(count):
-                                    if d_v[count] > total_ETHNIES:
-                                        total_ETHNIES = d_v[count]
-
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "H", "ind_169")][count] = total_JEUNES_H
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "F", "ind_170")][count] = total_JEUNES_F
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = (total_JEUNES_H + total_JEUNES_F) if (total_JEUNES_H+total_JEUNES_F) else total_JEUNES
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "H", "ind_172")][count] = total_H
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "F", "ind_173")][count] = total_F
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "T", "ind_174")][count] = total_H + total_F
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Nombre total de ménage", "Nombre total de ménage", "ind_175")][count] = total_MENAGES
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
-
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = f.no_sql_db_name
-
-
-
-                            count += 1
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
+
+                                    elif _.get('sql_id') == 13: #Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "Date de la séance", "Date de la séance", "ind_11")][count] = value
+                                        
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "H", "ind_12")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "F", "ind_13")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "T", "ind_14")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "H", "ind_15")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "F", "ind_16")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommes") if form_response[0].get("totalHommes") else 0) + (form_response[0].get("totalFemmes") if form_response[0].get("totalFemmes") else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "T", "ind_17")][count] = value
+
+
+                                    elif _.get('sql_id') == 17: #Présentation et clarification de votre mission
+                                        try:
+                                            value = get_datas_dict(form_response, "dateDeLaReunion", 1)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "Date de la séance", "Date de la séance", "ind_18")][count] = value
+
+
+                                        try:
+                                            value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "H", "ind_19")][count] = value
+
+                                        try:
+                                            value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "F", "ind_20")][count] = value
+
+                                        try:
+                                            value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] else 0)
+                                            if not value:
+                                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "T", "ind_21")][count] = value
+
+                                        try:
+                                            value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "H", "ind_22")][count] = value
+
+                                        try:
+                                            value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "F", "ind_23")][count] = value
+
+                                        try:
+                                            value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "T", "ind_24")][count] = value
+
+
+                                    elif _.get('sql_id') == 22: #Brève introduction de la réunion et de l'ANADEB
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "H", "ind_26")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "F", "ind_27")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "T", "ind_28")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "H", "ind_29")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "F", "ind_30")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "T", "ind_31")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_32")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_33")][count] = value
+
+
+                                    elif _.get('sql_id') == 27: #Ouverture de la deuxième réunion et vérification du quorum des participants
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Date de la séance", "Date de la séance", "ind_34")][count] = value
+                                        
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "H", "ind_35")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "F", "ind_36")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "T", "ind_37")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "H", "ind_38")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "F", "ind_39")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "T", "ind_40")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_41")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_42")][count] = value
+
+
+                                    elif _.get('sql_id') == 37: #Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD
+                                        try:
+                                            value = form_response[0]["DateDeLaFormation"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Date de la séance", "Date de la séance", "ind_43")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "H", "ind_44")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "F", "ind_45")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "T", "ind_46")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "H", "ind_47")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "F", "ind_48")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "T", "ind_49")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Nombre total de ménage", "Nombre total de ménage", "ind_50")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_51")][count] = value
+
+
+                                    elif _.get('sql_id') == 41: #Présenter les activités de la journée
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Date de la séance", "Date de la séance", "ind_52")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "H", "ind_53")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "F", "ind_54")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "T", "ind_55")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "H", "ind_56")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "F", "ind_57")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "T", "ind_58")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_59")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_60")][count] = value
+
+
+                                    elif _.get('sql_id') == 45: #Elaboration du plan d'action villageois (PAV)
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Date de la séance", "Date de la séance", "ind_61")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "H", "ind_62")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "F", "ind_63")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "T", "ind_64")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "H", "ind_65")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "F", "ind_66")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "T", "ind_67")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_68")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_69")][count] = value
+
+
+                                    elif _.get('sql_id') == 46: #Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Date de la séance", "Date de la séance", "ind_70")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "H", "ind_71")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "F", "ind_72")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "T", "ind_73")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "H", "ind_74")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "F", "ind_75")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "T", "ind_76")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Nombre total de ménage", "Nombre total de ménage", "ind_77")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = value
+
+
+                                    elif _.get('sql_id') == 47: #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "H", "ind_80")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "F", "ind_81")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "T", "ind_82")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "H", "ind_83")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "F", "ind_84")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "T", "ind_85")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Nombre total de ménage", "Nombre total de ménage", "ind_86")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = value
+
+
+                                    elif _.get('sql_id') == 48: #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "H", "ind_89")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "F", "ind_90")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "T", "ind_91")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "H", "ind_92")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "F", "ind_93")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "T", "ind_94")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_95")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_96")][count] = value
+
+
+                                    elif _.get('sql_id') == 49: #Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement
+                                        try:
+                                            value = form_response[0]["dateDeSeance"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Date de la séance", "Date de la séance", "ind_97")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "H", "ind_98")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "F", "ind_99")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "T", "ind_100")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "H", "ind_101")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "F", "ind_102")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "T", "ind_103")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Nombre total de ménage", "Nombre total de ménage", "ind_104")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Ethnies minoritaires", "Ethnies minoritaires", "ind_105")][count] = value
+
+
+                                    elif _.get('sql_id') == 50: #Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Date de la séance", "Date de la séance", "ind_106")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "H", "ind_107")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "F", "ind_108")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "T", "ind_109")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "H", "ind_110")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "F", "ind_111")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "T", "ind_112")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_113")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_114")][count] = value
+
+
+                                    elif _.get('sql_id') == 51: #Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA
+                                        try:
+                                            value = form_response[0]["dateDeSoumission"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Date de la séance", "Date de la séance", "ind_115")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "H", "ind_116")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "F", "ind_117")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "T", "ind_118")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "H", "ind_119")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "F", "ind_120")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "T", "ind_121")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Nombre total de ménage", "Nombre total de ménage", "ind_122")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_123")][count] = value
+
+
+                                    elif _.get('sql_id') == 52: #Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer
+                                        try:
+                                            value = form_response[0]["dateDeSeance"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Date de la séance", "Date de la séance", "ind_124")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "H", "ind_125")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "F", "ind_126")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "T", "ind_127")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "H", "ind_128")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "F", "ind_129")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "T", "ind_130")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Nombre total de ménage", "Nombre total de ménage", "ind_131")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Ethnies minoritaires", "Ethnies minoritaires", "ind_132")][count] = value
+
+
+                                    elif _.get('sql_id') == 53: #Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Date de la séance", "Date de la séance", "ind_133")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "H", "ind_134")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "F", "ind_135")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "T", "ind_136")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "H", "ind_137")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "F", "ind_138")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "T", "ind_139")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Nombre total de ménage", "Nombre total de ménage", "ind_140")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Ethnies minoritaires", "Ethnies minoritaires", "ind_141")][count] = value
+
+
+                                    elif _.get('sql_id') == 54: #Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet
+                                        try:
+                                            value = form_response[0]["dateDeLaReunion"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Date de la séance", "Date de la séance", "ind_142")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "H", "ind_143")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "F", "ind_144")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "T", "ind_145")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "H", "ind_146")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "F", "ind_147")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "T", "ind_148")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Nombre total de ménage", "Nombre total de ménage", "ind_149")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_150")][count] = value
+
+
+                                    elif _.get('sql_id') == 55: #Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet
+                                        try:
+                                            value = form_response[0]["dateDeSeance"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Date de la séance", "Date de la séance", "ind_151")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "H", "ind_152")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "F", "ind_153")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "T", "ind_154")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "H", "ind_155")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "F", "ind_156")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "T", "ind_157")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Nombre total de ménage", "Nombre total de ménage", "ind_158")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Ethnies minoritaires", "Ethnies minoritaires", "ind_159")][count] = value
+
+
+                                    elif _.get('sql_id') == 56: #Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage
+                                        try:
+                                            value = form_response[0]["dateDeSensibilisation"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Date de la sensibilisation", "Date de la sensibilisation", "ind_160")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "H", "ind_161")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmesMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "F", "ind_162")][count] = value
+
+                                        try:
+                                            value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                            if not value:
+                                                value = form_response[0]["totalMoins35"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "T", "ind_163")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalHommes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "H", "ind_164")][count] = value
+
+                                        try:
+                                            value = form_response[0]["totalFemmes"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "F", "ind_165")][count] = value
+
+                                        try:
+                                            value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "T", "ind_166")][count] = value
+            
+                                        try:
+                                            value = form_response[0]["totalMenages"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Nombre total de ménage", "Nombre total de ménage", "ind_167")][count] = value
+
+                                        try:
+                                            value = form_response[0]["nombreEthniques"]
+                                        except Exception as exc:
+                                            value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Ethnies minoritaires", "Ethnies minoritaires", "ind_168")][count] = value
+
+
+                        #
+                        for d_k, d_v in datas.items():
+                            if d_k[4] == "NON JEUNES" and d_k[5] == "H" and d_v.get(count):
+                                if d_v[count] > total_H:
+                                    total_H = d_v[count]
+                            elif d_k[4] == "NON JEUNES" and d_k[5] == "F" and d_v.get(count):
+                                if d_v[count] > total_F:
+                                    total_F = d_v[count]
+                            elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "H" and d_v.get(count):
+                                if d_v[count] > total_JEUNES_H:
+                                    total_JEUNES_H = d_v[count]
+                            elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "F" and d_v.get(count):
+                                if d_v[count] > total_JEUNES_F:
+                                    total_JEUNES_F = d_v[count]
+                            elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "T" and d_v.get(count):
+                                if d_v[count] > total_JEUNES:
+                                    total_JEUNES = d_v[count]
+                            elif d_k[4] == "Nombre total de ménage" and d_k[5] == "Nombre total de ménage" and d_v.get(count):
+                                if d_v[count] > total_MENAGES:
+                                    total_MENAGES = d_v[count]
+                            elif d_k[4] == "Ethnies minoritaires" and  d_k[5] == "Ethnies minoritaires" and d_v.get(count):
+                                if d_v[count] > total_ETHNIES:
+                                    total_ETHNIES = d_v[count]
+
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "H", "ind_169")][count] = total_JEUNES_H
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "F", "ind_170")][count] = total_JEUNES_F
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = (total_JEUNES_H + total_JEUNES_F) if (total_JEUNES_H+total_JEUNES_F) else total_JEUNES
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "H", "ind_172")][count] = total_H
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "F", "ind_173")][count] = total_F
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "T", "ind_174")][count] = total_H + total_F
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Nombre total de ménage", "Nombre total de ménage", "ind_175")][count] = total_MENAGES
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
+
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = f.no_sql_db_name
+
+
+
+                        count += 1
 
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
@@ -1389,1113 +1577,1260 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_db_name, file_type=
     for administrative_level_cvd_village in administrative_level_cvd_villages:
         administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
         if administrativelevel_obj.cvd:
-            _ok = True
-            if liste_villages:
-                _ok = False
-                for village in liste_villages:
-                    if str(administrative_level_cvd_village) == str(village["administrative_id"]):
-                        _ok = True
-                        break
-            if _ok:
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
-                # villages = ""
-                # for o in administrativelevel_obj.cvd.get_villages():
-                #     villages += f'{o.name} ; '
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
-                
-                total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
-                
-                for doc in query_result_docs:
-                    _ = doc.get('doc')
-                    if _.get('type') == "task" and str(administrative_level_cvd_village) == str(_["administrative_level_id"]):
-                        form_response = _.get("form_response")
-                        if form_response:
-                            value = None
+            # _ok = True
+            # if liste_villages:
+            #     _ok = False
+            #     for village in liste_villages:
+            #         if str(administrative_level_cvd_village) == str(village["administrative_id"]):
+            #             _ok = True
+            #             break
+            # if _ok:
+            if (facilitator_dbs_name and (
+                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+            )) or (
+                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
+            ):
+                pass
+            else:
+                continue
 
-                            if _.get('sql_id') == 20: #Etablissement du profil du village
-                                try:
-                                    value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
-                                except Exception as exc:
-                                    if not value:
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
+            # villages = ""
+            # for o in administrativelevel_obj.cvd.get_villages():
+            #     villages += f'{o.name} ; '
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
+            
+            total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
+            
+            for doc in query_result_docs:
+                _ = doc.get('doc')
+                if _.get('type') == "task" and str(administrative_level_cvd_village) == str(_["administrative_level_id"]):
+                    form_response = _.get("form_response")
+                    if form_response:
+                        value = None
+
+                        if _.get('sql_id') == 20: #Etablissement du profil du village
+                            old_forms = _.get('old_forms')
+                            old_form_response = old_forms[-1].get("form_response") if old_forms else []
+
+                            try:
+                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                            except Exception as exc:
+                                if not value:
+                                    try:
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                    except:
                                         try:
-                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
                                             value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
-                                
-                                try:
-                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
-
-                            elif _.get('sql_id') == 13: #Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "Date de la séance", "Date de la séance", "ind_11")][count] = value
-                                
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "H", "ind_12")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "F", "ind_13")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "T", "ind_14")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "H", "ind_15")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "F", "ind_16")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommes") if form_response[0].get("totalHommes") else 0) + (form_response[0].get("totalFemmes") if form_response[0].get("totalFemmes") else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "T", "ind_17")][count] = value
-
-
-                            elif _.get('sql_id') == 17: #Présentation et clarification de votre mission
-                                try:
-                                    value = get_datas_dict(form_response, "dateDeLaReunion", 1)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "Date de la séance", "Date de la séance", "ind_18")][count] = value
-
-
-                                try:
-                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "H", "ind_19")][count] = value
-
-                                try:
-                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "F", "ind_20")][count] = value
-
-                                try:
-                                    value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] else 0)
-                                    if not value:
-                                        value = get_datas_dict(form_response, "totalPersonnes", 1)["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "T", "ind_21")][count] = value
-
-                                try:
-                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "H", "ind_22")][count] = value
-
-                                try:
-                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "F", "ind_23")][count] = value
-
-                                try:
-                                    value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "T", "ind_24")][count] = value
-
-
-                            elif _.get('sql_id') == 22: #Brève introduction de la réunion et de l'ANADEB
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "H", "ind_26")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "F", "ind_27")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "T", "ind_28")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "H", "ind_29")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "F", "ind_30")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "T", "ind_31")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_32")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_33")][count] = value
-
-
-                            elif _.get('sql_id') == 27: #Ouverture de la deuxième réunion et vérification du quorum des participants
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Date de la séance", "Date de la séance", "ind_34")][count] = value
-                                
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "H", "ind_35")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "F", "ind_36")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "T", "ind_37")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "H", "ind_38")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "F", "ind_39")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "T", "ind_40")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_41")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_42")][count] = value
-
-
-                            elif _.get('sql_id') == 37: #Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD
-                                try:
-                                    value = form_response[0]["DateDeLaFormation"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Date de la séance", "Date de la séance", "ind_43")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "H", "ind_44")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "F", "ind_45")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "T", "ind_46")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "H", "ind_47")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "F", "ind_48")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "T", "ind_49")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Nombre total de ménage", "Nombre total de ménage", "ind_50")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_51")][count] = value
-
-
-                            elif _.get('sql_id') == 41: #Présenter les activités de la journée
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Date de la séance", "Date de la séance", "ind_52")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "H", "ind_53")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "F", "ind_54")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "T", "ind_55")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "H", "ind_56")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "F", "ind_57")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "T", "ind_58")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_59")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_60")][count] = value
-
-
-                            elif _.get('sql_id') == 45: #Elaboration du plan d'action villageois (PAV)
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Date de la séance", "Date de la séance", "ind_61")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "H", "ind_62")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "F", "ind_63")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "T", "ind_64")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "H", "ind_65")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "F", "ind_66")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "T", "ind_67")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_68")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_69")][count] = value
-
-
-                            elif _.get('sql_id') == 46: #Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Date de la séance", "Date de la séance", "ind_70")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "H", "ind_71")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "F", "ind_72")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "T", "ind_73")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "H", "ind_74")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "F", "ind_75")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "T", "ind_76")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Nombre total de ménage", "Nombre total de ménage", "ind_77")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = value
-
-
-                            elif _.get('sql_id') == 47: #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "H", "ind_80")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "F", "ind_81")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "T", "ind_82")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "H", "ind_83")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "F", "ind_84")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "T", "ind_85")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Nombre total de ménage", "Nombre total de ménage", "ind_86")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = value
-
-
-                            elif _.get('sql_id') == 48: #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "H", "ind_89")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "F", "ind_90")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "T", "ind_91")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "H", "ind_92")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "F", "ind_93")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "T", "ind_94")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_95")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_96")][count] = value
-
-
-                            elif _.get('sql_id') == 49: #Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement
-                                try:
-                                    value = form_response[0]["dateDeSeance"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Date de la séance", "Date de la séance", "ind_97")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "H", "ind_98")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "F", "ind_99")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "T", "ind_100")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "H", "ind_101")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "F", "ind_102")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "T", "ind_103")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Nombre total de ménage", "Nombre total de ménage", "ind_104")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Ethnies minoritaires", "Ethnies minoritaires", "ind_105")][count] = value
-
-
-                            elif _.get('sql_id') == 50: #Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Date de la séance", "Date de la séance", "ind_106")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "H", "ind_107")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "F", "ind_108")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "T", "ind_109")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "H", "ind_110")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "F", "ind_111")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "T", "ind_112")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_113")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_114")][count] = value
-
-
-                            elif _.get('sql_id') == 51: #Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA
-                                try:
-                                    value = form_response[0]["dateDeSoumission"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Date de la séance", "Date de la séance", "ind_115")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "H", "ind_116")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "F", "ind_117")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "T", "ind_118")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "H", "ind_119")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "F", "ind_120")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "T", "ind_121")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Nombre total de ménage", "Nombre total de ménage", "ind_122")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_123")][count] = value
-
-
-                            elif _.get('sql_id') == 52: #Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer
-                                try:
-                                    value = form_response[0]["dateDeSeance"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Date de la séance", "Date de la séance", "ind_124")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "H", "ind_125")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "F", "ind_126")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "T", "ind_127")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "H", "ind_128")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "F", "ind_129")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "T", "ind_130")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Nombre total de ménage", "Nombre total de ménage", "ind_131")][count] = value
+                            population = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
+
+                            population_young_h = None
+                            value = None
+                            percent_young_h = None
+                            try:
+                                try:
+                                    value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                    percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                except:
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                    percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+
+                                if percent_young_f and percent_young_h:
+                                    t = percent_young_f+percent_young_f
+                                    if t == 100:
+                                        value = ((value*percent_young_h)/100) if value and percent_young_h else None
+                                    else:
+                                        value = percent_young_h
+                            except Exception as exc:
+                                if not value:
+                                    try:
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                    except:
+                                        try:
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                        except:
+                                            value = None
+                            population_young_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "H", "ind_9_4")][count] = value
+
+
+                            value = None
+                            percent_young_f = None
+                            population_young_f = None
+                            try:
+                                try:
+                                    value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                    percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                except:
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
+                                    percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
+                                    
+                                if percent_young_f and percent_young_h:
+                                    t = percent_young_f+percent_young_f
+                                    if t == 100:
+                                        value = ((value*percent_young_f)/100) if value and percent_young_f else None
+                                    else:
+                                        value = percent_young_f
+                            except Exception as exc:
+                                if not value:
+                                    try:
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                    except:
+                                        try:
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                        except:
+                                            value = None
+                            population_young_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "F", "ind_9_5")][count] = value
+
+                            
+                            
+                            young = None
+                            value = None
+                            try:
+                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                            except Exception as exc:
+                                try:
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                except Exception as exc:
+                                    value = None
+                            young = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Jeunes", "ind_9_3")][count] = young if young else (population_young_f + population_young_h if population_young_f and population_young_h else None)
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (<=35)", "T", "ind_9_6")][count] = young if young else (population_young_f + population_young_h if population_young_f and population_young_h else None)
+
+
+                            population_old_h = None
+                            try:
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                            except:
+                                try:
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                except:
+                                    value = None
+                            population_old_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "H", "ind_9_7")][count] = value
+
+                            population_old_f = None
+                            try:
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                            except:
+                                try:
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                except:
+                                    value = None
+                            population_old_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "F", "ind_9_8")][count] = value
 
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Ethnies minoritaires", "Ethnies minoritaires", "ind_132")][count] = value
-
-
-                            elif _.get('sql_id') == 53: #Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Date de la séance", "Date de la séance", "ind_133")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "H", "ind_134")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "F", "ind_135")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "T", "ind_136")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "H", "ind_137")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "F", "ind_138")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "T", "ind_139")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Nombre total de ménage", "Nombre total de ménage", "ind_140")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Ethnies minoritaires", "Ethnies minoritaires", "ind_141")][count] = value
-
-
-                            elif _.get('sql_id') == 54: #Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet
-                                try:
-                                    value = form_response[0]["dateDeLaReunion"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Date de la séance", "Date de la séance", "ind_142")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "H", "ind_143")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "F", "ind_144")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "T", "ind_145")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "H", "ind_146")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "F", "ind_147")][count] = value
 
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "T", "ind_148")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Nombre total de ménage", "Nombre total de ménage", "ind_149")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_150")][count] = value
-
-
-                            elif _.get('sql_id') == 55: #Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet
-                                try:
-                                    value = form_response[0]["dateDeSeance"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Date de la séance", "Date de la séance", "ind_151")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "H", "ind_152")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "F", "ind_153")][count] = value
-
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "T", "ind_154")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalHommes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "H", "ind_155")][count] = value
-
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "F", "ind_156")][count] = value
-
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "T", "ind_157")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Nombre total de ménage", "Nombre total de ménage", "ind_158")][count] = value
-
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Ethnies minoritaires", "Ethnies minoritaires", "ind_159")][count] = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. (>35)", "T", "ind_9_9")][count] = (population_old_f+population_old_h) if population_old_f and population_old_h else (population - young if population and young else None)
 
-
-                            elif _.get('sql_id') == 56: #Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage
+                            
+                            value = None
+                            try:
+                                value = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
+                            except Exception as exc:
                                 try:
-                                    value = form_response[0]["dateDeSensibilisation"]
+                                    value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
                                 except Exception as exc:
                                     value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Date de la sensibilisation", "Date de la sensibilisation", "ind_160")][count] = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = value if value else (population_old_h + population_young_h if population_old_h and population_young_h else None)
 
+                            value = None
+                            try:
+                                value = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
+                            except Exception as exc:
                                 try:
-                                    value = form_response[0]["totalHommesMoins35"]
+                                    value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
                                 except Exception as exc:
                                     value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "H", "ind_161")][count] = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = value if value else (population_old_f + population_young_f if population_old_f and population_young_f else None)
 
-                                try:
-                                    value = form_response[0]["totalFemmesMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "F", "ind_162")][count] = value
 
-                                try:
-                                    value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
-                                    if not value:
-                                        value = form_response[0]["totalMoins35"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "T", "ind_163")][count] = value
 
+                            try:
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                            except Exception as exc:
                                 try:
-                                    value = form_response[0]["totalHommes"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                                 except Exception as exc:
                                     value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "H", "ind_164")][count] = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
 
-                                try:
-                                    value = form_response[0]["totalFemmes"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "F", "ind_165")][count] = value
 
-                                try:
-                                    value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "T", "ind_166")][count] = value
-    
-                                try:
-                                    value = form_response[0]["totalMenages"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Nombre total de ménage", "Nombre total de ménage", "ind_167")][count] = value
+                        elif _.get('sql_id') == 13: #Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "Date de la séance", "Date de la séance", "ind_11")][count] = value
+                            
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "H", "ind_12")][count] = value
 
-                                try:
-                                    value = form_response[0]["nombreEthniques"]
-                                except Exception as exc:
-                                    value = None
-                                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Ethnies minoritaires", "Ethnies minoritaires", "ind_168")][count] = value
-
-
-                #
-                for d_k, d_v in datas.items():
-                    if d_k[4] == "NON JEUNES" and d_k[5] == "H" and d_v.get(count):
-                        if d_v[count] > total_H:
-                            total_H = d_v[count]
-                    elif d_k[4] == "NON JEUNES" and d_k[5] == "F" and d_v.get(count):
-                        if d_v[count] > total_F:
-                            total_F = d_v[count]
-                    elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "H" and d_v.get(count):
-                        if d_v[count] > total_JEUNES_H:
-                            total_JEUNES_H = d_v[count]
-                    elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "F" and d_v.get(count):
-                        if d_v[count] > total_JEUNES_F:
-                            total_JEUNES_F = d_v[count]
-                    elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "T" and d_v.get(count):
-                        if d_v[count] > total_JEUNES:
-                            total_JEUNES = d_v[count]
-                    elif d_k[4] == "Nombre total de ménage" and d_k[5] == "Nombre total de ménage" and d_v.get(count):
-                        if d_v[count] > total_MENAGES:
-                            total_MENAGES = d_v[count]
-                    elif d_k[4] == "Ethnies minoritaires" and  d_k[5] == "Ethnies minoritaires" and d_v.get(count):
-                        if d_v[count] > total_ETHNIES:
-                            total_ETHNIES = d_v[count]
-
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "H", "ind_169")][count] = total_JEUNES_H
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "F", "ind_170")][count] = total_JEUNES_F
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = (total_JEUNES_H + total_JEUNES_F) if (total_JEUNES_H+total_JEUNES_F) else total_JEUNES
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "H", "ind_172")][count] = total_H
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "F", "ind_173")][count] = total_F
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "T", "ind_174")][count] = total_H + total_F
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Nombre total de ménage", "Nombre total de ménage", "ind_175")][count] = total_MENAGES
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
-
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
-                datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = 'backup_db_facilitators_docs'
-
-
-
-                count += 1
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "F", "ind_13")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "JEUNES (<=35)", "T", "ind_14")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "H", "ind_15")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "F", "ind_16")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommes") if form_response[0].get("totalHommes") else 0) + (form_response[0].get("totalFemmes") if form_response[0].get("totalFemmes") else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "1- Visite préalable au niveau canton", "NON JEUNES", "T", "ind_17")][count] = value
+
+
+                        elif _.get('sql_id') == 17: #Présentation et clarification de votre mission
+                            try:
+                                value = get_datas_dict(form_response, "dateDeLaReunion", 1)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "Date de la séance", "Date de la séance", "ind_18")][count] = value
+
+
+                            try:
+                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "H", "ind_19")][count] = value
+
+                            try:
+                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "F", "ind_20")][count] = value
+
+                            try:
+                                value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommesMoins35"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmesMoins35"] else 0)
+                                if not value:
+                                    value = get_datas_dict(form_response, "totalPersonnes", 1)["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "JEUNES (<=35)", "T", "ind_21")][count] = value
+
+                            try:
+                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "H", "ind_22")][count] = value
+
+                            try:
+                                value = get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "F", "ind_23")][count] = value
+
+                            try:
+                                value = (get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalHommes"] else 0) + (get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] if get_datas_dict(form_response, "totalPersonnes", 1)["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "NON JEUNES", "T", "ind_24")][count] = value
+
+
+                        elif _.get('sql_id') == 22: #Brève introduction de la réunion et de l'ANADEB
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "H", "ind_26")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "F", "ind_27")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "JEUNES (<=35)", "T", "ind_28")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "H", "ind_29")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "F", "ind_30")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "NON JEUNES", "T", "ind_31")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_32")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_33")][count] = value
+
+
+                        elif _.get('sql_id') == 27: #Ouverture de la deuxième réunion et vérification du quorum des participants
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Date de la séance", "Date de la séance", "ind_34")][count] = value
+                            
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "H", "ind_35")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "F", "ind_36")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "JEUNES (<=35)", "T", "ind_37")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "H", "ind_38")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "F", "ind_39")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "NON JEUNES", "T", "ind_40")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_41")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "4- 2ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_42")][count] = value
+
+
+                        elif _.get('sql_id') == 37: #Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD
+                            try:
+                                value = form_response[0]["DateDeLaFormation"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Date de la séance", "Date de la séance", "ind_43")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "H", "ind_44")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "F", "ind_45")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "JEUNES (<=35)", "T", "ind_46")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "H", "ind_47")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "F", "ind_48")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "NON JEUNES", "T", "ind_49")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Nombre total de ménage", "Nombre total de ménage", "ind_50")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "5- Formation ECG au niveau village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_51")][count] = value
+
+
+                        elif _.get('sql_id') == 41: #Présenter les activités de la journée
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Date de la séance", "Date de la séance", "ind_52")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "H", "ind_53")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "F", "ind_54")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "JEUNES (<=35)", "T", "ind_55")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "H", "ind_56")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "F", "ind_57")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "NON JEUNES", "T", "ind_58")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_59")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "6- 3ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_60")][count] = value
+
+
+                        elif _.get('sql_id') == 45: #Elaboration du plan d'action villageois (PAV)
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Date de la séance", "Date de la séance", "ind_61")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "H", "ind_62")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "F", "ind_63")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "JEUNES (<=35)", "T", "ind_64")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "H", "ind_65")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "F", "ind_66")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "NON JEUNES", "T", "ind_67")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_68")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "7- 4ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_69")][count] = value
+
+
+                        elif _.get('sql_id') == 46: #Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Date de la séance", "Date de la séance", "ind_70")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "H", "ind_71")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "F", "ind_72")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "JEUNES (<=35)", "T", "ind_73")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "H", "ind_74")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "F", "ind_75")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "NON JEUNES", "T", "ind_76")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Nombre total de ménage", "Nombre total de ménage", "ind_77")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = value
+
+
+                        elif _.get('sql_id') == 47: #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "H", "ind_80")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "F", "ind_81")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "JEUNES (<=35)", "T", "ind_82")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "H", "ind_83")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "F", "ind_84")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "NON JEUNES", "T", "ind_85")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Nombre total de ménage", "Nombre total de ménage", "ind_86")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = value
+
+
+                        elif _.get('sql_id') == 48: #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "H", "ind_89")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "F", "ind_90")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "JEUNES (<=35)", "T", "ind_91")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "H", "ind_92")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "F", "ind_93")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "NON JEUNES", "T", "ind_94")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_95")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_96")][count] = value
+
+
+                        elif _.get('sql_id') == 49: #Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement
+                            try:
+                                value = form_response[0]["dateDeSeance"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Date de la séance", "Date de la séance", "ind_97")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "H", "ind_98")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "F", "ind_99")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "JEUNES (<=35)", "T", "ind_100")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "H", "ind_101")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "F", "ind_102")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "NON JEUNES", "T", "ind_103")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Nombre total de ménage", "Nombre total de ménage", "ind_104")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "4–Préparation Sous–Projet", "11- Réunion technique du CVD", "Ethnies minoritaires", "Ethnies minoritaires", "ind_105")][count] = value
+
+
+                        elif _.get('sql_id') == 50: #Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Date de la séance", "Date de la séance", "ind_106")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "H", "ind_107")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "F", "ind_108")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "JEUNES (<=35)", "T", "ind_109")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "H", "ind_110")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "F", "ind_111")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "NON JEUNES", "T", "ind_112")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Nombre total de ménage", "Nombre total de ménage", "ind_113")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "12- 6ème réunion de village", "Ethnies minoritaires", "Ethnies minoritaires", "ind_114")][count] = value
+
+
+                        elif _.get('sql_id') == 51: #Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA
+                            try:
+                                value = form_response[0]["dateDeSoumission"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Date de la séance", "Date de la séance", "ind_115")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "H", "ind_116")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "F", "ind_117")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "JEUNES (<=35)", "T", "ind_118")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "H", "ind_119")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "F", "ind_120")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "NON JEUNES", "T", "ind_121")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Nombre total de ménage", "Nombre total de ménage", "ind_122")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "5–Consultation Et Examen  Sous–Projet", "13- Soumission du sous projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_123")][count] = value
+
+
+                        elif _.get('sql_id') == 52: #Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer
+                            try:
+                                value = form_response[0]["dateDeSeance"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Date de la séance", "Date de la séance", "ind_124")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "H", "ind_125")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "F", "ind_126")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "JEUNES (<=35)", "T", "ind_127")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "H", "ind_128")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "F", "ind_129")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "NON JEUNES", "T", "ind_130")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Nombre total de ménage", "Nombre total de ménage", "ind_131")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "14- Mise en œuvre", "Ethnies minoritaires", "Ethnies minoritaires", "ind_132")][count] = value
+
+
+                        elif _.get('sql_id') == 53: #Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Date de la séance", "Date de la séance", "ind_133")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "H", "ind_134")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "F", "ind_135")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "JEUNES (<=35)", "T", "ind_136")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "H", "ind_137")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "F", "ind_138")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "NON JEUNES", "T", "ind_139")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Nombre total de ménage", "Nombre total de ménage", "ind_140")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "6–Mise En Œuvre Du Sous–Projet", "15- Réunions périodiques", "Ethnies minoritaires", "Ethnies minoritaires", "ind_141")][count] = value
+
+
+                        elif _.get('sql_id') == 54: #Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet
+                            try:
+                                value = form_response[0]["dateDeLaReunion"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Date de la séance", "Date de la séance", "ind_142")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "H", "ind_143")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "F", "ind_144")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "JEUNES (<=35)", "T", "ind_145")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "H", "ind_146")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "F", "ind_147")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "NON JEUNES", "T", "ind_148")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Nombre total de ménage", "Nombre total de ménage", "ind_149")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "16- Clôture du sous-projet", "Ethnies minoritaires", "Ethnies minoritaires", "ind_150")][count] = value
+
+
+                        elif _.get('sql_id') == 55: #Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet
+                            try:
+                                value = form_response[0]["dateDeSeance"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Date de la séance", "Date de la séance", "ind_151")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "H", "ind_152")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "F", "ind_153")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "JEUNES (<=35)", "T", "ind_154")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "H", "ind_155")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "F", "ind_156")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "NON JEUNES", "T", "ind_157")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Nombre total de ménage", "Nombre total de ménage", "ind_158")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "17- Audit social", "Ethnies minoritaires", "Ethnies minoritaires", "ind_159")][count] = value
+
+
+                        elif _.get('sql_id') == 56: #Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage
+                            try:
+                                value = form_response[0]["dateDeSensibilisation"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Date de la sensibilisation", "Date de la sensibilisation", "ind_160")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "H", "ind_161")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmesMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "F", "ind_162")][count] = value
+
+                            try:
+                                value = (form_response[0].get("totalHommesMoins35") if form_response[0].get("totalHommesMoins35") else 0) + (form_response[0].get("totalFemmesMoins35") if form_response[0].get("totalFemmesMoins35") else 0)
+                                if not value:
+                                    value = form_response[0]["totalMoins35"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "JEUNES (<=35)", "T", "ind_163")][count] = value
+
+                            try:
+                                value = form_response[0]["totalHommes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "H", "ind_164")][count] = value
+
+                            try:
+                                value = form_response[0]["totalFemmes"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "F", "ind_165")][count] = value
+
+                            try:
+                                value = (form_response[0]["totalHommes"] if form_response[0]["totalHommes"] else 0) + (form_response[0]["totalFemmes"] if form_response[0]["totalFemmes"] else 0)
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "NON JEUNES", "T", "ind_166")][count] = value
+
+                            try:
+                                value = form_response[0]["totalMenages"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Nombre total de ménage", "Nombre total de ménage", "ind_167")][count] = value
+
+                            try:
+                                value = form_response[0]["nombreEthniques"]
+                            except Exception as exc:
+                                value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "7–Cloture Et Replanification Du Sous–Projet", "18- Exploitation et maintenance", "Ethnies minoritaires", "Ethnies minoritaires", "ind_168")][count] = value
+
+
+            #
+            for d_k, d_v in datas.items():
+                if d_k[4] == "NON JEUNES" and d_k[5] == "H" and d_v.get(count):
+                    if d_v[count] > total_H:
+                        total_H = d_v[count]
+                elif d_k[4] == "NON JEUNES" and d_k[5] == "F" and d_v.get(count):
+                    if d_v[count] > total_F:
+                        total_F = d_v[count]
+                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "H" and d_v.get(count):
+                    if d_v[count] > total_JEUNES_H:
+                        total_JEUNES_H = d_v[count]
+                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "F" and d_v.get(count):
+                    if d_v[count] > total_JEUNES_F:
+                        total_JEUNES_F = d_v[count]
+                elif d_k[4] == "JEUNES (<=35)" and d_k[5] == "T" and d_v.get(count):
+                    if d_v[count] > total_JEUNES:
+                        total_JEUNES = d_v[count]
+                elif d_k[4] == "Nombre total de ménage" and d_k[5] == "Nombre total de ménage" and d_v.get(count):
+                    if d_v[count] > total_MENAGES:
+                        total_MENAGES = d_v[count]
+                elif d_k[4] == "Ethnies minoritaires" and  d_k[5] == "Ethnies minoritaires" and d_v.get(count):
+                    if d_v[count] > total_ETHNIES:
+                        total_ETHNIES = d_v[count]
+
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "H", "ind_169")][count] = total_JEUNES_H
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "F", "ind_170")][count] = total_JEUNES_F
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "JEUNES (<=35)", "T", "ind_171")][count] = (total_JEUNES_H + total_JEUNES_F) if (total_JEUNES_H+total_JEUNES_F) else total_JEUNES
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "H", "ind_172")][count] = total_H
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "F", "ind_173")][count] = total_F
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "NON JEUNES", "T", "ind_174")][count] = total_H + total_F
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Nombre total de ménage", "Nombre total de ménage", "ind_175")][count] = total_MENAGES
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "TOTAL", "TOTAL", "Ethnies minoritaires", "Ethnies minoritaires", "ind_176")][count] = total_ETHNIES
+
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177")][count] = ""
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")][count] = 'backup_db_facilitators_docs'
+
+
+
+            count += 1
                 
                 
                 

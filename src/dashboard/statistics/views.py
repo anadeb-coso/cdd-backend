@@ -13,15 +13,16 @@ from cdd.my_librairies import download_file, convert_file_to_dict
 from .functions import get_global_statistic_under_file_excel_or_csv, save_csv_datas_in_db
 from authentication.permissions import AdminPermissionRequiredMixin
 from .functions_reports import priorities_pav_pac_situation, priorities_situation
+from dashboard.reports.excel_csv.functions_cdd_datas import all_cdd_datas
 
 
-class StatisticView(PageMixin, LoginRequiredMixin, FormView):
+class StatisticView(PageMixin, LoginRequiredMixin, TemplateView):
     
     template_name = 'statistics/statistic.html'
     context_object_name = 'statistic'
     title = gettext_lazy('statistic')
     active_level1 = 'statistics'
-    form_class = FilterFacilitatorFormMultiChoices
+    # form_class = FilterFacilitatorFormMultiChoices
     breadcrumb = [
         {
             'url': '',
@@ -29,29 +30,29 @@ class StatisticView(PageMixin, LoginRequiredMixin, FormView):
         },
     ]
 
-    def render_to_response(self, context, **response_kwargs):
-        """
-        Return a response, using the `response_class` for this view, with a
-        template rendered with the given context.
-        Pass response_kwargs to the constructor of the response class.
-        """
-        response_kwargs.setdefault('content_type', self.content_type)
-        return self.response_class(
-            request=self.request,
-            template=self.get_template_names(),
-            context=context,
-            using=self.template_engine,
-            **response_kwargs
-        )
+    # def render_to_response(self, context, **response_kwargs):
+    #     """
+    #     Return a response, using the `response_class` for this view, with a
+    #     template rendered with the given context.
+    #     Pass response_kwargs to the constructor of the response class.
+    #     """
+    #     response_kwargs.setdefault('content_type', self.content_type)
+    #     return self.response_class(
+    #         request=self.request,
+    #         template=self.get_template_names(),
+    #         context=context,
+    #         using=self.template_engine,
+    #         **response_kwargs
+    #     )
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['breadcrumb'] = False
-        context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
-        context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
-        context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], projects__in=[self.request.session.get('project_id')]))
+    # def get_context_data(self, **kwargs):
+    #     context = super().get_context_data(**kwargs)
+    #     context['breadcrumb'] = False
+    #     context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
+    #     context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
+    #     context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], projects__in=[self.request.session.get('project_id')]))
 
-        return context
+    #     return context
 
 
 
@@ -71,16 +72,20 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
 
     def _get_ids_list(self, elt: str):
         if type(elt) is str:
-            return [_elt for _elt in elt.split(',') if _elt]
+            return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
         return []
 
-    def get(self, request, facilitator_db_name=None, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
+        facilitator_dbs_name = self._get_ids_list(request.GET.get('facilitator_db_name'))
 
         ids_region = self._get_ids_list(request.GET.get('id_region'))
         ids_prefecture = self._get_ids_list(request.GET.get('id_prefecture'))
         ids_commune = self._get_ids_list(request.GET.get('id_commune'))
         ids_canton = self._get_ids_list(request.GET.get('id_canton'))
         ids_village = self._get_ids_list(request.GET.get('id_village'))
+        ids_administrative_level = self._get_ids_list(request.GET.get('administrative_level_id'))
+        ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
+        
         type_field = request.GET.get('type_field')
         _ids = []
         _type = "All"
@@ -100,12 +105,16 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
             elif ids_region:
                 _type = "region"
                 _ids = ids_region
-                
+                 
         file_path = ""
         try:
             file_path = get_global_statistic_under_file_excel_or_csv(
-                facilitator_db_name=facilitator_db_name,
-                params={"type": _type, "ids_administrativelevel": _ids, "session_project_id": self.request.session.get('project_id')}
+                facilitator_dbs_name=facilitator_dbs_name,
+                params={
+                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                    "session_project_id": self.request.session.get('project_id'), 
+                    "session_project_name": self.request.session.get('project_name')
+                }
             )
 
         except Exception as exc:
@@ -166,17 +175,55 @@ class PrioritiesPAVPACSituationCSVView(PageMixin, LoginRequiredMixin, TemplateVi
         },
     ]
 
+    # def _get_ids_list(self, elt: str):
+    #     if type(elt) is str:
+    #         return [_elt for _elt in elt.split(',') if _elt]
+    #     return []
     def _get_ids_list(self, elt: str):
         if type(elt) is str:
-            return [_elt for _elt in elt.split(',') if _elt]
+            return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
         return []
 
     def get(self, request, *args, **kwargs):
+        facilitator_dbs_name = self._get_ids_list(request.GET.get('facilitator_db_name'))
+
+        ids_region = self._get_ids_list(request.GET.get('id_region'))
+        ids_prefecture = self._get_ids_list(request.GET.get('id_prefecture'))
+        ids_commune = self._get_ids_list(request.GET.get('id_commune'))
+        ids_canton = self._get_ids_list(request.GET.get('id_canton'))
+        ids_village = self._get_ids_list(request.GET.get('id_village'))
+        ids_administrative_level = self._get_ids_list(request.GET.get('administrative_level_id'))
+        ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
+        
+        type_field = request.GET.get('type_field')
+        _ids = []
+        _type = "All"
+        if (ids_region or ids_prefecture or ids_commune or ids_canton or ids_village) and type_field:
+            if ids_village:
+                _type = "village"
+                _ids = ids_village
+            elif ids_canton:
+                _type = "canton"
+                _ids = ids_canton
+            elif ids_commune:
+                _type = "commune"
+                _ids = ids_commune
+            elif ids_prefecture:
+                _type = "prefecture"
+                _ids = ids_prefecture
+            elif ids_region:
+                _type = "region"
+                _ids = ids_region
 
         file_path = ""
         try:
             file_path = priorities_pav_pac_situation(
-                params={"session_project_id": self.request.session.get('project_id'), "session_project_name": self.request.session.get('project_name')}
+                facilitator_dbs_name=facilitator_dbs_name,
+                params={
+                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                    "session_project_id": self.request.session.get('project_id'), 
+                    "session_project_name": self.request.session.get('project_name')
+                    }
             )
         except Exception as exc:
             print(exc)
@@ -208,17 +255,56 @@ class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
         },
     ]
 
+    # def _get_ids_list(self, elt: str):
+    #     if type(elt) is str:
+    #         return [_elt for _elt in elt.split(',') if _elt]
+    #     return []
     def _get_ids_list(self, elt: str):
         if type(elt) is str:
-            return [_elt for _elt in elt.split(',') if _elt]
+            return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
         return []
 
     def get(self, request, *args, **kwargs):
+        facilitator_dbs_name = self._get_ids_list(request.GET.get('facilitator_db_name'))
+
+        ids_region = self._get_ids_list(request.GET.get('id_region'))
+        ids_prefecture = self._get_ids_list(request.GET.get('id_prefecture'))
+        ids_commune = self._get_ids_list(request.GET.get('id_commune'))
+        ids_canton = self._get_ids_list(request.GET.get('id_canton'))
+        ids_village = self._get_ids_list(request.GET.get('id_village'))
+        ids_administrative_level = self._get_ids_list(request.GET.get('administrative_level_id'))
+        ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
+        
+        type_field = request.GET.get('type_field')
+        _ids = []
+        _type = "All"
+        if (ids_region or ids_prefecture or ids_commune or ids_canton or ids_village) and type_field:
+            if ids_village:
+                _type = "village"
+                _ids = ids_village
+            elif ids_canton:
+                _type = "canton"
+                _ids = ids_canton
+            elif ids_commune:
+                _type = "commune"
+                _ids = ids_commune
+            elif ids_prefecture:
+                _type = "prefecture"
+                _ids = ids_prefecture
+            elif ids_region:
+                _type = "region"
+                _ids = ids_region
+
 
         file_path = ""
         try:
             file_path = priorities_situation(
-                params={"session_project_id": self.request.session.get('project_id'), "session_project_name": self.request.session.get('project_name')}
+                facilitator_dbs_name=facilitator_dbs_name,
+                params={
+                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                    "session_project_id": self.request.session.get('project_id'), 
+                    "session_project_name": self.request.session.get('project_name')
+                }
             )
 
         except Exception as exc:
@@ -232,4 +318,82 @@ class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
             #     file_path,
             #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             # )
+            return HttpResponse(file_path)
+        
+
+
+class CddDatasCSVView(PageMixin, LoginRequiredMixin, TemplateView):
+    """Class to download all datas under excel file"""
+
+    template_name = 'reports/pages/cdd_datas.html'
+    context_object_name = 'Download'
+    title = gettext_lazy("Download")
+    active_level1 = 'reports'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def _get_ids_list(self, elt: str):
+        if type(elt) is str:
+            return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
+        return []
+
+    def get(self, request, *args, **kwargs):
+        facilitator_dbs_name = self._get_ids_list(request.GET.get('facilitator_db_name'))
+        
+        ids_region = self._get_ids_list(request.GET.get('id_region'))
+        ids_prefecture = self._get_ids_list(request.GET.get('id_prefecture'))
+        ids_commune = self._get_ids_list(request.GET.get('id_commune'))
+        ids_canton = self._get_ids_list(request.GET.get('id_canton'))
+        ids_village = self._get_ids_list(request.GET.get('id_village'))
+        ids_administrative_level = self._get_ids_list(request.GET.get('administrative_level_id'))
+        ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
+
+        include_form_fields = request.GET.get('include_form_fields') in (1,"1")
+        include_history = request.GET.get('include_history') in (1,"1")
+        
+        type_field = request.GET.get('type_field')
+        _ids = []
+        _type = "All"
+        if (ids_region or ids_prefecture or ids_commune or ids_canton or ids_village) and type_field:
+            if ids_village:
+                _type = "village"
+                _ids = ids_village
+            elif ids_canton:
+                _type = "canton"
+                _ids = ids_canton
+            elif ids_commune:
+                _type = "commune"
+                _ids = ids_commune
+            elif ids_prefecture:
+                _type = "prefecture"
+                _ids = ids_prefecture
+            elif ids_region:
+                _type = "region"
+                _ids = ids_region
+
+
+        file_path = ""
+        # try:
+        file_path = all_cdd_datas(
+            facilitator_dbs_name=facilitator_dbs_name,
+            params={
+                "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                "session_project_id": self.request.session.get('project_id'), 
+                "session_project_name": self.request.session.get('project_name'), 
+                "include_form_fields": include_form_fields,
+                "include_history": include_history
+            }
+        )
+
+        # except Exception as exc:
+        #     messages.info(request, gettext_lazy("An error has occurred..."))
+        print(file_path)
+
+        if not file_path:
+            return redirect('dashboard:facilitators:list')
+        else:
             return HttpResponse(file_path)
