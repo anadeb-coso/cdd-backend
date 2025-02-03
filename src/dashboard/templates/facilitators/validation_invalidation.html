@@ -1,9 +1,15 @@
 {% load static i18n custom_tags %}
 
-<div style="width: 30%; margin: auto; float: left;" >
+<div style="width: 30%; margin: auto; float: left;" class="cls_invalidation_validation">
     <button type="button" name="invalidate_valide" 
         class="btn {% if task.validated %}btn-warning action_code_0{% else %}btn-primary action_code_1{% endif %} invalidate_valide" 
-        required id="id_invalidate_valide_{{ task|get:'_id' }}">
+        required 
+        {% if task.validated %}
+            id="id_invalidate_valide_invalidation_action_{{ task|get:'_id' }}"
+        {% else %}
+            id="id_invalidate_valide_validation_action_{{ task|get:'_id' }}"
+        {% endif %}
+        >
         {% if task.validated %}
             {% translate 'Mark as invalidated' %}
         {% else %}
@@ -12,9 +18,8 @@
     </button>
 </div>
 
-{% if task.validated == True or task.validated == False %}
-{% else %}
-    <div style="width: 30%; margin: auto; float: left;" id="id_invalidate_{{ task|get:'_id' }}" >
+{% if task.validated != True %}
+    <div style="width: 30%; margin: auto; float: left;" id="id_invalidate_{{ task|get:'_id' }}" class="cls_invalidation_validation">
         <button type="button" name="invalidate_valide" id="_id_invalidate_{{ task|get:'_id' }}" 
             class="btn btn-warning  action_code_0 invalidate_valide" 
             required>

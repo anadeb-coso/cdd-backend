@@ -231,265 +231,268 @@
         {% include 'facilitators/profile/components/profile-header.html' %}
         <hr />
         <div class="row m-2">
-        {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
-        <div class="col-12 col-md-8">
-            <div class="header">
-                <div class="header__item header__name">
-                    {% translate 'Village' %}
-                </div>
-                <div class="header__item header__population">
-                    {% translate 'Pop.' %}
-                </div>
-                <div class="header__item header__progress">
-                    {% translate 'Progress' %}
-                </div>
-                <div class="header__item header__pending">
-                    <span class="mr-2">{% translate 'A faire' %}</span> <div class="header__progress-icon"></div>
-                </div>
-                <div class="header__item header__completed">
-                    <span class="mr-2">{% translate 'En validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
-                </div>
-                <div class="header__item header__rejected">
-                    <span class="mr-2">{% translate 'Rejeté' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
-                </div>
-                <div class="header__item header__validated">
-                    <span class="mr-2">{% translate 'Validé' %} </span><div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
-                </div>
-            </div>
-
-             {% for Village in villages %}
-                  <div class="information" id="{{ villages|get:Village|get:'id' }}" onclick="filterByVillage('{{ Village }}', '{{  villages|get:Village|get:'id'  }}')">
-
-                        <div class="information__item information__name">
-                            {{ Village }}
-                        </div>
-                        <div class="information__item information__population">
-                            {{ villages|get:Village|get:'populationVillage'  }}
-                        </div>
-                        <div class="information__item information__progress">
-                                    {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                        <div class="progress-bar progress-bar-green"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"VISITES PREALABLES" %}
-                                        <div class="progress-bar progress-bar-green"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                        <div class="progress-bar progress-bar-red"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                        <div class="progress-bar progress-bar-red"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
-                                        <div class="progress-bar progress-bar-red"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PLANIFICATION" %}
-                                        <div class="progress-bar progress-bar-yellow"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PLANIFICATION" %}
-                                        <div class="progress-bar progress-bar-yellow"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PLANIFICATION" %}
-                                        <div class="progress-bar progress-bar-yellow"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PLANIFICATION" %}
-                                        <div class="progress-bar progress-bar-yellow"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PLANIFICATION" %}
-                                        <div class="progress-bar progress-bar-yellow"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-purple"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-dark-green"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-dark-green"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-purple-pink"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-purple-pink"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-pink"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-pink"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                    {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
-                                        <div class="progress-bar progress-bar-pink"></div>
-                                    {% else %}
-                                        <div class="progress-bar progress-bar-gray"></div>
-                                    {% endif %}
-
-                                </div>
-                        <div class="information__item information__pending">
-                            {{ villages|get:Village|get:'total_tasks_pending'  }}
-                        </div>
-                        <div class="information__item information__completed">
-                            {{ villages|get:Village|get:'total_tasks_completed'  }}
-                        </div>
-                        <div class="information__item information__rejected">
-                            {{ villages|get:Village|get:'total_tasks_rejected'  }}
-                        </div>
-                        <div class="information__item information__validated">
-                            {{ villages|get:Village|get:'total_tasks_validated'  }}
-                        </div>
+            {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
+            <div class="col-12 col-md-8">
+                <div class="header">
+                    <div class="header__item header__name">
+                        {% translate 'Village' %}
                     </div>
-             {% endfor %}
-            </div>
+                    <div class="header__item header__population">
+                        {% translate 'Pop.' %}
+                    </div>
+                    <div class="header__item header__progress">
+                        {% translate 'Progress' %}
+                    </div>
+                    <div class="header__item header__pending">
+                        <span class="mr-2">{% translate 'To do' %}</span> <div class="header__progress-icon"></div>
+                    </div>
+                    <div class="header__item header__completed">
+                        <span class="mr-2">{% translate 'En validation' %}</span> <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+                    </div>
+                    <div class="header__item header__rejected">
+                        <span class="mr-2">{% translate 'Rejected' %}</span> <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
+                    </div>
+                    <div class="header__item header__validated">
+                        <span class="mr-2">{% translate 'Validated' %} </span><div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
+                    </div>
+                </div>
 
-            <div class="col-md-4 col-12 justify-content-start"  id="admin_level_selected">
-            <div class="row" id="admin_level_selected_detail">
-                <div class="col-12 profile__name" id="villageName">
-                    {{ village_name }}
-                </div>
-                <div class="card col-12 filters">
-                    <strong class="col-auto">{% translate 'Filter by' %}</strong>
-                    <div class="filters__item col-2" id="pendingStatus" onclick="filterBy('pending')">
-                        <div class="header__progress-icon"></div>
-                    </div>
-                    <div class="filters__item col-2" id="completedStatus" onclick="filterBy('completed')">
-                        <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
-                    </div>
-                    <div class="filters__item col-2" id="rejectedStatus" onclick="filterBy('rejected')">
-                        <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
-                    </div>
-                    <div class="filters__item col-2"  id="validatedStatus" onclick="filterBy('validated')">
-                        <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
-                    </div>
-                     <strong class="col-auto" style="cursor: pointer;" id="allStatus" onclick="filterBy('all')">{% translate 'All' %}</strong>
-                </div>
-                    {%  for phase in phases %}
-                       <div class="card phase phase--{{ phase.order }} flex-column col-12">
-                            <div class="w-100 p-0 row align-items-start">
-                                <div class="flex-column col mb-2">
-                                    <div class="phase__title">
-                                        {% translate 'Phase' %} {{ phase.order }}
-                                    </div>
-                                    <div class="phase__description">
-                                        {{ phase.name }}
-                                    </div>
-                                </div>
-                                <div class="ml-auto pointer-event fs20 expand-icon" id="icon{{ phase.order }}">
-                                    <i class="fas fa-chevron-right cursor"></i>
-                                </div>
+                {% for Village in villages %}
+                    <div 
+                        class="information" id="{{ villages|get:Village|get:'id' }}" 
+                        onclick="filterByVillage('{{ Village }}', '{{  villages|get:Village|get:'id'  }}')" 
+                        style="{% if villages|get:Village|get:"stabilized" %}color: green;font-weight:bold;{% endif %}"
+                        >
+
+                            <div class="information__item information__name">
+                                {{ Village }}
                             </div>
+                            <div class="information__item information__population">
+                                {{ villages|get:Village|get:'populationVillage'  }}
+                            </div>
+                            <div class="information__item information__progress">
+                                        {% if villages|get:Village|get:"VISITES PREALABLES" %}
+                                            <div class="progress-bar progress-bar-green"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
 
-                            <div class="w-100">
-                                <div id="content{{ phase.order }}">
-                                    {% for activity in activities_per_phase|get:phase.order %}
-                                        <div class="card-item task-card">
-                                            <div class="row">
-                                                <div class="col-12">
-                                                 <div class="w-100 p-0 row align-items-start">
-                                                    <div class="flex-column col mb-2">
-                                                        <div class="phase__title">
-                                                            {% translate 'Etape' %} {{ activity.order }}: {{ activity.name }}
-                                                        </div>
+                                        {% if villages|get:Village|get:"VISITES PREALABLES" %}
+                                            <div class="progress-bar progress-bar-green"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
 
-                                                    </div>
-                                                    <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
-                                                        <i class="fas fa-chevron-right cursor"></i>
-                                                    </div>
-                                                 </div>
-                                                 <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
-                                                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                                                 </div>
-                                                 <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
-                                                     <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
-                                                     <br>
-                                                     <br>
-                                                 </div>
-                                                 <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
-                                                       <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
-                                                            <a id="previous{{ phase.order }}{{ activity.order }}" class="btn hidden">
-                                                                <i class="fa fa-chevron-left fs20 align-middle"></i>
-                                                            </a>
-                                                            <div id="currentPage{{ phase.order }}{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                                                            <a id="next{{ phase.order }}{{ activity.order }}" class="btn hidden">
-                                                                <i class="fa fa-chevron-right fs20 align-middle"></i>
-                                                            </a>
-                                                        </div>
-                                                 </div>
-                                            </div>
+                                        {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                            <div class="progress-bar progress-bar-red"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                            <div class="progress-bar progress-bar-red"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"MOBILISATION COMMUNAUTAIRE" %}
+                                            <div class="progress-bar progress-bar-red"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PLANIFICATION" %}
+                                            <div class="progress-bar progress-bar-yellow"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PLANIFICATION" %}
+                                            <div class="progress-bar progress-bar-yellow"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PLANIFICATION" %}
+                                            <div class="progress-bar progress-bar-yellow"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PLANIFICATION" %}
+                                            <div class="progress-bar progress-bar-yellow"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PLANIFICATION" %}
+                                            <div class="progress-bar progress-bar-yellow"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"PRÉPARATION SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-purple"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-dark-green"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"CONSULTATION ET EXAMEN SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-dark-green"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-purple-pink"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"MISE EN ŒUVRE DU SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-purple-pink"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-pink"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-pink"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                        {% if villages|get:Village|get:"CLOTURE ET REPLANIFICATION DU SOUS-PROJET" %}
+                                            <div class="progress-bar progress-bar-pink"></div>
+                                        {% else %}
+                                            <div class="progress-bar progress-bar-gray"></div>
+                                        {% endif %}
+
+                                    </div>
+                            <div class="information__item information__pending">
+                                {{ villages|get:Village|get:'total_tasks_pending'  }}
+                            </div>
+                            <div class="information__item information__completed">
+                                {{ villages|get:Village|get:'total_tasks_completed'  }}
+                            </div>
+                            <div class="information__item information__rejected">
+                                {{ villages|get:Village|get:'total_tasks_rejected'  }}
+                            </div>
+                            <div class="information__item information__validated">
+                                {{ villages|get:Village|get:'total_tasks_validated'  }}
+                            </div>
+                        </div>
+                {% endfor %}
+                </div>
+
+                <div class="col-md-4 col-12 justify-content-start"  id="admin_level_selected">
+                <div class="row" id="admin_level_selected_detail">
+                    <div class="col-12 profile__name" id="villageName">
+                        {{ village_name }}
+                    </div>
+                    <div class="card col-12 filters">
+                        <strong class="col-auto">{% translate 'Filter by' %}</strong>
+                        <div class="filters__item col-2" id="pendingStatus" onclick="filterBy('pending')">
+                            <div class="header__progress-icon"></div>
+                        </div>
+                        <div class="filters__item col-2" id="completedStatus" onclick="filterBy('completed')">
+                            <div class="header__circle-icon success"><i class="fas fa-check"></i></div>
+                        </div>
+                        <div class="filters__item col-2" id="rejectedStatus" onclick="filterBy('rejected')">
+                            <div class="header__circle-icon error"><i class="fas fa-times"></i></div>
+                        </div>
+                        <div class="filters__item col-2"  id="validatedStatus" onclick="filterBy('validated')">
+                            <div class="header__circle-icon success"><i class="fas fa-check-double"></i></div>
+                        </div>
+                        <strong class="col-auto" style="cursor: pointer;" id="allStatus" onclick="filterBy('all')">{% translate 'All' %}</strong>
+                    </div>
+                        {%  for phase in phases %}
+                        <div class="card phase phase--{{ phase.order }} flex-column col-12">
+                                <div class="w-100 p-0 row align-items-start">
+                                    <div class="flex-column col mb-2">
+                                        <div class="phase__title">
+                                            {% translate 'Phase' %} {{ phase.order }}
                                         </div>
-                                    {% endfor %}
+                                        <div class="phase__description">
+                                            {{ phase.name }}
+                                        </div>
+                                    </div>
+                                    <div class="ml-auto pointer-event fs20 expand-icon" id="icon{{ phase.order }}">
+                                        <i class="fas fa-chevron-right cursor"></i>
+                                    </div>
+                                </div>
+
+                                <div class="w-100">
+                                    <div id="content{{ phase.order }}">
+                                        {% for activity in activities_per_phase|get:phase.order %}
+                                            <div class="card-item task-card">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                    <div class="w-100 p-0 row align-items-start">
+                                                        <div class="flex-column col mb-2">
+                                                            <div class="phase__title">
+                                                                {% translate 'Etape' %} {{ activity.order }}: {{ activity.name }}
+                                                            </div>
+
+                                                        </div>
+                                                        <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
+                                                            <i class="fas fa-chevron-right cursor"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
+                                                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                                                    </div>
+                                                    <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
+                                                        <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
+                                                        <br>
+                                                        <br>
+                                                    </div>
+                                                    <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
+                                                        <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
+                                                                <a id="previous{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                                    <i class="fa fa-chevron-left fs20 align-middle"></i>
+                                                                </a>
+                                                                <div id="currentPage{{ phase.order }}{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                                                                <a id="next{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                                    <i class="fa fa-chevron-right fs20 align-middle"></i>
+                                                                </a>
+                                                            </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+
+                    </div>
 
                 </div>
 
+                <div class="col-md-4 col-12 justify-content-center overlay" id="spin">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+                <div class="col-md-4 col-12 align-content-center text-center" id="no_admin_level_selected">
+                            <img src="{% static 'images/house.png' %}" />
+                            <div>{% translate 'Select a village to review their respective phases' %}</div>
+                    </div>
+                </div>
             </div>
-
-            <div class="col-md-4 col-12 justify-content-center overlay" id="spin">
-                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-            </div>
-            <div class="col-md-4 col-12 align-content-center text-center" id="no_admin_level_selected">
-                        <img src="{% static 'images/house.png' %}" />
-                        <div>{% translate 'Sélectionnez un village pour revoir leurs phases respectives' %}</div>
-                  </div>
-            </div>
+            {% endwith %}
         </div>
-</div>
-    {% endwith %}
-</div>
-
+    </div>
 </div>
 
 
@@ -682,7 +685,7 @@
                     }
                     if (response.trim()) {
                         if (total_tasks == '0') {
-                            $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = '<div class="text-center">{% translate 'No tasks found' %} </div>';
+                            $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = `<div class="text-center">{% translate 'No tasks found' %} </div>`;
                             $('#pagination' + phaseNumber + activityNumber)[0].hidden = false
                         } else {
                             $('#currentPage' + phaseNumber + activityNumber)[0].innerHTML = Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset);
@@ -781,7 +784,260 @@
             loadTasks();
         }
 
+
+
+        
+        
+        function loadTaskComments(no_sql_db_name, task__id) {
+            $('#load-comments-spin-'+task__id).show();
+            try{
+                $('#task_comments_'+task__id).load(
+                    "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}"
+                    .replace('no_sql_db_name', no_sql_db_name)
+                    .replace('task__id', task__id), 
+                    function (response, status, xhr) {
+                    if (status === "error") {
+                        alert(error_server_message + "Error " + response.status);
+                    }
+                    $('#load-comments-spin-'+task__id).hide();
+                });
+            }catch(e){
+                $('#load-comments-spin-'+task__id).hide();
+            }
+        }
+
+        
     </script>
     <script src="{% static 'js/cascade_requests.js' %}"></script>
+
+
+
+
+
+
+
+
+    
+<script type="text/javascript">
+    try{
+        total_tasks = parseInt("{{ total_tasks }}");
+    }catch(e){
+        console.log(e);
+    }
+
+    $(document).ready(function () {
+        let facilitator_db_name = "{{ facilitator_db_name }}";
+
+        //Valide invalide
+        let task__id = null;
+        let action_code = null;
+        let id_invalidate_elt = null;
+        $(document).on('click', '.invalidate_valide', function () {
+            task__id = this.id.split("_")[this.id.split("_").length - 1];
+            console.log(task__id)
+            id_invalidate_elt = $(('#id_invalidate_'+task__id));
+            for(var i = 0; i < this.classList.length; i++){
+                if(this.classList[i].includes("action_code_")){
+                    action_code = this.classList[i].split("_")[2];
+                }
+            }
+
+            $('#card-item-task-'+task__id).modal('hide');
+            $('#modal_comment').modal('show');
+        });
+
+
+        $(document).on('click', '#btn-send-comment', function () {
+            let btn_send_comment = $('#btn-send-comment');
+            let in_validation_comment = $('#id_in_validation_comment').val();
+            
+            if(["0", 0].includes(action_code) && (
+                    ["", null, undefined].includes(in_validation_comment) || (
+                        in_validation_comment && [""].includes(in_validation_comment.replace(/\s/g, ''))
+                    )
+                )
+                )
+            {
+                alert("{% translate 'Please add a comment' %}");
+            }else if(task__id != null && action_code != null){
+                btn_send_comment.prop("disabled", true);
+                btn_send_comment.text("{% translate 'Sending...' %}");
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+                    data: {
+                        no_sql_db_name: facilitator_db_name,
+                        task_id: task__id,
+                        action_code: action_code,
+                        in_validation_comment: in_validation_comment
+                    },
+                    success: function (response) {
+                        if(response.status == "ok"){
+                            
+                            if(action_code == "1" || action_code == 1){
+
+                                let id_invalidate_valide_validation_action_task__id_elt = $(("#id_invalidate_valide_validation_action_"+task__id));
+                                id_invalidate_valide_validation_action_task__id_elt.hide();
+                                
+                                $(".cls_invalidation_validation_inclusion").hide();
+
+                                /*id_invalidate_valide_validation_action_task__id_elt.removeClass(('action_code_'+action_code));
+                                id_invalidate_valide_validation_action_task__id_elt.addClass('action_code_0');
+
+                                id_invalidate_valide_validation_action_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
+                                id_invalidate_valide_validation_action_task__id_elt.removeClass("btn-primary");
+                                id_invalidate_valide_validation_action_task__id_elt.addClass("btn-warning");*/
+
+                                $(('.text_'+task__id)).html(`
+                                    <div class="status__circle-icon success"><i class="fas fa-check-double"></i></div>
+                                `);
+
+
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge success-color">
+                                        <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
+                                    </div>
+                                `);
+                            }else{
+                                /*let id_invalidate_valide_invalidation_action_task__id_elt = $(("#id_invalidate_valide_invalidation_action_"+task__id));
+                                id_invalidate_valide_invalidation_action_task__id_elt.removeClass(('action_code_'+action_code));
+                                id_invalidate_valide_invalidation_action_task__id_elt.addClass('action_code_1');
+
+                                id_invalidate_valide_invalidation_action_task__id_elt.text(`{% translate 'Mark as validated' %}`);
+                                id_invalidate_valide_invalidation_action_task__id_elt.removeClass("btn-warning");
+                                id_invalidate_valide_invalidation_action_task__id_elt.addClass("btn-primary");*/
+                                
+                                $(('.text_'+task__id)).html(`
+                                    <div class="status__circle-icon error"><i class="fas fa-times"></i></div>
+                                `);
+                                
+                                $(('.modal_text_'+task__id)).html(`
+                                    <div class="status-badge warning-color">
+                                        <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
+                                    </div>
+                                `);
+
+                                if(response.previous_status == true){
+                                    $('.cls_invalidation_validation').before(`<div style="width: 30%; margin: auto; float: left;" class="cls_invalidation_validation_inclusion">
+                                        <button type="button" name="invalidate_valide" 
+                                            class="btn btn-primary action_code_1 invalidate_valide" 
+                                            required id="id_invalidate_valide_validation_action_inclusion_${task__id}">
+                                                {% translate 'Mark as validated' %}
+                                        </button>
+                                    </div>`);
+                                }
+
+                            }
+                            $('#modal_comment').modal('hide');
+                            {% comment %} $('#card-item-task-'+task__id).modal('show'); {% endcomment %}
+                            task__id = null;
+                            action_code = null;
+                            /*if(id_invalidate_elt){
+                                id_invalidate_elt.hide();
+                            }*/
+                            $('#id_in_validation_comment').val("");
+                        }else{
+                            alert(response.message);
+                        }
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+
+                        if(response.mail_message && response.sms_message){
+                            alert(response.mail_message+"\n"+response.sms_message);
+                        }else if(response.mail_message){
+                            alert(response.mail_message);
+                        }else if(response.sms_message){
+                            alert(response.sms_message);
+                        }
+
+                        loadTaskComments(facilitator_db_name, task__id);
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                        btn_send_comment.prop("disabled", false);
+                        btn_send_comment.text("{% translate 'Send' %}");
+                    }
+                });
+            }
+            
+        });
+        //End valide invalide
+
+
+
+
+        //Complet Uncomplet
+        $('.uncomplete_complete').click(function () {
+
+            //Completed Uncompleted
+            let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
+            let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
+            let elt_task_number = $(('#task_number_'+task_completed__id));
+            
+            $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
+                data: {
+                    no_sql_db_name: facilitator_db_name,
+                    task_id: task_completed__id,
+                    action_code: action_code_completed
+                },
+                success: function (response) {
+                    if(response.status == "ok"){
+                        if(action_code_completed == "1" || action_code_completed == 1){
+                            $(('#action_code_completed_'+task_completed__id)).val(0);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as uncompleted' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-primary");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-warning");
+                     
+                            $(('.text_'+task__id)).html(`
+                                <div class="status__circle-icon success"><i class="fas fa-check"></i></div>
+                            `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-completed">
+                                    {% translate 'Completed' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-pending");
+                            elt_task_number.addClass("badge-completed");
+                        }else{
+                            $(('#action_code_completed_'+task_completed__id)).val(1);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as completed' %}`);
+                            $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-warning");
+                            $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-primary");
+                            $(('.text_'+task__id)).html(`
+                                <div class="header__progress-icon"></div>
+                            `);
+                            $(('.modal_text_completed_'+task_completed__id)).html(`
+                                <div class="status-badge badge-pending">
+                                    {% translate 'Pending' %}
+                                </div>
+                            `);
+                            elt_task_number.removeClass("badge-completed");
+                            elt_task_number.addClass("badge-pending");
+                        }
+                    }else{
+                        alert(response.message);
+                    }
+
+                    loadTaskComments(facilitator_db_name, task_completed__id);
+                    
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+                
+        });
+        //End complet Uncomplet
+
+    }); 
+
+    
+</script>
+
+
 
 {% endblock %}

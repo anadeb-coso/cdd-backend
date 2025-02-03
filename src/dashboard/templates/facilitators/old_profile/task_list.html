@@ -24,11 +24,13 @@
                 <th>{% translate 'Completed' %}</th>
                 <th>{% translate 'Uncompleted' %}</th>
                 <th>{% translate 'Percentage' %}</th>
+                <th>{% translate 'Validated' %}</th>
+                <th>{% translate 'Invalidated' %}</th>
             </tr>
             </thead>
             <tbody>
                 {% for cvd_name, infos in dict_administrative_levels_with_infos.items %}
-                <tr>
+                <tr style="{% if infos|get:"stabilized" %}color: green;font-weight:bold;{% endif %}">
                     <td>{{ forloop.counter }}</td>
                     <td align="left">{% with infos|get:"cvd" as cvd %}{{ cvd|get:"cvd_name" }}{% endwith %}</td>
                     {% comment %} {% for key, value in infos.items %}
@@ -59,6 +61,8 @@
                             {{ percentage_tasks_completed|floatformat:"2"  }}%
                         {% endwith %}
                     </td>
+                    <td>{{ infos|get:"total_tasks_validated" }}</td>
+                    <td>{{ infos|get:"total_tasks_invalidated" }}</td>
                 </tr>
                 {% endfor %}
                 {% if dict_administrative_levels_with_infos|length > 1 %}
@@ -68,6 +72,8 @@
                     <td><b>{{ total_tasks_completed }}</b></td>
                     <td><b>{{ total_tasks_uncompleted }}</b></td>
                     <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
+                    <td><b>{{ total_tasks_validated }}</b></td>
+                    <td><b>{{ total_tasks_invalidated }}</b></td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -226,188 +232,34 @@
                     {% endfor %}
                     {% endwith %} {% endcomment %}
 
-                    {% with task|structureTheFieldsLabels as liste %}
-                    {% for fields in liste %}
-                        {% for field, dicts in fields.items %}
-                            {% if dicts.value|checkType:'dict' %}
-                                <div class="fieldset"><fieldset>
-                                    <legend>{{ dicts.name }}</legend>
-                                    <div class="content">
-                                    {% for k, v in dicts.value.items %}
-                                        {% if v.value|checkType:'dict' %}
-                                        <div><fieldset>
-                                            <legend>{{ v.name }}</legend>
-                                            <div class="content">
-                                                {% for k1, v1 in v.value.items %}
-                                                    {% if v1.value|checkType:'dict' %}
-                                                    <div><fieldset>
-                                                        <legend>{{ v1.name }}</legend>
-                                                        <div class="content">
-                                                        {% for k2, v2 in v1.value.items %}
-                                                            <div class="form-group row">
-                                                                <label class="col-sm-3 col-form-label">{{ v2.name }}</label>
-                                                                <div class="col-sm-9">
-                                                                    <input type="text" readonly value="{% if v2.value %}{{ v2.value }}{% else %}-{% endif %}" class="form-control" />
-                                                                </div>
-                                                                <div class="clearfix"></div>
-                                                            </div>
-                                                        {% endfor %}
-                                                        </div>
-                                                    </fieldset></div>
-                                                    {% elif v1.value|checkType:'list' %}
-                                                    <div class="fieldset"><fieldset>
-                                                        <legend>{{ v1.name }}</legend>
-                                                        <div class="content">
-                                                        {% for item2 in v1.value %}
-                                                        <div><fieldset>
-                                                            <legend>{{ forloop.counter }}</legend>
-                                                            <div class="content">
-                                                            {% for field2, dicts2 in item2.items %}
-                                                                <div class="form-group row">
-                                                                    <label class="col-sm-3 col-form-label">{{ dicts2.name|structureTheWords }}</label>
-                                                                    <div class="col-sm-9">
-                                                                        <input type="text" readonly value="{% if dicts2.value %}{{ dicts2.value }}{% else %}-{% endif %}" class="form-control" />
-                                                                    </div>
-                                                                    <div class="clearfix"></div>
-                                                                </div>
-                                                            {% endfor %}
-                                                            </div>
-                                                        </fieldset></div>
-                                                        {% endfor %}
-                                                        </div>
-                                                    </fieldset></div>
-                                                    {% else %}
-                                                    <div class="form-group row">
-                                                        <label class="col-sm-3 col-form-label">{{ v1.name }}</label>
-                                                        <div class="col-sm-9">
-                                                            <input type="text" readonly value="{% if v1.value %}{{ v1.value }}{% else %}-{% endif %}" class="form-control" />
-                                                        </div>
-                                                        <div class="clearfix"></div>
-                                                    </div>
-                                                    {% endif %}
-                                                {% endfor %}
-                                            </div>
-                                        </fieldset></div>
-                                        {% elif v.value|checkType:'list' %}
-                                        <div class="fieldset"><fieldset>
-                                            <legend>{{ v.name }}</legend>
-                                            <div class="content">
-                                            {% for item0 in v.value %}
-                                                <div><fieldset>
-                                                    <legend>{{ forloop.counter }}</legend>
-                                                    <div class="content">
-                                                    {% for field0, dicts0 in item0.items %}
-                                                        <div class="form-group row">
-                                                            <label class="col-sm-3 col-form-label">{{ dicts0.name|structureTheWords }}</label>
-                                                            <div class="col-sm-9">
-                                                                <input type="text" readonly value="{% if dicts0.value %}{{ dicts0.value }}{% else %}-{% endif %}" class="form-control" />
-                                                            </div>
-                                                            <div class="clearfix"></div>
-                                                        </div>
-                                                    {% endfor %}
-                                                    </div>
-                                                </fieldset></div>
-                                            {% endfor %}
-                                            </div>
-                                        </fieldset></div>
-                                        {% else %}
-                                        <div class="form-group row">
-                                            <label class="col-sm-3 col-form-label">{{ v.name }}</label>
-                                            <div class="col-sm-9">
-                                                <input type="text" readonly value="{% if v.value %}{{ v.value }}{% else %}-{% endif %}" class="form-control" />
-                                            </div>
-                                            <div class="clearfix"></div>
-                                        </div>
-                                        {% endif %}
-                                            
-                                    {% endfor %}
-                                    </div>
-                                </fieldset></div>
-                            {% elif dicts.value|checkType:'list' %}
-                                <div class="fieldset"><fieldset>
-                                    <legend>{{ dicts.name }}</legend>
-                                    <div class="content">
-                                    {% for item in dicts.value %}
-                                        <div><fieldset>
-                                            <legend>{{ forloop.counter }}</legend>
-                                            <div class="content">
-                                            {% for field1, dicts1 in item.items %}
-                                                <div class="form-group row">
-                                                    <label class="col-sm-3 col-form-label">{{ dicts1.name|structureTheWords }}</label>
-                                                    <div class="col-sm-9">
-                                                        <input type="text" readonly value="{% if dicts1.value %}{{ dicts1.value }}{% else %}-{% endif %}" class="form-control" />
-                                                    </div>
-                                                    <div class="clearfix"></div>
-                                                </div>
-                                            {% endfor %}
-                                            </div>
-                                        </fieldset></div>
-                                    {% endfor %}
-                                    </div>
-                                </fieldset></div>
-                            {% else %}
-                            <div class="form-group row">
-                                <label class="col-sm-3 col-form-label">{{ dicts.name }}</label>
-                                <div class="col-sm-9">
-                                    <input type="text" readonly value="{% if dicts.value %}{{ dicts.value }}{% else %}-{% endif %}" class="form-control" />
-                                </div>
-                                <div class="clearfix"></div>
-                            </div>
-                            {% endif %}
-                        {% endfor %}
-                    {% endfor %}
-                    {% endwith %}
-
-
-                    
-
-                    {% if task.attachments %}
-                    {% for attach in task.attachments %}
-                        <div class="form-group row">
-                            <label class="col-sm-3 col-form-label">{{ attach.name }}</label>
-                            <div class="col-sm-9 attach-file">
-                                {% if attach.attachment.uri %}
-                                    {% if "file:///data" in attach.attachment.uri %}
-                                        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
-                                    {% elif ".pdf" in attach.attachment.uri %}
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            {% translate "Link" %}
-                                        </a><br />
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
-                                        </a>
-                                    {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            {% translate "Download" %}
-                                        </a><br />
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            <iframe style="float: left;"
-                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}' 
-                                                width="250" height="300" frameborder='0'>
-                                                    This is an embedded 
-                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a> 
-                                                    document, powered by 
-                                                    <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
-                                            </iframe>
-                                        </a>
-                                    {% else %}
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                        <!-- class="btn btn-primary" data-toggle="modal" 
-                                        data-target="#item-attach-{{ forloop.counter }}" -->
-                                            <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
-                                        </a>
-                                    {% endif %}
-                                {% else %}
-                                    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
-                                {% endif %}
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                    {% endfor %}
-                    {% endif %}
+                    {% include "facilitators/task_form.html" %}
 
                 </div>
-                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"Supervisor" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
+                
+
+                    
+                <div class="card" style="margin-right: 20px !important; margin-top: 15px !important;elevation: 15;">
+                    <h5 class="card-title overlay-wrapper" style="width: 90%; margin: auto !important; text-align: center;">
+                        {% translate "Comments and actions history" %}
+                    </h5>
+
+                    <div class="card-body overflow-y-auto">
+                        <div class="overlay-wrapper" style="width: 80%; margin: auto !important;">
+                            <div class="task_comments" id="task_comments_{{ task|get:'_id' }}">
+                                {% include 'facilitators/comments.html' with comments=task.actions_by %}
+                            </div>
+                            <button class="btn btn-primary" onclick="loadTaskComments('{{ facilitator_db_name }}', '{{ task|get:'_id' }}')">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                            <div class="overlay" id="load-comments-spin-{{ task|get:'_id' }}" style="display: none;">
+                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"Evaluator" %}
                     <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}" 
                             name="{{ task|get:'_id' }}" id="action_code_completed_{{ task|get:'_id' }}"  />
                     {% if task.completed %}
@@ -462,6 +314,23 @@
                         {% endif %}
                     {% endif %}
                     
+                {% endif %}
+
+
+                
+
+                {% if task.old_forms and task.old_forms|length != 0 %}
+                    <br />
+                    <br />
+                    <p style="width: 98% !important;margin: auto !important;">
+                        <legend style="background-color: black;">{% translate "Data from the old form. The following data must not be counted during the validation of this task" %}</legend>
+                    </p>
+
+                    <div style="width: 90%; margin: auto !important;">
+                        <div>
+                            {% include "facilitators/task_old_form.html" %}
+                        </div>
+                    </div>
                 {% endif %}
                 
                     
@@ -588,15 +457,21 @@
                     },
                     success: function (response) {
                         if(response.status == "ok"){
-                            let id_invalidate_valide_task__id_elt = $(("#id_invalidate_valide_"+task__id));
-                            id_invalidate_valide_task__id_elt.removeClass(('action_code_'+action_code));
-
+                            
                             if(action_code == "1" || action_code == 1){
-                                id_invalidate_valide_task__id_elt.addClass('action_code_0');
 
-                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
-                                id_invalidate_valide_task__id_elt.removeClass("btn-primary");
-                                id_invalidate_valide_task__id_elt.addClass("btn-warning");
+                                let id_invalidate_valide_validation_action_task__id_elt = $(("#id_invalidate_valide_validation_action_"+task__id));
+                                id_invalidate_valide_validation_action_task__id_elt.hide();
+                                
+                                $(".cls_invalidation_validation_inclusion").hide();
+
+                                /*id_invalidate_valide_validation_action_task__id_elt.removeClass(('action_code_'+action_code));
+                                id_invalidate_valide_validation_action_task__id_elt.addClass('action_code_0');
+
+                                id_invalidate_valide_validation_action_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
+                                id_invalidate_valide_validation_action_task__id_elt.removeClass("btn-primary");
+                                id_invalidate_valide_validation_action_task__id_elt.addClass("btn-warning");*/
+
                                 $(('.text_'+task__id)).html(`<i class="fas fa-check success-color"></i> {% translate 'Task validated' %}`);
                                 $(('.modal_text_'+task__id)).html(`
                                     <div class="status-badge success-color">
@@ -604,25 +479,39 @@
                                     </div>
                                 `);
                             }else{
-                                id_invalidate_valide_task__id_elt.addClass('action_code_1');
+                                /*let id_invalidate_valide_invalidation_action_task__id_elt = $(("#id_invalidate_valide_invalidation_action_"+task__id));
+                                id_invalidate_valide_invalidation_action_task__id_elt.removeClass(('action_code_'+action_code));
+                                id_invalidate_valide_invalidation_action_task__id_elt.addClass('action_code_1');
 
-                                id_invalidate_valide_task__id_elt.text(`{% translate 'Mark as validated' %}`);
-                                id_invalidate_valide_task__id_elt.removeClass("btn-warning");
-                                id_invalidate_valide_task__id_elt.addClass("btn-primary");
+                                id_invalidate_valide_invalidation_action_task__id_elt.text(`{% translate 'Mark as validated' %}`);
+                                id_invalidate_valide_invalidation_action_task__id_elt.removeClass("btn-warning");
+                                id_invalidate_valide_invalidation_action_task__id_elt.addClass("btn-primary");*/
                                 $(('.text_'+task__id)).html(`<i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}`);
                                 $(('.modal_text_'+task__id)).html(`
                                     <div class="status-badge warning-color">
                                         <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
                                     </div>
                                 `);
+
+                                
+                                if(response.previous_status == true){
+                                    $('.cls_invalidation_validation').before(`<div style="width: 30%; margin: auto; float: left;" class="cls_invalidation_validation_inclusion">
+                                        <button type="button" name="invalidate_valide" 
+                                            class="btn btn-primary action_code_1 invalidate_valide" 
+                                            required id="id_invalidate_valide_validation_action_inclusion_${task__id}">
+                                                {% translate 'Mark as validated' %}
+                                        </button>
+                                    </div>`);
+                                }
+
                             }
                             $('#modal_comment').modal('hide');
                             {% comment %} $('#card-item-task-'+task__id).modal('show'); {% endcomment %}
                             task__id = null;
                             action_code = null;
-                            if(id_invalidate_elt){
+                            /*if(id_invalidate_elt){
                                 id_invalidate_elt.hide();
-                            }
+                            }*/
                             $('#id_in_validation_comment').val("");
                         }else{
                             alert(response.message);
@@ -637,6 +526,8 @@
                         }else if(response.sms_message){
                             alert(response.sms_message);
                         }
+
+                        loadTaskComments(facilitator_db_name, task__id);
                     },
                     error: function (data) {
                         spin.hide();
@@ -709,6 +600,8 @@
                     }else{
                         alert(response.message);
                     }
+
+                    loadTaskComments(facilitator_db_name, task_completed__id);
                     
                 },
                 error: function (data) {

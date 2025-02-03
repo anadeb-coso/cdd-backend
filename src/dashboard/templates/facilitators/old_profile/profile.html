@@ -251,6 +251,26 @@ input {
             loadTasks();
         });
 
+
+        
+        function loadTaskComments(no_sql_db_name, task__id) {
+            $('#load-comments-spin-'+task__id).show();
+            try{
+                $('#task_comments_'+task__id).load(
+                    "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}"
+                    .replace('no_sql_db_name', no_sql_db_name)
+                    .replace('task__id', task__id), 
+                    function (response, status, xhr) {
+                    if (status === "error") {
+                        alert(error_server_message + "Error " + response.status);
+                    }
+                    $('#load-comments-spin-'+task__id).hide();
+                });
+            }catch(e){
+                $('#load-comments-spin-'+task__id).hide();
+            }
+        }
+
     </script>
 
 

@@ -1,0 +1,65 @@
+{% load static i18n custom_tags %}
+{% for comment in comments %}
+{% if comment.type == 'Invalidated' and not comment.comment %}
+{% else %}
+    <div class="row task_comments_div">
+        <div class="col-9">
+            <div class="circle-icon float-left mr-2 navbar-mediumpurple">
+                <div class="center-32 pt-1 text-white text-bold-family">
+                    <span class="text-white text-bold-family">{% get_initials comment.user_last_name %}{% get_initials comment.user_first_name %}</span>
+                </div>
+            </div>
+            <div class="text-bold-family">
+                <span>{% if comment.user_last_name %}{{ comment.user_last_name }}{% endif %} {% if comment.user_first_name %}{{ comment.user_first_name }}{% endif %}</span>
+                {% if comment.type != 'comment' %}
+                (<span style="color: {% if comment.type == 'Validated' or comment.type == 'Completed' %}green{% else %}red{% endif %};">
+                    {% if comment.type == 'Validated' %}
+                        {% translate "Validation action" %}
+                    {% elif comment.type == 'Invalidated' %}
+                        {% translate "Invalidation action" %}
+                    {% elif comment.type == 'Completed' %}
+                        {% translate "Completion action" %}
+                    {% elif comment.type == 'Uncompleted' %}
+                        {% translate "Uncompletion action" %}
+                    {% else %}
+                        {% translate "Another action" %}
+                    {% endif %}
+                </span>)
+                {% endif %}
+            </div>
+
+            <div class="text-regular-family">
+                <span class="text-regular-family">{{ comment.action_date|string_to_date:"%Y-%m-%d %H:%M:%S"|date:'j-F-Y' }}</span>
+            </div>
+        </div>
+        <div class="col-3 text-right lh15 mt-3 text-regular-family">
+            <span class="text-regular-family">{{ comment.action_date|string_to_date:"%Y-%m-%d %H:%M:%S"|date:'H:i' }}</span>
+        </div>
+    </div>
+    <div class="row border-bottom mt-2 mb-3">
+        <div class="col-10 mb-2 text-regular-family mb-3">
+            <p id="issue_comment_comment">
+                {% if comment.type == 'Validated' or comment.type == 'Completed' or comment.type == 'Uncompleted' %}
+                    {% if comment.comment %}
+                        {{ comment.comment|safe }}
+                    {% elif comment.type == 'Uncompleted' %}
+                        {% translate "Task back in pending" %}
+                    {% elif comment.type == 'Completed' %}
+                        {% translate "Task Completed" %}
+                    {% else %}
+                        {% translate "Task validated" %}
+                    {% endif %}
+                {% else %}
+                    {{ comment.comment|safe }}
+                {% endif %}
+            </p>
+        </div>
+    </div>
+{% endif %}
+{% empty %}
+    <div class="row">
+        <div class="col-12 text-center">
+            <span class="text-center" style="color:black;">{% translate 'No comments found' %}</span>
+        </div>
+    </div>
+{% endfor %}
