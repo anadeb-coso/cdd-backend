@@ -14,6 +14,8 @@ from administrativelevels import models as administrativelevels_models
 from dashboard.facilitators.functions import get_cvds
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.functions import datetime_complet_str
+from cdd.call_objects_from_other_db import mis_objects_call
+
 
 def structure_the_words(word):
     return (" ").join(re.findall(r'[A-Z][^A-Z]*|[^A-Z]+', word)).lower().capitalize()
@@ -496,7 +498,7 @@ def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
             nsc.update_cloudant_document(db,  doc["_id"], doc) # Update doc of process_design
 
 
-def over_documents(develop_mode=False, training_mode=False, project_id=None):
+def over_documents(project_id, develop_mode=False, training_mode=False):
     """Method to override the documents by adding 'sql_id' by default"""
     phases = Phase.objects.filter(project_id=project_id)
     activities = Activity.objects.filter(project_id=project_id)
@@ -520,7 +522,7 @@ def over_documents(develop_mode=False, training_mode=False, project_id=None):
         create_task_all_facilitators("process_design", task, develop_mode, training_mode, project_id=project_id)
 
 
-def over_documents_to_add_completed_date_and_last_updated_attrs(develop_mode=False, training_mode=False, project_id=None):
+def over_documents_to_add_completed_date_and_last_updated_attrs(project_id, develop_mode=False, training_mode=False):
     """Method to override the documents by adding 'completed_date' and 'last_updated' attributes"""
 
     tasks = Task.objects.filter(project_id=project_id).prefetch_related()
@@ -875,7 +877,7 @@ def clear_facilitator_documents_tasks_by_administrativelevels(no_sql_db, adminis
 
 
 
-def sync_geographicalunits_with_cvd_on_facilittor(develop_mode=False, training_mode=False, no_sql_db=False, project_id=None):
+def sync_geographicalunits_with_cvd_on_facilittor(project_id, develop_mode=False, training_mode=False, no_sql_db=False):
     
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
@@ -1507,9 +1509,77 @@ def default_project_to_assign(name="COSO", develop_mode=False, training_mode=Fal
 
 
 
-def search_facilitators_db_with_villages_stabilized(name="COSO"):
+def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=False, trainning_mode=False, active=True, no_sql_db=None, no_sql_dbs=None):
+    project = Project.objects.filter(name=project_name).first()
+    _facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project.id])
+    if no_sql_db or no_sql_dbs:
+        if not no_sql_dbs:
+            no_sql_dbs = []
+        if no_sql_db:
+            no_sql_dbs.append(no_sql_db)
+
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, active=active, no_sql_db_name__in=no_sql_dbs).order_by("name")
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, active=active, projects__in=[project.id]).order_by("name")
+    
+    emails = [f.email for f in facilitators if f.email]
+
+    nsc = NoSQLClient()
+    eadls = nsc.get_db('eadls')
+    docs_eadls = eadls.all_docs(include_docs=True)['rows']
+    """
+    "3805",
+    "3804"
+    """
+    for _doc in docs_eadls:
+        no_sql_dbs_names = []
+        doc = _doc.get('doc')
+        if doc.get('type') == "adl" and doc.get('representative') and doc.get('administrative_regions_objects') and doc['representative'].get('email') in emails:
+            print(doc['representative'].get('name'), doc['representative'].get('email'))
+
+            villages = []
+            for c in doc['administrative_regions_objects']:
+                villages += c['villages']
+            
+            # AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+            #     administrative_level_id=int(doc.get('administrative_id')), project_id=project_id, activated=True
+            # )
+
+            if villages:
+                for f in _facilitators:
+                    if f.email != doc['representative'].get('email'):
+                        print(f.name)
+                        db = nsc.get_db(f.no_sql_db_name)
+                        docs = db.get_query_result({"type": "facilitator"})[0]
+                        if len(docs) > 0:
+                            for adl in docs[0]['administrative_levels']:
+                                if  len([v for v in villages if str(v.get('id')) == adl.get('id')]) > 0:
+                                    no_sql_dbs_names.append(f.no_sql_db_name)
+                                    break
+                
+            print(no_sql_dbs_names)
+            facilitator = facilitators.filter(email=doc['representative'].get('email')).first()
+            if facilitator:
+                facilitator.no_sql_dbs_names = no_sql_dbs_names
+                facilitator = facilitator.save_and_return_object()
+
+                db = nsc.get_db(facilitator.no_sql_db_name)
+                docs = db.get_query_result({"type": "facilitator"})[0]
+                if len(docs) > 0:
+                    doc = docs[0].copy()
+                    doc["no_sql_dbs_names"] = no_sql_dbs_names
+                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+
+def search_facilitators_db_with_villages_stabilized_using_assign_model(name="COSO", develop_mode=False, trainning_mode=False, no_sql_db=False):
+
     project = Project.objects.filter(name=name).first()
-    facilitators = Facilitator.objects.filter(develop_mode=False, training_mode=False, projects__in=[project.id])
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project.id])
+
 
     nsc = NoSQLClient()
     eadls = nsc.get_db('eadls')
@@ -1555,7 +1625,8 @@ def search_facilitators_db_with_villages_stabilized(name="COSO"):
                     nsc.update_cloudant_document(db,  doc["_id"], doc)
 
 
-def add_couchdb_id_on_objects(project_name="PURS"):
+
+def add_couchdb_id_on_objects(project_name="COSO"):
     nsc = NoSQLClient()
     
     project = Project.objects.filter(name=project_name).first()

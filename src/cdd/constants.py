@@ -55,3 +55,19 @@ COMPONENTS = {
     "COMPOSANTE 5": _("COMPONENT 5"),
     "Autre": _("Other")
 }
+
+INVALID_CHARS = r'[\\/*?:\[\]]'
+
+HEADERS_TO_SKIP = [
+    "form", "form_fields", "administrative_levels", "updated_history", "updated_after_invalidation", "actions_by",
+    "users_involved_in_task", "completed_history", "updated_after_invalidation_history", "action_by", "action_complete_by",
+]
+
+HEADERS_FORM_FIELDS = [
+    "form", "form_fields", "administrative_levels"
+]
+
+HEADERS_HISTORY = [
+   "updated_history", "updated_after_invalidation", "actions_by", "users_involved_in_task", "completed_history", 
+   "updated_after_invalidation_history", "action_by", "action_complete_by",
+]

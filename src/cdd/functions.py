@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from django.utils import timezone
+import zlib
 
 def exists_id(liste, id):
     for o in liste:
@@ -70,3 +71,10 @@ def get_dates_between(start_date, end_date, must_between=None):
 
     return dates
 
+
+def get_validation_code(seed):
+    return str(zlib.adler32(str(seed).encode('utf-8')))[:6]
+
+def get_code(seed):
+        import zlib
+        return str(zlib.adler32(str(seed).encode('utf-8')))[:6]

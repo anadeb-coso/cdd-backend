@@ -192,9 +192,11 @@ def sync_aggregated_status_on_adl(project_id: int):
         aggreg_last_activity = aggregs.order_by('last_activity').last()
         if aggreg_last_activity:
             adl.last_activity = aggreg_last_activity.last_activity
-        adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-        adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
-        adl.save()
+        
+        if aggregs.exists():
+            adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+            adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+            adl.save()
     
     #Canton|Commune|Prefecture|Region
     for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
@@ -231,17 +233,26 @@ def sync_aggregated_status_on_adl(project_id: int):
             aggreg_last_activity = aggregs.order_by('last_activity').last()
             if aggreg_last_activity:
                 adl.last_activity = aggreg_last_activity.last_activity
-            adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-            adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
-            adl.save()
+            
+            if aggregs.exists():
+                adl.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+                adl.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']  
+                adl.save()
                       
     #End Canton|Commune|Prefecture|Region
 
-def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
+def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False, no_sql_db=None):
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-    for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
+
+    if no_sql_db:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
+
+
+    for f in facilitators.order_by('id'):
         print()
         # print()
         # print()
@@ -344,6 +355,6 @@ def sync_celery_tasks_re(project_id, develop_mode=False, training_mode=False):
                         a.total_tasks = 1
                         a.save()
     
-    sync_aggregated_status_on_adl(project_id)
+    # sync_aggregated_status_on_adl(project_id)
     
     print("End")
