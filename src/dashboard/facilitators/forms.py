@@ -22,6 +22,7 @@ class FilterTaskForm(forms.Form):
         initial = kwargs.get('initial')
         facilitator_db_name = initial.get('facilitator_db_name')
         project_id = initial.get('project_id')
+        cvds = initial.get('cvds')
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -69,7 +70,7 @@ class FilterTaskForm(forms.Form):
         [query_result_phases.append((o.name, o.name)) for o in Phase.objects.filter(project_id=project_id).order_by("order")]
         [query_result_activities.append((o.name, o.name)) for o in Activity.objects.filter(project_id=project_id).order_by("phase__order", "order")]
         [query_result_tasks.append((o.name, o.name)) for o in Task.objects.filter(project_id=project_id).order_by("phase__order", "activity__order", "order")]
-        cvds = sorted(get_cvds(facilitator_doc), key=lambda obj: obj.get('name'))
+        cvds = sorted(cvds, key=lambda obj: obj.get('name'))
 
         # self.fields['administrative_level'].widget.choices = get_choices(
         #     query_result_administrativelevels, "id", "name")
@@ -205,8 +206,12 @@ class UpdateFacilitatorForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
-        facilitator_doc = initial.get('facilitator_doc', None)
-        facilitator_projects = initial.get('facilitator_projects', None)
+        if initial:
+            facilitator_doc = initial.get('facilitator_doc', None)
+            facilitator_projects = initial.get('facilitator_projects', None)
+        else:
+            facilitator_doc = None
+            facilitator_projects = None
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()

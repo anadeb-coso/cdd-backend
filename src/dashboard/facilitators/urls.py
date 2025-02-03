@@ -18,4 +18,6 @@ urlpatterns = [
     
     path('stabilized/', views_stabilized.FacilitatorStabilizedListView.as_view(), name='stabilized_list'),
     path('facilitators-stabilized-list/', views_stabilized.FacilitatorStabilizedListTableView.as_view(), name='facilitators_stabilized_list'),
+    
+    path('task-comments/<slug:id>/<str:task__id>/', views.TaskCommentListView.as_view(), name='task_comments'),
 ]

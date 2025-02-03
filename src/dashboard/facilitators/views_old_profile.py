@@ -11,26 +11,80 @@ from authentication.models import Facilitator
 from dashboard.facilitators.forms import FilterTaskForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin
 from no_sql_client import NoSQLClient
-from .functions import get_cvds, single_task_by_cvd
+from .functions import get_cvds, single_task_by_cvd, get_search_for_stabilized_facilitator_dbs
 from cdd.functions import datetime_complet_str
+from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from cdd.call_objects_from_other_db import mis_objects_call
+from subprojects.models import Project as MisProject
 
 
-class FacilitatorMixin:
+class FacilitatorMixin(LoginRequiredMixin):
     doc = None
     obj = None
     facilitator_db = None
     facilitator_db_name = None
     cvds = None
+    facilitator_grm = None
+    no_sql_dbs_names_with_village_ids = {}
 
     def dispatch(self, request, *args, **kwargs):
         nsc = NoSQLClient()
+        self.cvds = []
         try:
+            if not self.request.user.is_authenticated:
+                return redirect_user_to_login(request)
+            if not self.request.session.get('project_id'):
+                return redirect_to_an_url(request, 'dashboard:process_manager:list')
+                
             self.facilitator_db_name = kwargs['id']
             self.facilitator_db = nsc.get_db(self.facilitator_db_name)
             query_result = self.facilitator_db.get_query_result({"type": 'facilitator'})[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
-            self.cvds = get_cvds(self.doc)
+            
+            # eadls = nsc.get_db('eadls')
+            # try:
+            #     self.facilitator_grm = eadls.get_query_result({
+            #         "type": "adl",
+            #         "representative.email": self.doc.get('email')
+            #     })[:][0]
+            #     administrative_regions = self.facilitator_grm['administrative_regions']
+                
+            #     project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+            #     project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+                
+            #     for adl_id in administrative_regions:
+            #         if adl_id not in [elt['id'] for elt in self.doc['administrative_levels']]:
+            #             assing_facilitator_object = mis_objects_call.filter_objects(
+            #                 AssignAdministrativeLevelToFacilitator, 
+            #                 project_id=project_mis_id,
+            #                 administrative_level_id=int(adl_id)
+            #             ).last()
+            #             if assing_facilitator_object:
+            #                 _facilitator = Facilitator.objects.get(id=assing_facilitator_object.facilitator_id)
+            #                 _ids = self.no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['ids'] if _facilitator.no_sql_db_name in self.no_sql_dbs_names_with_village_ids else []
+            #                 _ids.append(adl_id)
+            #                 _ids = list(set(_ids))
+            #                 self.no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name] = {}
+            #                 self.no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['ids'] = list(set(_ids))
+            #                 self.no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['facilitator'] = _facilitator
+
+
+            #     for k, v in self.no_sql_dbs_names_with_village_ids.items():
+            #         self.cvds += get_cvds(nsc.get_db(k).get_query_result({"type": 'facilitator'})[:][0], v['ids'])
+                
+                
+            # except Exception as exc:
+            #     print(exc)
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+            project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+            self.no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, self.doc)
+            self.cvds += cvds
+
+            self.cvds += get_cvds(self.doc, [], administratives_stabilized)
+            self.cvds = sorted(self.cvds, key=lambda obj: obj.get('name'))
+                
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
@@ -56,9 +110,18 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        nsc = NoSQLClient()
+
         context['facilitator'] = self.obj
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
+        context['form'] = FilterTaskForm(
+            initial={
+                'facilitator_db_name': self.facilitator_db_name, 
+                'project_id': self.request.session.get('project_id'),
+                'cvds': self.cvds
+            }
+        )
         context['breadcrumb'] = False
+        context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
 
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
         last_activity_date = "0000-00-00 00:00:00"
@@ -68,6 +131,18 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
                 last_activity_date = datetime_complet_str(doc.get('last_updated'))
             total_tasks += 1
+        
+        for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
+            _db = nsc.get_db(k_db_name)
+            facilitator_docs = _db.get_query_result(
+                {"type": "task", "administrative_level_id": {"$in": v['ids']}}, 
+                limit=10000
+            )[:]
+            for doc in facilitator_docs:
+                if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
+                    last_activity_date = datetime_complet_str(doc.get('last_updated'))
+                total_tasks += 1
+
 
         if last_activity_date == "0000-00-00 00:00:00":
             context['facilitator_doc']['last_activity_date'] = None
@@ -122,7 +197,16 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                         r.append(task)
                 return r
 
-        return self.facilitator_db.get_query_result(selector)
+        results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        
+        nsc = NoSQLClient()
+        for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
+            if not administrative_level_id:
+                selector["administrative_level_id"] = {"$in": v['ids']}
+            _db = nsc.get_db(k_db_name)
+            results += _db.get_query_result(selector, limit=10000)[:]
+        return results
+    
 
     def get_queryset(self):
         index = int(self.request.GET.get('index'))
@@ -152,6 +236,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         context = super().get_context_data(**kwargs)
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
+        total_tasks_validated = 0
+        total_tasks_invalidated = 0
         total_tasks = 0
         dict_administrative_levels_with_infos = {}
 
@@ -165,6 +251,10 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                     if village and str(village.get("id")) == str(_.get("administrative_level_id")):
                         if _.get("completed"):
                             total_tasks_completed += 1
+                            if _.get("validated") == True:
+                                total_tasks_validated += 1
+                            elif _.get("validated") == False:
+                                total_tasks_invalidated += 1
                         else:
                             total_tasks_uncompleted += 1
                         total_tasks += 1
@@ -172,19 +262,51 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                         if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
                             if _.get("completed"):
                                 dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed'] += 1
+                                if _.get("validated") == True:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_validated'] += 1
+                                elif _.get("validated") == False:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_invalidated'] += 1
                             else:
                                 dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted'] += 1
                             dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] += 1
                         else:
                             if _.get("completed"):
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                    'total_tasks_completed': 1,
-                                    'total_tasks_uncompleted': 0
-                                }
+                                if _.get("validated") == True:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                        'total_tasks_completed': 1,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 1,
+                                        'total_tasks_invalidated': 0,
+                                        'stabilized': administrative_level_cvd.get("stabilized"),
+                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                    }
+                                elif _.get("validated") == False:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                        'total_tasks_completed': 1,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_invalidated': 1,
+                                        'stabilized': administrative_level_cvd.get("stabilized"),
+                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                    }
+                                else:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                        'total_tasks_completed': 1,
+                                        'total_tasks_uncompleted': 0,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_invalidated': 0,
+                                        'stabilized': administrative_level_cvd.get("stabilized"),
+                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                    }
+                                
                             else:
                                 dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
                                     'total_tasks_completed': 0,
-                                    'total_tasks_uncompleted': 1
+                                    'total_tasks_uncompleted': 1,
+                                    'total_tasks_validated': 0,
+                                    'total_tasks_invalidated': 0,
+                                    'stabilized': administrative_level_cvd.get("stabilized"),
+                                    'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
                                 }
                             dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
                         dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
@@ -192,6 +314,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
         context['total_tasks_completed'] = total_tasks_completed
         context['total_tasks_uncompleted'] = total_tasks_uncompleted
+        context['total_tasks_validated'] = total_tasks_validated
+        context['total_tasks_invalidated'] = total_tasks_invalidated
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
         context['nbr_villages'] = 0

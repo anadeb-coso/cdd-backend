@@ -100,16 +100,29 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         eadls = nsc.get_db('eadls')
         facilitators_stabilized = []
         
-        def get_all_facilitators_stabilized():
-            facilitators_stabilized_all_docs = eadls.all_docs(include_docs=True)['rows']
+        def get_all_facilitators_stabilized(docs=None):
+            # facilitators_stabilized_all_docs = eadls.all_docs(include_docs=True)['rows']
+            # adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True), projects__in=[self.request.session.get('project_id')])]
+            
+            # return [
+            #     doc.get('doc') for doc in facilitators_stabilized_all_docs \
+            #         if(
+            #             type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' \
+            #             and doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email') in adls_emaails
+            #         )
+            # ]
+            facilitators_stabilized_all_docs = [
+                doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
+                    if (
+                        type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
+                        doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
+                    )
+            ] if docs == None else docs
+
             adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True), projects__in=[self.request.session.get('project_id')])]
             
             return [
-                doc.get('doc') for doc in facilitators_stabilized_all_docs \
-                    if(
-                        type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' \
-                        and doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email') in adls_emaails
-                    )
+                doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
             ]
         
         
@@ -142,7 +155,7 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
                     for elt in facilitators_stabilized[:]:
                         if elt.get('value') and elt.get('value') not in _f_s:
                             _f_s.append(elt['value'])
-                    facilitators_stabilized = _f_s
+                    facilitators_stabilized = get_all_facilitators_stabilized(_f_s)
                 
             else:
                 # facilitators_stabilized = eadls.get_query_result({
