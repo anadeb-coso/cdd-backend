@@ -46,7 +46,7 @@
                 </p>
                   {% block content %}
                     {% for project in projects %}
-                      <a class="row" href="{% url 'dashboard:process_manager:list' %}?project_id={{ project.id }}">
+                      <a class="row" href="{% url 'dashboard:process_manager:list' %}?project_id={{ project.id }}{% if next_url %}&next={{ next_url }}{% endif %}">
                         <div class="col-12 border-bottom pt-2 pb-2 pointer-event">
                             <div class="text-primary">
                                 {{ project.name }}

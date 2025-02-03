@@ -154,6 +154,21 @@ class TaskAdmin(admin.ModelAdmin):
         'project__description',
     )
 
+class EmailAddressesWhichSendEmailsAdmin(admin.ModelAdmin):
+    fields = (
+        'name',
+        'email_addresses',
+    )
+    list_display = (
+        'id',
+        'name',
+    )
+    search_fields = (
+        'id',
+        'name',
+        'email_addresses',
+    )
+
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(Phase, PhaseAdmin)
 admin.site.register(Activity, ActivityAdmin)
@@ -165,3 +180,4 @@ admin.site.register(Deployment)
 admin.site.register(AdministrativeLevelWave)
 admin.site.register(FacilitatorWave, FacilitatorWaveAdmin)
 admin.site.register(FacilitatorDeployment, FacilitatorDeploymentAdmin)
+admin.site.register(EmailAddressesWhichSendEmails, EmailAddressesWhichSendEmailsAdmin)
