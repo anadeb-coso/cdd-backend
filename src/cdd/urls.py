@@ -30,9 +30,9 @@ handler500 = 'dashboard.authentication.views.handler500'
 
 
 urlpatterns = [
-    path('set-language/', 
-         views.set_language, 
-         name='set_language'),
+    path('set-language/', views.set_language, name='set_language'),
+    path('profile/', views.profile, name='profile'),
+    # path('user-login/', views.redirect_user_to_login, name='redirect_user_to_login'),
     path('i18n/', include('django.conf.urls.i18n')),
     path('attachments/', include('attachments.urls')),
     path('authentication/', include('authentication.urls')),
@@ -49,6 +49,8 @@ urlpatterns = [
 urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
     path('', include('dashboard.urls')),
+
+    path('', include('usermanager.urls')),
 
     path('delete-object/<int:object_id>/<str:type>/<str:attr>/', views.DeleteObjectFormView.as_view(), name='object_deletion_form'),
 )

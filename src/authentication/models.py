@@ -10,9 +10,10 @@ from no_sql_client import NoSQLClient
 # from dashboard.facilitators.functions import get_cvds
 from cdd.functions import datetime_complet_str
 from django.db.models.signals import post_save, post_delete
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AbstractUser, Permission, Group
 # from django.db import IntegrityError
 # from django.forms.models import model_to_dict
+from authentication import FACILITATORS_TYPES
 
 class Facilitator(models.Model):
     no_sql_user = models.CharField(max_length=150, unique=True)
@@ -26,6 +27,8 @@ class Facilitator(models.Model):
     develop_mode = models.BooleanField(default=False, verbose_name=_('develop mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     
+    facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
+
     name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))
     email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))
     phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))

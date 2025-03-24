@@ -29,7 +29,7 @@ from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
 from cdd.constants import (
     PHASES_COLORS, PHASES_WITH_THEIR_NUMBERS, VALIDATION_PROCESS_COLORS, TYPES_VACATION,
-    COMPONENTS
+    COMPONENTS, VALIDATION_PROCESS_COLORS_DESCRIPTION
 )
 from cdd.utils import elements_communs
 from dashboard.planning.forms import TaskPlanCommentForm, DownloadAnonymePlanningForm
@@ -198,26 +198,20 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             current_monday_date_object = today - timedelta(days=today.weekday())
         week_dates = [(current_monday_date_object + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
-        _id = 0
+        _id = []
         facilitators = []
         liste_villages_ids = None
         
         if (id_region or id_prefecture or id_commune or ids_canton or ids_village) and type_field != 'clear':
-            _type = None
-            if id_region and type_field == "region":
-                _type = "region"
+            if id_region:
                 _id = id_region
-            elif id_prefecture and type_field == "prefecture":
-                _type = "prefecture"
+            if id_prefecture:
                 _id = id_prefecture
-            elif id_commune and type_field == "commune":
-                _type = "commune"
+            if id_commune:
                 _id = id_commune
-            elif ids_canton and type_field == "canton":
-                _type = "canton"
+            if ids_canton:
                 _id = ids_canton
-            elif ids_village and type_field == "village":
-                _type = "village"
+            if ids_village:
                 _id = ids_village
 
             liste_prefectures = []
@@ -228,7 +222,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
             liste_villages_ids = [int(v['administrative_id']) for v in liste_villages]
 
-            if type(_id) is not list:
+            if type(_id) is list and _id:
                 assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                     administrative_level_id__in=liste_villages_ids,
                     project_id=project_mis_id,
@@ -260,6 +254,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             )
         facilitators = []
         users = []
+        
         if username_facilitator_user:
             facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
             users = User.objects.filter(projects__in=[self.request.session.get('project_id')])
@@ -353,12 +348,16 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             activities = activities.filter(validated=True)
         elif task_status == 'not_validated':
             activities = activities.filter(validated=False)
+        elif task_status == 'pending':
+            activities = activities.filter(validated=None)
+        elif task_status == 'pending_to_review':
+            activities = activities.filter(edit_after_invalidation=True)
         elif task_status == 'undo':
             activities = activities.filter(undo=True)
-        elif task_status == 'pending':
-            activities = activities.filter(Q(completed=True) | Q(is_another=True))
+        elif task_status == 'pending_to_do':
+            activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(validated=True))
         elif task_status == 'deadline_passed':
-            activities = activities.filter(planned_datetime_end__lte=timezone.now())
+            activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(planned_datetime_end__lte=timezone.now())).exclude(undo=True)
             
         if liste_villages_ids != None:
             query = Q()
@@ -395,7 +394,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                                         "datetime": datetime.strftime(current_date_elt, "%Y-%m-%dT%H:%M:%S.%fZ"),
                                         "task_order": activity.activity.order if activity.activity else 0,
                                         "task__id": activity.id,
-                                        "no_sql_db_name": f.no_sql_db_name
+                                        "no_sql_db_name": f.no_sql_db_name,
+                                        "is_geolocation": bool(next((g for g in activity.get_geolocations() if g.planning_date == current_date_elt and g.latitude_start), None))
                                     }
                                 )
                         else:
@@ -410,7 +410,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                                     "datetime": datetime.strftime(activity.planned_datetime_start, "%Y-%m-%dT%H:%M:%S.%fZ"),
                                     "task_order": activity.activity.order if activity.activity else 0,
                                     "task__id": activity.id,
-                                    "no_sql_db_name": f.no_sql_db_name
+                                    "no_sql_db_name": f.no_sql_db_name,
+                                    "is_geolocation": activity.get_geolocations().filter(latitude_start__isnull=False).exists()
                                 }
                             )
 
@@ -451,7 +452,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                                     "datetime": datetime.strftime(current_date_elt, "%Y-%m-%dT%H:%M:%S.%fZ"),
                                     "task_order": activity.activity.order if activity.activity else 0,
                                     "task__id": activity.id,
-                                    "no_sql_db_name": "no_sql_db_name"
+                                    "no_sql_db_name": "no_sql_db_name",
+                                    "is_geolocation": bool(next((g for g in activity.get_geolocations() if g.planning_date == current_date_elt and g.latitude_start), None))
                                 }
                             )
                     else:
@@ -466,7 +468,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                                 "datetime": datetime.strftime(activity.planned_datetime_start, "%Y-%m-%dT%H:%M:%S.%fZ"),
                                 "task_order": activity.activity.order if activity.activity else 0,
                                 "task__id": activity.id,
-                                "no_sql_db_name": "no_sql_db_name"
+                                "no_sql_db_name": "no_sql_db_name",
+                                "is_geolocation": activity.get_geolocations().filter(latitude_start__isnull=False).exists()
                             })
 
                 _u = {
@@ -492,6 +495,24 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
     id_form = "plan_task_detail"
     title = gettext_lazy('Detail')
 
+    def get_color_status_number(self, elt):
+        if elt.type == "vacation":
+            return (2 if elt.validated == False else 0) if elt.validated != True  else 6
+
+        if elt.validated == None:
+            return 0
+        elif elt.validated == True:
+            if elt.completed or elt.is_another:
+                return 3
+            elif elt.undo:
+                return 4
+            elif is_datetime_in_past_or_now(elt.planned_datetime_end):
+                return 5
+            else:
+                return 1
+        else:
+            return 2
+        
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         no_sql_db_name = kwargs['no_sql_db_name']
@@ -539,6 +560,11 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
         except Exception:
             raise Http404
         
+        task_plan_date_object = datetime.strptime(task_plan_datetime, "%Y-%m-%dT%H:%M:%S.%fZ").date()
+        geolocation = next((g for g in activity.get_geolocations() if g.planning_date == task_plan_date_object and g.latitude_start), None)
+        context['geolocation'] = geolocation
+
+
         context['task'] = model_to_dict(activity)
         context['task']['phase_name'] = activity.phase.name if activity.phase else None
         context['task']['activity_name'] = activity.name
@@ -569,7 +595,10 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
         context['administrativelevls'] = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, type="Village")
         context['phases'] = Phase.objects.filter(project_id=self.request.session.get('project_id'))
         context['activities'] = ProcessActivity.objects.filter(project_id=self.request.session.get('project_id'))
-
+        context['activity_status_color'] = VALIDATION_PROCESS_COLORS[self.get_color_status_number(activity)]
+        context['activity_status_color_description'] = VALIDATION_PROCESS_COLORS_DESCRIPTION[
+            context['activity_status_color']
+        ]
 
         return context
 
@@ -705,6 +734,8 @@ class SaveValidationView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin
             activity_validate = activity_validate.save_and_return_object(user=self.request.user)
 
             activity.validated = validated
+            if activity.edit_after_invalidation:
+                activity.edit_after_invalidation = False
             activity = activity.save_and_return_object(user=self.request.user)
 
             save = True

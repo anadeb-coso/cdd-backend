@@ -33,6 +33,16 @@ VALIDATION_PROCESS_COLORS = [
     'black', # Vacation :  Black 6
 ]
 
+VALIDATION_PROCESS_COLORS_DESCRIPTION = {
+    '#F2CD86': _('Pending to validate'), # Yellow 0
+    '#63D3AC': _('Validated') ,# : Light Green 1
+    '#F0788E': _('Invalidated'), # Red 2
+    '#397F6A': _('Completed'), #  Dark Green 3
+    '#E9B9C2': _('Undo'), # Light Red 4
+    '#5D0B22': _('Deadline passed'), #  Dark Red 5
+    'black': _('Vacation validated'), # Black 6
+}
+
 TYPES_VACATION = {
     "Congé annuel": _("Annual vacation"), 
     "Maternité/Paternité": _("Maternity/Paternity"), 

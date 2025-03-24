@@ -86,8 +86,7 @@ class AdministrativeLevelListTableView(LoginRequiredMixin, generic.ListView):
         _id = 0
 
         
-        project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
         project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
         print(project_mis_id)
         assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
@@ -351,7 +350,13 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['facilitator'] = self.obj
-        context['form'] = FilterTaskForm(initial={'facilitator_db_name': self.facilitator_db_name, 'project_id': self.request.session.get('project_id')})
+        context['form'] = FilterTaskForm(
+            initial={
+                'facilitator_db_name': self.facilitator_db_name, 
+                'project_id': self.request.session.get('project_id'),
+                'cvds': self.cvds
+            }
+        )
         context['breadcrumb'] = False
         context['facilitator_db_name'] = self.facilitator_db_name
         context['administrative_level_id'] = self.request.GET.get('administrative_level')
@@ -377,6 +382,16 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
 
         total_tasks = 0
         dict_administrative_levels_with_infos = {'villages': {}}
+
+        phases =  Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        context['phases'] = phases
+
+        activities_per_phase = {}
+        for phase in phases:
+            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order, project_id=self.request.session.get('project_id')).values('name', 'phase', 'description', 'order').order_by('order')
+
+        context["activities_per_phase"] = activities_per_phase
+
 
         object_list = self.get_results()
 
@@ -824,8 +839,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
 
     def get_queryset(self):
         
-        project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
         project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         queryset = []
@@ -958,7 +972,7 @@ class FillAttachmentSelectFilters(rest_generics.GenericAPIView):
         child_qs = list()
         if select_type == 'administrative_level':
             parent_obj = mis_objects_call.get_object(administrativelevels_models.AdministrativeLevel, id=request.POST['value'])
-            child_qs = Phase.objects.filter(village=parent_obj, project_id=self.request.session.get('project_id'))
+            child_qs = Phase.objects.filter(project_id=self.request.session.get('project_id')) #village=parent_obj, 
         elif select_type == 'phase':
             parent_obj = Phase.objects.get(id=request.POST['value'])
             child_qs = Activity.objects.filter(phase=parent_obj, project_id=self.request.session.get('project_id'))

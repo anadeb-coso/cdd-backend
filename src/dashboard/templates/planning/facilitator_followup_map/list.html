@@ -1,0 +1,694 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+{% block extracss %}
+    {{ block.super }}
+    <link href="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.css' %}" rel="stylesheet">
+    <style>
+        #map {
+            height: 1553px;
+        }
+        .carte-legend p {
+            font-weight: bold;
+            margin-top: 17px;
+        }
+    </style>
+    <style>
+        #table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0;
+            border-radius: 10px 0 0 0 !important;
+
+            & thead th {
+                border: 1px solid #f2f2f2 !important;
+
+                font-weight: bolder !important;;
+                height: 36px;
+                padding: 0 25px 0 10px;
+
+                &:not([class^="bg-"]) {
+                    background-color: #f2f2f2 !important;
+                }
+
+                &:after, &:before {
+                    top: 30%;
+                }
+
+                &:last-of-type {
+
+                    border-radius: 0 10px 0 0 !important;
+                }
+
+                &:not(&:last-child) {
+                    border-right-color: #c1c1c1 !important;
+                }
+
+                &:last-child {
+                    border-right-color: transparent !important;
+                }
+
+                &:first-child {
+                    border-left-color: transparent !important;
+                }
+            }
+
+
+            & thead th:first-of-type {
+
+                border-radius: 10px 0 0 0 !important;
+            }
+
+            & tbody td {
+                border-bottom-width: 1px !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+
+            & tbody tr:last-of-type {
+                border-radius: 0 10px 0 0 !important;
+            }
+
+            & tbody tr:not(.even):not(.odd):last-of-type, & tbody tr:not(.even):not(.odd):last-of-type td[colspan="8"] {
+                border-radius: 0 0 10px 10px !important;
+            }
+
+            & tbody td:first-of-type {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:last-of-type td {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:not(:first-of-type) {
+                border-left: 0;
+
+            }
+
+            & tbody td:not(:last-of-type) {
+                padding: 0 25px 0 10px;
+                border-right: 0;
+            }
+
+            & tbody tr {
+                border-bottom: 1px solid #e2e1e1 !important;
+                border-right: 1px solid #e2e1e1 !important;
+                border-left: 1px solid #e2e1e1 !important;
+
+                &:last-of-type td:first-of-type {
+                    border-radius: 0 0 0 10px !important;
+
+                }
+
+                &:last-of-type td:last-of-type {
+                    border-radius: 0 0 10px 0 !important;
+
+                }
+            }
+
+        }
+
+        .search-bar {
+            height: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+            margin-top: 1px;
+        }
+
+        .dt-buttons, #table_length {
+            display: inline-flex;
+            max-width: 50%;
+            flex: 0 0 50%;
+            width: 50%;
+        }
+
+        .dt-buttons button {
+            color: #ffffff !important;
+            background-color: #24c38b;
+            border-color: #24c38b;
+            box-shadow: none;
+            border-style: none;
+            margin-right: 5px;
+            padding: 5px;
+            border-radius: 7px !important;
+        }
+
+        #table_length label {
+            margin-left: auto;
+        }
+
+        .no-sort:before, .no-sort:after {
+            display: none !important;
+        }
+    
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: white;
+            color: black;
+            padding: 10px 20px;
+            font-size: 18px;
+        }
+
+        #id_call_add_task_modal {
+            background-color: #4CAF50; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            position: fixed;
+            bottom: 20px; /* Distance from the bottom */
+            right: 20px;  /* Distance from the right */
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            
+            <div class="card">
+                <div class="p-2 row map-filter">
+
+                    <div class="col-3 col-lg mb-2 mb-lg-0">
+                        
+                        <div class="float-md-right">
+                            <span style="" >{% translate "Start" %} : &nbsp; </span><span id="id_plan_date_start" type="date" ></span> <span id="id_plan_date_start_selected" style="margin-top: 5px;margin-left: 5px;" >YYYY/MM/DD</span>
+                        </div>
+
+                        <div class="float-md-right">
+                            <span style="" > {% translate "End" %} : &nbsp; </span><span id="id_plan_date_end" type="date" ></span> <span id="id_plan_date_end_selected" style="margin-top: 5px;margin-left: 5px;" >YYYY/MM/DD</span>
+                        </div>
+                
+                        <div class="clearfix"></div>
+
+
+
+                    </div>
+
+
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-check justify-content-center" style="margin-top: 12px !important; margin-left: 13px;">
+                            <input class="form-check-input" type="checkbox" value="" id="show_my_calendar">
+                            <label class="form-check-label" for="show_my_calendar">
+                                {% translate "For me" %} 
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_task_type">
+                            <select class="form-control" id="id_task_type" name="task_type" style="width: 100%;">
+                                <option value="All" >{% translate 'All' %}</option>
+                                <option value="free_tasks">{% translate 'Free tasks' %}</option>
+                                <option value="existing_tasks">{% translate 'Existing tasks' %}</option>
+                                <option value="vacations">{% translate 'Vacations' %}</option>
+                            </select>
+                        </div>
+                    </div>
+                          
+                    
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_task_status">
+                            <select class="form-control" id="id_task_status" name="task_status" style="width: 100%;">
+                                <option value="All" >{% translate 'All' %}</option>
+                                <option value="pending">{% translate 'Pending' %}</option>
+                                <option value="completed">{% translate 'Completed' %}</option>
+                                <option value="validated">{% translate 'Validated' %}</option>
+                                <option value="not_validated">{% translate 'Not validated' %}</option>
+                                <option value="undo">{% translate 'Undo' %}</option>
+                                <option value="deadline_passed">{% translate 'Deadline passed' %}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    
+                    
+                    <div class="col-1 col-lg mb-2 mb-lg-0">
+                        <div class="form-group" id="group_facilitators">
+                            <select class="form-control" id="id_username_facilitator_user" name="facilitato" style="width: 100%;" multiple>
+                                <option value="All" selected>{% translate 'All' %}</option>
+                                {% for facilitator_user in facilitators_users %}
+                                    <option value="{{ facilitator_user.username }}">{{ facilitator_user.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <div class="col-2 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.canton show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0">
+                        {% bootstrap_field form.village show_label=False %}
+                    </div>
+                    <div class="col-lg-1 col-1 mb-2 mb-lg-0">
+                        <a class="btn fs12 text-bold-family text-primary pull-right pr-0 p-lg-0"
+                           id="clear_all_filters">
+                            {% translate "Clear all filters" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div id="map" style=""></div>
+                    <div id="subprojects-map-view"></div>
+                </div>
+                <div class="overlay" id="spin">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+    <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
+
+
+    <script type="text/javascript">
+        var task_plan_detail_modal = null;
+        var add_task_plan_modal = null;
+                
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}/${month}/${day}`;
+        }
+
+        let ids = ["id_canton", "id_village"]
+        var type_field = "all";
+        let spin = $('#spin');
+        let map_view = $('#subprojects-map-view');
+        let administrative_level = $('#id_administrative_level');
+        let id_region = $('#id_region');
+        let id_prefecture = $('#id_prefecture');
+        let id_commune = $('#id_commune');
+        let id_canton = $('#id_canton');
+        let id_village = $('#id_village');
+
+        let id_username_facilitator_user = $('#id_username_facilitator_user');
+        let id_task_status = $('#id_task_status');
+        let id_task_type = $('#id_task_type');
+        let show_my_calendar = $('#show_my_calendar');
+
+        show_my_calendar.prop('checked', true).val(true);
+        
+        var query_data = null;
+        var old_query_data = null;
+
+
+        function show_map_table(url) {
+            $.ajax({
+                type: "GET",
+                url: url,
+                data: {
+                    id_region: id_region.val(),
+                    id_prefecture: id_prefecture.val(),
+                    id_commune: id_commune.val(),
+                    id_canton: id_canton.val(),
+                    id_village: id_village.val(),
+                    type_field: type_field,
+                    is_training: "{{ is_training }}",
+                    is_develop: "{{ is_develop }}"
+                },
+                success: function (response) {
+                    spin.hide();
+                    map_view.html('');
+                    map_view.html(response);
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+        }
+
+
+        function loadMap(type_field = "", refresh_auto=false) {
+            query_data = {
+                id_region: id_region.val(),
+                id_prefecture: id_prefecture.val(),
+                id_commune: id_commune.val(),
+                id_canton: id_canton.val(),
+                id_village: id_village.val(),
+                is_training: "{{ is_training }}",
+                is_develop: "{{ is_develop }}",
+                show_my_calendar: show_my_calendar.is(':checked'),
+                task_status: id_task_status.val(),
+                task_type: id_task_type.val(),
+                username_facilitator_user: id_username_facilitator_user.val(),
+                
+                date_start_selected: date_start_selected,
+                date_end_selected: date_end_selected,
+            };
+            
+            if (
+                    refresh_auto ||
+                    (
+                        ($("#id_" + type_field).val() || ["all", "clear"].includes(type_field)) && 
+                        (!old_query_data || (old_query_data && JSON.stringify(old_query_data) !== JSON.stringify(query_data)))
+                    )
+                ) {
+                
+                $(".map-filter select").attr('disabled', true);
+                if(ids.includes(("id_" + type_field))){
+                    $.ajax({
+                        type: 'GET',
+                        url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_levels_all' %}",
+                        data: {
+                            parents_id: $("#id_" + type_field).val()
+                        },
+                        success: function (data) {
+                            if (type_field == "region") {
+                                set_datas_administrative_level(id_prefecture, data.prefectures);
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "prefecture") {
+                                set_datas_administrative_level(id_commune, data.communes);
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "commune") {
+                                set_datas_administrative_level(id_canton, data.cantons);
+                                set_datas_administrative_level(id_village, data.villages);
+                            } else if (type_field == "canton") {
+                                set_datas_administrative_level(id_village, data.villages);
+                            }
+
+                        },
+                        error: function (data) {
+                            alert(error_server_message + "Error " + data.status);
+                            $(".map-filter select").attr('disabled', false);
+                        }
+                    }).done(function () {
+                            $(".map-filter select").attr('disabled', false);
+                        }
+                    );
+                }
+
+
+                spin.show();
+                map_view.html('');
+                old_query_data = {
+                    id_region: id_region.val(),
+                    id_prefecture: id_prefecture.val(),
+                    id_commune: id_commune.val(),
+                    id_canton: id_canton.val(),
+                    id_village: id_village.val(),
+                    is_training: "{{ is_training }}",
+                    is_develop: "{{ is_develop }}",
+                    show_my_calendar: show_my_calendar.is(':checked'),
+                    task_status: id_task_status.val(),
+                    task_type: id_task_type.val(),
+                    username_facilitator_user: id_username_facilitator_user.val(),
+                    
+                    date_start_selected: date_start_selected,
+                    date_end_selected: date_end_selected,
+                };
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:planning:map:planning_map_list' %}",
+                    data: {...old_query_data, type_field: type_field},
+                    success: function (response) {
+                        spin.hide();
+
+                        map_view.html(response);
+
+                        $(".map-filter select").attr('disabled', false);
+                    },
+                    error: function (data) {
+                        spin.hide();
+                        alert(error_server_message + "Error " + data.status);
+                        $(".map-filter select").attr('disabled', false);
+                    }
+                });
+
+            }
+
+
+        }
+
+        loadMap("all");
+
+        $('.map-filter select').on('change', function () {
+            if($(this).attr('id') && ids.includes($(this).attr('id'))){
+                type_field = "";
+                if ($(this).val()) {
+                    type_field = $(this).attr('id').split('_')[1];
+                }else{
+                    let ids_r = ids.reverse();
+                    for(let i=0; i<ids_r.length; i++){
+                        if($('#'+ids_r[i]).val()){
+                            type_field = $('#'+ids_r[i]).attr('id').split('_')[1];
+                            break;
+                        }
+                    }
+                }
+            }
+            if(type_field == ""){
+                type_field = "all";
+            }
+            loadMap(type_field);
+            
+        });
+        $('.map-filter #show_my_calendar').on('change', function () {
+            loadMap(type_field);
+        });
+
+        
+
+        $("#clear_all_filters").on("click", function () {
+            $('.map-filter input').val('');
+            $('.map-filter select').val(null).trigger('change.select2');
+            loadMap("clear");
+        });
+
+
+        
+    </script>
+
+    <script>
+
+        $(document).ready(function () {
+
+
+                    //Map
+        
+                    mapboxgl.accessToken = "{{ access_token }}"; // Remplace avec ton token
+                    if (!mapboxgl.supported()) {
+                        alert('Your browser does not support Mapbox GL');
+                    }
+
+                    const map = new mapboxgl.Map({
+                        container: 'map',
+                        style: 'mapbox://styles/mapbox/streets-v11',
+                        center: [
+                            parseFloat('{{ lng }}'.replace(',', '.')), 
+                            parseFloat('{{ lat }}'.replace(',', '.'))
+                        ],
+                        zoom: parseFloat('{{ zoom }}'.replace(',', '.'))
+                    });
+
+                    const bounds = [
+                        {{ ws_bound }}, // [west, south]
+                        {{ en_bound }}  // [east, north]
+                    ];
+                    // Set the map's max bounds.
+                    map.setMaxBounds(bounds);
+
+                    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+                    
+                    // Données GeoJSON contenant les points et la ligne
+                    const geojsonData = {
+                        "type": "FeatureCollection",
+                        "features": [
+                            { 
+                                "type": "Feature", 
+                                "geometry": { "type": "Point", "coordinates": [1.2195, 6.1287] } 
+                            },
+                            { 
+                                "type": "Feature", 
+                                "geometry": { "type": "Point", "coordinates": [1.2295, 6.1387] } 
+                            },
+                            { 
+                                "type": "Feature", 
+                                "geometry": { "type": "Point", "coordinates": [1.2395, 6.1487] } 
+                            }
+                        ]
+                    };
+                    
+                    const lineData = {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": geojsonData.features.map(f => f.geometry.coordinates)
+                        }
+                    };
+                    
+                    map.on('load', () => {
+                        map.addLayer(
+                            {
+                                'id': 'country-boundaries',
+                                'source': {
+                                    'type': 'vector',
+                                    'url': 'mapbox://mapbox.country-boundaries-v1',
+                                },
+                                'source-layer': 'country_boundaries',
+                                'type': 'fill',
+                                'paint': {
+                                    'fill-color': '#00FFFF',
+                                    'fill-opacity': 0.2,
+                                },
+                            },
+                            'country-label'
+                        );
+
+                        map.setFilter('country-boundaries', [
+                            "in",
+                            "iso_3166_1_alpha_3",
+                            '{{ country_iso_code }}',
+                        ]);
+
+
+                        // Ajouter la couche des points
+                        map.addSource('points', {
+                            "type": "geojson",
+                            "data": geojsonData
+                        });
+                    
+                        map.addLayer({
+                            "id": "points-layer",
+                            "type": "circle",
+                            "source": "points",
+                            "paint": {
+                                "circle-radius": 6,
+                                "circle-color": "#FF0000"
+                            }
+                        });
+                    
+                        // Ajouter la couche de la ligne
+                        map.addSource('line', {
+                            "type": "geojson",
+                            "data": lineData
+                        });
+                    
+                        map.addLayer({
+                            "id": "line-layer",
+                            "type": "line",
+                            "source": "line",
+                            "layout": {
+                                "line-join": "round",
+                                "line-cap": "round"
+                            },
+                            "paint": {
+                                "line-color": "#0000FF",
+                                "line-width": 3
+                            }
+                        });
+                    });
+                    
+
+        //End Map
+
+
+        
+                  
+        let dp1 = '<div class="input-group-prepend" data-target="#{id}" data-toggle="datetimepicker">' +
+            '<div class="input-group-text"><i class="fa fa-calendar text-primary"></i></div></div>';
+            let dp2 = '<div class="input-group date" id="{id}" data-target-input="nearest"></div>';
+            $('#id_plan_date_start').before(dp1.replace('{id}', 'plan_date_start')).parent().wrapInner(
+                dp2.replace('{id}', 'plan_date_start'));
+            $('#id_plan_date_end').before(dp1.replace('{id}', 'plan_date_end')).parent().wrapInner(
+                dp2.replace('{id}', 'plan_date_end'));
+
+            //Datemask dd/mm/yyyy
+            $('.datetimepicker-input').inputmask({alias: "datetime", inputFormat: "dd/mm/yyyy"});
+
+            let options = {
+                //maxDate: Date.now(),
+                useCurrent: false,
+                format: "DD/MM/YYYY",
+                widgetPositioning: {
+                    vertical: 'bottom',
+                }
+            };
+
+            $('#plan_date_start').datetimepicker(options);
+            $('#plan_date_start').on("change.datetimepicker", function (e) {
+                if (e.oldDate !== e.date) {
+                    date_start_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_plan_date_start_selected").html(date_start_selected);
+                }
+            });
+
+            
+            $('#plan_date_end').datetimepicker(options);
+            $('#plan_date_end').on("change.datetimepicker", function (e) {
+                if (e.oldDate !== e.date) {
+                    date_end_selected = e.date ? formatDate(new Date(e.date)) : null;
+                    $("#id_plan_date_end_selected").html(date_end_selected);
+                }
+            });
+
+    });
+</script>
+
+
+    
+
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_task_status").select2({
+            placeholder: "{% translate 'Task Status' %}",
+            allowClear: true
+        });
+        $("#id_task_type").select2({
+            placeholder: "{% translate 'Task type' %}",
+            allowClear: true
+        });
+        $("#id_username_facilitator_user").select2({
+            placeholder: "{% translate 'Facilitators' %}",
+            allowClear: true,
+        });
+        $("#id_canton").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true,
+        });
+        {% comment %} $('#id_canton option[value="1973"]').attr("selected",true);
+        $('#id_canton').val("1973").trigger('change.select2'); {% endcomment %}
+        $("#id_village").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.map-filter .select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

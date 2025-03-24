@@ -35,6 +35,9 @@
 {#                {% translate 'Help / FAQ' %}#}
 {#            </a>#}
 {#        </li>#}
+        {% if PROJECT_NAME %}
+            {% include 'layouts/project_dropdown.html' %}
+        {% endif %}
         {% if OTHER_LANGUAGES %}
             {% include 'layouts/language_dropdown.html' %}
         {% endif %}

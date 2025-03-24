@@ -188,8 +188,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
 
     def get_queryset(self):
         
-        project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
         project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         queryset = []
@@ -237,6 +236,8 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             
         attachments = []
         
+        pac_libelle = "Télecharger le document du plan d'actions cantonales finalisé".lower()
+
         if object_list:
             for _ in object_list:
                 headquarters_village = mis_objects_call.get_object(
@@ -265,18 +266,29 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                         _.get("sql_id") in (45, 47) and
                         i.get("attachment") and "document du plan d'actions" in str(i.get("name")).lower()
                     ):
-                        i.update({
-                            "headquarters_village": _["administrative_level_name"],
-                            "headquarters_village_id": _["administrative_level_id"],
-                            "villages_names": "" if headquarters_village.cvd.get_villages().count() <= 1 else headquarters_village.cvd.get_names(),
-                            "canton": self.canton.name,
-                            "no_sql_db_name": Facilitator.objects.get(
-                                    id=mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
-                                        administrative_level_id=int(_["administrative_level_id"]),
-                                        project_id=project_mis_id
-                                    ).last().facilitator_id
-                                ).no_sql_db_name
-                        })
-                        attachments.append(i)
+                        _attachments = [a["name"].lower() for a in attachments]
+                        exists_pac_on_list = (pac_libelle == i['name'].lower() and pac_libelle not in [a["name"].lower() for a in attachments])
+                        if (
+                                pac_libelle != i['name'].lower() or 
+                                exists_pac_on_list
+                            ):
+                            i.update({
+                                "headquarters_village": _["administrative_level_name"],
+                                "headquarters_village_id": _["administrative_level_id"],
+                                "villages_names": "" if headquarters_village.cvd.get_villages().count() <= 1 else headquarters_village.cvd.get_names(),
+                                "canton": self.canton.name,
+                                "no_sql_db_name": Facilitator.objects.get(
+                                        id=mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+                                            administrative_level_id=int(_["administrative_level_id"]),
+                                            project_id=project_mis_id
+                                        ).last().facilitator_id
+                                    ).no_sql_db_name
+                            })
+
+                            # if exists_pac_on_list:
+                            #     attachments.insert(0, i)
+                            # else:
+                            #     attachments.append(i)
+                            attachments.append(i)
                             
-        return attachments
+        return sorted(attachments,  key=lambda obj: (str(obj["name"])+str(obj["headquarters_village"])))

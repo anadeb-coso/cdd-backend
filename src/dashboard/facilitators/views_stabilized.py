@@ -56,6 +56,7 @@ class FacilitatorStabilizedListView(PageMixin, LoginRequiredMixin, generic.ListV
         # context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         # context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['type_facilitator'] = self.request.GET.get('type_facilitator')
+        context['type_of_facilitator_list'] = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
 
         return context
 
@@ -94,6 +95,7 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
         type_facilitator = self.request.GET.get('type_facilitator')
+        type_of_facilitator_list = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
         _id = 0
         
         nsc = NoSQLClient()
@@ -119,7 +121,14 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
                     )
             ] if docs == None else docs
 
-            adls_emaails = [obj.email for obj in Facilitator.objects.filter(develop_mode=False, training_mode=False, active=(False if type_facilitator=='inactive' else True), projects__in=[self.request.session.get('project_id')])]
+            adls_emaails = [
+                obj.email for obj in Facilitator.objects.filter(
+                    facilitator_type=type_of_facilitator_list,
+                    develop_mode=False, training_mode=False, 
+                    active=(False if type_facilitator=='inactive' else True), 
+                    projects__in=[self.request.session.get('project_id')]
+                )
+            ]
             
             return [
                 doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails

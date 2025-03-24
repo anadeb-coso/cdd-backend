@@ -10,3 +10,4 @@ class FacilitatorCriteria:
     projects__id: Optional[List[str]] = None
     no_sql_pass: Optional[str] = None
     no_sql_user: Optional[str] = None
+    facilitator_type: Optional[str] = None

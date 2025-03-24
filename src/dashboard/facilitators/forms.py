@@ -9,6 +9,7 @@ from no_sql_client import NoSQLClient
 from .functions import get_cvds
 from process_manager.models import Task, Phase, Activity, Project
 from administrativelevels.models import AdministrativeLevel
+from authentication import FACILITATORS_TYPES
 
 
 class FilterTaskForm(forms.Form):
@@ -117,6 +118,7 @@ class FacilitatorForm(forms.Form):
     administrative_level = forms.ChoiceField(required=False)
     administrative_levels = forms.JSONField(label='', required=False)
     sex = forms.ChoiceField(choices=(("M.", "M."), ("Mme", "Mme")))
+    facilitator_type = forms.ChoiceField(choices=FACILITATORS_TYPES)
     
     projects = forms.ModelMultipleChoiceField(
         queryset=Project.objects.all(),
@@ -197,6 +199,7 @@ class UpdateFacilitatorForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         required=True
     )
+    facilitator_type = forms.ChoiceField(choices=FACILITATORS_TYPES)
 
     def clean(self):
         administrative_levels = self.cleaned_data['administrative_levels']
@@ -230,6 +233,7 @@ class UpdateFacilitatorForm(forms.ModelForm):
             self.fields['phone'].initial = facilitator_doc['phone']
             self.fields['name'].initial = facilitator_doc['name']
             self.fields['sex'].initial = facilitator_doc['sex']
+            self.fields['facilitator_type'].initial = facilitator_doc['facilitator_type'] if facilitator_doc.get('facilitator_type') else 'community_facilitator'
         if facilitator_projects:
             self.fields['projects'].initial = facilitator_projects
 

@@ -1,0 +1,25 @@
+{% load i18n %}
+
+<li class="nav-item dropdown">
+    <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="fa fa-project-diagram"></i>
+        {{ PROJECT_NAME }}
+    </a>
+    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        {% for project in PROJECTS %}
+            {% if PROJECT_NAME != project.name %}
+                <a class="dropdown-item" href="{% url 'dashboard:process_manager:list' %}?project_id={{ project.id }}&next={{ request.get_full_path }}">
+                    <div class="border-bottom pt-2 pb-2 pointer-event">
+                        <div class="text-primary">
+                            {{ project.name }}
+                        </div>
+                        <p class="text-secondary" style="font-size: 11px;">
+                            {{ project.description }}
+                        </p>
+
+                    </div>
+                </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</li>

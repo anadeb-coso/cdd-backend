@@ -208,10 +208,12 @@
                         <div class="form-group" id="group_task_status">
                             <select class="form-control" id="id_task_status" name="task_status" style="width: 100%;">
                                 <option value="All" >{% translate 'All' %}</option>
-                                <option value="pending">{% translate 'Pending' %}</option>
+                                <option value="pending">{% translate 'Pending validation' %}</option>
                                 <option value="completed">{% translate 'Completed' %}</option>
                                 <option value="validated">{% translate 'Validated' %}</option>
                                 <option value="not_validated">{% translate 'Not validated' %}</option>
+                                <option value="pending_to_review">{% translate 'Waiting for review' %}</option>
+                                <option value="pending_to_do">{% translate 'Pending to do' %}</option>
                                 <option value="undo">{% translate 'Undo' %}</option>
                                 <option value="deadline_passed">{% translate 'Deadline passed' %}</option>
                             </select>
@@ -326,6 +328,7 @@
 
         show_my_calendar.prop('checked', true).val(true);
         
+        let currentYear = new Date().getFullYear();
         var currentWeek = null;
         var currentMondayDate = null;
         var query_data = null;
@@ -373,7 +376,7 @@
                 task_type: id_task_type.val(),
                 username_facilitator_user: id_username_facilitator_user.val(),
                 
-                current_week: currentWeek ? currentWeek : null,
+                current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
                 current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
             };
             
@@ -437,7 +440,7 @@
                     task_type: id_task_type.val(),
                     username_facilitator_user: id_username_facilitator_user.val(),
                     
-                    current_week: currentWeek ? currentWeek : null,
+                    current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
                     current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
                 };
                 $.ajax({
@@ -505,7 +508,7 @@
         });
 
 
-        prevWeek.addEventListener('click', () => {
+        {% comment %} prevWeek.addEventListener('click', () => {
             currentWeek--;
             currentMondayDate.setDate(currentMondayDate.getDate() - 7);
             //renderCalendar(currentWeek);
@@ -517,7 +520,53 @@
             currentMondayDate.setDate(currentMondayDate.getDate() + 7);
             //renderCalendar(currentWeek);
             loadFacilitators(type_field);
+        }); {% endcomment %}
+        prevWeek.addEventListener('click', () => {
+            currentMondayDate.setDate(currentMondayDate.getDate() - 7);
+            let currentSundayDate = new Date(currentMondayDate);
+            currentSundayDate.setDate(currentMondayDate.getDate() + 6);
+            
+            let newYear = currentMondayDate.getFullYear();
+            
+            if (currentSundayDate.getFullYear() != newYear && newYear < currentYear) {
+                // On est passé à l'année précédente, on récupère la dernière semaine de cette année
+                currentYear = newYear;
+                currentWeek = getTotalWeeksOfYear(currentYear);
+            } else {
+                currentWeek = getWeekNumber(currentMondayDate);
+            }
+            
+            loadFacilitators(type_field);
         });
+        
+        nextWeek.addEventListener('click', () => {
+            currentMondayDate.setDate(currentMondayDate.getDate() + 7);
+            let currentSundayDate = new Date(currentMondayDate);
+            currentSundayDate.setDate(currentMondayDate.getDate() + 6);
+
+            let newYear = currentMondayDate.getFullYear();
+            
+            if (currentSundayDate.getFullYear() != newYear && newYear > currentYear) {
+                // On est passé à l'année suivante, on réinitialise à la première semaine
+                currentYear = newYear;
+                currentWeek = 1;
+            } else {
+                currentWeek = getWeekNumber(currentMondayDate);
+            }
+            
+            loadFacilitators(type_field);
+        });
+        
+        function getWeekNumber(date) {
+            let firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+            let pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+            return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        }
+        
+        function getTotalWeeksOfYear(year) {
+            let lastDayOfYear = new Date(year, 11, 31);
+            return getWeekNumber(lastDayOfYear);
+        }
 
 
 

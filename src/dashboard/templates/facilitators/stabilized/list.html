@@ -142,35 +142,52 @@
         <div class="col-12">
 
             <div class="float-left mb-3 m-0 main-title">
-                {{ title | safe }}
+                {% comment %} {{ title | safe }} {% endcomment %}
+                
+                <div class="dropdown">
+                    <a class="nav-link" data-toggle="dropdown" href="#">
+                        <i class="fa fa-angle-down"></i>
+                        {{ FACILITATORS_TYPES_PLURAL|get:type_of_facilitator_list }} ({% translate "Stabilized" %}{% if type_facilitator == 'inactive' %} {% translate "Inactive" %}{% endif %})
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                        {% for k_t_f, v_t_f in FACILITATORS_TYPES_PLURAL.items %}
+                            {% if k_t_f != type_of_facilitator_list %}
+                                <a class="dropdown-item language" href="?type_of_facilitator_list={{ k_t_f }}{% if type_facilitator %}&type_facilitator={{ type_facilitator }}{% endif %}" >
+                                    {{ v_t_f }} ({% translate "Stabilized" %}{% if type_facilitator == 'inactive' %} {% translate "Inactive" %}{% endif %})
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
             </div>
             {% if user.is_superuser or user|has_group:"Admin" %}
                 <div class="float-right mb-3">
                     <a href="{% url 'dashboard:facilitators:create' %}"
                        class="btn btn-primary btn-sm rounded-xl">
                         <i class="fa fa-plus mr-2"></i>
-                        {% translate "Create Facilitator" %}
+                        {% translate "Create Facilitator " %}
                     </a>
                 </div>
                 <div class="float-right mb-3">&nbsp;&nbsp;</div>
             {% endif %}
             <div class="float-right mb-3">
-                <a href="{% url 'dashboard:facilitators:list' %}"
+                <a href="{% url 'dashboard:facilitators:list' %}{% if type_of_facilitator_list %}?type_of_facilitator_list={{ type_of_facilitator_list }}{% endif %}"
                    class="btn btn-primary btn-sm rounded-xl">
                     <i class="fa fa-list mr-2"></i>
-                    {% translate "Facilitators assigned" %}
+                    {% translate "Facilitators assigned " %}
                 </a>
             </div>
             <div class="float-right mb-3">&nbsp;&nbsp;</div>
             <div class="float-right mb-3">&nbsp;&nbsp;</div>
             <div class="float-right mb-3">
-                <a href="{% url 'dashboard:facilitators:stabilized_list' %}{% if type_facilitator != 'inactive' %}?type_facilitator=inactive{% endif %}"
+                <a href="{% url 'dashboard:facilitators:stabilized_list' %}{% if type_facilitator != 'inactive' %}?type_facilitator=inactive{% endif %}{% if type_of_facilitator_list %}{% if type_facilitator != 'inactive' %}&{% else %}?{% endif %}type_of_facilitator_list={{ type_of_facilitator_list }}{% endif %}"
                    class="btn btn-primary btn-sm rounded-xl">
                     <i class="fa fa-list mr-2"></i>
                     {% if type_facilitator != 'inactive' %}
-                        {% translate "Inactive facilitators stabilized" %}
+                        {% translate "Inactive facilitators stabilized " %}
                     {% else %}
-                        {% translate "Active facilitators stabilized" %}
+                        {% translate "Active facilitators stabilized " %}
                     {% endif %}
                 </a>
             </div>
@@ -315,7 +332,8 @@
                     type_field: type_field,
                     is_training: "{{ is_training }}",
                     is_develop: "{{ is_develop }}",
-                    type_facilitator: "{{ type_facilitator }}"
+                    type_facilitator: "{{ type_facilitator }}",
+                    type_of_facilitator_list: "{{ type_of_facilitator_list }}"
                 },
                 success: function (response) {
                     spin.hide();
@@ -388,7 +406,8 @@
                         type_field: type_field,
                         is_training: "{{ is_training }}",
                         is_develop: "{{ is_develop }}",
-                        type_facilitator: "{{ type_facilitator }}"
+                        type_facilitator: "{{ type_facilitator }}",
+                        type_of_facilitator_list: "{{ type_of_facilitator_list }}"
                     },
                     success: function (response) {
                         spin.hide();

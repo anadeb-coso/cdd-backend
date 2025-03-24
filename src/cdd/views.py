@@ -1,7 +1,7 @@
 from django.http import HttpResponseRedirect
 from django.conf import settings
 from django.utils.translation import get_language
-
+from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import render
@@ -12,6 +12,7 @@ from django.apps import apps
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, ModalFormMixin
 from cdd.forms import DeleteConfirmForm
+from cdd.functions import get_validation_code
 
 
 def set_language(request):
@@ -69,8 +70,8 @@ class DeleteObjectFormView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin,
             
             # if ClassModal:
             for cls in ClassModals:
-                obj = cls.objects.get(id=self.kwargs.get('object_id'))
-                if hasattr(obj, self.kwargs.get('attr')):
+                obj = cls.objects.filter(id=self.kwargs.get('object_id')).first()
+                if obj and hasattr(obj, self.kwargs.get('attr')):
                     form = DeleteConfirmForm(request.POST)
 
                     if form and form.is_valid():
@@ -93,3 +94,39 @@ class DeleteObjectFormView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin,
         context = {'msg': render(self.request, 'common/messages.html').content.decode("utf-8")}
         return self.render_to_json_response(context, safe=False)
 #And Delete
+
+
+# @login_required
+# def profile(request):
+#     response = HttpResponseRedirect('/')
+    
+#     if request.method == 'POST':
+#         # try:
+#         #     response = HttpResponseRedirect(f"{settings.CDD_URL_BASE}/{settings.LANGUAGE_CODE}/user-manager")
+#         # except Exception as exc:
+#         #     pass
+#         return HttpResponseRedirect(f"{settings.CDD_URL_BASE}/{get_language()}/user-manager")
+#     # return response
+#     raise Http404
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        scheme = request.scheme
+        domain = request.get_host()
+        full_url = f"{scheme}://{domain}"
+
+        previous_url = request.headers.get('Referer', full_url)
+
+        post_data = {
+            'email': request.user.email,
+            'code': get_validation_code(request.user.email),
+            'redirection_url': full_url,
+            'previous_url': previous_url
+        }
+        return render(request, 'post_redirect.html', {
+            'url': f"{settings.CDD_URL_BASE}/{get_language()}/user-manager/",
+            'redirection_url': full_url,
+            'post_data': post_data
+        })
+    raise Http404

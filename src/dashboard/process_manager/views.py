@@ -6,6 +6,8 @@ from datetime import datetime
 from django.utils.translation import gettext_lazy
 from django.urls import reverse_lazy
 from django.conf import settings
+from django.shortcuts import resolve_url
+from django.http import HttpResponseRedirect
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
@@ -14,6 +16,15 @@ from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
 from cdd.my_librairies.sms.send_sms import send_sms
 from cdd.utils import get_administrative_region_name
+from dashboard.templatetags.custom_tags import get_group_high
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from cdd.call_objects_from_other_db import mis_objects_call
+from authentication.models import Facilitator
+from subprojects.models import Project as MisProject
+from dashboard.facilitators.functions import (
+    get_db_task, get_search_for_stabilized_facilitator_dbs
+)
+
 
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
@@ -135,10 +146,36 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         message = None
         status = "ok"
         mail_message, sms_message = None, None
+        previous_status = None
+        
         try:
+
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+            project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+
             nsc = NoSQLClient()
             db = nsc.get_db(no_sql_db_name)
-            task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+            try:
+                task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+            except Exception as exc:
+                print(exc)
+                query_result = db.get_query_result({
+                    "type": 'facilitator',
+                    "$or": [
+                        {"project_id": request.session.get('project_couch_id')},
+                        {"projects_ids": {"$in": [request.session.get('project_couch_id')]}}
+                    ]
+                })[:]
+                no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, db[query_result[0]['_id']])
+                db_name, query_result = get_db_task(no_sql_dbs_names_with_village_ids, task_id)
+                
+                nsc = NoSQLClient()
+                db = nsc.get_db(db_name)
+                if query_result:
+                    task = db[query_result[0]['_id']]
+
+
+            previous_status = task.get('validated')
             if task.get('completed'):
                 datetime_now = datetime.now()
                 date_validated = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
@@ -168,7 +205,43 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     facilitator = db[db.get_query_result({"type": "facilitator"})[:][0]['_id']]
                     subject = f'{gettext_lazy("Task Invalided")} : {task.get("name")}'
                     administrative_region_name = get_administrative_region_name(task.get("administrative_level_id"))
-                    
+
+                    facilitator_email = None
+                    facilitator_object = Facilitator.objects.filter(id=facilitator['sql_id'], active=True).first()
+                    assing_facilitator_object = None
+                    if facilitator_object:
+                        facilitator_email = facilitator_object.email
+
+
+                        # assing_facilitator_object = mis_objects_call.filter_objects(
+                        #     AssignAdministrativeLevelToFacilitator, 
+                        #     administrative_level_id=int(task.get("administrative_level_id")),
+                        #     facilitator_id=facilitator_object.id, 
+                        #     project_id=project_mis_id, 
+                        #     activated=True
+                        # ).first()
+
+                    # if not facilitator_object or not assing_facilitator_object:
+                    facilitator_grm = None
+                    eadls = nsc.get_db('eadls')
+                    try:
+                        facilitator_grm = eadls.get_query_result({
+                            "type": "adl",
+                            "representative.email": {
+                                "$not": {
+                                    "$eq": facilitator.get('email')
+                                }
+                            },
+                            "administrative_regions": {"$in": [task.get("administrative_level_id")]},
+                        })[:][0]
+                    except Exception as exc:
+                        # print(exc)
+                        pass
+                
+                    if facilitator_grm:
+                        facilitator_object = Facilitator.objects.filter(email=facilitator_grm['representative']['email']).first()
+                
+
                     try:
                         msg = send_email(
                             subject,
@@ -184,22 +257,26 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                                     gettext_lazy("Date"): date_validated,
                                 },
                                 "user": {
-                                    gettext_lazy("Facilitator Name"): facilitator.get('name'),
-                                    gettext_lazy("Phone"): facilitator.get('phone'),
-                                    gettext_lazy("Sex"): facilitator.get('sex'),
+                                    gettext_lazy("Facilitator Name"): facilitator_object.name,
+                                    gettext_lazy("Facilitator Phone"): facilitator_object.phone,
+                                    gettext_lazy("Facilitator Sex"): "F" if facilitator_object.sex == "Mme" else "M",
+                                    gettext_lazy("Validator"): f"{request.user.last_name} {request.user.first_name}",
+                                    gettext_lazy("Validator Type"): get_group_high(request.user),
+                                    gettext_lazy("Validator Email"): request.user.email,
                                 },
                                 "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                             },
-                            [facilitator.get('email')]
+                            list(set([facilitator_email, facilitator_object.email, request.user.email])) if facilitator_email else [facilitator_object.email, request.user.email]
                         )
                         mail_message = gettext_lazy("Mail sent successfully")
-                    except:
+                    except Exception as exc:
+                        # print(exc)
                         mail_message = gettext_lazy("An error occurred while sending the email")
 
                     try:
                         TWILIO_REGION = str(settings.TWILIO_REGION)
                         send_sms(
-                            f"+{(facilitator.get('phone') if (facilitator.get('phone') and TWILIO_REGION in facilitator.get('phone') and TWILIO_REGION == facilitator.get('phone')[0:len(TWILIO_REGION)]) else (TWILIO_REGION+facilitator.get('phone')))}", 
+                            f"+{(facilitator_object.phone if (facilitator_object.phone and TWILIO_REGION in facilitator_object.phone and TWILIO_REGION == facilitator_object.phone[0:len(TWILIO_REGION)]) else (TWILIO_REGION+facilitator_object.phone))}", 
                             body=f'{subject}\n\
                                 {gettext_lazy("Comment")}: {in_validation_comment}\n\
                                 {gettext_lazy("Phase")}: {task.get("phase_name")}\n\
@@ -211,7 +288,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                         )
                         sms_message = gettext_lazy("SMS sent successfully")
                     except Exception as exc:
-                        print(exc)
+                        # print(exc)
                         sms_message = gettext_lazy("An error occurred while sending the sms")
                 #End Send Mail - SMS
 
@@ -227,7 +304,8 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         return self.render_to_json_response(
             {
                 "message": message, "status": status, 
-                "sms_message": sms_message, "mail_message": mail_message
+                "sms_message": sms_message, "mail_message": mail_message,
+                "previous_status": previous_status
             }, safe=False
         )
 
@@ -242,7 +320,27 @@ class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         try:
             nsc = NoSQLClient()
             db = nsc.get_db(no_sql_db_name)
-            task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+            try:
+                task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
+            except Exception as exc:
+                print(exc)
+                project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+                project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+                query_result = db.get_query_result({
+                    "type": 'facilitator',
+                    "$or": [
+                        {"project_id": request.session.get('project_couch_id')},
+                        {"projects_ids": {"$in": [request.session.get('project_couch_id')]}}
+                    ]
+                })[:]
+                no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, db[query_result[0]['_id']])
+                db_name, query_result = get_db_task(no_sql_dbs_names_with_village_ids, task_id)
+                
+                nsc = NoSQLClient()
+                db = nsc.get_db(db_name)
+                if query_result:
+                    task = db[query_result[0]['_id']]
+
 
             datetime_now = datetime.now()
             date_completed = f"{str(datetime_now.year)}-{str(datetime_now.month)}-{str(datetime_now.day)} {str(datetime_now.hour)}:{str(datetime_now.minute)}:{str(datetime_now.second)}"
@@ -255,7 +353,7 @@ class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
                 'user_email': request.user.email, 'action_date': date_completed
             }
-            actions_by.append(action_complete_by)
+            actions_by.insert(0, action_complete_by)
             #End
 
             nsc.update_doc_uncontrolled(db, task['_id'], {
@@ -288,17 +386,24 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
     def get(self, request, *args, **kwargs):
         projects = self.get_queryset()
         project_id = self.request.GET.get('project_id')
+        
         if project_id is not None:
             projects = projects.filter(id=int(project_id))
         if len(projects) == 1:
             self.request.session['project_id'] = projects[0].id
             self.request.session['project_couch_id'] = projects[0].couch_id
             self.request.session['project_name'] = projects[0].name
+            
+            next_page = self.request.GET.get('next')
+            if next_page:
+                return HttpResponseRedirect(resolve_url(next_page or settings.LOGIN_REDIRECT_URL))
             return redirect('dashboard:facilitators:list')
+        
         return super().get(request)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['projects'] = list(self.object_list)
+        context['next_url'] = self.request.GET.get('next')
 
         return context

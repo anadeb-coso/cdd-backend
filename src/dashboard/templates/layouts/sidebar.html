@@ -28,10 +28,10 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
-                    <a href="{% url 'dashboard:facilitators:list' %}"
+                    <a href="{% url 'dashboard:facilitators:list' %}?type_of_facilitator_list=community_facilitator"
                        class="nav-link {% if active_level1 == 'facilitators' %}active{% endif %}">
                         <i class="nav-icon fa fa-user-friends"></i>
-                        <p>{% translate "Facilitators" %}</p>
+                        <p>{% translate "Facilitators " %}</p>
                     </a>
                 </li>
             </ul>
@@ -80,7 +80,7 @@
             </li>
         </ul>
 
-        {% comment %} <nav class="mt-2">
+        <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:reports:pages:facilitators_status' %}"
@@ -90,9 +90,9 @@
                     </a>
                 </li>
             </ul>
-        </nav> {% endcomment %}
+        </nav>
 
-        <nav class="mt-2">
+        {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:statistics:statistic' %}"
@@ -102,7 +102,7 @@
                     </a>
                 </li>
             </ul>
-        </nav>
+        </nav> {% endcomment %}
 
         {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
@@ -148,6 +148,43 @@
                         <i class="nav-icon fa fa-download"></i>
                         <p>{% translate "COSO Store" %}</p>
                     </a>
+                </li>
+            </ul>
+        </nav>
+
+
+
+        <style>
+            #nav-profile form, #nav-profile button {
+                display: inline !important;
+            }
+           #nav-profile button {
+                display: flex; /* Utilise flexbox pour aligner les éléments */
+                justify-content: flex-start; /* Aligne les éléments horizontalement à gauche */
+                align-items: center; /* Aligne les éléments verticalement au centre */
+                background-color: white; /* Arrière-plan blanc */
+                border: 1px solid white; /* Bordure blanche */
+                color: gray; /* Couleur du texte */
+                padding: 10px 15px; /* Espacement interne */
+                text-align: left; /* Alignement du texte à gauche */
+                width: auto; /* Ajuste la largeur automatiquement */
+                cursor: pointer; /* Curseur au survol */
+            }
+            #nav-profile, #nav-profile button, #nav-profile form {
+                width: 100%;
+            }
+        </style>
+        <nav class="mt-2" id="nav-profile">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <form action="{% url 'profile' %}" method="POST">
+                        {% csrf_token %}
+                        <button
+                            class="nav-link">
+                            <i class="nav-icon fa fa-user"></i>
+                            <p>{% translate "Profile" %}</p>
+                        </button>
+                    </form>
                 </li>
             </ul>
         </nav>

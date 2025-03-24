@@ -124,7 +124,7 @@ class GetChoicesForNextAdministrativeLevelAllView(AJAXRequestMixin, LoginRequire
 class GetChoicesForNextAdministrativeLevelsAllView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
         return self.render_to_json_response(
-            get_cascade_administrative_levels_by_administrative_level_ids(self.request.GET.getlist('parents_id[]')), 
+            get_cascade_administrative_levels_by_administrative_level_ids(self.request.GET.getlist('parents_id[]'), self.request), 
             safe=False
         )
     

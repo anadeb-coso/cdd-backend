@@ -1,4 +1,5 @@
 from django.urls import path
+from django.conf.urls import include
 
 from dashboard.planning import views
 
@@ -19,4 +20,5 @@ urlpatterns = [
     path('download-anonyme-planning/', views.PlanningDownloadAnonymeView.as_view(), name='download_anonyme_planning'),
     path('reports/', views.PlanningCSVView.as_view(), name="app_excel_reports_planning"),
 
+    path('map-tracking-user/', include('dashboard.planning.urls_map')),
 ]

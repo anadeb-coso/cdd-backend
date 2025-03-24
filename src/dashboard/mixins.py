@@ -1,6 +1,8 @@
 from django.http import Http404, JsonResponse
 from django.contrib.auth import logout as auth_logout
 from django.shortcuts import redirect
+from django.urls import reverse
+from urllib.parse import urlencode
 from django.http import HttpResponseRedirect
 
 
@@ -21,10 +23,16 @@ class PageMixin(object):
         return ctx
     
     def dispatch(self, request, *args, **kwargs):
-        
-        if "/process-manager/" not in self.request.get_full_path() and self.request.user.is_authenticated and not self.request.session.get('project_id'): # If the user is authenticated and no project selected
+        next_url = self.request.get_full_path()
+        if "/process-manager/select-project/" not in next_url and self.request.user.is_authenticated and not self.request.session.get('project_id'): # If the user is authenticated and no project selected
             # auth_logout(self.request) #log out user
-            return redirect('dashboard:process_manager:list')
+            
+            url = reverse('dashboard:process_manager:list')
+            query_params = {}
+            if next_url:
+                query_params['next'] = next_url
+            url_with_params = f"{url}?{urlencode(query_params)}"
+            return redirect(url_with_params)
         return super().dispatch(request, *args, **kwargs)
 
 

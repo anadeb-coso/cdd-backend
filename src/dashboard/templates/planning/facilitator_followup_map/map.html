@@ -1,0 +1,25 @@
+{% load static i18n custom_tags %}
+
+<script type="text/javascript">
+
+    var task_planed_detail=null;
+    currentWeek = parseInt("{{ currentWeek }}");
+    currentMondayDate = new Date('{{ currentMondayDate|date:"Y/m/d" }}');
+
+    
+    var date_start_selected = currentMondayDate ? formatDate(currentMondayDate) : null;
+    $("#id_plan_date_start_selected").html(date_start_selected);
+
+    let currentSundayDate = new Date(currentMondayDate);
+    currentSundayDate.setDate(currentMondayDate.getDate() + 6);
+    var date_end_selected = currentSundayDate ? formatDate(currentSundayDate) : null;
+    $("#id_plan_date_end_selected").html(date_end_selected);
+
+
+    let task_plan_map_spin = $('#task-plan-map-spin');
+    task_plan_map_spin.hide();
+    
+
+    
+
+</script>

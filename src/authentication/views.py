@@ -3,6 +3,8 @@ from rest_framework import parsers, renderers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
 
 from authentication.serializers import CredentialSerializer, UserAuthSerializer
 
@@ -49,3 +51,9 @@ class AuthenticateAPIView(APIView):
         credential_serializer = CredentialSerializer(data=credentials)
         credential_serializer.is_valid(raise_exception=True)
         return Response(credential_serializer.data, status=status.HTTP_200_OK)
+
+
+
+def get_csrf_token(request):
+    print(request)
+    return JsonResponse({'csrfToken': get_token(request)})

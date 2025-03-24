@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background-color:rgb(12, 160, 34);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .content {
+            padding: 20px;
+            color: #333;
+        }
+
+        .content h2 {
+            font-size: 20px;
+            color: rgb(12, 160, 34);
+        }
+
+        .content p {
+            line-height: 1.6;
+        }
+
+        .footer {
+            background-color: #f4f4f4;
+            text-align: center;
+            color: #999;
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: rgb(12, 160, 34);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background-color: rgb(19, 95, 30);
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>{{ title }}!</h1>
+    </div>
+    <div class="content">
+        <p>Cher {{ user_name }},</p>
+        <p>
+            <strong>{{ motif }}</strong>
+        </p>
+        <p>
+            {{ description }}
+        </p>
+    </div>
+    <div class="footer">
+        <p>&copy; {{ current_year }} Projet de Cohésion Sociale des régions nord du Golfe de Guinée. Tous droits réservés.</p>
+    </div>
+</div>
+</body>
+</html>

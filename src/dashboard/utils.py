@@ -1699,3 +1699,46 @@ def add_attr_total_number_of_tasks_on_facilitators_doc(name="COSO", develop_mode
                 doc["total_number_of_tasks"] = Task.objects.filter(project_id=project.id).count()
 
                 nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+
+def add_attr_facilitator_type_on_facilitators_doc(name="COSO", facilitator_type='community_facilitator'):
+    project = Project.objects.filter(name=name).first()
+
+    facilitators = Facilitator.objects.filter(facilitator_type='community_facilitator', projects__in=[project.id])
+
+    if project and facilitators:
+            
+        nsc = NoSQLClient()
+        for f in facilitators:
+            print(f.name)
+            db = nsc.get_db(f.no_sql_db_name)
+
+            docs = db.get_query_result({
+                "type": "facilitator",
+                "$or": [
+                    {
+                        "facilitator_type": {
+                            "$in": [
+                                None,
+                                ""
+                            ]
+                        }
+                    },
+                    {
+                        "facilitator_type": {
+                            "$exists": False
+                        }
+                    }
+                ]
+            })[0]
+
+            if len(docs) > 0:
+                doc = docs[0].copy()
+                doc["facilitator_type"] = facilitator_type
+
+                nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+                print(f.name, "done!")
+
+    print("")
+    print("End")

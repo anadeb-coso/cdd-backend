@@ -53,10 +53,15 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         },
     ]
 
+    # def get_queryset(self):
+    #     return FacilitatorRepository().find_by_criteria(
+    #         FacilitatorCriteria(
+    #             active=True, projects__id=[self.request.session.get('project_id')], 
+    #             facilitator_type=self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
+    #         )
+    #     )
     def get_queryset(self):
-        return FacilitatorRepository().find_by_criteria(
-            FacilitatorCriteria(active=True, projects__id=[self.request.session.get('project_id')])
-        )
+        return super().get_queryset()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -67,6 +72,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['region_id'] = self.request.GET.get('region_id')
         context['type_facilitator'] = self.request.GET.get('type_facilitator')
+        context['type_of_facilitator_list'] = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
             sync_celery_tasks_re()
@@ -165,6 +171,7 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         id_village = self.request.GET.get('id_village')
         type_field = self.request.GET.get('type_field')
         type_facilitator = self.request.GET.get('type_facilitator')
+        type_of_facilitator_list = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
         _id = 0
         facilitators = []
 
@@ -204,7 +211,8 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                     develop_mode=False,
                     training_mode=False,
                     active=(False if type_facilitator=='inactive' else True),
-                    projects__id=[self.request.session.get('project_id')]
+                    projects__id=[self.request.session.get('project_id')],
+                    facilitator_type=type_of_facilitator_list
                 )
 
             else:
@@ -212,7 +220,8 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                     develop_mode=False,
                     training_mode=False,
                     active=(False if type_facilitator=='inactive' else True),
-                    projects__id=[self.request.session.get('project_id')]
+                    projects__id=[self.request.session.get('project_id')],
+                    facilitator_type=type_of_facilitator_list
                 )
 
         else:
@@ -222,7 +231,8 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 develop_mode=is_develop,
                 training_mode=is_training,
                 active=(False if type_facilitator=='inactive' else True),
-                projects__id=[self.request.session.get('project_id')]
+                projects__id=[self.request.session.get('project_id')],
+                facilitator_type=type_of_facilitator_list
             )
 
         facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
@@ -679,6 +689,7 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.email = data['email']
         facilitator.phone = data['phone']
         facilitator.sex = data['sex']
+        facilitator.facilitator_type = data['facilitator_type']
         facilitator.save(replicate_design=False)
 
         project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
@@ -712,6 +723,7 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "email": data['email'],
             "phone": data['phone'],
             "sex": data['sex'],
+            "facilitator_type": data['facilitator_type'],
             "administrative_levels": _administrative_levels,
             "type": "facilitator",
             "develop_mode": facilitator.develop_mode,
@@ -771,6 +783,24 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             for p in data['projects']:
                 p.facilitators.add(facilitator)
                 p.save()
+
+                
+                try:
+                    nsc_database = nsc.get_db("process_design")
+                    project = nsc_database.get_query_result({"_id": p.couch_id})[0]
+
+                    fc_project = facilitator_database.get_query_result(
+                        {"type": "project", "name": project[0]['name']}
+                    )[0]
+
+                    # check if the project exists
+                    if not fc_project:
+                        # create the project on the facilitator database
+                        nsc.create_document(facilitator_database, project[0])
+                except:
+                    pass
+
+
 
         return super().form_valid(form)
 
@@ -863,6 +893,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         facilitator.email = data['email']
         facilitator.phone = data['phone']
         facilitator.sex = data['sex']
+        facilitator.facilitator_type = data['facilitator_type']
         facilitator = facilitator.save_and_return_object(user=self.request.user)
         administrative_levels_old = self.doc.get('administrative_levels')
         administrative_levels_remove = []
@@ -915,6 +946,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             "email": data['email'],
             "name": data['name'],
             "sex": data['sex'],
+            "facilitator_type": data['facilitator_type'],
             "administrative_levels": _administrative_levels,
 
             "project_id": self.request.session.get('project_couch_id'),

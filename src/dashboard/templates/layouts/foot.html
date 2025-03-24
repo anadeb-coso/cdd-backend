@@ -36,3 +36,35 @@
 <script src="{% static 'js/utils.js' %}"></script>
 <script src="{% static 'js/disableOnSubmit.js' %}"></script>
 <script src="{% static 'js/slugify.js' %}"></script>
+<script type="text/javascript">
+        
+    function set_datas_selected_fields(element, data){
+        v = element.val();
+        element.html('');
+        $(element).next().find('b[role="presentation"]').hide();
+        
+        let options = '';
+
+        options += '<option value=""></option>';
+
+        $.each(data, function (index, value) {
+            let option = '<option value="' + value.id + '"';
+            if(v == value.name){
+                option += ' selected>';
+            }else{
+                option += '>';
+            }
+            
+            option += value.name + '</option>';
+            options += option
+        });
+
+
+        element.html(options);
+        element.trigger('change');
+        let element_val = element.val();
+        if (element_val !== '') {
+            element.val(element_val)
+        }
+    }
+</script>

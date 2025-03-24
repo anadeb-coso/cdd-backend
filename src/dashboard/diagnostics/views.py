@@ -65,7 +65,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
     def get(self, request, *args, **kwargs):
         
         project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
         project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
 
         _type = request.GET.get('type')

@@ -1,4 +1,9 @@
 from administrativelevels import models as administrativelevels_models
+from assignments.models import AssignAdministrativeLevelToFacilitator
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
+from subprojects.models import Project as MisProject
+from cdd.call_objects_from_other_db import mis_objects_call
 
 
 def get_administrative_level_under_json(administrative_level):
@@ -149,7 +154,7 @@ def get_cascade_administrative_levels_by_administrative_level_id(_id):
 
 
 
-def get_cascade_administrative_levels_by_administrative_level_ids(_ids):
+def get_cascade_administrative_levels_by_administrative_level_ids(_ids, request=None):
     datas = {}
     if type(_ids) is not list:
         _ids = [_ids]
@@ -159,8 +164,10 @@ def get_cascade_administrative_levels_by_administrative_level_ids(_ids):
     if None in _ids:
         del _ids[_ids.index(None)]
 
+    _ids = [int(_id) for _id in _ids if _id if str(_id).isdigit()]
+
     if _ids:
-        ad_objects = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=[int(_id) for _id in _ids if _id])
+        ad_objects = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=_ids)
 
         ads = []
         for ad_obj in ad_objects:
@@ -214,5 +221,32 @@ def get_cascade_administrative_levels_by_administrative_level_ids(_ids):
     datas["cantons"] = get_administrative_levels_under_json(cantons)
     datas["villages"] = get_administrative_levels_under_json(villages)
 
+    if request:
+        project_mis = mis_objects_call.filter_objects(MisProject, name=request.session.get('project_name'))
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        
+        if datas["villages"]:
+            assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                administrative_level_id__in=[str(v['administrative_id']) for v in datas["villages"]],
+                project_id=project_mis_id,
+                activated=True
+            )
+            criteria = FacilitatorCriteria(
+                id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[request.session.get('project_id')]
+            )
 
+        else:
+            criteria = FacilitatorCriteria(
+                develop_mode=False,
+                training_mode=False,
+                projects__id=[request.session.get('project_id')]
+            )
+        fs = FacilitatorRepository().find_by_criteria(criteria=criteria)
+        
+        _facilitators = [('', '')]
+        datas["facilitators"] = [{'id': o.no_sql_db_name, 'name': o.name if o.name else o.username} for o in fs.order_by("name", "username")]
+        
     return datas

@@ -25,4 +25,6 @@ class FacilitatorRepository:
             query = query.filter(no_sql_pass=criteria.no_sql_pass)
         if criteria.no_sql_user is not None:
             query = query.filter(no_sql_user=criteria.no_sql_user)
+        if criteria.facilitator_type is not None:
+            query = query.filter(facilitator_type=criteria.facilitator_type)
         return query

@@ -156,6 +156,10 @@ msgstr "Profil de l'Animateur"
 msgid "Create Facilitator"
 msgstr "Créer un Animateur"
 
+#: .\dashboard
+msgid "Create Facilitator "
+msgstr "Créer un AC & FT"
+
 #: .\dashboard\facilitators\views.py:455
 msgid "Edit Facilitator"
 msgstr "Editer l'Animateur"
@@ -514,6 +518,10 @@ msgstr "Genérer"
 #: .\dashboard\templates\report\pages\facilitators.html
 msgid "Generate the link"
 msgstr "Générer le lien"
+
+#: .\dashboard\templates\report\pages\facilitators.html
+msgid "Generate a download link"
+msgstr "Générer un lien pour le téléchargement"
 
 #: .\dashboard\templates\report\pages\facilitators.html
 msgid "You have to fill all the fields"
@@ -876,8 +884,16 @@ msgid "Facilitators Stabilized"
 msgstr "Animateurs Stabilisés"
 
 #: .\facilitators
+msgid "Facilitators Stabilized "
+msgstr "AC & FT Stabilisés"
+
+#: .\facilitators
 msgid "Facilitators assigned"
 msgstr "Animateurs affectés"
+
+#: .\facilitators
+msgid "Facilitators assigned "
+msgstr "AC & FT affectés"
 
 #: .\dashboard\administrative_levels
 msgid "administrative level"
@@ -1195,16 +1211,36 @@ msgid "Inactive facilitators"
 msgstr "Facilitateurs inactifs"
 
 #: .\dashboard
+msgid "Inactive"
+msgstr "Inactifs"
+
+#: .\dashboard
+msgid "Inactive facilitators "
+msgstr "AC & FT inactifs"
+
+#: .\dashboard
 msgid "Active facilitators"
 msgstr "Facilitateurs actifs"
+
+#: .\dashboard
+msgid "Active facilitators "
+msgstr "AC & FT actifs"
 
 #: .\dashboard
 msgid "Inactive facilitators stabilized"
 msgstr "Facilitateurs stabilisés inactifs"
 
 #: .\dashboard
+msgid "Inactive facilitators stabilized "
+msgstr "AC & FT stabilisés inactifs"
+
+#: .\dashboard
 msgid "Active facilitators stabilized"
 msgstr "Facilitateurs stabilisés actifs"
+
+#: .\dashboard
+msgid "Active facilitators stabilized "
+msgstr "AC & FT stabilisés actifs"
 
 #: .\dashboard
 msgid "Published by"
@@ -1589,3 +1625,399 @@ msgstr "Modifiée le"
 #: .\dashboard
 msgid "Subject "
 msgstr "Objet "
+
+#: .\dashboard
+msgid "Day"
+msgstr "Jour"
+
+#: .\dashboard
+msgid "Hour"
+msgstr "Heure"
+
+#: .\dashboard
+msgid "Financial "
+msgstr "Financier"
+
+#: .\dashboard
+msgid "Procurement Specialist"
+msgstr "Passation de marché"
+
+#: .\dashboard
+msgid "Knowledge manager"
+msgstr "Gestionnaire de connaissanes"
+
+#: .\dashboard
+msgid "Completion action"
+msgstr "Action d'achèvement"
+
+#: .\dashboard
+msgid "Uncompletion action"
+msgstr "Action d'inachèvement"
+
+#: .\dashboard
+msgid "Another action"
+msgstr "Autre action"
+
+#: .\dashboard
+msgid "Task back in pending"
+msgstr "Tâche remise en attente"
+
+#: .\dashboard
+msgid "Comments history"
+msgstr "Historique des commentaires"
+
+#: .\dashboard
+msgid "Comments and actions history"
+msgstr "Historique des commentaires et actions"
+
+#: .\dashboard
+msgid "Validator Type"
+msgstr "Type de Valideur"
+
+#: .\dashboard
+msgid "Facilitator Phone"
+msgstr "Tel de l'AC"
+
+#: .\dashboard
+msgid "Facilitator Sex"
+msgstr "Sexe de l'AC"
+
+#: .\dashboard
+msgid "Validator Email"
+msgstr "Email du Valideur"
+
+#: .\dashboard
+msgid "Planner Email"
+msgstr "Email du planificateur"
+
+#: .\dashboard
+msgid "Invalidated task reviewed by the Facilitator"
+msgstr "Tâche invalidée revue par l'Animateur Communautaire"
+
+#: .\dashboard
+msgid "To do"
+msgstr "A faire"
+
+#: .\dashboard
+msgid "In validation"
+msgstr "En validation"
+
+#: .\dashboard
+msgid "Rejected"
+msgstr "Rejetée"
+
+#: .\dashboard
+msgid "Rejected "
+msgstr "Rejeté"
+
+#: .\dashboard
+msgid "Validated "
+msgstr "Validé"
+
+#: .\dashboard
+msgid "Select a village to review their respective phases"
+msgstr "Sélectionnez un village pour revoir leurs phases respectives"
+
+#: .\dashboard
+msgid "Data from the old form. The following data must not be counted during the validation of this task"
+msgstr "Les données de l'ancien formulaire. Ces données ci-dessous ne doivent pas être compte lors de la validation de cette tâche"
+
+#: .\dashboard
+msgid "Date range?"
+msgstr "Plage de dates ?"
+
+#: .\dashboard
+msgid "Activity covering several dates?"
+msgstr "Activité couvrant plusieurs dates ?"
+
+#: .\dashboard
+msgid "Dates (Mention the dates of the activity here with times if possible. Times are not require)"
+msgstr "Dates (Mentionnez les dates de l'activité ici avec les heures si possibles. Les heures ne sont pas obligatoires)"
+
+#: .\dashboard
+msgid "Modified variable(s)"
+msgstr "Variable(s) modifiée(s)"
+
+#: .\dashboard
+msgid "Download CDD data"
+msgstr "Télécharger les données DCC"
+
+#: .\dashboard
+msgid "Download in progress. This download may take some time depending on the amount of data being downloaded!"
+msgstr "Téléchargement en cours. Ce téléchargement peut prendre un certain temps en fonction de la quantité de données en téléchargement !"
+
+#: .\dashboard
+msgid "Include history"
+msgstr "Inclure les historiques"
+
+#: .\dashboard
+msgid "Include form fields"
+msgstr "Inclure les champs du formulaire"
+
+#: .\dashboard
+msgid "Password change confirmation code"
+msgstr "Code de confirmation de changement de mot de passe"
+
+#: .\dashboard
+msgid "This code is only valid for %(deadline)s"
+msgstr "Ce code est valable que pendant %(deadline)s"
+
+#: .\dashboard
+msgid "We are encountering a few errors when sending you e-mails."
+msgstr "Nous rencontrons quelques erreurs pour vous envoyer des mails."
+
+#: .\dashboard
+msgid "Confirmation code sent by e-mail"
+msgstr "Code de confirmation envoyé par mail"
+
+#: .\dashboard
+msgid "A confirmation code has been e-mailed to your e-mail address"
+msgstr "Un code de confirmation a été envoyé par mail sur votre adresse mail"
+
+#: .\dashboard
+msgid "Current password"
+msgstr "Mot de passe actuel"
+
+#: .\dashboard
+msgid "New password"
+msgstr "Nouveau mot de passe"
+
+#: .\dashboard
+msgid "Confirm new password"
+msgstr "Confirmer le nouveau mot de passe"
+
+#: .\dashboard
+msgid "Enter your new password."
+msgstr "Entrez votre nouveau mot de passe."
+
+#: .\dashboard
+msgid "It must contain at least 8 characters, including at least one letter and one number."
+msgstr "Il doit contenir au moins 8 caractères, dont au moins une lettre et un chiffre."
+
+#: .\dashboard
+msgid "Only numbers and letters are accepted."
+msgstr "Seuls les chiffres et les lettres sont acceptés."
+
+#: .\dashboard
+msgid "The password must contain at least 8 characters."
+msgstr "Le mot de passe doit contenir au moins 8 caractères."
+
+#: .\dashboard
+msgid "The password must contain at least one letter."
+msgstr "Le mot de passe doit contenir au moins une lettre."
+
+#: .\dashboard
+msgid "The password must contain at least one digit."
+msgstr "Le mot de passe doit contenir au moins un chiffre."
+
+#: .\dashboard
+msgid "The password must contain only letters and numbers."
+msgstr "Le mot de passe ne doit contenir que des lettres et des chiffres."
+
+#: .\dashboard
+msgid "The password must be the same as the previous one."
+msgstr "Le mot de passe doit être le même que le précédent."
+
+#: .\dashboard
+msgid "The confirmation password must be the same as the new password."
+msgstr "Le mot de passe de confirmation doit être le même que le nouveau mot de passe."
+
+#: .\dashboard
+msgid "Code invalide"
+msgstr "Code invalide"
+
+#: .\dashboard
+msgid "Note: This process will reset your passwords for the CDD, GRM, and/or MIS platforms if you have an account on any of these platforms."
+msgstr "Remarque : Ce processus réinitialisera vos mots de passe pour les plateformes DCC, MGP et/ou SIG, si vous possédez un compte sur l'une de ces plateformes."
+
+#: .\dashboard
+msgid "Note: If you have accounts on the CDD, GRM and/or MIS platforms, their passwords will also be changed."
+msgstr "Remarque : Si vous possédez des comptes sur les plateformes DCC, MGP et/ou SIG, leurs mots de passe seront également modifiés."
+
+#: .\dashboard
+msgid "Code expired"
+msgstr "Code expiré"
+
+#: .\dashboard
+msgid "Code already used"
+msgstr "Code déjà utilisé"
+
+#: .\dashboard
+msgid "This field is mandatory"
+msgstr "Ce champs est obligatoire"
+
+#: .\dashboard
+msgid "Current password does not match."
+msgstr "Le mot de passe actuel ne correspond pas."
+
+#: .\dashboard
+msgid "The password has been successfully changed."
+msgstr "Le mot de passe a été changé avec succès."
+
+#: .\dashboard
+msgid "Full Name"
+msgstr "Nom complet"
+
+#: .\dashboard
+msgid "Password reset"
+msgstr "Réinitialisation du mot de passe"
+
+#: .\dashboard
+msgid "Reset"
+msgstr "Réinitialiser"
+
+#: .\dashboard
+msgid "Password forgotten"
+msgstr "Mot de passe oublié"
+
+#: .\dashboard
+msgid "Password forgotten?"
+msgstr "Mot de passe oublié ?"
+
+#: .\dashboard
+msgid "To ensure the security of your account, we are obliged to send an e-mail containing a validation code to your e-mail address."
+msgstr "Pour assurer la sécurité du compte, nous sommes dans l'obligation d'envoyer un mail contenant un code de validation sur votre adresse mail."
+
+#: .\dashboard
+msgid "Please enter your e-mail address in the following field"
+msgstr "Mentionnez votre adresse mail dans le champs suivant"
+
+#: .\dashboard
+msgid "I remember my password"
+msgstr "Je me rappelle de mon mot de passe"
+
+#: .\dashboard
+msgid "E-mail address"
+msgstr "Adresse mail"
+
+#: .\dashboard
+msgid "Password reset confirmation code"
+msgstr "Code de confirmation de réinitialisation de mot de passe"
+
+#: .\dashboard
+msgid "Fill in the following fields and save them to reset your password"
+msgstr "Remplissez les champs suivants et sauvegardez les pour  réinitialiser votre mot de passe"
+
+#: .\dashboard
+msgid "The e-mail address is required"
+msgstr "L'adresse mail est requise"
+
+#: .\dashboard
+msgid "The password address is required"
+msgstr "L'adresse du mot de passe est requise"
+
+#: .\dashboard
+msgid "The password has been successfully reset."
+msgstr "Le mot de passe a été réinitialisé avec succès."
+
+#: .\dashboard
+msgid "Go to the login page"
+msgstr "Allez à la page de connexion"
+
+#: .\dashboard
+msgid "Your password has been reset. You can now log in with your new password."
+msgstr "Votre mot de passe a été réinitialisé. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe."
+
+#: .\dashboard
+msgid "An e-mail is being sent to your e-mail address."
+msgstr "Un mail est en cours d'envoi sur votre adresse mail."
+
+#: .\dashboard
+msgid "Mail sent successfully"
+msgstr "Le Mail a été envoyé avec succès"
+
+#: .\dashboard
+msgid "Return"
+msgstr "Retourner"
+
+#: .\dashboard
+msgid "This e-mail address does not exist in our database. If you have any questions, please contact the administration."
+msgstr "Cette adresse e-mail n'existe pas dans notre base de données. Pour toute question, veuillez contacter l'administration."
+
+#: .\dashboard
+msgid "Facilitators "
+msgstr "Animateurs & Facilitateurs"
+
+#: .\dashboard
+msgid "Community facilitator"
+msgstr "Animateur communautaire"
+
+#: .\dashboard
+msgid "Technical facilitator"
+msgstr "Facilitateur technique"
+
+#: .\dashboard
+msgid "Community facilitators"
+msgstr "Animateurs communautaires"
+
+#: .\dashboard
+msgid "Technical facilitators"
+msgstr "Facilitateurs techniques"
+
+#: .\dashboard
+msgid "Facilitator type"
+msgstr "Type d'Animateur/facilitateur"
+
+#: .\dashboard
+msgid "Initially planned activity not carried out"
+msgstr "L'activité planifiée initialement n'a pas été faite"
+
+#: .\dashboard
+msgid "This activity was not carried out"
+msgstr "Cette activité n'a pas été faite"
+
+#: .\dashboard
+msgid "Reason"
+msgstr "Raison"
+
+#: .\dashboard
+msgid "Reason not mentioned"
+msgstr "Raison non mentionnée"
+
+#: .\dashboard
+msgid "Done"
+msgstr "Effectuée"
+
+#: .\dashboard
+msgid "Not Done"
+msgstr "Non Effectuée"
+
+#: .\dashboard
+msgid "Superseded"
+msgstr "Remplacée"
+
+#: .\dashboard
+msgid "Pending to validate"
+msgstr "En attente de validation"
+
+#: .\dashboard
+msgid "Vacation validated"
+msgstr "Vacance validée"
+
+#: .\dashboard
+msgid "The presence of the planner for this activity has been confirmed on the ground"
+msgstr "La présence du planificateur de cette activité a été confirmée sur le terrain"
+
+#: .\dashboard
+msgid "coordinates"
+msgstr "les coordonnées"
+
+#: .\dashboard
+msgid "Only arrival coordinates are saved"
+msgstr "Seules les coordonnées d'arriver sont enrégistrées"
+
+#: .\dashboard
+msgid "Stabilized"
+msgstr "Stabilisés"
+
+#: .\dashboard
+msgid "Pending validation"
+msgstr "En attente de validation"
+
+#: .\dashboard
+msgid "Waiting for review"
+msgstr "En attente de révision"
+
+#: .\dashboard
+msgid "Pending to do"
+msgstr "En attente de réalisation"

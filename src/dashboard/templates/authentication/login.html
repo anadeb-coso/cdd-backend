@@ -53,6 +53,8 @@
                             <button type="submit" class="btn btn-primary btn-block">
                                 {% translate "Log in" %}
                             </button>
+                            <br />
+                            <p>{% translate "Password forgotten?" %}<a href="{% url 'user_manager:reset_password_ask_email' %}"> {% translate "Reset" %} <a/></p>
                         </div>
                         <!-- /.col -->
                     </div>

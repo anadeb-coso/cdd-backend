@@ -88,33 +88,35 @@ class RestSaveNews(APIView):
             
             if (not id and news.publish) or (not publication_date_existed and publication_date):
                 try:
-                    
-                    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-                    msg = send_email(
-                        f"Nouvelle - COSO : {news.title}",
-                        "mail/send/news",
-                        {
-                            "datas": {
+                    if news.facilitator and news.facilitator.training_mode:
+                        pass
+                    else:
+                        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+                        msg = send_email(
+                            f"Nouvelle - COSO : {news.title}",
+                            "mail/send/news",
+                            {
+                                "datas": {
+                                },
+                                "user": {
+                                },
+                                "url": f"",
+                                "news": news,
+                                "event_date": news.event_date.strftime('%A %d %B %Y à %H:%M') if news.event_date else None,
+                                "publication_date": news.publication_date.strftime('%A %d %B %Y à %H:%M') if news.publication_date else None,
+                                "files": news.get_files() if news.get_files().count() <= 3 else news.get_files()[:3],
+                                "files_count": news.get_files().count() if news.get_files().count() <= 3 else 3,
+                                "villages_exist": (len([ad for ad in news.administrative_levels if ad.get('type') == "Village"]) != 0) if news.administrative_levels else False
                             },
-                            "user": {
-                            },
-                            "url": f"",
-                            "news": news,
-                            "event_date": news.event_date.strftime('%A %d %B %Y à %H:%M') if news.event_date else None,
-                            "publication_date": news.publication_date.strftime('%A %d %B %Y à %H:%M') if news.publication_date else None,
-                            "files": news.get_files() if news.get_files().count() <= 3 else news.get_files()[:3],
-                            "files_count": news.get_files().count() if news.get_files().count() <= 3 else 3,
-                            "villages_exist": (len([ad for ad in news.administrative_levels if ad.get('type') == "Village"]) != 0) if news.administrative_levels else False
-                        },
-                        [
-                            (subscrib.user.email if subscrib.user else subscrib.facilitator.email) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
-                        ],
-                        [
-                            "cosotogosig@gmail.com"
-                        ]
-                    )
-                    
-                    mail_message = gettext_lazy("Mail sent successfully")
+                            [
+                                (subscrib.user.email if subscrib.user else subscrib.facilitator.email) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
+                            ],
+                            [
+                                "cosotogosig@gmail.com"
+                            ]
+                        )
+                        
+                        mail_message = gettext_lazy("Mail sent successfully")
                 except Exception as exc:
                     print(exc)
                     mail_message = gettext_lazy("An error occurred while sending the email")
@@ -226,9 +228,9 @@ class RestGetNews(APIView):
                 
             else:
                 query = Q(publish=True)
-            print(query)
+            
             _ = News.objects.filter(query)
-            print(_.count())
+            
             paginator = CustomPagination()
             paginated_data = paginator.paginate_queryset(News.objects.filter(query).order_by('-created_date'), request)
             serializer = NewsSerializer(paginated_data, many=True)

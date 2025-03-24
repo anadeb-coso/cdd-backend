@@ -42,7 +42,6 @@ def planning_csv(request):
     task_status = request.GET.get('task_status', 'All')
     task_type = request.GET.get('task_type', 'All')
     username_facilitator_user = request.GET.getlist('username_facilitator_user[]')
-    print(username_facilitator_user)
 
     is_training = bool(request.GET.get('is_training', "False") == "True")
     is_develop = bool(request.GET.get('is_develop', "False") == "True")
@@ -66,6 +65,9 @@ def planning_csv(request):
         "Date & Heure fin": {},
         "Commentaires": {},
         "Villages": {},
+        "Autre activité faite": {},
+        "Composante (Autre activité)": {},
+        "Villages (Autre activité)": {},
     }
     plan_datas = {
         "Nom": {},
@@ -101,26 +103,20 @@ def planning_csv(request):
     
     week_dates = [(date_start_selected_object + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(-days_between, days_between)]
 
-    _id = 0
+    _id = []
     facilitators = []
     liste_villages_ids = None
     
     if (id_region or id_prefecture or id_commune or ids_canton or ids_village) and type_field != 'clear':
-        _type = None
-        if id_region and type_field == "region":
-            _type = "region"
+        if id_region:
             _id = id_region
-        elif id_prefecture and type_field == "prefecture":
-            _type = "prefecture"
+        if id_prefecture:
             _id = id_prefecture
-        elif id_commune and type_field == "commune":
-            _type = "commune"
+        if id_commune:
             _id = id_commune
-        elif ids_canton and type_field == "canton":
-            _type = "canton"
+        if ids_canton:
             _id = ids_canton
-        elif ids_village and type_field == "village":
-            _type = "village"
+        if ids_village:
             _id = ids_village
 
         liste_prefectures = []
@@ -131,7 +127,7 @@ def planning_csv(request):
         liste_villages = get_cascade_villages_by_administrative_level_id(_id)
         liste_villages_ids = [int(v['administrative_id']) for v in liste_villages]
 
-        if type(_id) is not list:
+        if type(_id) is list and _id:
             assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                 administrative_level_id__in=liste_villages_ids,
                 project_id=project_mis_id,
@@ -232,8 +228,27 @@ def planning_csv(request):
         datas_dict_planning['Précédentes']['Description'][i] = activity.description
         datas_dict_planning['Précédentes']['Date & Heure début'][i] = activity.planned_datetime_start.strftime('%Y-%m-%d %H:%M:%S')
         datas_dict_planning['Précédentes']['Date & Heure fin'][i] = activity.planned_datetime_end.strftime('%Y-%m-%d %H:%M:%S')
-        datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Yes") if activity.completed else gettext_lazy("No")
-        datas_dict_planning['Précédentes']['Commentaires'][i] = f"{gettext_lazy('Another activity is done instead: ')}{activity.another_detail.get('name') if activity.another_detail else gettext_lazy('Not defined')}" if not activity.completed and activity.is_another else activity.undo_comment
+
+        if activity.completed:
+            datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Done")
+        elif not activity.completed and activity.is_another and activity.another_detail:
+            datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Superseded")
+        elif activity.undo:
+            datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Not Done")
+        else:
+            datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Pending")
+
+        # datas_dict_planning['Précédentes']['Statut'][i] = gettext_lazy("Yes") if activity.completed else gettext_lazy("No")
+
+        if not activity.completed and activity.is_another and activity.another_detail:
+            datas_dict_planning['Précédentes']['Autre activité faite'][i] = activity.another_detail.get('name')
+            datas_dict_planning['Précédentes']['Composante (Autre activité)'][i] = activity.another_detail.get('component')
+            datas_dict_planning['Précédentes']['Villages (Autre activité)'][i] = " ; ".join([v.get('name') for v in activity.another_detail.get('administrative_levels')]) if activity.another_detail.get('administrative_levels') else ""
+
+        if activity.undo and activity.undo_comment:
+            datas_dict_planning['Précédentes']['Commentaires'][i] = activity.undo_comment
+        
+        
         datas_dict_planning['Précédentes']['Rapport'][i] = activity.comment
         datas_dict_planning['Précédentes']['Villages'][i] = " ; ".join([v.get('name') for v in activity.administrative_levels]) if activity.administrative_levels else ""
         

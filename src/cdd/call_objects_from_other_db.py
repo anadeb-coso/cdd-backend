@@ -25,3 +25,5 @@ class CallObjects:
 
 
 mis_objects_call = CallObjects('mis')
+grm_objects_call = CallObjects('grm')
+cdd_objects_call = CallObjects('default')

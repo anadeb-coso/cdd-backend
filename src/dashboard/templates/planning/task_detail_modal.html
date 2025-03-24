@@ -74,9 +74,15 @@
                             {% translate 'Completed' %}
                         </div>
                     {% else %}
-                        <div class="status-badge badge-pending" style="font-size: 12px;">
-                            {% translate 'Pending' %}
-                        </div>
+                        {% if activity_status_color_description %}
+                            <div class="status-badge " style="font-size: 12px; background-color: {{ activity_status_color }} !important" >
+                                {{ activity_status_color_description }}
+                            </div>
+                        {% else %}
+                            <div class="status-badge badge-pending" style="font-size: 12px;">
+                                {% translate 'Pending' %}
+                            </div>
+                        {% endif %}
                     {% endif %}
                 </div>
                 <div>
@@ -129,6 +135,28 @@
                         <div class="text-center">
                             <img id="modal_form_picture" src="{{ picture }}" class="{{ picture_class }}">
                         </div>
+                    {% endif %}
+                    
+                    {% if geolocation and  geolocation.latitude_start and  geolocation.longitude_start %}
+                    <p style="font-size: 12px;">
+                        {% translate "The presence of the planner for this activity has been confirmed on the ground" %}(
+                            {% translate "coordinates" %} <i class="fas fa-hand-point-right"></i>
+                        )
+                        <a target="_blank" 
+                            href="https://www.google.com/maps?q={{ geolocation.latitude_start|replace:',r|.' }},{{ geolocation.longitude_start|replace:',r|.' }}&z=10" 
+                            >
+                            {{ geolocation.latitude_start }} {{ geolocation.longitude_start }}
+                        </a>
+                        (
+                            {% if geolocation.latitude_end and geolocation.longitude_end %}
+                                <a target="_blank" href="https://www.google.com/maps?q={{ geolocation.latitude_end|replace:',r|.' }},{{ geolocation.longitude_end|replace:',r|.' }}&z=10" >
+                                    {{ geolocation.latitude_end }} {{ geolocation.longitude_end }}
+                                </a>
+                            {% else %}
+                                {% translate "Only arrival coordinates are saved" %}
+                            {% endif %}
+                        )
+                    </p>
                     {% endif %}
                     
                     <div class="fieldset">
@@ -398,12 +426,40 @@
                                 <hr />
                                 {% endif %}
 
+                                {% if task_plan.undo %}
+                                <div class="fieldset">
+                                    <fieldset>
+                                        <legend>
+                                            {% if task_plan.is_another %}
+                                                {% translate "Initially planned activity not carried out" %}
+                                            {% else %}
+                                                {% translate "This activity was not carried out" %}
+                                            {% endif %}
+                                        </legend>
+                                        <div class="content">
+
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Reason" %}</label>
+                                                <div class="col-sm-9">
+                                                    
+                                                    <textarea readonly class="form-control" rows="3">{% if task.undo_comment %}{{ task.undo_comment }}{% else %}{% translate 'Reason not mentioned' %}{% endif %}</textarea>
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+
+                                        </div>
+                                    </fieldset>
+                                </div>
+                                {% endif %}
+
+
                                 {% if task_plan.is_another and task_plan.another_detail %}
                                 <div class="fieldset">
                                     <fieldset>
                                         <legend>{% translate "Another activity was carried out instead of the planned one. Below are the details of the activity carried out" %}</legend>
                                         <div class="content">
 
+                                            {% if task_plan.another_detail.phase %}
                                             <div class="form-group row">
                                                 <label class="col-sm-3 col-form-label">{% translate "Phase" %}</label>
                                                 <div class="col-sm-9">
@@ -411,7 +467,9 @@
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
+                                            {% endif %}
 
+                                            {% if task_plan.another_detail.activity %}
                                             <div class="form-group row">
                                                 <label class="col-sm-3 col-form-label">{% translate "Activity" %}</label>
                                                 <div class="col-sm-9">
@@ -419,14 +477,17 @@
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
+                                            {% endif %}
 
+                                            {% if task_plan.another_detail.name %}
                                             <div class="form-group row">
                                                 <label class="col-sm-3 col-form-label">{% translate "Task" %}</label>
                                                 <div class="col-sm-9">
-                                                    <input type="text" readonly value="{{ task_plan.another_detail.task_name }}" class="form-control" />
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.name }}" class="form-control" />
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
+                                            {% endif %}
 
                                             <div class="form-group row">
                                                 <label class="col-sm-3 col-form-label">{% translate "Free Task?" %}</label>
@@ -435,6 +496,27 @@
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
+                                            
+                                            {% if task.type != "vacation" and task_plan.another_detail.component %}
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Component" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.component }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if task_plan.another_detail.administrative_level_ids %}
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% if task_plan.another_detail.administrative_level_ids|length >= 2 %}{% translate "Villages" %}{% else %}{% translate "Village" %}{% endif %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.administrative_levels|join_attr:'name' }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+                                            {% endif %}
+
 
                                         </div>
                                     </fieldset>

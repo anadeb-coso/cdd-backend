@@ -184,7 +184,8 @@
                     `<span style="font-size: 8px; text-align: left; font-weight: bold; color: ${taskData.text_color};">${couperChaine(taskData.task, 35)}</span>` +
                 `</div>
                 <div style="width: 17%; float: right;">
-                    ${(taskData.planning.completed ? true : (taskData.planning.is_another ? true : false)) ? '<i class="nav-icon fa fa-check-circle"></i>' : '<i class="nav-icon fa fa-circle-o"></i>'}
+                    ${(taskData.planning.completed ? true : (taskData.planning.is_another ? true : false)) ? '<i class="nav-icon fa fa-check-circle" style="font-size: 7px;"></i>' : '<i class="nav-icon fa fa-circle-o" style="font-size: 7px;"></i>'}
+                    ${(taskData.is_geolocation == true) ? '<i class="nav-icon fa fa-map-marker" style="font-size: 7px;"></i>' : ''}
                     <br />
                     ${taskData.planning?.comments ? '<i class="nav-icon fa fa-envelope">'+
                         (![null, undefined, 0].includes(taskData.planning?.comments?.filter((elt) => [undefined, false].includes(elt.comment_read))?.length) ? (
@@ -195,6 +196,7 @@
                             '</span>'
                         ) : '')
                     +'</i>' : ''}
+                    
                 </div>
                 <div class="clearfix"></div>
             </div>
@@ -335,7 +337,7 @@ renderCalendar(currentWeek);
                 task_type: id_task_type.val(),
                 username_facilitator_user: id_username_facilitator_user.val(),
                 
-                current_week: currentWeek ? currentWeek : null,
+                current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
                 current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
                 date_start_selected: date_start_selected,
                 date_end_selected: date_end_selected,

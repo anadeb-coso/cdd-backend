@@ -293,7 +293,7 @@ CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 CORS_ALLOW_ALL_ORIGINS = False  # Assure que seules les origines spécifiées sont autorisées
 CORS_ALLOW_CREDENTIALS = True  # Autorise les cookies/session
-CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PATCH"]
+CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PATCH", "PUT"]
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'Access-Control-Allow-Origin',
 ]

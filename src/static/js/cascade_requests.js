@@ -102,6 +102,7 @@ function set_datas_administrative_level(element, data){
     }
 }
 
+
 function ajax_request_cascade_administrative_level(url, id){
     let elment_id_prefecture = $("#id_prefecture");
     let elment_id_commune = $("#id_commune");

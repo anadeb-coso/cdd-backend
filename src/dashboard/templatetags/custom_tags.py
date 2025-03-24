@@ -7,6 +7,7 @@ from django.contrib.auth.models import Group
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from process_manager.models import AggregatedStatus
+from cdd.functions import get_validation_code
 
 from dashboard.utils import structure_the_words as utils_structure_the_words
 from dashboard.functions import order_dict
@@ -20,6 +21,12 @@ register = template.Library()
 def get(dictionary, key):
     return dictionary.get(key, None)
 
+@register.simple_tag
+def get_code_email(email):
+    code = "-"
+    if email:
+        code = get_validation_code(email)
+    return code
 
 @register.simple_tag
 def date_order_format(date):
@@ -79,6 +86,8 @@ def next_in_circular_list(items, i):
 
 @register.simple_tag
 def get_initials(string):
+    if not string or string in ('', ):
+        return 'N'
     return ''.join((w[0] for w in string.split(' ') if w)).upper()
 
 
@@ -226,7 +235,7 @@ def structure_the_fields_labels(task):
                                                     for field8, value8 in l_field.items():
                                                         item7[field8] = {'name': utils_structure_the_words(field8), 'value': value8}
                                                     _list5.append(item7)
-                                                dict2[field5] = {'name': label2, 'value': _list5}
+                                                item6[field5] = {'name': label2, 'value': _list5}
                                             else:
                                                 item8 = {}
                                                 for field9, value9 in value7.items():
@@ -234,10 +243,10 @@ def structure_the_fields_labels(task):
                                                         label3 = fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') if fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') else utils_structure_the_words(field9)
                                                     except Exception as ex:
                                                         label3 = utils_structure_the_words(field9)
-                                                    item6[field7] = {'name': label3, 'value': value9}
-                                                dict2[field5] = {'name': label2, 'value': item6}
+                                                    item8[field7] = {'name': label3, 'value': value9}
+                                                item6[field5] = {'name': label2, 'value': item6}
                                         else:
-                                            dict2[field7] = {'name': label2, 'value': value7}
+                                            item6[field7] = {'name': label2, 'value': value7}
 
 
                                         # item6[field7] = {'name': label2, 'value': value7}
@@ -327,33 +336,45 @@ def get_group_high(user):
         - Advisor  : Advisor
         - Minister  : Minister
     """
-    if user.is_superuser:
-        return gettext_lazy("Principal Administrator").__str__()
-    
-    if user.groups.filter(name="Admin").exists():
-        return gettext_lazy("Administrator").__str__()
-    if user.groups.filter(name="CDDSpecialist").exists():
-        return gettext_lazy("CDD Specialist").__str__()
-    if user.groups.filter(name="Evaluator").exists():
-        return gettext_lazy("Evaluator").__str__()
-    if user.groups.filter(name="Accountant").exists():
-        return gettext_lazy("Accountant").__str__()
-    if user.groups.filter(name="RegionalCoordinator").exists():
-        return gettext_lazy("Regional Coordinator").__str__()
-    if user.groups.filter(name="NationalCoordinator").exists():
-        return gettext_lazy("National Coordinator").__str__()
-    if user.groups.filter(name="GeneralManager").exists():
-        return gettext_lazy("General Manager").__str__()
-    if user.groups.filter(name="Director").exists():
-        return gettext_lazy("Director").__str__()
-    if user.groups.filter(name="Advisor").exists():
-        return gettext_lazy("Advisor").__str__()
-    if user.groups.filter(name="Minister").exists():
-        return gettext_lazy("Minister").__str__()
-    if user.groups.filter(name="Supervisor").exists():
-        return gettext_lazy("Supervisor").__str__()
-    if user.groups.filter(name="Validator").exists():
-        return gettext_lazy("Validator").__str__()
+    if user:
+        if user.is_superuser:
+            return gettext_lazy("Principal Administrator").__str__()
+        
+        if user.groups.filter(name="Admin").exists():
+            return gettext_lazy("Administrator").__str__()
+        
+        if user.groups.filter(name="Minister").exists():
+            return gettext_lazy("Minister").__str__()
+        if user.groups.filter(name="Advisor").exists():
+            return gettext_lazy("Advisor").__str__()
+        if user.groups.filter(name="GeneralManager").exists():
+            return gettext_lazy("General Manager").__str__()
+        if user.groups.filter(name="NationalCoordinator").exists():
+            return gettext_lazy("National Coordinator").__str__()
+        if user.groups.filter(name="RegionalCoordinator").exists():
+            return gettext_lazy("Regional Coordinator").__str__()
+        if user.groups.filter(name="Director").exists():
+            return gettext_lazy("Director").__str__()
+        
+        if user.groups.filter(name="Evaluator").exists():
+            return gettext_lazy("Evaluator").__str__()
+        if user.groups.filter(name="Financial").exists():
+            return gettext_lazy("Financial ").__str__()
+        if user.groups.filter(name="ProcurementSpecialist").exists():
+            return gettext_lazy("Procurement Specialist").__str__()
+        if user.groups.filter(name="KnowledgeManager").exists():
+            return gettext_lazy("Knowledge manager").__str__()
+        if user.groups.filter(name="CDDSpecialist").exists():
+            return gettext_lazy("CDD Specialist").__str__()
+        if user.groups.filter(name="Accountant").exists():
+            return gettext_lazy("Accountant").__str__()
+        if user.groups.filter(name="Infra").exists():
+            return gettext_lazy("Infra").__str__()
+        if user.groups.filter(name="Supervisor").exists():
+            return gettext_lazy("Supervisor").__str__()
+        
+        if user.groups.filter(name="Validator").exists():
+            return gettext_lazy("Validator").__str__()
 
 
     return gettext_lazy("User").__str__()
