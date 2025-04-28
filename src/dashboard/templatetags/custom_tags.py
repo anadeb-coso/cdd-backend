@@ -421,39 +421,105 @@ def get_facilitator_by_email(facilitator):
 
 
 @register.filter
-def last_facilitator_cdd(adl):
-    assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+def last_facilitator_cdd(adl, request):
+    last_assign = mis_objects_call.filter_objects(
+        AssignAdministrativeLevelToFacilitator,
         administrative_level_id=adl.id,
-        project_id=1
-    ).order_by('id')
-    if assigns:
-        l = [int(f.facilitator_id) for f in assigns]
-        return Facilitator.objects.get(id=l[-1])
-    return None
+        project_id=request.session.get("project_mis_id")
+    ).last()
 
-@register.filter
-def percent_cdd(adl):
-    aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id)
-    t_t_c = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-    t_t = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']
-    if t_t_c and t_t:
-        _percent = t_t_c/t_t if t_t else 0
-        return float("%.2f" % ((_percent if _percent else 0)*100))
-    return None
-
-@register.filter
-def last_activity_cdd(adl):
-    aggreg = AggregatedStatus.objects.filter(administrative_level_id=adl.id).order_by('last_activity').last()
-    if aggreg:
-        return aggreg.last_activity
+    if last_assign:
+        return Facilitator.objects.filter(id=last_assign.facilitator_id).first()
     
     return None
 
 @register.filter
-def facilitator_on_this_cvd(adl):
+def percent_cdd(adl, request):
+    totals = AggregatedStatus.objects.filter(
+        administrative_level_id=adl.id,
+        project__id=request.session.get("project_id"),
+        cycle__id=request.session.get("cycle_id"),
+        task=None,
+        facilitator=None
+    ).aggregate(
+        total_tasks_completed=Sum('total_tasks_completed'),
+        total_tasks=Sum('total_tasks')
+    )
+
+    t_t_c = totals.get('total_tasks_completed') or 0
+    t_t = totals.get('total_tasks') or 0
+
+    if t_t > 0:
+        return round((t_t_c / t_t) * 100, 2)
+
+    return None
+
+@register.filter
+def last_activity_cdd(adl, request):
+    try:
+        return AggregatedStatus.objects.filter(
+            administrative_level_id=adl.id,
+            project__id=request.session.get("project_id"),
+            cycle__id=request.session.get("cycle_id"),
+            task=None,
+            facilitator=None
+        ).latest('last_activity').last_activity
+    except AggregatedStatus.DoesNotExist:
+        return None
+
+@register.filter
+def detail_cdd_activity(adl, request):
+    aggregs = AggregatedStatus.objects.filter(
+        administrative_level_id=adl.id,
+        project__id=request.session.get("project_id"),
+        cycle__id=request.session.get("cycle_id"),
+        task=None,
+        facilitator=None
+    )
+
+    if aggregs.exists():
+        totals = aggregs.aggregate(
+            total_tasks_completed=Sum('total_tasks_completed'),
+            total_tasks=Sum('total_tasks')
+        )
+
+        t_t_c = totals['total_tasks_completed'] or 0
+        t_t = totals['total_tasks'] or 1
+        
+        _percent_cdd = round((t_t_c / t_t) * 100, 2)
+
+        return {
+            "percent_cdd": _percent_cdd,
+            "last_activity_cdd": aggregs.latest('last_activity') #.last_activity
+        }
+
+    return {"percent_cdd": None, "last_activity_cdd": None}
+# def detail_cdd_activity(adl, request):
+#     _last_activity_cdd = None
+#     _percent_cdd = None
+#     aggregs = AggregatedStatus.objects.filter(
+#         administrative_level_id=adl.id, project__id=request.session.get("project_id"), 
+#         cycle__id=request.session.get("cycle_id"), task=None, facilitator=None
+#     )
+#     print(aggregs)
+#     t_t_c = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+#     t_t = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum']
+#     if aggregs.exists():
+#         _percent = t_t_c/t_t if t_t else 0
+#         _percent_cdd = float("%.2f" % ((_percent if _percent else 0)*100))
+
+#         _last_activity_cdd = aggregs.order_by('last_activity').last()
+
+#     return {
+#         "percent_cdd": _percent_cdd,
+#         "last_activity_cdd": _last_activity_cdd
+#     }
+
+@register.filter
+def facilitator_on_this_cvd(adl, request):
     return mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
         administrative_level_id=adl.id,
-        project_id=1,
+        project_id=request.session.get("project_mis_id"),
         activated=True
     ).exists()
 
@@ -478,18 +544,34 @@ def check_if_activity_is_for_user_auth(activity, user):
 
 @register.filter
 def check_if_activity_is_enable_to_validate(activity, user):
-    activity = PlanActivity.objects.get(id=activity.get('id'))
-    user_auth_groups = [g.id for g in user.groups.all()]
+    if isinstance(activity, dict):
+        activity = PlanActivity.objects.get(id=activity.get('id'))
 
-    user_planner_groups = [g.id for g in Group.objects.filter(name="Facilitator")]
+    user_auth_groups = set(user.groups.values_list('id', flat=True))
+
     if activity.user:
-        user_planner_groups = [g.id for g in activity.user.groups.all()]
-        
+        user_planner_groups = set(activity.user.groups.values_list('id', flat=True))
+    else:
+        user_planner_groups = set(Group.objects.filter(name="Facilitator").values_list('id', flat=True))
+
     return ValidationGroupsProcess.objects.filter(
         planners_groups__in=user_planner_groups,
         validators_groups__in=user_auth_groups,
         project__in=user.projects.all()
     ).exists()
+# def check_if_activity_is_enable_to_validate(activity, user):
+#     activity = PlanActivity.objects.get(id=activity.get('id'))
+#     user_auth_groups = [g.id for g in user.groups.all()]
+
+#     user_planner_groups = [g.id for g in Group.objects.filter(name="Facilitator")]
+#     if activity.user:
+#         user_planner_groups = [g.id for g in activity.user.groups.all()]
+        
+#     return ValidationGroupsProcess.objects.filter(
+#         planners_groups__in=user_planner_groups,
+#         validators_groups__in=user_auth_groups,
+#         project__in=user.projects.all()
+#     ).exists()
 
 
 @register.filter
