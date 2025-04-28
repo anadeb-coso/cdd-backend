@@ -13,6 +13,7 @@ from administrativelevels import models as administrativelevels_models
 from dashboard.reports.constants import IGNORES
 from cdd.my_librairies.functions import strip_accents
 from dashboard.utils_functions import get_facilitators_on_adlor_dbs_name
+from process_manager.models import Project
 
 
 def get_datas_dict(reponses_datas, key, level: int = 1):
@@ -49,7 +50,8 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
     id_in_details = request.GET.get("id_in_details")
     ids_administrative_level = _get_ids_list(request.GET.get('administrative_level_id'))
     ids_administrative_level = list(set(ids_administrative_level+ids_region+ids_prefecture+ids_commune+ids_canton+ids_village))
-    print(ids_administrative_level)
+    
+    cycle_id = request.session.get('cycle_couch_id')
 
     # _id = 0
     facilitators = []
@@ -109,6 +111,8 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     phone = f_doc["phone"]
                     break
             
+            query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
+            
             if f_doc:
                 for cvd in cvds:
                     administrative_level_cvd = cvd
@@ -135,7 +139,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                                 total_tasks_inter_date = 0
                                 last_activity_date = "0000-00-00 00:00:00"
 
-                                for doc in query_result_docs:
+                                for _ in query_result_docs:
                                     _ = doc.get('doc')
                                     if _.get('type') == "task":
                                         last_updated = datetime_complet_str(_.get('last_updated'))
@@ -230,6 +234,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
             already_count_facilitator = False
             facilitator_db = nsc.get_db(f.no_sql_db_name)
             query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+            
             f_doc = None
             cvds = []
             name_with_sex = None
@@ -246,6 +251,9 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
                     phone = f_doc["phone"]
                     break
+
+            query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
+            
             
             if f_doc:        
                 total_tasks_completed = 0
@@ -256,7 +264,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                 total_tasks_inter_date = 0
                 last_activity_date = "0000-00-00 00:00:00"
 
-                for doc in query_result_docs:
+                for _ in query_result_docs:
                     _ = doc.get('doc')
                     if _.get('type') == "task":
                         last_updated = datetime_complet_str(_.get('last_updated'))
@@ -466,6 +474,9 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
 def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
     nsc = NoSQLClient()
 
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
+
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
     if facilitator_db_name:
@@ -520,6 +531,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
         already_count_facilitator = False
         facilitator_db = nsc.get_db(f.no_sql_db_name)
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        
         f_doc = None
         cvds = []
         for doc in query_result_docs:
@@ -528,6 +540,9 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                 f_doc = doc
                 cvds = get_cvds(f_doc)
                 break
+
+        query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+            
         
         if f_doc:
             for cvd in cvds:
@@ -554,7 +569,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             datas[("MONOGRAPHIE", "LOCALITE", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
                             datas[("MONOGRAPHIE", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
                             
-                            for doc in query_result_docs:
+                            for _ in query_result_docs:
                                 _ = doc.get('doc')
                                 if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
                                     form_response = _.get("form_response")
@@ -648,7 +663,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
     administrative_level_cvd_villages = []
     for _ in query_result_docs:
         doc = _.get('doc')
@@ -795,6 +810,9 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
 def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="excel", params={"type":"All", "id_administrativelevel":""}):
     nsc = NoSQLClient()
 
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
+
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
     if facilitator_db_name:
@@ -829,6 +847,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
         already_count_facilitator = False
         facilitator_db = nsc.get_db(f.no_sql_db_name)
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        
         f_doc = None
         cvds = []
         for doc in query_result_docs:
@@ -837,7 +856,9 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                 f_doc = doc
                 cvds = get_cvds(f_doc)
                 break
-        
+
+        query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+            
         if f_doc:
             for cvd in cvds:
                 administrative_level_cvd_village = cvd.get('village')
@@ -901,7 +922,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
     administrative_level_cvd_villages = []
     for _ in query_result_docs:
         doc = _.get('doc')
@@ -997,6 +1018,8 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
     p_g_farmers_breeders_1_2_a, p_g_women_1_2_a, p_g_young_1_2_a, p_g_ethnic_minorities_1_2_a = {}, {}, {}, {}
     p_g_farmers_breeders_1_2_b, p_g_women_1_2_b, p_g_young_1_2_b, p_g_ethnic_minorities_1_2_b = {}, {}, {}, {}
     
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
 
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("id_administrativelevel"))
@@ -1088,6 +1111,9 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                 f_doc = doc
                 cvds = get_cvds(f_doc)
                 break
+            
+        query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+        
         
         if f_doc:
             for cvd in cvds:
@@ -1279,7 +1305,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                             count += 1
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
     administrative_level_cvd_villages = []
     for _ in query_result_docs:
         doc = _.get('doc')

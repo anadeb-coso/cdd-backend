@@ -99,7 +99,11 @@ class GetVillagesMonographExcelCSVRport(PageMixin, LoginRequiredMixin, TemplateV
         # try:
         file_path = get_villages_monograph_under_file_excel_or_csv(
             facilitator_db_name=facilitator_db_name,
-            params={"type": _type, "id_administrativelevel": _id, "session_project_id": self.request.session.get('project_id')}
+            params={
+                "type": _type, "id_administrativelevel": _id, 
+                "session_project_id": self.request.session.get('project_id'),
+                "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+            }
         )
 
         # except Exception as exc:
@@ -164,7 +168,11 @@ class GetExistencesCVDExcelCSVRport(PageMixin, LoginRequiredMixin, TemplateView)
         # try:
         file_path = get_existences_cvd_under_file_excel_or_csv(
             facilitator_db_name=facilitator_db_name,
-            params={"type": _type, "id_administrativelevel": _id, "session_project_id": self.request.session.get('project_id')}
+            params={
+                "type": _type, "id_administrativelevel": _id, 
+                "session_project_id": self.request.session.get('project_id'),
+                "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+            }
         )
 
         # except Exception as exc:
@@ -228,7 +236,11 @@ class GetVillagesPrioritiesExcelCSVRport(PageMixin, LoginRequiredMixin, Template
         # try:
         file_path = get_village_priorities_under_file_excel_or_csv(
             facilitator_db_name=facilitator_db_name,
-            params={"type": _type, "id_administrativelevel": _id, "session_project_id": self.request.session.get('project_id')}
+            params={
+                "type": _type, "id_administrativelevel": _id, 
+                "session_project_id": self.request.session.get('project_id'),
+                "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+            }
         )
 
         # except Exception as exc:

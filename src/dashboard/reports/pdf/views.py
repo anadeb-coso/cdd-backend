@@ -59,6 +59,7 @@ class Generate(View):
                 already_count_facilitator = False
                 facilitator_db = nsc.get_db(f.no_sql_db_name)
                 query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+
                 f_doc = None
                 cvds = []
                 name_with_sex = None
@@ -75,6 +76,8 @@ class Generate(View):
                         sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
                         phone = f_doc["phone"]
                         break
+                
+                query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
                 
                 if f_doc:
                     for _village in f_doc['administrative_levels']:
@@ -190,6 +193,7 @@ class Generate(View):
                 already_count_facilitator = False
                 facilitator_db = nsc.get_db(f.no_sql_db_name)
                 query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+                
                 f_doc = None
                 cvds = []
                 name_with_sex = None
@@ -206,6 +210,8 @@ class Generate(View):
                         sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
                         phone = f_doc["phone"]
                         break
+                
+                query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
                 
                 if f_doc:        
                     total_tasks_completed = 0
