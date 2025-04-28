@@ -351,22 +351,26 @@ padding: 0;
                             
                             let nbr_tasks = 0;
                             for (const [key, value] of Object.entries(data.regions)) {
-                                document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
-                                table.innerHTML += `
-                                <tr title="{% translate 'Task' %}s: `+value.nbr_tasks_completed+`/`+value.nbr_tasks+` ; CVD: `+value.nbr_cvds+` ; Village(s): `+value.nbr_villages+`" style="cursor: pointer;" >
-                                    <td>`+key+`</td>
-                                    <td>`+value.nbr_tasks_completed+`</td>
-                                    <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
-                                </tr>
-                                `;
-                                nbr_tasks += value.nbr_tasks;
+                                let current_element = document.getElementById(("_"+key.toLowerCase()));
+                                if(current_element){
+                                    console.log(("_"+key.toLowerCase()))
+                                    document.getElementById(("_"+key.toLowerCase())).innerHTML = (value.percentage_tasks_completed).toFixed(2)+"%";
+                                    table.innerHTML += `
+                                    <tr title="{% translate 'Task' %}s: `+value.nbr_tasks_completed+`/`+value.nbr_tasks+` ; CVD: `+value.nbr_cvds+` ; Village(s): `+value.nbr_villages+`" style="cursor: pointer;" >
+                                        <td>`+key+`</td>
+                                        <td>`+value.nbr_tasks_completed+`</td>
+                                        <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
+                                    </tr>
+                                    `;
+                                    nbr_tasks += value.nbr_tasks;
+                                }
                             }
 
                             table.innerHTML += `
                             </tbody>
                             <br />
                             `;
-                            p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+` (${((data.nbr_tasks_completed*100)/data.nbr_tasks).toFixed(2)}%)`+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
+                            p.innerHTML = `<p>{% translate 'Facilitators' %}: <b>`+data.nbr_facilitators+`</b> ; {% translate 'Task' %}s: <b>`+data.nbr_tasks_completed+`/`+data.nbr_tasks+` (${((data.nbr_tasks_completed*100)/(data.nbr_tasks && data.nbr_tasks != 0 ? data.nbr_tasks : 1)).toFixed(2)}%)`+`</b> ; CVD : <b>`+data.nbr_cvds+`</b> ; Village(s) : <b>`+data.nbr_villages+`</b></p>`;
                         }
                         
                         {% comment %} if (data.length > 0) {
@@ -380,6 +384,7 @@ padding: 0;
                     error: function (data) {
                         alert(error_server_message + "Error " + data.status);
                         statistics_spin.hide();
+                        statistics_table_spin.hide();
                     }
                 });
             }else{
@@ -398,6 +403,8 @@ padding: 0;
                     <tbody>
                 `;
                 p.innerHTML = '';
+                
+                statistics_table_spin.hide();
             }
         }
         {% for field in list_fields %}
