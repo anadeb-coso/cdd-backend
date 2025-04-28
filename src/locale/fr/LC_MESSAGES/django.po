@@ -2021,3 +2021,15 @@ msgstr "En attente de révision"
 #: .\dashboard
 msgid "Pending to do"
 msgstr "En attente de réalisation"
+
+#: .\dashboard
+msgid "No cycle is defined for this project"
+msgstr "Aucun cycle n'est défini pour ce projet"
+
+#: .\dashboard
+msgid "We have detected several cycles for this project. We have chosen the first cycle by default."
+msgstr "Nous avons détecté plusieurs cycles pour ce projet. Nous avons choisi le premier cycle par défaut."
+
+#: .\dashboard
+msgid "No projects found. If you have any questions, please contact the system administrator."
+msgstr "Aucun projet trouvé. Pour toute question, veuillez contacter l'administrateur du système."
