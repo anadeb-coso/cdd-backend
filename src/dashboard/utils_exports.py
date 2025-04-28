@@ -9,6 +9,7 @@ from no_sql_client import NoSQLClient
 from cdd.call_objects_from_other_db import mis_objects_call
 from administrativelevels.models import AdministrativeLevel
 from assignments.models import AssignAdministrativeLevelToFacilitator
+from process_manager.models import Cycle, Project
 
 
 def get_last_task_completed(last_task_completed, _task):
@@ -29,8 +30,11 @@ def get_cvd_index(datas_dict_havent_priorities_pav: dict, cvd_id: str):
                     g_index = _k if _k > g_index else g_index
     return (g_index + 1, False)
 
-def villages_level(project_id, develop_mode=False, training_mode=False, no_sql_db=False):
-   
+def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=False):
+    
+    cycle = Cycle.objects.get(id=cycle_id)
+    project = Project.objects.get(id=project_id)
+
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db).order_by('name')
     else:
@@ -59,13 +63,13 @@ def villages_level(project_id, develop_mode=False, training_mode=False, no_sql_d
     eadls = nsc.get_db('eadls')
 
     for facilitator in facilitators:
-        print(facilitator.name)
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        fc_tasks = [doc for doc in fc_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
 
         for _task in fc_tasks:
             task = _task.get('doc')
-            if task and task.get('type') == "task":
+            if task and task.get('cycle_id') == cycle.couch_id and task.get('type') == "task":
 
                 _village = mis_objects_call.get_object(AdministrativeLevel, id=int(task.get("administrative_level_id")))
                 cvd = _village.cvd
@@ -77,12 +81,23 @@ def villages_level(project_id, develop_mode=False, training_mode=False, no_sql_d
                         project_id=project_id,
                         administrative_level_id=int(task.get("administrative_level_id"))
                     )
-                    facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
-                    
+                    # facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
+                    # _f_s = []
+                    # if facilitators_stabilized:
+                    #     for elt in facilitators_stabilized[:]:
+                    #         if elt.get('value') and elt.get('value') not in _f_s:
+                    #             _f_s.append(elt['value'])
+
+                    facilitators_stabilized = eadls.get_view_result(
+                        "_design/adl_village_filter", "by_village_id", 
+                        keys=[int(task.get("administrative_level_id"))], 
+                        include_docs=True
+                    )
                     _f_s = []
                     if facilitators_stabilized:
-                        for elt in facilitators_stabilized[:]:
-                            if elt.get('value') and elt.get('value') not in _f_s:
+                        for row in facilitators_stabilized[:]:
+                            elt = row['doc']
+                            if elt not in _f_s:
                                 _f_s.append(elt['value'])
                                 
                     _facilitators = Facilitator.objects.filter(
@@ -118,10 +133,11 @@ def villages_level(project_id, develop_mode=False, training_mode=False, no_sql_d
 
     bk_database = nsc.get_db("backup_db_facilitators_docs")
     bk_tasks = bk_database.all_docs(include_docs=True)['rows']
+    bk_tasks = [doc for doc in bk_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
     
     for _doc in bk_tasks:
         task = _doc.get('doc')
-        if task and task.get('type') == "task":
+        if task and task.get('cycle_id') == cycle.couch_id and task.get('type') == "task":
         
             _village = mis_objects_call.get_object(AdministrativeLevel, id=int(task.get("administrative_level_id")))
             cvd = _village.cvd
@@ -133,13 +149,25 @@ def villages_level(project_id, develop_mode=False, training_mode=False, no_sql_d
                     project_id=project_id,
                     administrative_level_id=int(task.get("administrative_level_id"))
                 )
-                facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
+                # facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
+                # _f_s = []
+                # if facilitators_stabilized:
+                #     for elt in facilitators_stabilized[:]:
+                #         if elt.get('value') and elt.get('value') not in _f_s:
+                #             _f_s.append(elt['value'])
                 
+                facilitators_stabilized = eadls.get_view_result(
+                        "_design/adl_village_filter", "by_village_id", 
+                        keys=[int(task.get("administrative_level_id"))], 
+                        include_docs=True
+                    )
                 _f_s = []
                 if facilitators_stabilized:
-                    for elt in facilitators_stabilized[:]:
-                        if elt.get('value') and elt.get('value') not in _f_s:
+                    for row in facilitators_stabilized[:]:
+                        elt = row['doc']
+                        if elt not in _f_s:
                             _f_s.append(elt['value'])
+
                             
                 _facilitators = Facilitator.objects.filter(
                     Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) | 
