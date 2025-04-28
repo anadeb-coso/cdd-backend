@@ -113,7 +113,8 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
                 params={
                     "type": _type, "ids_administrativelevel": ids_administrative_level, 
                     "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name')
+                    "session_project_name": self.request.session.get('project_name'), 
+                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
                 }
             )
 
@@ -151,6 +152,8 @@ class UploadCSVView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin,
         _type = request.POST.get('_type')
         if _type == "statistic_file":
             message, file_path = save_csv_datas_in_db(
+                self.request.session.get('project_couch_id'),
+                self.request.session.get('cycle_couch_id'),
                 convert_file_to_dict.conversion_file_xlsx_to_dict(request.FILES.get('file'))
             )
             
@@ -222,7 +225,8 @@ class PrioritiesPAVPACSituationCSVView(PageMixin, LoginRequiredMixin, TemplateVi
                 params={
                     "type": _type, "ids_administrativelevel": ids_administrative_level, 
                     "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name')
+                    "session_project_name": self.request.session.get('project_name'), 
+                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
                     }
             )
         except Exception as exc:
@@ -303,7 +307,8 @@ class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
                 params={
                     "type": _type, "ids_administrativelevel": ids_administrative_level, 
                     "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name')
+                    "session_project_name": self.request.session.get('project_name'), 
+                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
                 }
             )
 

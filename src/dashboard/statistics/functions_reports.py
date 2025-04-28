@@ -16,8 +16,10 @@ from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCr
 from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
+from process_manager.models import Project
 
 from no_sql_client import NoSQLClient
+
 
 def get_task_by_administrativelevel_id_and_task_id(list, ad_id, task_id):
     for doc in list:
@@ -84,6 +86,8 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
         "Villages": {}
     }
     project_name = params.get('session_project_name')
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
 
     nsc = NoSQLClient()
 
@@ -131,6 +135,7 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
         
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+
         facilitator_doc = None
         facilitator_adl_ids = []
         for elt in fc_tasks:
@@ -139,7 +144,9 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
                 facilitator_doc = d
                 facilitator_adl_ids = [_['id'] for _ in d['administrative_levels']]
                 break
-                    
+
+        fc_tasks = [doc for doc in fc_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+                            
         docs = get_task_by_task_id(fc_tasks, 59)
         ok_unc = False
         ok_havent_p = False
@@ -196,7 +203,8 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
         
 
     bk_database = nsc.get_db("backup_db_facilitators_docs")
-    bk_tasks = bk_database.all_docs(include_docs=True)['rows']                
+    bk_tasks = bk_database.all_docs(include_docs=True)['rows']
+    bk_tasks = [doc for doc in bk_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]            
     docs = get_task_by_task_id(bk_tasks, 59)
     
     administrative_level_cvd_villages = []
@@ -325,6 +333,8 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
         "Phone": {}
     }
     project_name = params.get('session_project_name')
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
 
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
@@ -368,6 +378,7 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
         # print(facilitator.name)
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
+        
         facilitator_doc = None
         facilitator_adl_ids = []
         for elt in fc_tasks:            
@@ -376,7 +387,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                 facilitator_doc = d
                 facilitator_adl_ids = [_['id'] for _ in d['administrative_levels']]
                 break
-                    
+            
+        fc_tasks = [doc for doc in fc_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+                
         docs = get_task_by_task_ids(fc_tasks, [59, 45, 47])
         ok_unc = False
         ok_havent_p = False
@@ -496,7 +509,8 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                     
     # print(datas_dict_havent_priorities_pav)
     bk_database = nsc.get_db("backup_db_facilitators_docs")
-    bk_tasks = bk_database.all_docs(include_docs=True)['rows']                
+    bk_tasks = bk_database.all_docs(include_docs=True)['rows']
+    bk_tasks = [doc for doc in bk_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]              
     docs = get_task_by_task_ids(bk_tasks, [59, 45, 47])
     
     for _doc in docs:

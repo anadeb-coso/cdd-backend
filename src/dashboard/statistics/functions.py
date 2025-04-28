@@ -12,6 +12,7 @@ from dashboard.facilitators.repository.db_facilitator_repository import Facilita
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
+from process_manager.models import Project
 
 
 def get_datas_dict(reponses_datas, key, level: int = 1):
@@ -43,8 +44,12 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
     
-    project_mis = mis_objects_call.filter_objects(MisProject, name=params.get('session_project_name'))
-    project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+    cycle_id = params.get('session_cycle_couch_id')
+    project = Project.objects.get(id=params.get('session_project_id'))
+    
+    project_mis = mis_objects_call.filter_objects(MisProject, name=params.get('session_project_name')).first()
+    project_mis_id = project_mis.id if project_mis else 1
+    print(project_mis)
     if facilitator_dbs_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
     else:
@@ -52,7 +57,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
             assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                 administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
                 project_id=project_mis_id,
-                activated=True
+                # activated=True
             )
             criteria = FacilitatorCriteria(
                 id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
@@ -305,13 +310,16 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                 f_doc = doc
                 cvds = get_cvds(f_doc)
                 break
+        query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
         
         if f_doc:
             for cvd in cvds:
                 administrative_level_cvd_village = cvd.get('village')
                 if administrative_level_cvd_village:
-                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
-                    if administrativelevel_obj.cvd:
+                    # administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
+                    administrativelevel_obj = project_mis.administrative_levels.filter(id=int(administrative_level_cvd_village['id'])).first()
+                    
+                    if administrativelevel_obj and administrativelevel_obj.cvd:
                         # _ok = True
                         # if liste_villages:
                         #     _ok = False
@@ -1567,7 +1575,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
-    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task']
+    query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and _.get('doc').get('project_id') == project.couch_id]
     administrative_level_cvd_villages = []
     for _ in query_result_docs:
         doc = _.get('doc')
@@ -2894,7 +2902,7 @@ def get_value(elt):
     return _elt
 
 
-def save_csv_datas_in_db(datas_file: dict) -> str:
+def save_csv_datas_in_db(project_couch_id, cycle_couch_id, datas_file: dict) -> str:
     """Function to save the CSV datas in database"""
     nsc = NoSQLClient()
     list_error_found = []
@@ -2933,7 +2941,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
                     
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 20}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 20, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         index, d = get_index_with_datas_dict_by_one_key_name(form_response, "population")
@@ -2993,7 +3001,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 13}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 13, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3062,7 +3070,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 17}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 17, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         
@@ -3145,7 +3153,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 22}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 22, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3227,7 +3235,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 27}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 27, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3315,7 +3323,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 37}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 37, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3405,7 +3413,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 41}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 41, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3488,7 +3496,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 45}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 45, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3571,7 +3579,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 46}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 46, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3665,7 +3673,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 47}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 47, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3748,7 +3756,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 48}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 48, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3832,7 +3840,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 49}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 49, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -3915,7 +3923,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 50}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 50, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4000,7 +4008,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 51}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 51, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4083,7 +4091,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 52}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 52, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4166,7 +4174,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 53}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 53, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4249,7 +4257,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 54}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 54, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4332,7 +4340,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 55}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 55, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
@@ -4415,7 +4423,7 @@ def save_csv_datas_in_db(datas_file: dict) -> str:
 
                     try:
                         task = facilitator_db.get_query_result(
-                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 56}
+                            {"type": "task", "administrative_level_id": str(headquarters_village.id), "sql_id": 56, "project_id": project_couch_id, "cycle_id": cycle_couch_id}
                         )[0][0]
                         form_response = task.get("form_response")
                         if not form_response:
