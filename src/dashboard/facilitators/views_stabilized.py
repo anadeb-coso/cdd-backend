@@ -157,13 +157,26 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
             if type(_id) is not list:
                 liste_villages = []
                 liste_villages = get_cascade_villages_by_administrative_level_id(_id)
-                facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[v['administrative_id'] for v in liste_villages])
+                # facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[v['administrative_id'] for v in liste_villages])
+                # if facilitators_stabilized:
+                #     # facilitators_stabilized = list(set([elt['value'] for elt in facilitators_stabilized[:]]))
+                #     _f_s = []
+                #     for elt in facilitators_stabilized[:]:
+                #         if elt.get('value') and elt.get('value') not in _f_s:
+                #             _f_s.append(elt['value'])
+                #     facilitators_stabilized = get_all_facilitators_stabilized(_f_s)
+                
+                facilitators_stabilized = eadls.get_view_result(
+                    "_design/adl_village_filter", "by_village_id", 
+                    keys=[int(v['administrative_id']) for v in liste_villages], 
+                    include_docs=True
+                )
                 if facilitators_stabilized:
-                    # facilitators_stabilized = list(set([elt['value'] for elt in facilitators_stabilized[:]]))
                     _f_s = []
-                    for elt in facilitators_stabilized[:]:
-                        if elt.get('value') and elt.get('value') not in _f_s:
-                            _f_s.append(elt['value'])
+                    for row in facilitators_stabilized[:]:
+                        elt = row['doc']
+                        if elt not in _f_s:
+                            _f_s.append(elt)
                     facilitators_stabilized = get_all_facilitators_stabilized(_f_s)
                 
             else:

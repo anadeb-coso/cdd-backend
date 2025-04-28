@@ -34,7 +34,7 @@ class FacilitatorMixin(LoginRequiredMixin):
         try:
             if not self.request.user.is_authenticated:
                 return redirect_user_to_login(request)
-            if not self.request.session.get('project_id'):
+            if not self.request.session.get('project_id') or not self.request.session.get('cycle_id'):
                 return redirect_to_an_url(request, 'dashboard:process_manager:list')
                 
             self.facilitator_db_name = kwargs['id']
@@ -117,6 +117,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             initial={
                 'facilitator_db_name': self.facilitator_db_name, 
                 'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id'),
                 'cvds': self.cvds
             }
         )
@@ -124,6 +125,8 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
 
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+        facilitator_docs = [doc for doc in facilitator_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == self.request.session.get('project_couch_id')]
+
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks = 0
         for doc in facilitator_docs:
@@ -135,7 +138,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             _db = nsc.get_db(k_db_name)
             facilitator_docs = _db.get_query_result(
-                {"type": "task", "administrative_level_id": {"$in": v['ids']}}, 
+                {"type": "task", 'cycle_id': self.request.session.get('cycle_couch_id'), 'project_id': self.request.session.get('project_couch_id'), "administrative_level_id": {"$in": v['ids']}}, 
                 limit=10000
             )[:]
             for doc in facilitator_docs:
@@ -169,8 +172,12 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         is_validated = self.request.GET.get('is_validated', None)
 
         selector = {
-            "type": "task"
+            "type": "task",
+            "project_id": self.request.session.get('project_couch_id')
         }
+        
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
@@ -211,8 +218,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
     def get_queryset(self):
         index = int(self.request.GET.get('index'))
         offset = int(self.request.GET.get('offset'))
-        phases = Phase.objects.filter(project_id=self.request.session.get('project_id'))
-        activities = Activity.objects.filter(project_id=self.request.session.get('project_id'))
+        phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
+        activities = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
 

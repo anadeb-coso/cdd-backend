@@ -1,3 +1,5 @@
+import itertools
+
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
@@ -136,7 +138,11 @@ def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
             "representative.email": facilitator.get('email')
         })[:][0]
         administratives_stabilized = facilitator_grm['administrative_regions']
-        
+        administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
+        administratives_stabilized = list(set(
+            (administratives_stabilized if administratives_stabilized else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
+        ))
+
         for adl_id in administratives_stabilized:
             if adl_id not in [elt['id'] for elt in facilitator['administrative_levels']]:
                 assing_facilitator_object = mis_objects_call.filter_objects(

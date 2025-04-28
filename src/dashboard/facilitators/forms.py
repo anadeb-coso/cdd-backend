@@ -2,9 +2,13 @@ from django import forms
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
 
 from authentication.models import Facilitator
-from dashboard.utils import get_administrative_level_choices, get_administrative_levels_by_level, get_choices
+from dashboard.utils import (
+    get_administrative_level_choices, get_administrative_levels_by_level, 
+    get_choices, get_administrative_level_choices_mis
+)
 from no_sql_client import NoSQLClient
 from .functions import get_cvds
 from process_manager.models import Task, Phase, Activity, Project
@@ -23,25 +27,27 @@ class FilterTaskForm(forms.Form):
         initial = kwargs.get('initial')
         facilitator_db_name = initial.get('facilitator_db_name')
         project_id = initial.get('project_id')
+        cycle_id = initial.get('cycle_id')
         cvds = initial.get('cvds')
         super().__init__(*args, **kwargs)
 
-        nsc = NoSQLClient()
-        facilitator_db = nsc.get_db(facilitator_db_name)
-
-        facilitator_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        # nsc = NoSQLClient()
+        # facilitator_db = nsc.get_db(facilitator_db_name)
+        # facilitator_docs = facilitator_db.all_docs(include_docs=True)['rows']
 
         query_result_phases = [('', '')]
         query_result_activities = [('', '')]
         query_result_tasks = [('', '')]
         # query_result_administrativelevels = []
-        facilitator_doc = {}
-        for doc in facilitator_docs:
-            doc = doc.get('doc')
-            if doc.get('type') == "facilitator":
-                # query_result_administrativelevels = doc.get("administrative_levels")
-                facilitator_doc = doc
-                break
+
+        # facilitator_doc = {}
+        # for doc in facilitator_docs:
+        #     doc = doc.get('doc')
+        #     if doc.get('type') == "facilitator":
+        #         # query_result_administrativelevels = doc.get("administrative_levels")
+        #         facilitator_doc = doc
+        #         break
+
             # elif doc.get('type') == "phase" and not self.check_name(query_result_phases, doc):
             #     query_result_phases.append(doc)
             # elif doc.get('type') == "activity" and not self.check_name(query_result_activities, doc):
@@ -68,9 +74,16 @@ class FilterTaskForm(forms.Form):
         # query_result_activities = sorted(query_result_activities, key=lambda obj: (str(obj["phase_order"])+str(obj["order"])))
         # query_result_tasks = sorted(query_result_tasks, key=lambda obj: (str(obj["phase_order"])+str(obj["activity_order"])+str(obj["order"])))
         # query_result_administrativelevels = sorted(query_result_administrativelevels, key=lambda obj: obj.get('name'))
-        [query_result_phases.append((o.name, o.name)) for o in Phase.objects.filter(project_id=project_id).order_by("order")]
-        [query_result_activities.append((o.name, o.name)) for o in Activity.objects.filter(project_id=project_id).order_by("phase__order", "order")]
-        [query_result_tasks.append((o.name, o.name)) for o in Task.objects.filter(project_id=project_id).order_by("phase__order", "activity__order", "order")]
+        
+        # [query_result_phases.append((o.name, o.name)) for o in Phase.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by("order")]
+        # [query_result_activities.append((o.name, o.name)) for o in Activity.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by("phase__order", "order")]
+        # [query_result_tasks.append((o.name, o.name)) for o in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by("phase__order", "activity__order", "order")]
+        
+        [query_result_phases.append((o.name, o.name)) for o in Phase.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("order")]
+        [query_result_activities.append((o.name, o.name)) for o in Activity.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "order")]
+        [query_result_tasks.append((o.name, o.name)) for o in Task.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "activity__order", "order")]
+        
+
         cvds = sorted(cvds, key=lambda obj: obj.get('name'))
 
         # self.fields['administrative_level'].widget.choices = get_choices(
@@ -123,6 +136,7 @@ class FacilitatorForm(forms.Form):
     projects = forms.ModelMultipleChoiceField(
         queryset=Project.objects.all(),
         widget=forms.CheckboxSelectMultiple,
+        # widget=forms.SelectMultiple,
         required=True
     )
 
@@ -162,6 +176,7 @@ class FacilitatorForm(forms.Form):
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
         project_id = initial.get('project_id', None)
+        user_id = initial.get('user_id')
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -169,14 +184,15 @@ class FacilitatorForm(forms.Form):
         label = get_administrative_levels_by_level(administrative_levels_db)[0]['administrative_level'].upper()
         self.fields['administrative_level'].label = label
 
-        administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        # administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        administrative_level_choices = get_administrative_level_choices_mis(project_id)
         self.fields['administrative_level'].widget.choices = administrative_level_choices
         self.fields['administrative_level'].choices = administrative_level_choices
         self.fields['administrative_level'].widget.attrs['class'] = "region"
         self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
 
         if project_id is not None:
-            self.fields['projects'].initial = Project.objects.filter(id=project_id)
+            self.fields['projects'].initial = Project.objects.filter(Q(id=project_id) | Q(parent_id=project_id) | Q(project__in=[project_id]), users__in=[user_id])
 
 
 
@@ -212,9 +228,11 @@ class UpdateFacilitatorForm(forms.ModelForm):
         if initial:
             facilitator_doc = initial.get('facilitator_doc', None)
             facilitator_projects = initial.get('facilitator_projects', None)
+            project_id = initial.get('project_id', None)
         else:
             facilitator_doc = None
             facilitator_projects = None
+            project_id = None
         super().__init__(*args, **kwargs)
 
         nsc = NoSQLClient()
@@ -222,7 +240,8 @@ class UpdateFacilitatorForm(forms.ModelForm):
         label = get_administrative_levels_by_level(administrative_levels_db)[0]['administrative_level'].upper()
         self.fields['administrative_level'].label = label
 
-        administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        # administrative_level_choices = get_administrative_level_choices(administrative_levels_db)
+        administrative_level_choices = get_administrative_level_choices_mis(project_id)
         self.fields['administrative_level'].widget.choices = administrative_level_choices
         self.fields['administrative_level'].choices = administrative_level_choices
         self.fields['administrative_level'].widget.attrs['class'] = "region"

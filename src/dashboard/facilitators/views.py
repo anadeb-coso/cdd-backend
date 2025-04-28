@@ -9,8 +9,9 @@ from django.utils.translation import gettext_lazy
 from django.views import generic
 from datetime import datetime
 from django.contrib.auth.models import User
+import itertools
 
-from process_manager.models import Phase, Activity, Project, ProcessAddOrRemoveADL
+from process_manager.models import Phase, Activity, Project, ProcessAddOrRemoveADL, Cycle
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
@@ -31,12 +32,14 @@ from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from cdd.functions import datetime_complet_str, exists_id_in_a_dict
 from cdd.call_objects_from_other_db import mis_objects_call
-from authentication.functions import get_assign_adl_by_facilitatr
+from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs
 from dashboard.tasks import sync_celery_tasks_re
 from .repository.db_facilitator_repository import FacilitatorRepository
 from .repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
+from cdd.my_librairies.functions import get_datas_dict
+from process_manager.models import AggregatedStatus, Task, Cycle, Project
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -96,7 +99,7 @@ class FacilitatorMixin(LoginRequiredMixin):
         try:
             if not self.request.user.is_authenticated:
                 return redirect_user_to_login(request)
-            if not self.request.session.get('project_id'):
+            if not self.request.session.get('project_id') or not self.request.session.get('cycle_id'):
                 return redirect_to_an_url(request, 'dashboard:process_manager:list')
 
             self.facilitator_db_name = kwargs['id']
@@ -175,8 +178,9 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
         _id = 0
         facilitators = []
 
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+        project_mis_id = project_mis.id if project_mis else 1
+        liste_villages = []
 
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             criteria = FacilitatorCriteria()
@@ -199,10 +203,11 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 _id = id_village
 
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
+            liste_villages = [int(v['administrative_id']) for v in liste_villages]
 
             if type(_id) is not list:
                 assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
-                    administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages],
+                    administrative_level_id__in=liste_villages,
                     project_id=project_mis_id,
                     activated=True
                 )
@@ -235,15 +240,111 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 facilitator_type=type_of_facilitator_list
             )
 
+        # facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+        # _facilitators = []
+        # for f in facilitators:
+        #     assigns = get_assign_adl_by_facilitatr(f.id, project_id=project_mis_id, activated=True)
+        #     if assigns:
+        #         for assign in assigns:
+        #             adl = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id=assign.administrative_level_id).first()
+        #             f.villages_number += 1
+        #             if adl and adl.cvd and adl.cvd.headquarters_village and adl.cvd.headquarters_village.id == adl.id:
+        #                 f.cvds_number += 1
+        #         _facilitators.append(f)
+
+
+        # nsc = NoSQLClient()
+        # eadls = nsc.get_db('eadls')
+        # docs_eadls = eadls.all_docs(include_docs=True)['rows']
+        # docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[v['id'] for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
+        
+        # # Récupérer tous les facilitateurs en une seule requête
+        # facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+
+        # adls = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
+
+        # adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
+
+        # # Liste des facilitateurs à retourner
+        # _facilitators = []
+
+        # aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
+        # print(aggregs)
+        # # Parcours des facilitateurs
+        # for f in facilitators:
+
+        #     administrative_levels_ids = f.administrative_levels_ids if f.administrative_levels_ids else []
+        #     administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
+        #     administrative_levels_ids_stabilize = administrative_levels_ids_stabilize if administrative_levels_ids_stabilize else []
+
+        #     _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
+        #     print(_administrative_levels_ids)
+        #     children_agg = aggregs.filter(administrative_level_id__in=_administrative_levels_ids)
+        #     print(children_agg)
+            
+        #     f.villages_number = len(_administrative_levels_ids)
+        #     f.cvds_number = len(adl_headquarters_villages & set(_administrative_levels_ids))
+
+        #     aggreg_last_activity = None
+        #     if children_agg:
+        #         aggreg_last_activity = children_agg.latest('last_activity')
+
+        #     f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
+        #     f.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
+        #     f.total_tasks = sum([agg.total_tasks for agg in children_agg])
+
+        #     _facilitators.append(f)
+
+
+        nsc = NoSQLClient()
+        eadls = nsc.get_db('eadls')
+        docs_eadls = eadls.all_docs(include_docs=True)['rows']
+        docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
+
+        # Récupérer tous les facilitateurs en une seule requête
         facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+
+        # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
+        adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
+
+        adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
+        adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
+
+        # Liste des facilitateurs à retourner
         _facilitators = []
+
+        aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
+        
+        # Parcours des facilitateurs
         for f in facilitators:
-            for assign in get_assign_adl_by_facilitatr(f.id, project_id=project_mis_id, activated=True):
-                adl = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id=assign.administrative_level_id).first()
-                f.villages_number += 1
-                if adl and adl.cvd and adl.cvd.headquarters_village and adl.cvd.headquarters_village.id == adl.id:
-                    f.cvds_number += 1
+
+            administrative_levels_ids = [str(adl['id']) for adl in f.administrative_levels if adl['project_id'] == self.request.session.get('project_couch_id')] if f.administrative_levels else []
+            administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
+            administrative_levels_ids_stabilize = [ad_id for ad_id in administrative_levels_ids_stabilize if int(ad_id) in adl_villages_ids] if administrative_levels_ids_stabilize else []
+
+            _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
+
+            adl_headquarters_villages_uniques = set(str(elt) for elt in adl_headquarters_villages) & set(_administrative_levels_ids)
+
+            children_agg = [agg for agg in aggregs if str(agg.administrative_level_id) in _administrative_levels_ids]
+
+            f.villages_number = len(_administrative_levels_ids)
+            f.cvds_number = len(adl_headquarters_villages_uniques)
+
+            # Filtrer les éléments qui ont un last_activity valide (non-None)
+            valid_aggregs = [agg for agg in children_agg if agg.last_activity is not None]
+
+            # Calculer la dernière activité si possible
+            aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
+
+            # Assigner la dernière activité et les totaux des tâches
+            f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
+            f.total_tasks_completed = sum(agg.total_tasks_completed for agg in children_agg)
+            f.total_tasks = sum(agg.total_tasks for agg in children_agg)
+
             _facilitators.append(f)
+
+
 
         return _facilitators
 
@@ -257,14 +358,23 @@ class FacilitatorsPercentListView(FacilitatorMixin, AJAXRequestMixin, LoginRequi
     context_object_name = 'facilitator_percent_completed'
     def get_results(self):
         # return self.facilitator_db.get_query_result({"type": "task"})
-            
-        docs = self.facilitator_db.get_query_result({"type": "task"}, limit=10000)[:]
+        
+        selector = {
+            "type": "task"
+        }
+        
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
+        if self.request.session.get('project_couch_id'):
+            selector['project_id'] = self.request.session.get('project_couch_id')
+
+        docs = self.facilitator_db.get_query_result(selector, limit=10000)[:]
         
         nsc = NoSQLClient()
         
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             _db = nsc.get_db(k_db_name)
-            docs += _db.get_query_result({"type": "task"}, limit=10000)[:]
+            docs += _db.get_query_result(selector, limit=10000)[:]
 
         return docs
 
@@ -297,11 +407,21 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         d = {}
 
         nsc = NoSQLClient()
+        
+        selector = {
+            "type": "task"
+        }
+        
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
+        if self.request.session.get('project_couch_id'):
+            selector['project_id'] = self.request.session.get('project_couch_id')
+
         for f in liste:
             facilitator_db = nsc.get_db(f)
             # docs = facilitator_db.get_query_result({"type": "task"})
             
-            docs = facilitator_db.get_query_result({"type": "task"}, limit=10000)[:]
+            docs = facilitator_db.get_query_result(selector, limit=10000)[:]
             
             nsc = NoSQLClient()
             project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
@@ -316,7 +436,7 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator_db[query_result[0]['_id']])
             for k_db_name, v in no_sql_dbs_names_with_village_ids.items():
                 _db = nsc.get_db(k_db_name)
-                docs += _db.get_query_result({"type": "task"}, limit=10000)[:]
+                docs += _db.get_query_result(selector, limit=10000)[:]
             
 
             total_tasks_completed = 0
@@ -353,9 +473,16 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
     ]
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
+        
         selector = {
             "type": "task"
         }
+        
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
+        if self.request.session.get('project_couch_id'):
+            selector['project_id'] = self.request.session.get('project_couch_id')
+
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
 
@@ -363,6 +490,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
         
         nsc = NoSQLClient()
+        # print(self.no_sql_dbs_names_with_village_ids)
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
@@ -379,19 +507,22 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             initial={
                 'facilitator_db_name': self.facilitator_db_name, 
                 'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id'),
                 'cvds': self.cvds
             }
         )
         context['breadcrumb'] = False
         facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+        facilitator_docs = [doc for doc in facilitator_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == self.request.session.get('project_couch_id')]
+        
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks = 0
-        phases =  Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        phases =  Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         context['phases'] = phases
 
         activities_per_phase = {}
         for phase in phases:
-            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order, project_id=self.request.session.get('project_id')).values('name', 'phase', 'description', 'order').order_by('order')
+            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order).get_objects_by_general_filtre(request=self.request, attrs=None).values('name', 'phase', 'description', 'order').order_by('order')
 
         context["activities_per_phase"] = activities_per_phase
         for doc in facilitator_docs:
@@ -403,10 +534,14 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             _db = nsc.get_db(k_db_name)
-            facilitator_docs = _db.get_query_result(
-                {"type": "task", "administrative_level_id": {"$in": v['ids']}}, 
-                limit=10000
-            )[:]
+
+            _selector = {"type": "task", "administrative_level_id": {"$in": v['ids']}}
+            if self.request.session.get('cycle_couch_id'):
+                _selector['cycle_id'] = self.request.session.get('cycle_couch_id')
+            if self.request.session.get('project_couch_id'):
+                _selector['project_id'] = self.request.session.get('project_couch_id')
+            facilitator_docs = _db.get_query_result(_selector, limit=10000)[:]
+
             for doc in facilitator_docs:
                 if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
                     last_activity_date = datetime_complet_str(doc.get('last_updated'))
@@ -527,10 +662,16 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get(
                                     "name") == 'Etablissement du profil du village':
                                 form_response = _.get('form_response')
-                                if form_response:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'populationVillage'] = form_response[0]['generalitiesSurVillage'][
-                                        'populationVillage'] if form_response[0] else 0
+                                old_forms = _.get('old_forms')
+                                old_form_response = old_forms[-1].get("form_response") if old_forms else []
+                                if form_response or old_form_response:
+                                    _populationVillage = None
+                                    _generalitiesSurVillage = get_datas_dict(form_response, "generalitiesSurVillage", 1)
+                                    if not _generalitiesSurVillage:
+                                        _generalitiesSurVillage = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)
+                                    if _generalitiesSurVillage:
+                                        _populationVillage = _generalitiesSurVillage["populationVillage"]
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = _populationVillage
                                 else:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')][
                                         'populationVillage'] = 0
@@ -581,13 +722,17 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         selector = {
             "type": "task"
         }
+        if self.request.session.get('project_couch_id'):
+            selector['project_id'] = self.request.session.get('project_couch_id')
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
         # if phase_id:
         #     selector["order"] = int(phase_id)
         if activity_id:
-            selector["activity_name"] = Activity.objects.filter(order=activity_id, phase__order=phase_id, project_id=self.request.session.get('project_id'))[0].name
+            selector["activity_name"] = Activity.objects.filter(order=activity_id, phase__order=phase_id).get_objects_by_general_filtre(request=self.request, attrs=None)[0].name
         if task_name:
             selector["name"] = task_name
 
@@ -616,8 +761,8 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         return results
 
     def get_queryset(self):
-        phases = Phase.objects.filter(project_id=self.request.session.get('project_id'))
-        activities = Activity.objects.filter(project_id=self.request.session.get('project_id'))
+        phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
+        activities = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
 
         object_list = single_task_by_cvd(self.get_results(), self.cvds)
         
@@ -641,6 +786,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             initial={
                 'facilitator_db_name': self.facilitator_db_name, 
                 'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id'),
                 'cvds': self.cvds
             }
         )
@@ -678,7 +824,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = FacilitatorForm(initial={'project_id': self.request.session.get('project_id')})
+        context['form'] = FacilitatorForm(initial={
+            'project_id': self.request.session.get('project_id'),
+            'user_id': self.request.user.id
+        })
         return context
 
     def form_valid(self, form):
@@ -692,8 +841,11 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.facilitator_type = data['facilitator_type']
         facilitator.save(replicate_design=False)
 
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
+        cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
+
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+        project_mis_id = project_mis.id if project_mis else 1
 
         _administrative_levels = []
         if 'administrative_levels' in data and data['administrative_levels']:
@@ -701,12 +853,19 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
                 if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
                     elt['is_headquarters_village'] = True
+
+                if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
+                    elt["project_id"] = project_cdd.couch_id
+                    elt["project_name"] = project_cdd.name
+                    elt["cycle_id"] = cycle_cdd.couch_id
+                    elt["cycle_name"] = cycle_cdd.name
+
                 _administrative_levels.append(elt)
 
         #Assign ADL
         for adl in _administrative_levels:
             _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True).first()
-            print(_assign)
+            
             if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
                     try:
                         assign = AssignAdministrativeLevelToFacilitator()
@@ -717,7 +876,6 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
                     except Exception as exc:
                         print(exc)
         #End Assign ADL
-
         doc = {
             "name": data['name'],
             "email": data['email'],
@@ -732,9 +890,18 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             "project_id": self.request.session.get('project_couch_id'),
             "project_name": self.request.session.get('project_name'),
             "projects_ids": [
-                self.request.session.get('project_couch_id')
-            ]
+                p.couch_id for p in data['projects'] 
+            ] if 'projects' in data and data['projects'] else [],
+            "projects_names": [
+                p.name for p in data['projects'] 
+            ] if 'projects' in data and data['projects'] else []
         }
+
+        facilitator.administrative_levels = _administrative_levels
+        facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
+        facilitator.simple_save()
+
+
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         nsc.create_document(facilitator_database, doc)
@@ -853,7 +1020,10 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         form = ctx.get('form')
         ctx.setdefault('facilitator_doc', self.doc)
         if self.doc:
-            ctx['form'] = UpdateFacilitatorForm(initial={'facilitator_doc': self.doc, 'facilitator_projects': self.facilitator.projects.all()})
+            ctx['form'] = UpdateFacilitatorForm(initial={
+                'facilitator_doc': self.doc, 'facilitator_projects': self.facilitator.projects.all(),
+                'project_id': self.request.session.get('project_id')
+            })
             if form:
                 for label, field in form.fields.items():
                     try:
@@ -900,17 +1070,35 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         _administrative_levels = []
         administrative_levels_new = []
         if 'administrative_levels' in data and data['administrative_levels']:
+            
+            project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
+            cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
+
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+
             for elt in data['administrative_levels']:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
                 if administrativelevel_obj:
                     if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
                         elt['is_headquarters_village'] = True
 
-                    if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
-                        _administrative_levels.append(elt)
-
-                    if not exists_id_in_a_dict(administrative_levels_old, elt.get('id')):
+                    _elt = exists_id_in_a_dict(administrative_levels_old, elt.get('id'))
+                    if not _elt:
+                        if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
+                            elt["project_id"] = project_cdd.couch_id
+                            elt["project_name"] = project_cdd.name
+                            elt["cycle_id"] = cycle_cdd.couch_id
+                            elt["cycle_name"] = cycle_cdd.name
                         administrative_levels_new.append(elt)
+                    else:
+                        elt["project_id"] = _elt["project_id"]
+                        elt["project_name"] = _elt["project_name"]
+                        elt["cycle_id"] = _elt["cycle_id"]
+                        elt["cycle_name"] = _elt["cycle_name"]
+                        # elt = _elt
+                    # if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
+                    _administrative_levels.append(elt)
+
 
         for ad in administrative_levels_old:
             if ad.get('id') and not exists_id_in_a_dict(_administrative_levels, ad.get('id')):
@@ -955,6 +1143,11 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                 p.couch_id for p in data['projects'] 
             ] if 'projects' in data and data['projects'] else []
         }
+
+        facilitator.administrative_levels = _administrative_levels
+        facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
+        facilitator.simple_save()
+
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
 
@@ -1035,6 +1228,11 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         selector = {
             "type": "task",
         }
+        
+        if self.request.session.get('project_couch_id'):
+            selector['project_id'] = self.request.session.get('project_couch_id')
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
 
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
@@ -1125,8 +1323,16 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
 
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
                                 form_response =  _.get('form_response')
-                                if form_response:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = form_response[0]['generalitiesSurVillage']['populationVillage'] if form_response[0] else 0
+                                old_forms = _.get('old_forms')
+                                old_form_response = old_forms[-1].get("form_response") if old_forms else []
+                                if form_response or old_form_response:
+                                    _populationVillage = None
+                                    _generalitiesSurVillage = get_datas_dict(form_response, "generalitiesSurVillage", 1)
+                                    if not _generalitiesSurVillage:
+                                        _generalitiesSurVillage = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)
+                                    if _generalitiesSurVillage:
+                                        _populationVillage = _generalitiesSurVillage["populationVillage"]
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = _populationVillage
                                 else:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')][
                                         'populationVillage'] = 0
