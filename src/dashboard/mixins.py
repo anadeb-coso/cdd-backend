@@ -24,7 +24,9 @@ class PageMixin(object):
     
     def dispatch(self, request, *args, **kwargs):
         next_url = self.request.get_full_path()
-        if "/process-manager/select-project/" not in next_url and self.request.user.is_authenticated and not self.request.session.get('project_id'): # If the user is authenticated and no project selected
+        if "/process-manager/select-project/" not in next_url and self.request.user.is_authenticated and (
+                not self.request.session.get('project_id') or not self.request.session.get('cycle_id')
+            ): # If the user is authenticated and no project selected
             # auth_logout(self.request) #log out user
             
             url = reverse('dashboard:process_manager:list')
