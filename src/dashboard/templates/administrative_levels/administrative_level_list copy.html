@@ -26,12 +26,12 @@
             </thead>
             <tbody>
             {% for cvd in administrative_levels %}
-                <tr {% if not cvd.is_facilitator_on_this_cvd %} style="color: red;" {% endif %}>
-
+                <tr {% if not cvd.headquarters_village|facilitator_on_this_cvd:request %} style="color: red;" {% endif %}>
+                    {% with last_facilitator=cvd.headquarters_village|last_facilitator_cdd:request detail_cdd_activity=cvd.headquarters_village|detail_cdd_activity:request %}
                         <td align="left">
-                            <a class="pointer-event" data-facilitatorid="{{ cvd.last_facilitator|get:'no_sql_db_name' }}"
-                                {% if cvd.last_facilitator|get:'no_sql_db_name' %}
-                                href="{% url 'dashboard:administrative_levels:detail' cvd.last_facilitator|get:'no_sql_db_name' %}?administrative_level={{ cvd.headquarters_village.id }}"
+                            <a class="pointer-event" data-facilitatorid="{{ last_facilitator.no_sql_db_name }}"
+                                {% if last_facilitator %}
+                                href="{% url 'dashboard:administrative_levels:detail' last_facilitator.no_sql_db_name %}?administrative_level={{ cvd.headquarters_village.id }}"
                                 target="_blank" 
                                 {% else %}
                                 href="#"
@@ -51,30 +51,28 @@
                             {% endfor %}
                         </td>
                         <td align="left">{{ cvd.headquarters_village.parent.name }}</td>
-                        <td align="left">{{ cvd.last_facilitator|get:"name" }}</td>
-                        <td align="left">{{ cvd.last_facilitator|get:"phone" }}</td>
-                        <td align="left">{{ cvd.last_activity_cdd }}</td>
+                        <td align="left">{{ last_facilitator.name }}</td>
+                        <td align="left">{{ last_facilitator.phone }}</td>
+                        <td align="left">{{ detail_cdd_activity|get:"last_activity_cdd" }}</td>
                         <td align="left"
                             title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
                             style="color:
-                                    {% if cvd.percent_cdd < 10 %}red
-                                    {% elif cvd.percent_cdd < 30 %}orange
-                                    {% elif cvd.percent_cdd < 50 %}purple
-                                    {% elif cvd.percent_cdd < 70 %}black
-                                    {% elif cvd.percent_cdd < 90 %}#04e1e1
-                                    {% elif cvd.percent_cdd < 100 %}blue
+                                    {% if detail_cdd_activity|get:"percent_cdd" < 10 %}red
+                                    {% elif detail_cdd_activity|get:"percent_cdd" < 30 %}orange
+                                    {% elif detail_cdd_activity|get:"percent_cdd" < 50 %}purple
+                                    {% elif detail_cdd_activity|get:"percent_cdd" < 70 %}black
+                                    {% elif detail_cdd_activity|get:"percent_cdd" < 90 %}#04e1e1
+                                    {% elif detail_cdd_activity|get:"percent_cdd" < 100 %}blue
                                     {% else %}green
                                     {% endif %}; font-weight: bold;
                                     "
-                            >{% if cvd.percent_cdd %}{{ cvd.percent_cdd }} %{% else %} - {% endif %}</td>
+                            >{% if detail_cdd_activity|get:"percent_cdd" %}{{ detail_cdd_activity|get:"percent_cdd" }} %{% else %} - {% endif %}</td>
                         <td class=" pointer-event ">
-                            <i id="adl-{{ cvd.headquarters_village.id }}-{{ cvd.last_facilitator|get:'no_sql_db_name' }}" class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
+                            <i id="adl-{{ cvd.headquarters_village.id }}-{{ last_facilitator.no_sql_db_name }}" class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
                         </td>
-                        
+                    {% endwith %}
                 </tr>
             {% endfor %}
-
-            
             </tbody>
         </table>
     </div>

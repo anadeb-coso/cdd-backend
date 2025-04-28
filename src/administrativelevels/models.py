@@ -2,7 +2,7 @@ from email.policy import default
 from django.db import models
 from cdd_client import CddClient
 from django.db.models.signals import post_save
-from cdd.models_base import BaseModel
+from cdd.models_base import BaseModel, CustomQuerySet
 
 
 # Create your models here.
@@ -25,6 +25,7 @@ class AdministrativeLevel(BaseModel):
     total_tasks_completed = models.IntegerField(default=0)
     last_activity = models.DateTimeField(blank=True, null=True)
 
+    objects = CustomQuerySet.as_manager()
     
     class Meta:
         unique_together = ['name', 'parent', 'type']
@@ -100,6 +101,15 @@ class CVD(BaseModel):
     secretary_name_of_the_cvd = models.CharField(max_length=100, null=True, blank=True)
     secretary_phone_of_the_cvd = models.CharField(max_length=15, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+
+    percent_cdd = None
+    last_activity_cdd = None
+    is_facilitator_on_this_cvd = False
+    last_facilitator = {}
+
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.percent_cdd
 
     def get_name(self):
         administrativelevels = self.get_villages()

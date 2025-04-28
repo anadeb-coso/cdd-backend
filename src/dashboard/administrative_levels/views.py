@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import generic
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin
-from dashboard.utils import get_child_administrative_levels, get_parent_administrative_level
+from dashboard.utils import get_child_administrative_levels, get_parent_administrative_level, get_parent_administrative_level_mis
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
 from .functions import (
@@ -14,14 +14,20 @@ class GetChoicesForNextAdministrativeLevelView(AJAXRequestMixin, LoginRequiredMi
     def get(self, request, *args, **kwargs):
         parent_id = request.GET.get('parent_id')
         exclude_lower_level = request.GET.get('exclude_lower_level', None)
-        project_id = int(request.GET.get('project_id', 1))
+        project_id = int(request.GET.get('project_id', 0))
+        cycle_id = int(request.GET.get('cycle_id', 0))
 
+        if not project_id:
+            project_id = request.session.get('project_id')
+        if not cycle_id:
+            cycle_id = request.session.get('cycle_id')
+        
         nsc = NoSQLClient()
         administrative_levels_db = nsc.get_db("administrative_levels")
-        data = get_child_administrative_levels(administrative_levels_db, parent_id, project_id)
+        data = get_child_administrative_levels(administrative_levels_db, parent_id, project_id, cycle_id)
 
         if data and exclude_lower_level and not get_child_administrative_levels(
-                administrative_levels_db, data[0]['administrative_id'], parent_id=project_id):
+                administrative_levels_db, data[0]['administrative_id'], parent_id, project_id, cycle_id):
             data = []
 
         return self.render_to_json_response(data, safe=False)
@@ -36,9 +42,11 @@ class GetAncestorAdministrativeLevelsView(AJAXRequestMixin, LoginRequiredMixin, 
             administrative_levels_db = nsc.get_db("administrative_levels")
             has_parent = True
             while has_parent:
-                parent = get_parent_administrative_level(administrative_levels_db, administrative_id)
+                # parent = get_parent_administrative_level(administrative_levels_db, administrative_id)
+                parent = get_parent_administrative_level_mis(administrative_id, request.session.get('project_id'))
                 if parent:
-                    administrative_id = parent['administrative_id']
+                    # administrative_id = parent['administrative_id']
+                    administrative_id = parent.id
                     ancestors.insert(0, administrative_id)
                 else:
                     has_parent = False

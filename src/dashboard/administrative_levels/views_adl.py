@@ -15,6 +15,10 @@ from django.core.paginator import Paginator
 from django.db.models import Q, QuerySet
 import re as re_module
 from functools import reduce
+from django.db.models import Sum
+from django.forms.models import model_to_dict
+from django.db.models import OuterRef, Subquery
+
 
 from process_manager.models import Phase, Activity, Task, Project
 from authentication.models import Facilitator
@@ -45,6 +49,7 @@ from dashboard.administrative_levels.forms import AttachmentFilterForm
 from cdd.my_librairies.functions import strip_accents, get_datas_dict
 from dashboard.reports.constants import IGNORES, PEULS
 from subprojects.models import Project as MisProject
+from process_manager.models import AggregatedStatus
 
 
 class AdministrativeLevelListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
@@ -86,13 +91,30 @@ class AdministrativeLevelListTableView(LoginRequiredMixin, generic.ListView):
         _id = 0
 
         
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
-        print(project_mis_id)
-        assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
-            project_id=project_mis_id,
-            # activated=True
-        )
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+        project_mis_id = project_mis.id if project_mis else 1
+        
+        # assign_facilitators = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+        #     project_id=project_mis_id,
+        #     # activated=True
+        # )
+        # _ll = list(set([
+        #     Facilitator.objects.get(id=a_f.facilitator_id).name for a_f in assign_facilitators
+        # ]))
+        # print(_ll)
+        # print(len(_ll))
+        # _adls = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel,
+        #         id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+        # )
+        # print("_adls", len(_adls))
+        # purs = mis_objects_call.get_object(MisProject, name="PURS")
+        # print(
+        #     [adl_purs.name for adl_purs in purs.administrative_levels.all() for adl_coso in _adls if adl_coso.id == adl_purs.id]
+        # )
+
+        # print("_cvd", len(mis_objects_call.filter_objects(administrativelevels_models.CVD,
+        #         headquarters_village__id__in=list(set([int(adl.id) for adl in _adls]))
+        # )))
 
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
@@ -118,27 +140,281 @@ class AdministrativeLevelListTableView(LoginRequiredMixin, generic.ListView):
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
 
             if type(_id) is not list:
-                assign_facilitators = assign_facilitators.filter(
-                    administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages]
-                )
+                # assign_facilitators = assign_facilitators.filter(
+                #     administrative_level_id__in=[int(v['administrative_id']) for v in liste_villages]
+                # )
 
                 administrativelels = mis_objects_call.filter_objects(administrativelevels_models.CVD,
-                    headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                    # headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                    headquarters_village__id__in=[adl.id for adl in project_mis.administrative_levels.filter(id__in=[int(v['administrative_id']) for v in liste_villages])]
                 )
             else:
                 administrativelels = mis_objects_call.filter_objects(administrativelevels_models.CVD,
-                    headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                    # headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                    headquarters_village__id__in=[adl.id for adl in project_mis.administrative_levels.all()]
                 )
             
         else:
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
             administrativelels = mis_objects_call.filter_objects(administrativelevels_models.CVD,
-                headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                # headquarters_village__id__in=list(set([int(f.administrative_level_id) for f in assign_facilitators]))
+                headquarters_village__id__in=[adl.id for adl in project_mis.administrative_levels.all()]
             )
 
 
-        return administrativelels
+        # # Récupérer les IDs des villages du quartier général dans une liste
+        # _headquarters_village_ids = [adl_cvd.headquarters_village_id for adl_cvd in administrativelels]
+
+        # # Récupérer les IDs des niveaux administratifs assignés à un facilitateur
+        # _administrative_level_ids_and_facilitator_ids_assigned = list(mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+        #         administrative_level_id__in=_headquarters_village_ids,
+        #         project_id=self.request.session.get("project_mis_id"),
+        #         activated=True
+        #     ).values_list('administrative_level_id', 'facilitator_id'))
+        
+        # _administrative_level_ids_assigned = set(_adl_f[0] for _adl_f in _administrative_level_ids_and_facilitator_ids_assigned)
+        # _facilitators = list(facilitator._asdict() for facilitator in Facilitator.objects.filter(id__in=[_adl_f[1] for _adl_f in _administrative_level_ids_and_facilitator_ids_assigned]).values_list('id', 'name', 'no_sql_db_name', 'phone', named=True))
+
+        # _facilitator_ids_assigned = [
+        #     {**_f, 'administrative_level_id': _adl_f[0], 'facilitator_id': int(_adl_f[1])} 
+        #     for _adl_f in _administrative_level_ids_and_facilitator_ids_assigned for _f in _facilitators if int(_adl_f[1]) == _f['id']
+        # ]
+        
+        # # Récupérer les agrégations associées aux quartiers généraux de villages
+        # aggregs = AggregatedStatus.objects.filter(
+        #     administrative_level_id__in=_headquarters_village_ids,
+        #     project__id=self.request.session.get("project_id"),
+        #     cycle__id=self.request.session.get("cycle_id"),
+        #     task=None,
+        #     facilitator=None
+        # ).values('administrative_level_id').annotate(
+        #     total_tasks_completed=Sum('total_tasks_completed'),
+        #     total_tasks=Sum('total_tasks')
+        # )
+
+        # # Créer un dictionnaire des agrégations par ID de niveau administratif
+        # aggregs_dict = {
+        #     agg['administrative_level_id']: {
+        #         'total_tasks_completed': agg['total_tasks_completed'] or 0,
+        #         'total_tasks': agg['total_tasks'] or 1
+        #     }
+        #     for agg in aggregs
+        # }
+
+        # # Ajouter des informations aux éléments administratifs
+        # _administrativelels = []
+        # for _adl in administrativelels:
+        #     if _adl.headquarters_village_id in _administrative_level_ids_assigned:
+        #         _adl.is_facilitator_on_this_cvd = True
+        #         _fs = [_f for _f in _facilitator_ids_assigned if _f['administrative_level_id'] == _adl.headquarters_village_id]
+        #         if _fs:
+        #             print(_fs)
+        #             _adl.last_facilitator = _fs[0]
+
+
+        #     # Vérifier s'il existe une agrégation pour ce village
+        #     if _adl.headquarters_village_id in aggregs_dict:
+        #         totals = aggregs_dict[_adl.headquarters_village_id]
+        #         t_t_c = totals['total_tasks_completed']
+        #         t_t = totals['total_tasks']
+                
+        #         # Calculer le pourcentage de tâches CDD et la dernière activité
+        #         _adl.percent_cdd = round((t_t_c / t_t) * 100, 2)
+
+        #         # Trouver la dernière activité à partir des agrégations existantes
+        #         _aggregs = aggregs.filter(administrative_level_id=_adl.headquarters_village_id)
+        #         _adl.last_activity_cdd = _aggregs.latest('last_activity') if _aggregs.exists() else None
+
+        #     # Ajouter l'élément administratif à la liste
+        #     _administrativelels.append(_adl)
+
+
+
+
+        # # Récupérer les IDs des villages du quartier général dans une liste
+        # _headquarters_village_ids = [adl_cvd.headquarters_village_id for adl_cvd in administrativelels]
+
+        # # Récupérer les IDs des niveaux administratifs assignés à un facilitateur et les facilitators
+        # _assigned_data = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator,
+        #     administrative_level_id__in=_headquarters_village_ids,
+        #     project_id=self.request.session.get("project_mis_id"),
+        #     activated=True
+        # ).values_list('administrative_level_id', 'facilitator_id')
+
+        # # Créer un set pour les niveaux administratifs assignés et un dictionnaire pour les facilitators
+        # _administrative_level_ids_assigned = {adl_f[0] for adl_f in _assigned_data}
+        # _facilitator_ids_assigned = {adl_f[1] for adl_f in _assigned_data}
+
+        # # Créer un dictionnaire facilitators pour un accès rapide
+        # facilitators = {f.id: f._asdict() for f in Facilitator.objects.filter(id__in=_facilitator_ids_assigned).values_list('id', 'name', 'no_sql_db_name', 'phone', named=True)}
+
+        # # Créer un dictionnaire de liaisons entre administrative_level_id et facilitators
+        # facilitator_assignments = {
+        #     adl_f[0]: {
+        #         'facilitator_id': int(adl_f[1]),
+        #         'facilitator': facilitators.get(int(adl_f[1]))
+        #     }
+        #     for adl_f in _assigned_data
+        # }
+
+        # # Récupérer les agrégations associées aux quartiers généraux de villages
+        # aggregs_by_project = AggregatedStatus.objects.filter(
+        #     administrative_level_id__in=_headquarters_village_ids,
+        #     project__id=self.request.session.get("project_id"),
+        #     cycle__id=self.request.session.get("cycle_id"),
+        #     task=None,
+        #     facilitator=None
+        # )
+        
+        # aggregs = aggregs_by_project.values('administrative_level_id').annotate(
+        #     total_tasks_completed=Sum('total_tasks_completed'),
+        #     total_tasks=Sum('total_tasks')
+        # )
+
+        # # Créer un dictionnaire des agrégations par ID de niveau administratif
+        # aggregs_dict = {
+        #     agg['administrative_level_id']: {
+        #         'total_tasks_completed': agg['total_tasks_completed'] or 0,
+        #         'total_tasks': agg['total_tasks'] or 1
+        #     }
+        #     for agg in aggregs
+        # }
+
+        # # Ajouter des informations aux éléments administratifs
+        # _administrativelels = []
+        # for _adl in administrativelels:
+        #     # Si un facilitateur est assigné à ce village, l'ajouter
+        #     if _adl.headquarters_village_id in _administrative_level_ids_assigned:
+        #         _adl.is_facilitator_on_this_cvd = True
+        #         facilitator_data = facilitator_assignments.get(_adl.headquarters_village_id)
+        #         if facilitator_data and facilitator_data['facilitator']:
+        #             _adl.last_facilitator = facilitator_data['facilitator'] if facilitator_data['facilitator'] else {}
+            
+        #     # Vérifier si une agrégation existe pour ce village
+        #     if _adl.headquarters_village_id in aggregs_dict:
+        #         totals = aggregs_dict[_adl.headquarters_village_id]
+        #         t_t_c = totals['total_tasks_completed']
+        #         t_t = totals['total_tasks']
+                
+        #         # Calculer le pourcentage de tâches CDD et la dernière activité
+        #         _adl.percent_cdd = round((t_t_c / t_t) * 100, 2)
+
+        #         # Trouver la dernière activité à partir des agrégations existantes
+        #         _aggregs = aggregs_by_project.filter(administrative_level_id=_adl.headquarters_village_id)
+        #         _adl.last_activity_cdd = _aggregs.latest('last_activity').last_activity if _aggregs.exists() else None
+
+        #     # Ajouter l'élément administratif à la liste
+        #     _administrativelels.append(_adl)
+
+
+
+
+
+        # Récupérer les IDs des villages du quartier général
+        _headquarters_village_ids = [adl_cvd.headquarters_village_id for adl_cvd in administrativelels]
+
+        # # Récupérer les niveaux administratifs assignés à un facilitateur et les facilitateurs associés
+        # _assigned_data = mis_objects_call.filter_objects(
+        #     AssignAdministrativeLevelToFacilitator,
+        #     administrative_level_id__in=_headquarters_village_ids,
+        #     project_id=self.request.session.get("project_mis_id"),
+        #     activated=True
+        # ).values_list('administrative_level_id', 'facilitator_id')
+        # Récupérer les IDs des villages du quartier général
+
+        # Sous-requête pour obtenir la dernière affectation désactivée
+        last_deactivated_subquery = mis_objects_call.filter_objects(
+            AssignAdministrativeLevelToFacilitator,
+            administrative_level_id=OuterRef('administrative_level_id'),
+            project_id=self.request.session.get("project_mis_id"),
+            activated=False
+        ).order_by('-updated_date').values('facilitator_id')[:1]  # Prendre le plus récent
+
+        # Requête principale : récupérer les affectations actives ou la dernière désactivée si aucune active n'existe
+        _assigned_data = mis_objects_call.filter_objects(
+            AssignAdministrativeLevelToFacilitator,
+            administrative_level_id__in=_headquarters_village_ids,
+            project_id=self.request.session.get("project_mis_id")
+        ).annotate(
+            last_deactivated_facilitator=Subquery(last_deactivated_subquery)
+        ).values_list('administrative_level_id', 'facilitator_id', 'last_deactivated_facilitator')
+
+        # Construire la liste finale avec priorité aux affectations actives
+        final_assignments = [
+            (adl_id, facilitator_id if facilitator_id else last_deactivated_facilitator)
+            for adl_id, facilitator_id, last_deactivated_facilitator in _assigned_data
+        ]
+
+
+
+        # Création des dictionnaires pour accès rapide
+        _administrative_level_ids_assigned = {adl_f[0] for adl_f in final_assignments}
+        _facilitator_ids_assigned = {int(adl_f[1]) for adl_f in final_assignments}
+
+        # Récupérer les facilitateurs en une seule requête
+        facilitators = Facilitator.objects.filter(id__in=_facilitator_ids_assigned).in_bulk(field_name='id')
+        
+        # Création d'un dictionnaire des affectations
+        facilitator_assignments = {
+            adl_id: {
+                'facilitator_id': int(fac_id),
+                'facilitator':  model_to_dict(facilitators.get(int(fac_id))) if facilitators.get(int(fac_id)) else {}
+            }
+            for adl_id, fac_id in final_assignments
+        }
+
+        # Récupérer les agrégations associées aux quartiers généraux des villages
+        aggregs_by_project = AggregatedStatus.objects.filter(
+            administrative_level_id__in=_headquarters_village_ids,
+            project_id=self.request.session.get("project_id"),
+            cycle_id=self.request.session.get("cycle_id"),
+            task=None,
+            facilitator=None
+        )
+
+        # Agréger les tâches et stocker les résultats sous forme de dictionnaire
+        aggregs_dict = {
+            agg['administrative_level_id']: {
+                'total_tasks_completed': agg['total_tasks_completed'] or 0,
+                'total_tasks': agg['total_tasks'] or 1
+            }
+            for agg in aggregs_by_project.values('administrative_level_id').annotate(
+                total_tasks_completed=Sum('total_tasks_completed'),
+                total_tasks=Sum('total_tasks')
+            )
+        }
+
+        # Récupérer les dernières activités des villages
+        latest_activities = {
+            agg.administrative_level_id: agg.last_activity
+            for agg in aggregs_by_project.order_by('administrative_level_id', '-last_activity')
+        }
+
+        # Ajout des informations aux niveaux administratifs
+        _administrativelels = []
+        for _adl in administrativelels:
+            hq_village_id = _adl.headquarters_village_id
+
+            # Vérifier si un facilitateur est assigné
+            if hq_village_id in _administrative_level_ids_assigned:
+                _adl.is_facilitator_on_this_cvd = True
+                facilitator_data = facilitator_assignments.get(hq_village_id)
+                _adl.last_facilitator = facilitator_data['facilitator'] if facilitator_data and facilitator_data['facilitator'] else {}
+                
+            # Vérifier si une agrégation existe pour ce village
+            if hq_village_id in aggregs_dict:
+                totals = aggregs_dict[hq_village_id]
+                _adl.percent_cdd = round((totals['total_tasks_completed'] / totals['total_tasks']) * 100, 2)
+
+                # Récupérer la dernière activité enregistrée
+                _adl.last_activity_cdd = latest_activities.get(hq_village_id)
+
+            _administrativelels.append(_adl)
+
+
+
+        return _administrativelels
 
     def get_queryset(self):
 
@@ -153,7 +429,10 @@ class AdministrativeLevelDetailForListView(FacilitatorMixin, AJAXRequestMixin, L
         administrative_level_id = self.request.GET.get('administrative_level')
         selector = {
             "type": "task",
+            "project_id": self.request.session.get('project_couch_id')
         }
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
         
         if administrative_level_id:
             headquarters_village_id = get_headquarters_village_id(self.cvds, administrative_level_id)
@@ -243,8 +522,16 @@ class AdministrativeLevelDetailForListView(FacilitatorMixin, AJAXRequestMixin, L
 
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get("name") == 'Etablissement du profil du village':
                                 form_response =  _.get('form_response')
-                                if form_response:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = form_response[0]['generalitiesSurVillage']['populationVillage']
+                                old_forms = _.get('old_forms')
+                                old_form_response = old_forms[-1].get("form_response") if old_forms else []
+                                if form_response or old_form_response:
+                                    _populationVillage = None
+                                    _generalitiesSurVillage = get_datas_dict(form_response, "generalitiesSurVillage", 1)
+                                    if not _generalitiesSurVillage:
+                                        _generalitiesSurVillage = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)
+                                    if _generalitiesSurVillage:
+                                        _populationVillage = _generalitiesSurVillage["populationVillage"]
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = _populationVillage
                                 else:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')][
                                         'populationVillage'] = 0
@@ -341,8 +628,11 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
         selector = {
-            "type": "task"
+            "type": "task",
+            "project_id": self.request.session.get('project_couch_id')
         }
+        if self.request.session.get('cycle_couch_id'):
+            selector['cycle_id'] = self.request.session.get('cycle_couch_id')
         if administrative_level_id:
             selector["administrative_level_id"] = administrative_level_id
 
@@ -354,6 +644,7 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
             initial={
                 'facilitator_db_name': self.facilitator_db_name, 
                 'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id'),
                 'cvds': self.cvds
             }
         )
@@ -383,12 +674,12 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
         total_tasks = 0
         dict_administrative_levels_with_infos = {'villages': {}}
 
-        phases =  Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        phases =  Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         context['phases'] = phases
 
         activities_per_phase = {}
         for phase in phases:
-            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order, project_id=self.request.session.get('project_id')).values('name', 'phase', 'description', 'order').order_by('order')
+            activities_per_phase[phase.order] =  Activity.objects.filter(phase__order=phase.order).get_objects_by_general_filtre(request=self.request, attrs=None).values('name', 'phase', 'description', 'order').order_by('order')
 
         context["activities_per_phase"] = activities_per_phase
 
@@ -490,10 +781,16 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
                             if _.get("phase_name") == "VISITES PREALABLES" and _.get(
                                     "name") == 'Etablissement du profil du village':
                                 form_response = _.get('form_response')
-                                if form_response:
-                                    dict_administrative_levels_with_infos['villages'][village.get('name')][
-                                        'populationVillage'] = form_response[0]['generalitiesSurVillage'][
-                                        'populationVillage']
+                                old_forms = _.get('old_forms')
+                                old_form_response = old_forms[-1].get("form_response") if old_forms else []
+                                if form_response or old_form_response:
+                                    _populationVillage = None
+                                    _generalitiesSurVillage = get_datas_dict(form_response, "generalitiesSurVillage", 1)
+                                    if not _generalitiesSurVillage:
+                                        _generalitiesSurVillage = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)
+                                    if _generalitiesSurVillage:
+                                        _populationVillage = _generalitiesSurVillage["populationVillage"]
+                                    dict_administrative_levels_with_infos['villages'][village.get('name')]['populationVillage'] = _populationVillage
                                 else:
                                     dict_administrative_levels_with_infos['villages'][village.get('name')][
                                         'populationVillage'] = 0
@@ -510,6 +807,9 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
                             context['administrative_level_name'] = village.get('name')
         
                             if _.get('sql_id') == 20: #Etablissement du profil du village
+                                if not form_response or (form_response and not form_response[0]):
+                                    old_forms = _.get('old_forms')
+                                    form_response = old_forms[-1].get("form_response") if old_forms else []
                                 try:
                                     try:
                                         _data = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
@@ -746,7 +1046,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             type='Village'
         )
 
-        context["phases"] = Phase.objects.filter(project_id=self.request.session.get('project_id'))
+        context["phases"] = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         if "administrative_level" in self.request.GET and self.request.GET[
             "administrative_level"
         ] not in ["", None]:
@@ -755,13 +1055,13 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             #     village__id=self.request.GET["administrative_level"]
             # )
 
-        context["activities"] = Activity.objects.filter(project_id=self.request.session.get('project_id'))
+        context["activities"] = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         if "phase" in self.request.GET and self.request.GET["phase"] not in ["", None]:
             context["activities"] = context["activities"].filter(
                 phase__id=self.request.GET["phase"]
             )
 
-        context["tasks"] = Task.objects.filter(project_id=self.request.session.get('project_id'))
+        context["tasks"] = Task.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         if "activities" in self.request.GET and self.request.GET["activities"] not in [
             "",
             None,
@@ -816,19 +1116,19 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                     )
                 if key == "phase":
                     resp["Phases"] = ", ".join(
-                        Phase.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
+                        Phase.objects.filter(id__in=[int(value)]).get_objects_by_general_filtre(request=self.request, attrs=None).values_list(
                             "name", flat=True
                         )
                     )
                 if key == "activities":
                     resp["Activities"] = ", ".join(
-                        Activity.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
+                        Activity.objects.filter(id__in=[int(value)]).get_objects_by_general_filtre(request=self.request, attrs=None).values_list(
                             "name", flat=True
                         )
                     )
                 if key == "tasks":
                     resp["Tasks"] = ", ".join(
-                        Task.objects.filter(id__in=[int(value)], project_id=self.request.session.get('project_id')).values_list(
+                        Task.objects.filter(id__in=[int(value)]).get_objects_by_general_filtre(request=self.request, attrs=None).values_list(
                             "name", flat=True
                         )
                     )
@@ -972,13 +1272,13 @@ class FillAttachmentSelectFilters(rest_generics.GenericAPIView):
         child_qs = list()
         if select_type == 'administrative_level':
             parent_obj = mis_objects_call.get_object(administrativelevels_models.AdministrativeLevel, id=request.POST['value'])
-            child_qs = Phase.objects.filter(project_id=self.request.session.get('project_id')) #village=parent_obj, 
+            child_qs = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None) #village=parent_obj, 
         elif select_type == 'phase':
             parent_obj = Phase.objects.get(id=request.POST['value'])
-            child_qs = Activity.objects.filter(phase=parent_obj, project_id=self.request.session.get('project_id'))
+            child_qs = Activity.objects.filter(phase=parent_obj).get_objects_by_general_filtre(request=self.request, attrs=None)
         elif select_type == 'activity': 
             parent_obj = Activity.objects.get(id=request.POST['value'])
-            child_qs = Task.objects.filter(activity=parent_obj, project_id=self.request.session.get('project_id'))
+            child_qs = Task.objects.filter(activity=parent_obj).get_objects_by_general_filtre(request=self.request, attrs=None)
 
         return response.Response({
             'values': [{'id': child.id, 'name': child.name} for child in child_qs]
