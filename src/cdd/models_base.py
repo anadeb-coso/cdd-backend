@@ -13,22 +13,14 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
     
-    def save_and_return_object(self, user=None):
-        super().save()
-        if user:
-            self.users_history(user)
-            
-
-        return self
+    def save_and_return_object(self, user=None, force_insert=False, force_update=False, using=None, update_fields=None):
+        return self.users_history(user, force_insert, force_update, using, update_fields)
     
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None, user=None):
-        super().save(force_insert, force_update, using, update_fields)
-        if user:
-            self.users_history(user)
-
-
+        self.users_history(user, force_insert, force_update, using, update_fields)
+            
     
-    def users_history(self, user):
+    def users_history(self, user, force_insert=False, force_update=False, using=None, update_fields=None):
         """
         Save users stories
         user_json = {
@@ -37,7 +29,7 @@ class BaseModel(models.Model):
             "data": self
         }
         """
-        
+        # if user:
         # user_json = user.__dict__ if user else {'is_superuser': True}
         # self_json = self.__dict__
 
@@ -60,4 +52,37 @@ class BaseModel(models.Model):
 
         # self.users_involved = users_involved
 
-        super().save()
+        super().save(force_insert, force_update, using, update_fields)
+
+        return self
+
+
+
+
+class CustomQuerySet(models.QuerySet):
+    
+    def get_objects_by_general_filtre(self, request, attrs, *args, **kwargs):
+        if self.first():
+            if self.first().__class__.__name__ in ["Phase", "Activity", "Task"]:
+                return self.get_process_manager_actifs(request, attrs, *args, **kwargs)
+            elif self.first().__class__.__name__ in ["AdministrativeLevel"]:
+                return self.get_adl_actifs(request, attrs, *args, **kwargs)
+        return self.filter()
+    
+    def get_adl_actifs(self, request, attrs, *args, **kwargs):
+        if attrs:
+            return self.filter(**attrs)
+        else:
+            return self.filter(
+                administrative_levels_projects__in=[request.session.get('project_mis_id')], 
+                administrative_levels_cycles__in=[request.session.get('cycle_mis_id')]
+            )
+    
+    def get_process_manager_actifs(self, request, attrs, *args, **kwargs):
+        if attrs:
+            if 'cycle_id' in attrs:
+                attrs['cycles__in'] = [attrs.get('cycle_id')]
+                del attrs['cycle_id']
+            return self.filter(**attrs)
+        else:
+            return self.filter(project_id=request.session.get('project_id'), cycles__in=[request.session.get('cycle_id')])

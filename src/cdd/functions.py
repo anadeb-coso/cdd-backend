@@ -11,7 +11,7 @@ def exists_id(liste, id):
 def exists_id_in_a_dict(liste, id):
     for o in liste:
         if o.get('id') == id:
-            return True
+            return o
     return False
 
 def get_number_under_two_letter(n: str):
