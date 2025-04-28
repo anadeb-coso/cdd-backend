@@ -25,6 +25,7 @@ class DiagnosticsForm(forms.Form):
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
         project_id = initial.get('project_id')
+        cycle_id = initial.get('cycle_id')
         super().__init__(*args, **kwargs)
 
         # nsc = NoSQLClient()
@@ -40,9 +41,9 @@ class DiagnosticsForm(forms.Form):
         #         self.fields[label].widget.attrs['class'] = label
         #     except Exception as exc:
         #         pass
-        self.fields['phase'].widget.choices = [('', '')] + [(o.id, o.name) for o in Phase.objects.filter(project_id=project_id).order_by("order")]
-        self.fields['activity'].widget.choices = [('', '')] + [(o.id, o.name) for o in Activity.objects.filter(project_id=project_id).order_by("phase__order", "order")]
-        self.fields['task'].widget.choices = [('', '')] + [(o.id, o.name) for o in Task.objects.filter(project_id=project_id).order_by("phase__order", "activity__order", "order")]
+        self.fields['phase'].widget.choices = [('', '')] + [(o.id, o.name) for o in Phase.objects.get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("order")]
+        self.fields['activity'].widget.choices = [('', '')] + [(o.id, o.name) for o in Activity.objects.get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "order")]
+        self.fields['task'].widget.choices = [('', '')] + [(o.id, o.name) for o in Task.objects.get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "activity__order", "order")]
 
         # for label in ["region", "prefecture", "commune", "canton", "village"]:
         #     try:

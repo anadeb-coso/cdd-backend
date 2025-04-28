@@ -33,7 +33,7 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = DiagnosticsForm(initial={'project_id': self.request.session.get('project_id')})
+        context['form'] = DiagnosticsForm(initial={'project_id': self.request.session.get('project_id'), 'cycle_id': self.request.session.get('cycle_id')})
         context['access_token'] = settings.MAPBOX_ACCESS_TOKEN
         context['lat'] = settings.DIAGNOSTIC_MAP_LATITUDE
         context['lng'] = settings.DIAGNOSTIC_MAP_LONGITUDE
@@ -95,7 +95,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             }
         
         assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=project_mis_id)
-        aggregated_status_project = AggregatedStatus.objects.filter(project_id=project.id)
+        aggregated_status_project = AggregatedStatus.objects.filter(project_id=project.id, cycle_id=self.request.session.get('cycle_id'))
 
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
@@ -167,7 +167,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             elif _type == "task":
                 tasks.append(Task.objects.get(id=int(sql_id)))
             else:
-                tasks = Task.objects.filter(project_id=self.request.session.get('project_id'))
+                tasks = Task.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
             
             aggrs_status = aggregated_status_project.filter(task_id__in=[t.id for t in tasks])
 
