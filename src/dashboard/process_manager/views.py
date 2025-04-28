@@ -8,10 +8,11 @@ from django.urls import reverse_lazy
 from django.conf import settings
 from django.shortcuts import resolve_url
 from django.http import HttpResponseRedirect
+from django.contrib import messages
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
-from process_manager.models import Task, Phase, Activity, Project
+from process_manager.models import Task, Phase, Activity, Project, Cycle
 from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
 from cdd.my_librairies.sms.send_sms import send_sms
@@ -24,6 +25,7 @@ from subprojects.models import Project as MisProject
 from dashboard.facilitators.functions import (
     get_db_task, get_search_for_stabilized_facilitator_dbs
 )
+from subprojects.models import Project as ProjectMis, Cycle as CycleMis
 
 
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
@@ -44,23 +46,23 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
         if activity_name and phase_name:
             phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
             activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
-            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
             activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
             tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         elif phase_name:
             phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
-            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
             activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
             tasks = phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         elif activity_name:
             activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
-            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
-            activies = Activity.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "order")
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
+            activies = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
             tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
         else:
-            phases = Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by("order")
-            activies = Activity.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "order")
-            tasks = Task.objects.filter(project_id=self.request.session.get('project_id')).order_by("phase__order", "activity__order", "order")
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
+            activies = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
+            tasks = Task.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "activity__order", "order")
 
         datas = {'phases': [], 'activities': [], 'tasks': []}
 
@@ -132,7 +134,7 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         # return self.render_to_json_response(datas, safe=False)
 
         return self.render_to_json_response(
-            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id'), show_all_if_none), 
+            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id'), self.request.session.get('cycle_id'), show_all_if_none), 
             safe=False
         )
 
@@ -158,7 +160,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             try:
                 task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
             except Exception as exc:
-                print(exc)
+                # print(exc)
                 query_result = db.get_query_result({
                     "type": 'facilitator',
                     "$or": [
@@ -225,15 +227,36 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     facilitator_grm = None
                     eadls = nsc.get_db('eadls')
                     try:
-                        facilitator_grm = eadls.get_query_result({
-                            "type": "adl",
-                            "representative.email": {
-                                "$not": {
-                                    "$eq": facilitator.get('email')
-                                }
-                            },
-                            "administrative_regions": {"$in": [task.get("administrative_level_id")]},
-                        })[:][0]
+                        results = eadls.get_view_result(
+                            "_design/adl_village_filter", "by_village_id", 
+                            keys=[int([task.get("administrative_level_id")])], 
+                            include_docs=True
+                        )
+                        
+                        facilitator_email = facilitator.get("email")
+                        matching_docs = {}
+                        count = 0
+                        for row in results:
+                            doc = row["doc"]
+                            if doc.get("representative", {}).get("email") != facilitator_email:
+                                if count == 0:
+                                    facilitator_grm = doc
+                                matching_docs[doc['representative']['email']] = doc
+                                count += 1
+                        
+                        try:
+                            facilitator_grm = matching_docs[task['completed_history'][-1]['facilitator']['email']] #search the last facilitator who has update the task
+                        except:
+                            if not facilitator_grm:
+                                facilitator_grm = eadls.get_query_result({
+                                    "type": "adl",
+                                    "representative.email": {
+                                        "$not": {
+                                            "$eq": facilitator.get('email')
+                                        }
+                                    },
+                                    "administrative_regions": {"$in": [task.get("administrative_level_id")]},
+                                })[:][0]
                     except Exception as exc:
                         # print(exc)
                         pass
@@ -323,7 +346,7 @@ class CompleteTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             try:
                 task = db[db.get_query_result({"type": "task", "_id": task_id})[:][0]['_id']]
             except Exception as exc:
-                print(exc)
+                # print(exc)
                 project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
                 project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
                 query_result = db.get_query_result({
@@ -384,7 +407,7 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
     ]
 
     def get(self, request, *args, **kwargs):
-        projects = self.get_queryset()
+        projects = self.get_queryset().filter(users__in=[self.request.user.id])
         project_id = self.request.GET.get('project_id')
         
         if project_id is not None:
@@ -393,6 +416,21 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             self.request.session['project_id'] = projects[0].id
             self.request.session['project_couch_id'] = projects[0].couch_id
             self.request.session['project_name'] = projects[0].name
+            
+            self.request.session['project_mis_id'] = mis_objects_call.get_object(ProjectMis, name=projects[0].name).id
+
+            cycles = Cycle.objects.filter(project_id=projects[0].id).order_by('order')
+            if cycles.exists():
+                self.request.session['cycle_id'] = cycles[0].id
+                self.request.session['cycle_couch_id'] = cycles[0].couch_id
+                self.request.session['cycle_name'] = cycles[0].name
+                
+                self.request.session['cycle_mis_id'] = mis_objects_call.get_object(CycleMis, name=cycles[0].name, project_id=self.request.session['project_mis_id']).id
+                if len(cycles) != 1:
+                    messages.success(request, "We have detected several cycles for this project. We have chosen the first cycle by default.")
+            else:
+                messages.success(request, "No cycle is defined for this project")
+
             
             next_page = self.request.GET.get('next')
             if next_page:
@@ -403,7 +441,7 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['projects'] = list(self.object_list)
+        context['projects'] = list(self.object_list.filter(users__in=[self.request.user.id]))
         context['next_url'] = self.request.GET.get('next')
 
         return context

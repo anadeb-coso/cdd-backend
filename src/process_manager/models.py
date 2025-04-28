@@ -5,7 +5,7 @@ from django.db.models.signals import post_save
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
-from cdd.models_base import BaseModel
+from cdd.models_base import BaseModel, CustomQuerySet
 
 # class BaseModel(models.Model):
 #     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
@@ -27,23 +27,36 @@ from cdd.models_base import BaseModel
 #     "name": "COSO",
 #     "description": "Lorem ipsum"
 # }
-class Project(models.Model):
-    name = models.CharField(max_length=255)
+class Project(BaseModel):
+    name = models.CharField(max_length=255, unique=True)
     description = models.TextField()
+    parent = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE)
     couch_id = models.CharField(max_length=255, blank=True)
     facilitators = models.ManyToManyField(Facilitator, related_name="projects", default=[], blank=True)
     users = models.ManyToManyField(User, related_name="projects", default=[], blank=True)
     def __str__(self):
         return self.name
 
+    def serialize_project(self, project):
+        return {
+            "name": project.name,
+            "type": "project",
+            "description": project.description,
+            "sql_id": project.id,
+            "couch_id": project.couch_id,
+            "parent": self.serialize_project(project.parent) if project.parent else None,
+        }
+
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        data = {
-            "name": self.name,
-            "type": "project",
-            "description": self.description,
-            "sql_id": self.id
-        }
+        # data = {
+        #     "name": self.name,
+        #     "type": "project",
+        #     "description": self.description,
+        #     "sql_id": self.id
+        # }
+        data = self.serialize_project(self)
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
         new_document = nsc_database.get_query_result(
@@ -61,6 +74,80 @@ class Project(models.Model):
         super().save(*args, **kwargs)
 
         return self
+
+    def get_cycles(self):
+        return self.cycle_set.get_queryset()
+
+# The Cycle object on couch looks like this
+# {
+#     "_id": "abc123",
+#     "_rev": "2-ae3f90c1f84c91ff97a4bffd5686a9b7",
+#     "type": "cycle",
+#     "project_id": "219e50bc41c65648039b08eb10e7b925",
+#     "administrative_level_id": "adml123", NO
+#     "name": "Community Mobilization",
+#     "order": 1,
+#     "description": "Lorem ipsum",
+#     "capacity_attachments": [
+#         {
+#             "name": "tutorial.pdf",
+#             "url": "/attachments/1253a3516c4e88550768d719be04e43d/report.pdf",
+#             "bd_id": "1253a3516c4e88550768d719be04e43d"
+#         }
+#     ]
+# }
+class Cycle(BaseModel):
+    name = models.CharField(max_length=255)
+    description = models.TextField()
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    couch_id = models.CharField(max_length=255, blank=True)
+    order = models.IntegerField()
+    capacity_attachments = models.JSONField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.project.name})"
+
+    def serialize_project(self, cycle):
+        return {
+            "name": cycle.name,
+            "type": "cycle",
+            "description": cycle.description,
+            "order": cycle.order,
+            "capacity_attachments": cycle.capacity_attachments,
+            "project_id": cycle.project.couch_id,
+            "project_name": self.project.name,
+            "sql_id": cycle.id
+        }
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        capacity_attachments = []
+        if self.capacity_attachments:
+            capacity_attachments = self.capacity_attachments
+        
+        data = self.serialize_project(self)
+        nsc = NoSQLClient()
+        nsc_database = nsc.get_db("process_design")
+        new_document = nsc_database.get_query_result(
+            {"_id": self.couch_id}
+        )[0]
+        if not new_document:
+            new_document = nsc.create_document(nsc_database, data)
+            self.couch_id = new_document['_id']
+        else:
+            if len(new_document) > 0:
+                new_document = new_document[0].copy()
+                new_document['project_id'] = self.project.couch_id
+                new_document['name'] = self.name
+                new_document['order'] = self.order
+                new_document['description'] = self.description
+                new_document['capacity_attachments'] = capacity_attachments
+                new_document['project_name'] = self.project.name
+                nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+
+        super().save(*args, **kwargs)
+        return self
+    
 
 
 # The Phase object on couch looks like this
@@ -81,13 +168,16 @@ class Project(models.Model):
 #         }
 #     ]
 # }
-class Phase(models.Model):
+class Phase(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycles = models.ManyToManyField("Cycle", related_name="phases", default=[], blank=False)
     couch_id = models.CharField(max_length=255, blank=True)
     order = models.IntegerField()
     capacity_attachments = models.JSONField(null=True, blank=True)
+    
+    objects = CustomQuerySet.as_manager()
 
     def __str__(self):
         return f"{self.name} ({self.project.name})"
@@ -104,7 +194,9 @@ class Phase(models.Model):
             "order": self.order,
             "capacity_attachments": capacity_attachments,
             "project_id": self.project.couch_id,
-            "sql_id": self.id
+            "project_name": self.project.name,
+            "sql_id": self.id,
+            "cycles": [c.couch_id for c in self.cycles.all()]
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -118,10 +210,12 @@ class Phase(models.Model):
             if len(new_document) > 0:
                 new_document = new_document[0].copy()
                 new_document['project_id'] = self.project.couch_id
+                new_document['project_name'] = self.project.name
                 new_document['name'] = self.name
                 new_document['order'] = self.order
                 new_document['description'] = self.description
                 new_document['capacity_attachments'] = capacity_attachments
+                new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
 
         super().save(*args, **kwargs)
@@ -149,15 +243,18 @@ class Phase(models.Model):
 #     "total_tasks": 4,
 #     "completed_tasks": 0
 # }
-class Activity(models.Model):
+class Activity(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycles = models.ManyToManyField("Cycle", related_name="activities", default=[], blank=False)
     phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
     total_tasks = models.IntegerField()
     order = models.IntegerField()
     couch_id = models.CharField(max_length=255, blank=True)
     capacity_attachments = models.JSONField(null=True, blank=True)
+    
+    objects = CustomQuerySet.as_manager()
 
     def __str__(self):
         return  f"{self.phase.name} - {self.name} ({self.project.name})"
@@ -175,10 +272,12 @@ class Activity(models.Model):
             "order": self.order,
             "capacity_attachments": capacity_attachments,
             "project_id": self.project.couch_id,
+            "project_name": self.project.name,
             "phase_id": self.phase.couch_id,
             "total_tasks": self.total_tasks,
             "completed_tasks": 0,
-            "sql_id": self.id
+            "sql_id": self.id,
+            "cycles": [c.couch_id for c in self.cycles.all()]
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -193,12 +292,14 @@ class Activity(models.Model):
                 new_document = new_document[0].copy()
                 new_document['project_id'] = self.project.couch_id
                 new_document['phase_id'] = self.phase.couch_id
+                new_document['project_name'] = self.project.name
                 new_document['phase_name'] = self.phase.name
                 new_document['name'] = self.name
                 new_document['order'] = self.order
                 new_document['description'] = self.description
                 new_document['total_tasks'] = self.total_tasks
                 new_document['capacity_attachments'] = capacity_attachments
+                new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
 
         super().save(*args, **kwargs)
@@ -225,17 +326,21 @@ class Activity(models.Model):
 #   "capacity_attachments": [],
 #   "attachments": [],
 #   "form": []
-class Task(models.Model):
+class Task(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycles = models.ManyToManyField("Cycle", related_name="tasks", default=[], blank=False)
     phase = models.ForeignKey("Phase", on_delete=models.CASCADE)
     activity = models.ForeignKey("Activity", on_delete=models.CASCADE)
     order = models.IntegerField()
+    task_order = models.IntegerField(default=0)
     form = models.JSONField(null=True, blank=True)
     attachments = models.JSONField(null=True, blank=True)
     capacity_attachments = models.JSONField(null=True, blank=True)
     couch_id = models.CharField(max_length=255, blank=True)
+    
+    objects = CustomQuerySet.as_manager()
 
     def __str__(self):
         return f"{self.phase.name} - {self.activity.name} - {self.name} ({self.project.name})"
@@ -254,12 +359,14 @@ class Task(models.Model):
         data = {
             "type": "task",
             "project_id": self.project.couch_id,
+            "project_name": self.project.name,
             "phase_id": self.phase.couch_id,
             "phase_name": self.phase.name,
             "activity_id": self.activity.couch_id,
             "activity_name": self.activity.name,
             "name": self.name,
             "order": self.order,
+            "task_order": self.task_order,
             "description": self.description,
             "completed": False,
             "completed_date": "",
@@ -268,7 +375,8 @@ class Task(models.Model):
             "attachments": attachments,
             "form": form,
             "form_response": [],
-            "sql_id": self.id
+            "sql_id": self.id,
+            "cycles": [c.couch_id for c in self.cycles.all()]
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -282,6 +390,7 @@ class Task(models.Model):
             if len(new_document) > 0:
                 new_document = new_document[0].copy()
                 new_document['project_id'] = self.project.couch_id
+                new_document['project_name'] = self.project.name
                 new_document['phase_id'] = self.phase.couch_id
                 new_document['phase_name'] = self.phase.name
                 new_document['activity_id'] = self.activity.couch_id
@@ -293,6 +402,7 @@ class Task(models.Model):
                 new_document['attachments'] = attachments
                 new_document['capacity_attachments'] = capacity_attachments
                 new_document['form'] = form
+                new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
         #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)
 
@@ -302,12 +412,21 @@ class Task(models.Model):
 
 
 class AggregatedStatus(BaseModel):
-    administrative_level_id = models.IntegerField()
-    task = models.ForeignKey("Task", on_delete=models.CASCADE)
+    """
+        - if task is null, facilitator is null and administrative_level_id is present, then AggregatedStatus represents the status of the location in a specific project and cycle.
+        - if task is null, administrative_level_id is null and facilitator is present, then AggregatedStatus represents the facilitator's progress status.
+        - if facilitator is null, administrative_level_id and task are present, then AggregatedStatus represents the status of the task in the locality
+    """
+    administrative_level_id = models.IntegerField(blank=True, null=True)
+    task = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL)
+    facilitator = models.ForeignKey(Facilitator, blank=True, null=True, on_delete=models.SET_NULL)
     project = models.ForeignKey("Project", on_delete=models.SET_NULL, null=True)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True)
     total_tasks = models.IntegerField(default=0)
     total_tasks_completed = models.IntegerField(default=0)
     last_activity = models.DateTimeField(blank=True, null=True)
+    
+    objects = CustomQuerySet.as_manager()
 
 
     def administrative_level(self):
@@ -345,6 +464,7 @@ class AdministrativeLevelWave(BaseModel):
     administrative_level_id = models.IntegerField()
     wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True)
     begin = models.DateField(blank=True, null=True)
     end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -376,6 +496,7 @@ class FacilitatorWave(BaseModel):
     facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
     wave = models.ForeignKey("Wave", on_delete=models.CASCADE)
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True)
     begin = models.DateField(blank=True, null=True)
     end = models.DateField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
@@ -453,5 +574,29 @@ class ProcessAddOrRemoveADL(BaseModel):
 #     except Exception as exc:
 #         print(exc)
 
+def create_or_update_project(sender, instance, **kwargs):
+    if instance.id:
+        cycle = Cycle.objects.filter(project_id=instance.id).first()
 
-# post_save.connect(post_project, sender=Project)
+        if not cycle:
+            print("pass")
+            cycle = Cycle()
+            cycle.name="Cycle 1"
+            cycle.description=f"Cycle 1 du projet ({instance.name})"
+            cycle.project_id=instance.id
+            cycle.order=1
+            cycle.save()
+            # Cycle.objects.create(
+            #     name="Cycle 1",
+            #     description=f"Cycle 1 du projet ({instance.name})",
+            #     project_id=instance.id,
+            #     order=1,
+            # )
+            
+        # instance = Project.objects.get(id=instance.id)
+        # if instance.id and instance.parent:
+        #     instance.users.add(*instance.parent.users.all())
+        #     instance.facilitators.add(*instance.parent.facilitators.all())
+            # instance = instance.save_and_return_object()
+
+post_save.connect(create_or_update_project, sender=Project)

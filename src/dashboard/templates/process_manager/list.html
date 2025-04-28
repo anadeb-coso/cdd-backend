@@ -57,6 +57,10 @@
 
                         </div>
                       </a>
+                      {% empty %}
+                        <p>
+                            {% translate 'No projects found. If you have any questions, please contact the system administrator.' %}
+                        </p>
                       {% endfor %}
                     {% endblock %}
 
