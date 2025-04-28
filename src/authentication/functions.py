@@ -7,3 +7,9 @@ def get_assign_adl_by_facilitatr(facilitator_id, project_id, activated):
                 AssignAdministrativeLevelToFacilitator, 
                 facilitator_id=facilitator_id, project_id=project_id, activated=activated
             )
+
+def get_assigns_adl_by_facilitatrs(facilitator_ids, project_id, activated):
+    return mis_objects_call.filter_objects(
+                AssignAdministrativeLevelToFacilitator, 
+                facilitator_id__in=facilitator_ids, project_id=project_id, activated=activated
+            )

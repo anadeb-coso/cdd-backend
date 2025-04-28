@@ -14,8 +14,9 @@ from django.contrib.auth.models import User, AbstractUser, Permission, Group
 # from django.db import IntegrityError
 # from django.forms.models import model_to_dict
 from authentication import FACILITATORS_TYPES
+from cdd.models_base import BaseModel
 
-class Facilitator(models.Model):
+class Facilitator(BaseModel):
     no_sql_user = models.CharField(max_length=150, unique=True)
     no_sql_pass = models.CharField(max_length=128)
     no_sql_db_name = models.CharField(max_length=150, unique=True)
@@ -26,6 +27,8 @@ class Facilitator(models.Model):
     active = models.BooleanField(default=False, verbose_name=_('active'))
     develop_mode = models.BooleanField(default=False, verbose_name=_('develop mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
+    administrative_levels = models.JSONField(null=True, blank=True)
+    administrative_levels_ids = models.JSONField(null=True, blank=True)
     
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
@@ -33,9 +36,10 @@ class Facilitator(models.Model):
     email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))
     phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))
     sex = models.CharField(max_length=5, null=True, blank=True, verbose_name=_('sex'))
-    total_tasks = models.IntegerField(default=0)
-    total_tasks_completed = models.IntegerField(default=0)
-    last_activity = models.DateTimeField(blank=True, null=True)
+    
+    total_tasks = None #models.IntegerField(default=0)
+    total_tasks_completed = None #models.IntegerField(default=0)
+    last_activity = None #models.DateTimeField(blank=True, null=True)
 
 
     __current_password = None
@@ -66,7 +70,6 @@ class Facilitator(models.Model):
     def save_and_return_object(self, *args, **kwargs):
         if "user" in kwargs:
             user = kwargs.pop("user")
-            print(user)
             self.users_history(user)
         super().save(*args, **kwargs)
         return self
@@ -108,39 +111,39 @@ class Facilitator(models.Model):
         
         return self
 
-    def users_history(self, user):
-        """
-        Save users stories
-        user_json = {
-            "type": "facilitator", # or user
-            "date": self.updated_date,
-            "data": self
-        }
-        """
+    # def users_history(self, user):
+    #     """
+    #     Save users stories
+    #     user_json = {
+    #         "type": "facilitator", # or user
+    #         "date": self.updated_date,
+    #         "data": self
+    #     }
+    #     """
         
-        # user_json = user.__dict__ if user else {'is_superuser': True}
-        # self_json = self.__dict__
+    #     # user_json = user.__dict__ if user else {'is_superuser': True}
+    #     # self_json = self.__dict__
 
-        # if user_json.get('is_superuser'):
-        #     user_json['type'] = "user"
-        # else:
-        #     user_json['type'] = "facilitator"
-        # user_json['date'] = self.updated_date
-        # user_json['data'] = self_json
+    #     # if user_json.get('is_superuser'):
+    #     #     user_json['type'] = "user"
+    #     # else:
+    #     #     user_json['type'] = "facilitator"
+    #     # user_json['date'] = self.updated_date
+    #     # user_json['data'] = self_json
 
 
-        # users_involved = self.users_involved if self.users_involved else []
+    #     # users_involved = self.users_involved if self.users_involved else []
 
-        # if self.created_date == self.updated_date:
-        #     self.create_by_user = user_json
+    #     # if self.created_date == self.updated_date:
+    #     #     self.create_by_user = user_json
             
-        # self.update_by_user = user_json
+    #     # self.update_by_user = user_json
         
-        # users_involved.append(user_json)
+    #     # users_involved.append(user_json)
 
-        # self.users_involved = users_involved
+    #     # self.users_involved = users_involved
 
-        super().save()
+    #     super().save()
 
 
     def hash_password(self, *args, **kwargs):
