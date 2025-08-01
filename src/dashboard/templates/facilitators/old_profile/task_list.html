@@ -24,8 +24,15 @@
                 <th>{% translate 'Completed' %}</th>
                 <th>{% translate 'Uncompleted' %}</th>
                 <th>{% translate 'Percentage' %}</th>
-                <th>{% translate 'Validated' %}</th>
+
+                <th>{% translate 'Not started' %}</th>
+                <th>{% translate 'In progress' %}</th>
+                <th>{% translate 'Invalidated (Reset in progress)' %}</th>
+                <th>{% translate 'Completed (Awaiting validation)' %}</th>
+                <th>{% translate 'Invalidated (Updated after invalidation)' %}</th>
+                <th>{% translate 'Invalidated (Not returned after invalidation)' %}</th>
                 <th>{% translate 'Invalidated' %}</th>
+                <th>{% translate 'Validated' %}</th>
             </tr>
             </thead>
             <tbody>
@@ -61,6 +68,14 @@
                             {{ percentage_tasks_completed|floatformat:"2"  }}%
                         {% endwith %}
                     </td>
+                    
+                    <td>{{ infos|get:"total_tasks_not_started" }}</td>
+                    <td>{{ infos|get:"total_tasks_in_progress" }}</td>
+                    <td>{{ infos|get:"total_tasks_invalidated_reset_in_progress" }}</td>
+                    <td>{{ infos|get:"total_tasks_completed_awaiting_validation" }}</td>
+                    <td>{{ infos|get:"total_tasks_invalidated_updated_after_invalidation" }}</td>
+                    <td>{{ infos|get:"total_tasks_invalidated_not_returned_after_invalidation" }}</td>
+
                     <td>{{ infos|get:"total_tasks_validated" }}</td>
                     <td>{{ infos|get:"total_tasks_invalidated" }}</td>
                 </tr>
@@ -72,6 +87,14 @@
                     <td><b>{{ total_tasks_completed }}</b></td>
                     <td><b>{{ total_tasks_uncompleted }}</b></td>
                     <td><b>{{ percentage_tasks_completed|floatformat:"2" }}%</b></td>
+                    
+                    <td><b>{{ total_tasks_not_started }}</b></td>
+                    <td><b>{{ total_tasks_in_progress }}</b></td>
+                    <td><b>{{ total_tasks_invalidated_reset_in_progress }}</b></td>
+                    <td><b>{{ total_tasks_completed_awaiting_validation }}</b></td>
+                    <td><b>{{ total_tasks_invalidated_updated_after_invalidation }}</b></td>
+                    <td><b>{{ total_tasks_invalidated_not_returned_after_invalidation }}</b></td>
+                    
                     <td><b>{{ total_tasks_validated }}</b></td>
                     <td><b>{{ total_tasks_invalidated }}</b></td>
                 </tr>
@@ -123,7 +146,7 @@
                     {% endif %}
                 {% endfor %}
             </div>
-            <div class="col-sm-3">
+            <div class="col-sm-2">
                 <div class="badge-closed-at">
                     <i class="far fa-calendar-alt text-warning"></i>
                     {% translate 'Completed on' %}:
@@ -155,8 +178,8 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-sm-2 text-right text_completed_{{ task|get:'_id' }}">
-                {% if task.completed %}
+            <div class="col-sm-3 text-right text_completed_{{ task|get:'_id' }}">
+                {% comment %} {% if task.completed %}
                     <div class="status-badge badge-completed">
                         {% translate 'Completed' %}
                     </div>
@@ -164,7 +187,32 @@
                     <div class="status-badge badge-pending">
                         {% translate 'Pending' %}
                     </div>
+                {% endif %} {% endcomment %}
+
+                {% if not task.completed %}
+                    {% if task.form_response and task.form_response|length != 0 %}
+                        {% if task.validated == False %}
+                            <div class="status-badge-no-size badge-secondary">{% translate 'Invalidated (Reset in progress)' %}</div>
+                        {% else %}
+                            <div class="status-badge-no-size badge-pending">{% translate 'In progress' %}</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="status-badge-no-size badge-pending">{% translate 'Not started' %}</div>
+                    {% endif %}
+                {% else %}
+                    {% if task.validated == True %}
+                        <div class="status-badge-no-size badge-completed">{% translate 'Validée' %}</div>
+                    {% elif task.validated == False %}
+                        {% if task.updated_after_invalidation %}
+                            <div class="status-badge-no-size badge-warning">{% translate 'Invalidated (Updated after invalidation)' %}</div>
+                        {% else %}
+                            <div class="status-badge-no-size badge-danger">{% translate 'Invalidated (Not returned after invalidation)' %}</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="status-badge-no-size badge-pending">{% translate 'Completed (Awaiting validation)' %}</div>
+                    {% endif %}
                 {% endif %}
+
             </div>
         </div>
     </div>

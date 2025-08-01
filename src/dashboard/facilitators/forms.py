@@ -95,9 +95,20 @@ class FilterTaskForm(forms.Form):
         self.fields['phase'].widget.choices = query_result_phases
         self.fields['activity'].widget.choices = query_result_activities
         self.fields['task'].widget.choices = query_result_tasks
+        # self.fields['is_validated'].widget.choices = [
+        #     ('', ''), ('Validated', _('Validated')), ('Invalidated',  _('Invalidated')),
+        #     ('Completed', _('Completed')), ('Pending',  _('Uncompleted')), ('Untouched',  _('Unsee'))
+        # ]
         self.fields['is_validated'].widget.choices = [
-            ('', ''), ('Validated', _('Validated')), ('Invalidated',  _('Invalidated')),
-            ('Completed', _('Completed')), ('Pending',  _('Uncompleted')), ('Untouched',  _('Unsee'))
+            ('', ''), 
+            ('Not_started', _('Not started')), 
+            ('In_progress',  _('In progress')), 
+            ('Invalidated_reset_in_progress', _('Invalidated (Reset in progress)')), 
+            ('Completed_awaiting_validation',  _('Completed (Awaiting validation)')), 
+            ('Invalidated_updated_after_invalidation',  _('Invalidated (Updated after invalidation)')), 
+            ('Invalidated_not_returned_after_invalidation',  _('Invalidated (Not returned after invalidation)')), 
+            ('Invalidated',  _('Invalidated')), 
+            ('Validated',  _('Validated'))
         ]
     
     def check_name(self, liste, obj):
@@ -319,6 +330,10 @@ class FilterFacilitatorFormMultiChoices(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        initial = kwargs.get('initial')
+        project_id = initial.get('project_id') if initial else None
+        cycle_id = initial.get('cycle_id') if initial else None
+
         # nsc = NoSQLClient()
         # db = nsc.get_db("administrative_levels")
 
@@ -356,3 +371,19 @@ class FilterFacilitatorFormMultiChoices(forms.Form):
         self.fields['village'].widget.choices = [('', '')] + [(str(o.id), o.name) for o in AdministrativeLevel.objects.using('mis').filter(type="Village").order_by("name")]
 
     
+
+
+class FilterTaskFormMultiChoices(forms.Form):
+    phase = forms.MultipleChoiceField()
+    activity = forms.MultipleChoiceField()
+    task = forms.MultipleChoiceField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        initial = kwargs.get('initial')
+        project_id = initial.get('project_id')
+        cycle_id = initial.get('cycle_id')
+
+        self.fields['phase'].widget.choices = [('', '')] + [(o.id, o.name) for o in Phase.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("order")]
+        self.fields['activity'].widget.choices = [('', '')] + [(o.id, o.name) for o in Activity.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "order")]
+        self.fields['task'].widget.choices = [('', '')] + [(o.id, o.name) for o in Task.objects.filter().get_objects_by_general_filtre(request=None, attrs={'project_id': project_id, 'cycle_id': cycle_id}).order_by("phase__order", "activity__order", "order")]

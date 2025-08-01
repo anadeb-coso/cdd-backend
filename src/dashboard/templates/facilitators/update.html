@@ -77,10 +77,10 @@
                             <div id="selected_regions" class="col-12">
                                 {% for elt in facilitator_administrative_levels %}
                                     <a class='tag mt-2' >
-                                        <i value='{{ elt.id }}' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>
-                                        {{ elt.name }} {% if elt.cvd_name and elt.cvd_name != elt.name %}(CVD : {{ elt.cvd_name }}){% endif %}
+                                        <i value='{{ elt.id }}_{{ elt.project_id }}_{{ elt.cycle_id }}' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>
+                                        <b>{{ elt.name }} {% if elt.cvd_name and elt.cvd_name != elt.name %}(CVD : {{ elt.cvd_name }}){% endif %}</b> | {{ elt.project_name }} - {{ elt.cycle_name }}
                                     </a>
-                                {% endfor %}
+                                {% endfor %} 
                             </div>
                         </div>
                         {% bootstrap_field form.administrative_levels %}
@@ -138,7 +138,11 @@
         {% for elt in facilitator_administrative_levels %}
             _selected_region_json = {
                 "name": "{{ elt.name }}",
-                "id": "{{ elt.id }}"
+                "id": "{{ elt.id }}",
+                "project_id": "{{ elt.project_id }}",
+                "project_name": "{{ elt.project_name }}",
+                "cycle_id": "{{ elt.cycle_id }}",
+                "cycle_name": "{{ elt.cycle_name }}"
             }; 
             selected_regions_json.push(_selected_region_json);
         {% endfor %}

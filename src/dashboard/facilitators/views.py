@@ -30,7 +30,7 @@ from .functions import (
 from administrativelevels import models as administrativelevels_models
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
-from cdd.functions import datetime_complet_str, exists_id_in_a_dict
+from cdd.functions import datetime_complet_str, exists_id_in_a_dict, exists_id_in_a_dict_by_project_and_cycle
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs
 from dashboard.tasks import sync_celery_tasks_re
@@ -153,7 +153,7 @@ class FacilitatorMixin(LoginRequiredMixin):
             self.no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(self.project_mis_id, self.doc)
             self.cvds += cvds
 
-            self.cvds += get_cvds(self.doc, [], administratives_stabilized)
+            self.cvds += get_cvds(request.session.get('project_couch_id'), request.session.get('cycle_couch_id'), self.doc, [], administratives_stabilized)
             self.cvds = sorted(self.cvds, key=lambda obj: obj.get('name'))
 
         except Exception:
@@ -1069,12 +1069,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         administrative_levels_remove = []
         _administrative_levels = []
         administrative_levels_new = []
+        
+        project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
+        cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
+
         if 'administrative_levels' in data and data['administrative_levels']:
             
-            project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
-            cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
-
             project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+            villages_ids = [o.id for o in project_mis.administrative_levels.filter(type="Village")] if project_mis else []
 
             for elt in data['administrative_levels']:
                 administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
@@ -1082,26 +1084,29 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                     if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
                         elt['is_headquarters_village'] = True
 
-                    _elt = exists_id_in_a_dict(administrative_levels_old, elt.get('id'))
-                    if not _elt:
-                        if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
-                            elt["project_id"] = project_cdd.couch_id
-                            elt["project_name"] = project_cdd.name
-                            elt["cycle_id"] = cycle_cdd.couch_id
-                            elt["cycle_name"] = cycle_cdd.name
-                        administrative_levels_new.append(elt)
-                    else:
-                        elt["project_id"] = _elt["project_id"]
-                        elt["project_name"] = _elt["project_name"]
-                        elt["cycle_id"] = _elt["cycle_id"]
-                        elt["cycle_name"] = _elt["cycle_name"]
-                        # elt = _elt
-                    # if not exists_id_in_a_dict(_administrative_levels, elt.get('id')):
+                    if elt.get("project_id") == project_cdd.couch_id and elt.get("cycle_id") == cycle_cdd.couch_id:
+                        _elt = exists_id_in_a_dict_by_project_and_cycle(administrative_levels_old, elt.get('id'), elt.get('project_id'), elt.get('cycle_id'))
+                        if not _elt: # Useless
+                            # if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
+                            if int(elt['id']) in villages_ids:
+                                elt["project_id"] = project_cdd.couch_id
+                                elt["project_name"] = project_cdd.name
+                                elt["cycle_id"] = cycle_cdd.couch_id
+                                elt["cycle_name"] = cycle_cdd.name
+                            administrative_levels_new.append(elt)
+                                
+                        else:
+                            elt["project_id"] = _elt["project_id"]
+                            elt["project_name"] = _elt["project_name"]
+                            elt["cycle_id"] = _elt["cycle_id"]
+                            elt["cycle_name"] = _elt["cycle_name"]
+                            # elt = _elt
+                        # if not exists_id_in_a_dict_by_project_and_cycle(_administrative_levels, elt.get('id'), elt.get('project_id'), elt.get('cycle_id')):
                     _administrative_levels.append(elt)
 
 
         for ad in administrative_levels_old:
-            if ad.get('id') and not exists_id_in_a_dict(_administrative_levels, ad.get('id')):
+            if ad.get('id') and not exists_id_in_a_dict_by_project_and_cycle(_administrative_levels, ad.get('id'), ad.get('project_id'), ad.get('cycle_id')):
                 administrative_levels_remove.append(ad)
 
         #Assign ADL

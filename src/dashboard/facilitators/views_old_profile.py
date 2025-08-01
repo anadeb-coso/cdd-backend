@@ -82,7 +82,7 @@ class FacilitatorMixin(LoginRequiredMixin):
             self.no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, self.doc)
             self.cvds += cvds
 
-            self.cvds += get_cvds(self.doc, [], administratives_stabilized)
+            self.cvds += get_cvds(self.request.session.get('project_couch_id'), self.request.session.get('cycle_couch_id'), self.doc, [], administratives_stabilized)
             self.cvds = sorted(self.cvds, key=lambda obj: obj.get('name'))
                 
         except Exception:
@@ -188,21 +188,78 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         if task_name:
             selector["name"] = task_name
         if is_validated not in (None, ''):
-            if is_validated == "Validated":
-                selector["validated"] = True
-            elif is_validated == "Invalidated":
-                selector["validated"] = False
-            elif is_validated == "Completed":
-                selector["completed"] = True
-            elif is_validated == "Pending":
+            """
+            {
+              task.completed != true ? (
+                task.form_response && task.form_response.length != 0 ? (
+                  task.validated == false ? 'Invalidée (Remise en cours)' : 'En cours'
+                ) : 'Non démarré'
+              ) : (
+                task.validated == true ? 'Validée' : (
+                  task.validated == false ? (task.updated_after_invalidation ? 'Invalidée (Mise à jour après invalidation)' : 'Invalidée') : 'Achevée (En attente de validation)'
+                )
+              )
+            }
+            """
+            
+            if is_validated == "Not_started":
                 selector["completed"] = False
-            elif is_validated == "Untouched":
-                q_r = self.facilitator_db.get_query_result(selector)
-                r = []
-                for task in q_r:
-                    if task.get('validated') == None:
-                        r.append(task)
-                return r
+                selector["form_response"] = []
+            elif is_validated == "In_progress":
+                selector["completed"] = False
+                selector["form_response"] = { "$elemMatch": {} }
+            elif is_validated == "Invalidated_reset_in_progress":
+                selector["completed"] = False
+                selector["validated"] = False
+                selector["form_response"] = { "$elemMatch": {} }
+            elif is_validated == "Completed_awaiting_validation":
+                selector["completed"] = True
+                selector["validated"] = { "$exists": False }
+            elif is_validated == "Invalidated_updated_after_invalidation":
+                selector["completed"] = True
+                selector["updated_after_invalidation"] = True
+                selector["validated"] = False
+            elif is_validated == "Invalidated_not_returned_after_invalidation":
+                selector["completed"] = True
+                selector["$or"] = [
+                    {
+                        "updated_after_invalidation": {
+                            "$in": [
+                                False,
+                                None,
+                                ""
+                            ]
+                        }
+                    },
+                    {
+                        "updated_after_invalidation": {
+                            "$exists": False
+                        }
+                    }
+                ]
+                selector["validated"] = False
+            elif is_validated == "Invalidated":
+                selector["completed"] = True
+                selector["validated"] = False
+            elif is_validated == "Validated":
+                selector["completed"] = True
+                selector["validated"] = True
+
+            # if is_validated == "Validated":
+            #     selector["validated"] = True
+            # elif is_validated == "Invalidated":
+            #     selector["validated"] = False
+            # elif is_validated == "Completed":
+            #     selector["completed"] = True
+            # elif is_validated == "Pending":
+            #     selector["completed"] = False
+            # elif is_validated == "Untouched":
+            #     q_r = self.facilitator_db.get_query_result(selector)
+            #     r = []
+            #     for task in q_r:
+            #         if task.get('validated') == None:
+            #             r.append(task)
+            #     return r
 
         results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
         
@@ -246,6 +303,15 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         total_tasks_validated = 0
         total_tasks_invalidated = 0
         total_tasks = 0
+
+        
+        total_tasks_not_started = 0
+        total_tasks_in_progress = 0
+        total_tasks_invalidated_reset_in_progress = 0
+        total_tasks_completed_awaiting_validation = 0
+        total_tasks_invalidated_updated_after_invalidation = 0
+        total_tasks_invalidated_not_returned_after_invalidation = 0
+
         dict_administrative_levels_with_infos = {}
 
         object_list = self.get_results()
@@ -262,8 +328,21 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                                 total_tasks_validated += 1
                             elif _.get("validated") == False:
                                 total_tasks_invalidated += 1
+                                if _.get("updated_after_invalidation") in ("", None, False):
+                                    total_tasks_invalidated_not_returned_after_invalidation += 1
+                                else:
+                                    total_tasks_invalidated_updated_after_invalidation += 1
+                            else:
+                                total_tasks_completed_awaiting_validation += 1
                         else:
                             total_tasks_uncompleted += 1
+                            if _.get("form_response") not in ([], None):
+                                total_tasks_in_progress += 1
+                                if _.get("validated") == False:
+                                    total_tasks_invalidated_reset_in_progress += 1
+                            else:
+                                total_tasks_not_started += 1
+
                         total_tasks += 1
 
                         if dict_administrative_levels_with_infos.get(administrative_level_cvd.get("name")):
@@ -273,8 +352,20 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                                     dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_validated'] += 1
                                 elif _.get("validated") == False:
                                     dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_invalidated'] += 1
+                                    if _.get("updated_after_invalidation") in ("", None, False):
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_invalidated_not_returned_after_invalidation'] += 1
+                                    else:
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_invalidated_updated_after_invalidation'] += 1
+                                else:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_completed_awaiting_validation'] += 1
                             else:
                                 dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_uncompleted'] += 1
+                                if _.get("form_response") not in ([], None):
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_in_progress'] += 1
+                                    if _.get("validated") == False:
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_invalidated_reset_in_progress'] += 1
+                                else:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks_not_started'] += 1
                             dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] += 1
                         else:
                             if _.get("completed"):
@@ -284,37 +375,123 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                                         'total_tasks_uncompleted': 0,
                                         'total_tasks_validated': 1,
                                         'total_tasks_invalidated': 0,
+
+                                        'total_tasks_not_started': 0,
+                                        'total_tasks_in_progress': 0,
+                                        'total_tasks_invalidated_reset_in_progress': 0,
+                                        'total_tasks_completed_awaiting_validation': 0,
+                                        'total_tasks_invalidated_updated_after_invalidation': 0,
+                                        'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
                                         'stabilized': administrative_level_cvd.get("stabilized"),
                                         'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
                                     }
                                 elif _.get("validated") == False:
-                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                        'total_tasks_completed': 1,
-                                        'total_tasks_uncompleted': 0,
-                                        'total_tasks_validated': 0,
-                                        'total_tasks_invalidated': 1,
-                                        'stabilized': administrative_level_cvd.get("stabilized"),
-                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
-                                    }
+                                    if _.get("updated_after_invalidation") in ("", None, False):
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                            'total_tasks_completed': 1,
+                                            'total_tasks_uncompleted': 0,
+                                            'total_tasks_validated': 0,
+                                            'total_tasks_invalidated': 1,
+
+                                            'total_tasks_not_started': 0,
+                                            'total_tasks_in_progress': 0,
+                                            'total_tasks_invalidated_reset_in_progress': 0,
+                                            'total_tasks_completed_awaiting_validation': 0,
+                                            'total_tasks_invalidated_updated_after_invalidation': 0,
+                                            'total_tasks_invalidated_not_returned_after_invalidation': 1,
+
+                                            'stabilized': administrative_level_cvd.get("stabilized"),
+                                            'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                        }
+                                    else:
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                            'total_tasks_completed': 1,
+                                            'total_tasks_uncompleted': 0,
+                                            'total_tasks_validated': 0,
+                                            'total_tasks_invalidated': 1,
+
+                                            'total_tasks_not_started': 0,
+                                            'total_tasks_in_progress': 0,
+                                            'total_tasks_invalidated_reset_in_progress': 0,
+                                            'total_tasks_completed_awaiting_validation': 0,
+                                            'total_tasks_invalidated_updated_after_invalidation': 1,
+                                            'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
+                                            'stabilized': administrative_level_cvd.get("stabilized"),
+                                            'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                        }
                                 else:
                                     dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
                                         'total_tasks_completed': 1,
                                         'total_tasks_uncompleted': 0,
                                         'total_tasks_validated': 0,
                                         'total_tasks_invalidated': 0,
+
+                                        'total_tasks_not_started': 0,
+                                        'total_tasks_in_progress': 0,
+                                        'total_tasks_invalidated_reset_in_progress': 0,
+                                        'total_tasks_completed_awaiting_validation': 1,
+                                        'total_tasks_invalidated_updated_after_invalidation': 0,
+                                        'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
                                         'stabilized': administrative_level_cvd.get("stabilized"),
                                         'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
                                     }
                                 
                             else:
-                                dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
-                                    'total_tasks_completed': 0,
-                                    'total_tasks_uncompleted': 1,
-                                    'total_tasks_validated': 0,
-                                    'total_tasks_invalidated': 0,
-                                    'stabilized': administrative_level_cvd.get("stabilized"),
-                                    'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
-                                }
+                                if _.get("form_response") not in ([], None):
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 1,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_invalidated': 0,
+
+                                        'total_tasks_not_started': 0,
+                                        'total_tasks_in_progress': 1,
+                                        'total_tasks_invalidated_reset_in_progress': 0,
+                                        'total_tasks_completed_awaiting_validation': 0,
+                                        'total_tasks_invalidated_updated_after_invalidation': 0,
+                                        'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
+                                        'stabilized': administrative_level_cvd.get("stabilized"),
+                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                    }
+                                    if _.get("validated") == False:
+                                        dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                            'total_tasks_completed': 0,
+                                            'total_tasks_uncompleted': 1,
+                                            'total_tasks_validated': 0,
+                                            'total_tasks_invalidated': 0,
+
+                                            'total_tasks_not_started': 0,
+                                            'total_tasks_in_progress': 1,
+                                            'total_tasks_invalidated_reset_in_progress': 1,
+                                            'total_tasks_completed_awaiting_validation': 0,
+                                            'total_tasks_invalidated_updated_after_invalidation': 0,
+                                            'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
+                                            'stabilized': administrative_level_cvd.get("stabilized"),
+                                            'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                        }
+                                else:
+                                    dict_administrative_levels_with_infos[administrative_level_cvd.get("name")] = {
+                                        'total_tasks_completed': 0,
+                                        'total_tasks_uncompleted': 1,
+                                        'total_tasks_validated': 0,
+                                        'total_tasks_invalidated': 0,
+
+                                        'total_tasks_not_started': 1,
+                                        'total_tasks_in_progress': 0,
+                                        'total_tasks_invalidated_reset_in_progress': 0,
+                                        'total_tasks_completed_awaiting_validation': 0,
+                                        'total_tasks_invalidated_updated_after_invalidation': 0,
+                                        'total_tasks_invalidated_not_returned_after_invalidation': 0,
+
+                                        'stabilized': administrative_level_cvd.get("stabilized"),
+                                        'for_another_facilitator': administrative_level_cvd.get("for_another_facilitator")
+                                    }
+                            
                             dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['total_tasks'] = 1
                         dict_administrative_levels_with_infos[administrative_level_cvd.get("name")]['cvd'] = administrative_level_cvd
 
@@ -324,6 +501,14 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         context['total_tasks_validated'] = total_tasks_validated
         context['total_tasks_invalidated'] = total_tasks_invalidated
         context['total_tasks'] = total_tasks
+        
+        context['total_tasks_not_started'] = total_tasks_not_started
+        context['total_tasks_in_progress'] = total_tasks_in_progress
+        context['total_tasks_invalidated_reset_in_progress'] = total_tasks_invalidated_reset_in_progress
+        context['total_tasks_completed_awaiting_validation'] = total_tasks_completed_awaiting_validation
+        context['total_tasks_invalidated_updated_after_invalidation'] = total_tasks_invalidated_updated_after_invalidation
+        context['total_tasks_invalidated_not_returned_after_invalidation'] = total_tasks_invalidated_not_returned_after_invalidation
+        
         context['percentage_tasks_completed'] = ((total_tasks_completed/total_tasks)*100) if total_tasks else 0
         context['nbr_villages'] = 0
 

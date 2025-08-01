@@ -5,10 +5,13 @@ from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.models import Facilitator
 from assignments.models import AssignAdministrativeLevelToFacilitator
+from process_manager.models import Project
+from subprojects.models import Project as ProjectMis
 
-def get_cvds(facilitator, ald_ids: list = [], administratives_stabilized: list = []):
-    administrative_levels = facilitator['administrative_levels']
-    geographical_units = facilitator.get('geographical_units')
+def get_cvds(project_couch_id, cycle_couch_id, facilitator, ald_ids: list = [], administratives_stabilized: list = []):
+    administrative_levels_project = [_ for _ in facilitator['administrative_levels'] if _.get('cycle_id') == cycle_couch_id and _.get('project_id') == project_couch_id]
+    administrative_levels_project_ids = [_.get('id') for _ in administrative_levels_project]
+    geographical_units = [_ for _ in facilitator.get('geographical_units') if any(elem in administrative_levels_project_ids for elem in _['villages'])]
     CVDs = []
     if geographical_units:
         for index in range(len(geographical_units)) :
@@ -17,41 +20,43 @@ def get_cvds(facilitator, ald_ids: list = [], administratives_stabilized: list =
                 for i in range(len(element["cvd_groups"])):
                     elt = element["cvd_groups"][i]
 
-                    if (administratives_stabilized and any(_elt in administratives_stabilized for _elt in elt['villages'])):
-                        elt['stabilized'] = True
-                    if (ald_ids and any(_elt in ald_ids for _elt in elt['villages'])):
-                        elt['stabilized'] = True
-                        elt['for_another_facilitator'] = True
-                    
-                    cvd_obj = administrativelevels_models.CVD.objects.using('mis').filter(id=int(elt['sql_id'])).first()
-                    if cvd_obj:
-                        if cvd_obj and not '(' in cvd_obj.name:
-                            elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
-                        else:
-                            elt['cvd_name'] = cvd_obj.name
-                        
-                        villages = []
-                        for _index in range(len(administrative_levels)):
-                            adl = administrative_levels[_index]
-                            if elt.get('villages') and adl['id'] in elt['villages']:
-                                
-                                _in_list = False
-                                for v in villages:
-                                    if adl['id'] == v['id']:
-                                        _in_list = True
-                                if not _in_list:
-                                    villages.append(adl)
+                    if any(elem in administrative_levels_project_ids for elem in elt['villages']):
 
-                                    if adl.get('is_headquarters_village'):
-                                        elt['village'] = adl
-                                        elt['village_id'] = adl['id']
+                        if (administratives_stabilized and any(_elt in administratives_stabilized for _elt in elt['villages'])):
+                            elt['stabilized'] = True
+                        if (ald_ids and any(_elt in ald_ids for _elt in elt['villages'])):
+                            elt['stabilized'] = True
+                            elt['for_another_facilitator'] = True
                         
-                    # elt['village'] = villages[0] if len(villages) != 0 else None
-                    # elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
-                    if elt.get('village_id'):
-                        elt['villages'] = villages
-                        elt['unit'] = element['name']
-                        CVDs.append(elt)
+                        cvd_obj = administrativelevels_models.CVD.objects.using('mis').filter(id=int(elt['sql_id'])).first()
+                        if cvd_obj:
+                            if cvd_obj and not '(' in cvd_obj.name:
+                                elt['cvd_name'] = f'{cvd_obj.name} ({cvd_obj.get_canton()})'
+                            else:
+                                elt['cvd_name'] = cvd_obj.name
+                            
+                            villages = []
+                            for _index in range(len(administrative_levels_project)):
+                                adl = administrative_levels_project[_index]
+                                if elt.get('villages') and adl['id'] in elt['villages']:
+                                    
+                                    _in_list = False
+                                    for v in villages:
+                                        if adl['id'] == v['id']:
+                                            _in_list = True
+                                    if not _in_list:
+                                        villages.append(adl)
+
+                                        if adl.get('is_headquarters_village'):
+                                            elt['village'] = adl
+                                            elt['village_id'] = adl['id']
+                            
+                        # elt['village'] = villages[0] if len(villages) != 0 else None
+                        # elt['village_id'] = villages[0]['id'] if len(villages) != 0 else None
+                        if elt.get('village_id'):
+                            elt['villages'] = villages
+                            elt['unit'] = element['name']
+                            CVDs.append(elt)
     
     return CVDs
 
@@ -159,9 +164,9 @@ def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
                     no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['ids'] = list(set(_ids))
                     no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['facilitator'] = _facilitator
 
-
+        project_cdd = Project.objects.get(name=mis_objects_call.get_object(ProjectMis, id=project_mis_id).name)
         for k, v in no_sql_dbs_names_with_village_ids.items():
-            cvds += get_cvds(nsc.get_db(k).get_query_result({"type": 'facilitator'})[:][0], v['ids'])
+            cvds += get_cvds(project_cdd.couch_id, project_cdd.get_cycles().last().couch_id, nsc.get_db(k).get_query_result({"type": 'facilitator'})[:][0], v['ids'])
     
     except Exception as exc:
         print(exc)     
