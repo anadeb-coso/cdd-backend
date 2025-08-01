@@ -37,6 +37,7 @@ function ajax_request_cascade(url, id, by_id=null){
     let elment_id_task = $("#id_task");
     
     $("#"+id).on("change keyup", function () {
+        $(".filter_fields select").attr('disabled', true);
         $(this).attr('disabled', true);
         $.ajax({
             type: 'GET',
@@ -59,9 +60,11 @@ function ajax_request_cascade(url, id, by_id=null){
             error: function (data) {
                 alert(error_server_message + "Error " + data.status);
                 $(".filter_fields select").attr('disabled', false);
+                $(this).attr('disabled', false);
             }
         }).done(function () {
                 $(".filter_fields select").attr('disabled', false);
+                $(this).attr('disabled', false);
             }
         );
 

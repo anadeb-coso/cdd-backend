@@ -121,7 +121,7 @@ padding: 0;
     <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
     <script>
     
-        let statistics_spin = $('#statistics-spin');
+        var statistics_spin = $('#statistics-spin');
         let markers = [];
 
         mapboxgl.accessToken = '{{ access_token }}';
@@ -261,6 +261,7 @@ padding: 0;
 {% block select2 %}
     <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script type="text/javascript">
+        var statistics_spin = $('#statistics-spin');
         let statistics_table_spin = $('#statistics-table-spin');
         let table = document.getElementById("table");
         let p = document.getElementById("_p");

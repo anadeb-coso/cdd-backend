@@ -9,6 +9,7 @@ from no_sql_client import NoSQLClient
 from process_manager.models import Task, Phase, Activity, Project, AggregatedStatus, Cycle
 from cloudant.document import Document
 from django.contrib.auth.models import User
+from django.utils.translation import gettext_lazy
 
 from administrativelevels import models as administrativelevels_models
 from dashboard.facilitators.functions import get_cvds
@@ -16,6 +17,9 @@ from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Cycle as CycleMis, Project as ProjectMis
+from cdd.my_librairies.mail.send_mail import send_email
+from dashboard.statistics.utils import comparer_chaines, normaliser_chaine
+from cdd.my_librairies.functions import get_datas_dict
 
 
 def structure_the_words(word):
@@ -811,6 +815,8 @@ def reset_tasks():
 
 def create_training_facilitators(project_name, start=1, amount=1):
     project = Project.objects.get(name=project_name)
+    cycle = Cycle.objects.get(order=1, project_id=project.id)
+    total_tasks_p_c = Task.objects.filter(project_id=project.id, cycles__in=[cycle.id]).count()
     count = start
     while count <= amount:
         facilitator = Facilitator(
@@ -837,11 +843,19 @@ def create_training_facilitators(project_name, start=1, amount=1):
                 {
                 "name": "SANFATOUTE CENTRE",
                 "id": "3805",
-                "is_headquarters_village": True
+                "is_headquarters_village": True,
+                "project_name": project.name,
+                "project_id": project.couch_id,
+                "cycle_name": cycle.name,
+                "cycle_id": cycle.couch_id
                 },
                 {
                 "name": "SANFATOUTE 2",
-                "id": "3804"
+                "id": "3804",
+                "project_name": project.name,
+                "project_id": project.couch_id,
+                "cycle_name": cycle.name,
+                "cycle_id": cycle.couch_id
                 }
             ],
             "type": "facilitator",
@@ -874,7 +888,18 @@ def create_training_facilitators(project_name, start=1, amount=1):
             "projects_ids": [
                 project.couch_id
             ],
-            "total_number_of_tasks": Task.objects.filter(project_id=project.id, cycles__in=[Cycle.objects.get(order=1, project_id=project.id).id]).count()
+            "projects_names": [
+                project.name
+            ],
+            "total_number_of_tasks": total_tasks_p_c,
+            "total_tasks_by_project_by_cycle": {
+                project.couch_id: {
+                    cycle.couch_id: total_tasks_p_c
+                },
+                project.name: {
+                    cycle.name: total_tasks_p_c
+                }
+            }
         }
         nsc = NoSQLClient()
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
@@ -2127,3 +2152,686 @@ def add_attr_facilitator_type_on_facilitators_doc(name="COSO", facilitator_type=
 
     print("")
     print("End")
+
+
+
+# from authentication.models import Facilitator
+# from process_manager.models import Task, Phase, Activity, Project, Cycle
+# from no_sql_client import NoSQLClient
+# from django.utils.translation import gettext_lazy
+# from cdd.my_librairies.mail.send_mail import send_email
+# def put_task_to_pending_invalidated(project_id, cycle_id, task_ids, develop_mode=False, training_mode=False):
+#     _fs = []
+#     nsc = NoSQLClient()
+#     project = Project.objects.get(id=project_id)
+#     cycle = Cycle.objects.get(id=cycle_id)
+#     facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
+#     in_validation_comment = """Nous invalidons et metons cette tâche en cours uniquement en raison d'un problème qui avait survenu et qui avait fait perdre les photos de cette tâche. 
+#     Nous vous prions de nous aider à retélécharger ces photos sur l'application. Merci pour votre compréhension et désolé pour cet desagrement.
+#     """
+#     date_validated = "2025-5-1 19:00:27"
+#     if facilitators:
+#         for f in facilitators:
+#             print(f.name)
+#             db = nsc.get_db(f.no_sql_db_name)
+#             fc_docs = db.all_docs(include_docs=True)['rows']
+#             fc_docs = [doc for doc in fc_docs if doc.get('doc') and doc.get('doc').get('type') == 'task' and doc.get('doc').get('completed') == True and doc.get('doc').get('sql_id') in task_ids and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
+#             for _doc in fc_docs:
+#                 doc = _doc.get('doc')
+#                 doc["completed"] = False
+#                 actions_by = doc.get('actions_by') if doc.get('actions_by') else []
+#                 action_by = {
+#                     'type': "Invalidated", 
+#                     'user_name': 'vincent', 
+#                     'user_id': 2,
+#                     'user_last_name': 'ADABOUNOU', 
+#                     'user_first_name': 'Vincent',
+#                     'user_email': 'adaboubvincent@gmail.com', 
+#                     'action_date': date_validated,
+#                     'comment': in_validation_comment
+#                 }
+#                 actions_by.insert(0, action_by)
+#                 doc["validated"] = False
+#                 doc["date_validated"] = None,
+#                 doc["action_by"] = action_by,
+#                 doc["actions_by"] = actions_by
+#                 nsc.update_cloudant_document(db,  doc["_id"], doc)
+#                 _fs.append(f)
+#     try:
+#         _task_name = ", ".join(list(set([doc.get('doc').get('name') for doc in fc_docs])))
+#         msg = send_email(
+#             f'{gettext_lazy("Task Invalided")} : {_task_name}',
+#             "mail/send/comment",
+#             {
+#                 "datas": {
+#                     gettext_lazy("Title"): gettext_lazy("Task Invalided"), 
+#                     gettext_lazy("Comment"): in_validation_comment,
+#                     gettext_lazy("Phase"): ", ".join(list(set([doc.get('doc').get('phase_name') for doc in fc_docs]))),
+#                     gettext_lazy("Activity"): ", ".join(list(set([doc.get('doc').get('activity_name') for doc in fc_docs]))),
+#                     gettext_lazy("Task"): _task_name,
+#                     gettext_lazy("Location Name"): None,
+#                     gettext_lazy("Date"): date_validated
+#                 },
+#                 "user": {
+#                     gettext_lazy("Facilitator Name"): ", ".join(list(set([_f.name for _f in _fs]))),
+#                     gettext_lazy("Facilitator Phone"): ", ".join(list(set([_f.phone for _f in _fs]))),
+#                     gettext_lazy("Facilitator Sex"): ", ".join(list(set(["F" if _f.sex == "Mme" else "M" for _f in _fs]))),
+#                     gettext_lazy("Validator"): f"ADABOUNOU Vincent",
+#                     gettext_lazy("Validator Type"): "Administrateur principal",
+#                     gettext_lazy("Validator Email"): 'adaboubvincent@gmail.com'
+#                 },
+#                 "url": None
+#             },
+#             list(set([_f.email for _f in _fs]))
+#         )
+#         mail_message = gettext_lazy("Mail sent successfully")
+#     except Exception as exc:
+#         mail_message = gettext_lazy("An error occurred while sending the email")
+#     return _fs, mail_message
+
+
+
+
+
+def update_facilitators_ads_for_error_adls_deleting(project_name="COSO"):
+    _updated_ = []
+
+    nsc = NoSQLClient()
+    if project_name:
+        projects = Project.objects.filter(name=project_name)
+    else:
+        projects = Project.objects.all()
+    print("Start")
+    for project in projects:
+        print(f"\n\n\t=============={project.name}===========\n")
+        cycle = Cycle.objects.get(project_id=project.id, order=1)
+
+
+        facilitators = Facilitator.objects.filter(projects__in=[project.id], develop_mode=False, training_mode=False).order_by('name')
+        if facilitators:
+            
+            for f in facilitators:
+                print(f.name, f.no_sql_db_name)
+                
+                db = nsc.get_db(f.no_sql_db_name)
+
+                _docs = db.get_query_result({"type": 'facilitator'})[:]
+                fc_doc = db[_docs[0]['_id']]
+                administrative_levels = list(fc_doc['administrative_levels']) #[_a for _a in list(fc_doc['administrative_levels']) if _a.get('project_name') != 'COSO']
+
+                fc_docs = db.all_docs(include_docs=True)['rows']
+
+                _adls = []
+                for _doc in fc_docs:
+                    doc = _doc.get('doc')
+                    if doc.get('project_id') == project.couch_id and doc.get('cycle_id') == cycle.couch_id and doc.get('type') == "task" and doc.get('administrative_level_id'):
+                        if (not any(_ad for _ad in _adls if _ad['project_id'] == doc['project_id'] and _ad['cycle_id'] == doc['cycle_id'] and _ad['id'] == doc['administrative_level_id'])) and \
+                            not any(_ad for _ad in administrative_levels if _ad['project_id'] == doc['project_id'] and _ad['cycle_id'] == doc['cycle_id'] and _ad['id'] == doc['administrative_level_id']):
+                            _adls.append({
+                                "name": doc['administrative_level_name'],
+                                "id": doc['administrative_level_id'],
+                                "project_name": project.name,
+                                "project_id": project.couch_id,
+                                "cycle_name": cycle.name,
+                                "cycle_id": cycle.couch_id
+                            })
+                
+
+                print(_adls)
+                if fc_doc:
+
+                    _updated_.append({
+                        "fc_name": fc_doc['name'],
+                        "sql_id": fc_doc['sql_id'],
+                        "adls": _adls,
+                    })
+                    if project.name == "COSO":
+                        for _adl in _adls:
+                            administrative_levels.insert(0, _adl)
+                    else:
+                        for _adl in _adls:
+                            administrative_levels.append(_adl)
+
+
+                    for __adl in administrative_levels:
+                        if __adl['project_id'] == project.couch_id and __adl['cycle_id'] == cycle.couch_id:
+                            administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(__adl['id']))
+                            villages = administrativelevel_obj.cvd.get_villages()
+                            
+                            for _village in villages:
+                                if not any(_ad for _ad in administrative_levels if _ad['project_id'] == project.couch_id and _ad['cycle_id'] == cycle.couch_id and int(_ad['id']) == int(_village.id)):
+                                    _adl = {
+                                        "name": _village.name,
+                                        "id": str(_village.id),
+                                        "project_name": project.name,
+                                        "project_id": project.couch_id,
+                                        "cycle_name": cycle.name,
+                                        "cycle_id": cycle.couch_id
+                                    }
+                                    if project.name == "COSO":
+                                        administrative_levels.insert(0, _adl)
+                                    else:
+                                        administrative_levels.append(_adl)
+
+
+                    fc_doc['administrative_levels'] = administrative_levels
+
+                    print("Saving")
+                    nsc.update_cloudant_document(db,  fc_doc["_id"], fc_doc)
+
+                    print()
+                    print()
+
+
+    print("Start sync_geographicalunits_with_cvd_on_facilittor")
+    sync_geographicalunits_with_cvd_on_facilittor(project.id)
+
+    print("\nEnd")
+    return _updated_
+
+
+
+
+
+def update_facilitator_assignment_in_mis(project_name="COSO"):
+    _updated_ = []
+
+    nsc = NoSQLClient()
+    if project_name:
+        projects = Project.objects.filter(name=project_name)
+    else:
+        projects = Project.objects.all()
+    print("Start")
+    for project in projects:
+        print(f"\n\n\t=============={project.name}===========\n")
+        
+        cycle = Cycle.objects.get(project_id=project.id, order=1)
+        project_mis = mis_objects_call.get_object(ProjectMis, name=project.name)
+
+
+        facilitators = Facilitator.objects.filter(projects__in=[project.id], develop_mode=False, training_mode=False).order_by('name')
+        if facilitators:
+            
+            for f in facilitators:
+                print(f.name, f.no_sql_db_name)
+                
+                
+                facilitator_db = nsc.get_db(f.no_sql_db_name)
+                docs = facilitator_db.get_query_result({"type": 'facilitator'})[:]
+                
+                if docs:
+                    doc = facilitator_db[docs[0]['_id']]
+                    _adls = [_ad for _ad in doc.get('administrative_levels') if _ad['project_id'] == project.couch_id and _ad['cycle_id'] == cycle.couch_id]
+                    for ad in _adls:
+                        id_str = ad.get('id')
+
+                        if  (id_str and str(id_str).isdigit() and \
+                            not AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(id_str), project_id=project_mis.id, activated=True).exists()):
+                            
+                            try:
+                                assign = AssignAdministrativeLevelToFacilitator()
+                                assign.administrative_level_id = int(id_str)
+                                assign.facilitator_id = str(f.id)
+                                assign.project_id = project_mis.id
+                                assign.save(using='mis')
+                                print(ad['name'])
+                            except Exception as exc:
+                                print(exc)
+                                input()
+                                
+
+    print("\nEnd")
+
+
+
+
+def sync_geographicalunits_with_cvd(project_name):
+
+    def mettre_a_jour_element(liste, id_recherche, nouvelles_donnees):
+        for i, element in enumerate(liste):
+            if str(element.get('sql_id') if element.get('sql_id') else element.get('id')) == str(id_recherche):
+                liste[i] = nouvelles_donnees
+                return True
+        return False
+    
+    nsc = NoSQLClient()
+    db = nsc.get_db("backup_administrativelevels")
+    
+    if project_name:
+        projects = Project.objects.filter(name=project_name)
+    else:
+        projects = Project.objects.all()
+    print("Start")
+    for project in projects:
+        already_exists = True
+        print(f"\n\n\t=============={project.name}===========\n")
+        
+        cycle = Cycle.objects.get(project_id=project.id, order=1)
+        project_mis = mis_objects_call.get_object(ProjectMis, name=project.name)
+
+        select_data_geographical_unit = {"type": 'geographical_unit', 'project_id': project.couch_id, 'cycle_id': cycle.couch_id}
+        _docs = db.get_query_result(select_data_geographical_unit)[:]
+        if not _docs:
+            already_exists = False
+            nsc.create_document(db, {**select_data_geographical_unit, 'project_name': project.name, 'cycle_name': cycle.name, 'created_date': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')})
+            _docs = db.get_query_result(select_data_geographical_unit)[:]
+        geographical_unit_doc = db[_docs[0]['_id']]
+
+        select_data_village = {"type": 'village', 'project_id': project.couch_id, 'cycle_id': cycle.couch_id}
+        v_docs = db.get_query_result(select_data_village)[:]
+        if not v_docs:
+            nsc.create_document(db, {**select_data_village, 'project_name': project.name, 'cycle_name': cycle.name, 'created_date': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')})
+            v_docs = db.get_query_result(select_data_village)[:]
+        village_doc = db[v_docs[0]['_id']]
+
+
+        if already_exists:
+            reponse = input("Ce document existe déjà dans la base. Souhaitez vous mettre à jour les données ? (y: pour poursuivre l'exécution) ").lower()
+            if reponse not in ('y', 'yes'):
+                return
+            print("NB: La mise à jour se fera selon la configuration actuelle des CVD et unités géographiques d'interventions")
+            reponse = input("Souhaitez vous vraiment poursuivre ? (y: pour poursuivre l'exécution) ").lower()
+            if reponse not in ('y', 'yes'):
+                return
+
+        adls = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis.id])
+        
+
+        geographical_units = []
+        all_villages = []
+
+        for administrativelevel_obj in adls:
+            all_villages.append({
+                "id": administrativelevel_obj.id,
+                "name": administrativelevel_obj.name,
+                "parent_id": administrativelevel_obj.parent.id,
+                "parent_name": administrativelevel_obj.parent.name,
+                "is_headquarters_village": True if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village.id == administrativelevel_obj.id else False
+            })
+            if administrativelevel_obj.geographical_unit:
+                geographical_unit = next((el for el in geographical_units if str(el.get('sql_id')) == str(administrativelevel_obj.geographical_unit_id)), None)
+
+                if not geographical_unit:
+                    geographical_units.append(
+                        {
+                            "sql_id": str(administrativelevel_obj.geographical_unit_id),
+                            "name": administrativelevel_obj.geographical_unit.get_name(),
+                            "villages": [], 
+                            "cvd_groups": []
+                        }
+                    )
+                
+                geographical_unit = next((el for el in geographical_units if str(el.get('sql_id')) == str(administrativelevel_obj.geographical_unit_id)), None)
+
+                villages = geographical_unit['villages']
+                villages.append(str(administrativelevel_obj.id))
+                geographical_unit['villages'] = list(set(villages))
+
+
+
+                #CVD
+                if administrativelevel_obj.cvd:
+                    cvd = next((el for el in geographical_unit['cvd_groups'] if str(el['sql_id']) == str(administrativelevel_obj.cvd_id)), None)
+                    
+                    if not cvd:
+                        geographical_unit['cvd_groups'].append(
+                            {
+                                "sql_id": str(administrativelevel_obj.cvd_id),
+                                "name": administrativelevel_obj.cvd.get_name(),
+                                "village_cvd": administrativelevel_obj.cvd.headquarters_village.id if administrativelevel_obj.cvd.headquarters_village else None,
+                                "villages": [str(administrativelevel_obj.id)]
+                            }
+                        )
+
+                    cvd = next((el for el in geographical_unit['cvd_groups'] if str(el['sql_id']) == str(administrativelevel_obj.cvd_id)), None)
+                    
+                    villages = cvd['villages']
+                    villages.append(str(administrativelevel_obj.id))
+                    cvd['villages'] = list(set(villages))
+
+                    mettre_a_jour_element(geographical_unit['cvd_groups'], administrativelevel_obj.cvd_id, cvd)
+                    #End CVD
+
+                mettre_a_jour_element(geographical_units, administrativelevel_obj.geographical_unit_id, geographical_unit)
+
+
+        geographical_unit_doc["geographical_units"] = geographical_units
+        geographical_unit_doc['updated_date'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        village_doc["villages"] = all_villages
+        village_doc['updated_date'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        nsc.update_cloudant_document(db,  geographical_unit_doc["_id"], geographical_unit_doc)
+        nsc.update_cloudant_document(db,  village_doc["_id"], village_doc)
+
+    print()
+    print("End")
+
+
+
+
+def copy_facilitators_doc_task_on_other(
+        project_name_to_copy="COSO", project_name_to_save="FA-COSO",
+        administrativelevel_ids=["3144", "3216", "1960", "1973", "2042", "2068", "1998", "2084", "2373", "2347", "3779", "3690"],
+        facilitators_params=[]
+    ):
+    
+    def get_all_keys(_list: list, form):
+        if isinstance(form, list):
+            for i in range(len(form)):
+                get_all_keys(_list, form[i])
+        elif isinstance(form, dict):
+            for k in list(form.keys()):
+                _list.append(k)
+                v = form[k]
+                if isinstance(v, (list, dict)):
+                    get_all_keys(_list, v)
+        return _list
+    
+    def recursive_on_data(_data, _list):
+        if isinstance(_data, list):
+            for i in range(len(_data)):
+                _data[i] = recursive_on_data(_data[i], _list)
+        elif isinstance(_data, dict):
+            for k in list(_data.keys()):
+                v = _data[k]
+                if isinstance(v, (list, dict)):
+                    _data[k] = recursive_on_data(v, _list)
+                if k.lower() not in _list:
+                    del _data[k]
+                elif k.lower() in [elt.lower() for elt in [
+                    "totalHommesPlus35Refugie", "totalFemmesPlus35Refugie", "totalHommesMoins35Refugie", "totalFemmesMoins35Refugie",
+                    "totalHommesPlus35DeplaceInterne", "totalFemmesPlus35DeplaceInterne", "totalHommesMoins35DeplaceInterne",
+                    "totalFemmesMoins35DeplaceInterne", "totalHommesPlus35CommunauteAcceuil", "totalFemmesPlus35CommunauteAcceuil",
+                    "totalHommesMoins35CommunauteAcceuil", "totalFemmesMoins35CommunauteAcceuil", "totalMenages", "nombreEthniques"
+                ]]:
+                    _data[k] = None
+                elif 'date' in str(k).lower() and not isinstance(v, (list, dict)):
+                    _data[k] = None
+                    
+        return _data
+
+    nsc = NoSQLClient()
+
+    project_to_copy = Project.objects.get(name=project_name_to_copy)
+    cycle_to_copy = Cycle.objects.get(project_id=project_to_copy.id, order=1)
+    project_mis_to_copy = mis_objects_call.get_object(ProjectMis, name=project_to_copy.name)
+
+
+    project_to_save = Project.objects.get(name=project_name_to_save)
+    cycle_to_save = Cycle.objects.get(project_id=project_to_save.id, order=1)
+
+    _facilitators = {
+        str(_f.id): dict([
+            ('id', _f.id), ('name', _f.name), ('email', _f.email),
+            ('no_sql_db_name', _f.no_sql_db_name),
+            ('projects_id', [_p.id for _p in _f.projects.all()]),
+            ('projects_couch_id', [_p.couch_id for _p in _f.projects.all()]), 
+            ('projects_name', [_p.name for _p in _f.projects.all()])
+        ])
+        for _f in Facilitator.objects.filter(develop_mode=False, training_mode=False).order_by('name')
+    }
+
+
+
+    print("Start")
+    print(f"\n\n\t=============={project_to_save.name}===========\n")
+
+
+    facilitators = [_f for _id, _f in _facilitators.items() if project_to_save.id in _f['projects_id'] if not facilitators_params or (facilitators_params and _f['no_sql_db_name'] in facilitators_params)]
+
+    assign_adl_to_facilitators = {
+        str(_assgn.administrative_level_id): _facilitators.get(str(_assgn.facilitator_id))
+        for _assgn in AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(project_id=project_mis_to_copy.id, activated=True)
+    }
+
+    if facilitators:
+        
+        for f in facilitators:
+            print(f['name'], f['no_sql_db_name'])
+            
+            db = nsc.get_db(f['no_sql_db_name'])
+
+            _docs = db.get_query_result({"type": 'facilitator'})[:]
+            fc_doc = db[_docs[0]['_id']]
+            administrative_levels = [_a for _a in list(fc_doc['administrative_levels']) if _a.get('project_name') == project_to_save.name]
+
+            for administrative_level in administrative_levels:
+                canton_sql_id = None
+                try:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                    canton_sql_id = str(administrativelevel_obj.parent.id)
+                except Exception as e:
+                    pass
+
+
+                if(administrative_level.get('project_name') == project_to_save.name and administrative_level.get('cycle_name') == cycle_to_save.name and (
+                    (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and canton_sql_id and canton_sql_id in administrativelevel_ids)
+                )):
+
+                    fc_docs = db.get_query_result({
+                        "type": "task",
+                        'project_id': project_to_save.couch_id,
+                        'cycle_id': cycle_to_save.couch_id,
+                        "administrative_level_id": administrative_level['id'],
+                        "phase_name": {
+                            "$in": ["VISITES PREALABLES", "MOBILISATION COMMUNAUTAIRE", "PLANIFICATION"]
+                        }
+                    }, limit=10000)[:]
+
+                    fc_copy = {str(_elt['task_order']): _elt for _elt in nsc.get_db(
+                        assign_adl_to_facilitators.get(str(administrative_level['id'])).get('no_sql_db_name')
+                    ).get_query_result({
+                        "type": "task",
+                        'project_id': project_to_copy.couch_id,
+                        'cycle_id': cycle_to_copy.couch_id,
+                        "administrative_level_id": administrative_level['id'],
+                        "phase_name": {
+                            "$in": ["VISITES PREALABLES", "MOBILISATION COMMUNAUTAIRE", "PLANIFICATION"]
+                        }
+                    }, limit=10000)[:]}
+
+                    for doc in fc_docs:
+                        if not doc.get('form_response') and doc.get('project_id') == project_to_save.couch_id and doc.get('cycle_id') == cycle_to_save.couch_id and doc.get('type') == "task" and doc.get('administrative_level_id'):
+                            
+                            doc_copy = fc_copy.get(str(doc['task_order']))
+                            if doc_copy:
+                                print(doc_copy['administrative_level_name'])
+
+                                if normaliser_chaine(doc['name']) == normaliser_chaine("Etablissement du profil du village") and (not get_datas_dict(doc_copy['form_response'], "generalitiesSurVillage", 1) or not get_datas_dict(doc_copy['form_response'], "principaleLanguesParlees", 1)):
+                                    continue
+                                if doc_copy.get('form_response') and doc_copy.get('administrative_level_id') == doc.get('administrative_level_id'):
+                                    
+                                    doc['form_response'] = recursive_on_data(doc_copy['form_response'], [elt.lower() for elt in get_all_keys([], doc['form'])])
+
+                                    if normaliser_chaine(doc['name']) in [
+                                        normaliser_chaine("Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD"),
+                                        normaliser_chaine("Animer la session de formation sur le Module 2 : mécanisme de gestion des plaintes"),
+                                        normaliser_chaine("Animer la session de formation sur le Module 3 : rôles et responsabilités des APDC"),
+                                        normaliser_chaine("Animer la session de formation sur le Module 4 : techniques de facilitation des focus groups et d’utilisation des outils MARP"),
+
+                                        # normaliser_chaine("Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)"),
+                                        # normaliser_chaine("Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affectation des ressources par sous - projet")
+                                    ]:
+                                        doc["attachments"] = doc_copy["attachments"]
+                                    elif normaliser_chaine(doc['name']) in [
+                                        normaliser_chaine("Utilisation  des outils et défintion du travail à faire par chaque groupe")
+                                    ]:
+                                        for i_att in range(4):
+                                            if 'type' in doc_copy["attachments"][i_att]:
+                                                doc["attachments"][i_att]['type'] = doc_copy["attachments"][i_att]['type']
+                                            doc["attachments"][i_att]['attachment'] = doc_copy["attachments"][i_att]['attachment']
+                                    elif normaliser_chaine(doc['name']) in [
+                                        normaliser_chaine("Présenter les activités de la journée")
+                                    ]:
+                                        doc["attachments"][1] = doc_copy["attachments"][1]
+                                    elif normaliser_chaine(doc['name']) in [
+                                        normaliser_chaine("Organiser la communauté en groupes de travail")
+                                    ]:
+                                        for i_attachment in range(len(doc["attachments"])):
+                                            _elts = [_elt for _elt in doc_copy["attachments"] if normaliser_chaine(_elt['name']) == normaliser_chaine(doc["attachments"][i_attachment]['name'])]
+                                            if _elts:
+                                                if 'type' in _elts[0]:
+                                                    doc["attachments"][i_attachment]['type'] = _elts[0]['type']
+                                                doc["attachments"][i_attachment]['attachment'] = _elts[0]['attachment']
+                                    
+                                    
+                                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+                                
+                        
+
+
+def delete_facilitators_task_form_reponse(project_id, cycle_id, administrativelevel_ids, develop_mode=False, trainning_mode=False, no_sql_dbs=False, tasks_ids=[]):
+    if no_sql_dbs:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name__in=no_sql_dbs)
+    else:
+        facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project_id])
+
+    if not tasks_ids:
+        tasks_ids = [t.id for t in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).prefetch_related()]
+    
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db("process_design")
+
+    process_design = {str(_elt['sql_id']): _elt for _elt in  nsc_database.get_query_result({
+            "sql_id": {
+                "$in": tasks_ids
+            }
+        })
+    }
+
+
+    project = Project.objects.get(id=project_id)
+    cycle = Cycle.objects.get(project_id=project.id, order=1)
+
+    print("Start")
+
+
+    if facilitators:
+        
+        for f in facilitators:
+            print(f.name, f.no_sql_db_name)
+            
+            db = nsc.get_db(f.no_sql_db_name)
+
+            _docs = db.get_query_result({"type": 'facilitator'})[:]
+            fc_doc = db[_docs[0]['_id']]
+            administrative_levels = [_a for _a in list(fc_doc['administrative_levels']) if _a.get('project_name') == project.name]
+
+            for administrative_level in administrative_levels:
+                canton_sql_id = None
+                try:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                    canton_sql_id = str(administrativelevel_obj.parent.id)
+                except Exception as e:
+                    pass
+
+
+                if(administrative_level.get('project_name') == project.name and administrative_level.get('cycle_name') == cycle.name and (
+                    (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and canton_sql_id and canton_sql_id in administrativelevel_ids)
+                )):
+
+                    fc_docs = db.get_query_result({
+                        "type": "task",
+                        'project_id': project.couch_id,
+                        'cycle_id': cycle.couch_id,
+                        "administrative_level_id": administrative_level['id'],
+                        "phase_name": {
+                            "$in": ["VISITES PREALABLES", "MOBILISATION COMMUNAUTAIRE", "PLANIFICATION"]
+                        },
+                        "sql_id": {
+                            "$in": tasks_ids
+                        }
+                    }, limit=10000)[:]
+
+                    for doc in fc_docs:
+                        if doc.get('form_response') and doc.get('project_id') == project.couch_id and doc.get('cycle_id') == cycle.couch_id and doc.get('type') == "task" and doc.get('administrative_level_id'):
+                            doc['form_response'] = []
+                            doc["attachments"] = process_design.get(str(doc['sql_id']))["attachments"]
+                                
+                            nsc.update_cloudant_document(db,  doc["_id"], doc)
+
+                                
+
+def set_facilitators_task_attibute_value_to_null(
+        project_name="FA-COSO",
+        administrativelevel_ids=["3144", "3216", "1960", "1973", "2042", "2068", "1998", "2084", "2373", "2347", "3779", "3690"],
+        facilitators_params=[], tasks_id=[104]
+    ):
+    nsc = NoSQLClient()
+    project = Project.objects.get(name=project_name)
+    cycle = Cycle.objects.get(project_id=project.id, order=1)
+    _facilitators = {
+        str(_f.id): dict([
+            ('id', _f.id), ('name', _f.name), ('email', _f.email),
+            ('no_sql_db_name', _f.no_sql_db_name),
+            ('projects_id', [_p.id for _p in _f.projects.all()]),
+            ('projects_couch_id', [_p.couch_id for _p in _f.projects.all()]), 
+            ('projects_name', [_p.name for _p in _f.projects.all()])
+        ])
+        for _f in Facilitator.objects.filter(develop_mode=False, training_mode=False).order_by('name')
+    }
+    count = 0
+    print("Start")
+    print(f"\n\n\t=============={project.name}===========\n")
+    facilitators = [_f for _id, _f in _facilitators.items() if project.id in _f['projects_id'] if not facilitators_params or (facilitators_params and _f['no_sql_db_name'] in facilitators_params)]
+    if facilitators:
+        for f in facilitators:
+            print(f['name'], f['no_sql_db_name'])
+            print()
+            db = nsc.get_db(f['no_sql_db_name'])
+            _docs = db.get_query_result({"type": 'facilitator'})[:]
+            fc_doc = db[_docs[0]['_id']]
+            administrative_levels = [_a for _a in list(fc_doc['administrative_levels']) if _a.get('project_name') == project.name]
+            for administrative_level in administrative_levels:
+                canton_sql_id = None
+                try:
+                    administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level['id']))
+                    canton_sql_id = str(administrativelevel_obj.parent.id)
+                except Exception as e:
+                    pass
+                if(administrative_level.get('project_name') == project.name and administrative_level.get('cycle_name') == cycle.name and (
+                    (administrative_level.get('is_headquarters_village') and not administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and str(administrative_level['id']) in administrativelevel_ids)
+                    or
+                    (administrative_level.get('is_headquarters_village') and administrativelevel_ids and canton_sql_id and canton_sql_id in administrativelevel_ids)
+                )):
+                    fc_docs = db.get_query_result({
+                        "type": "task",
+                        'project_id': project.couch_id,
+                        'cycle_id': cycle.couch_id,
+                        "administrative_level_id": administrative_level['id'],
+                        "phase_name": {
+                            "$in": ["VISITES PREALABLES", "MOBILISATION COMMUNAUTAIRE", "PLANIFICATION"]
+                        },
+                        "sql_id": {
+                            "$in": tasks_id
+                        },
+                    }, limit=10000)[:]
+                    for doc in fc_docs:
+                        if doc.get('form_response') and doc.get('project_id') == project.couch_id and doc.get('cycle_id') == cycle.couch_id and doc.get('type') == "task" and doc.get('administrative_level_id'):
+                            if normaliser_chaine(doc['name']) in [
+                                normaliser_chaine("Vérification de l'existence du CVD et de ses organes")
+                            ]:
+                                _value = get_datas_dict(doc["form_response"], "fonctionnement", 1)
+                                _value = _value.get('dateDesDeuxReunions', {}) if _value else None
+                                value = _value.get('reunion1') if _value else None
+                                if value and (
+                                    'T' not in value and 'Z' not in value
+                                ):
+                                    print(value)
+                                    doc["form_response"][1]["fonctionnement"]["dateDesDeuxReunions"] = None
+                                    nsc.update_cloudant_document(db,  doc["_id"], doc)
+                                    count += 1
+                                    print(doc)
+                                    print()
+                                    print()
+    print(count)

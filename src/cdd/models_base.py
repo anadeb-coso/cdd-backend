@@ -71,6 +71,12 @@ class CustomQuerySet(models.QuerySet):
     
     def get_adl_actifs(self, request, attrs, *args, **kwargs):
         if attrs:
+            if 'project_id' in attrs:
+                attrs['administrative_levels_projects__in'] = [attrs.get('project_id')]
+                del attrs['project_id']
+            if 'cycle_id' in attrs:
+                attrs['administrative_levels_cycles__in'] = [attrs.get('cycle_id')]
+                del attrs['cycle_id']
             return self.filter(**attrs)
         else:
             return self.filter(

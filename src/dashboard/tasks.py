@@ -73,7 +73,7 @@ def sync_celery_tasks(project_id, cycle_id, develop_mode=False, training_mode=Fa
         
         if facilitator_doc:
             doc = facilitator_doc
-            cvds = get_cvds(doc)
+            cvds = get_cvds(project.couch_id, cycle.couch_id, doc)
             count_facilitator_cvd = 0
             for cvd in cvds:
                 count_facilitator_cvd += 1
@@ -203,18 +203,20 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int):
             #     adl.last_activity = aggreg_last_activity.last_activity
             
 
-            adl_a = None
             adl__ok = True
-            try:
-                adl_a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=None, project_id=project_id, cycle_id=cycle_id, facilitator=None)
-            except AggregatedStatus.DoesNotExist as exc:
-                adl_a = AggregatedStatus()
-                adl_a.administrative_level_id = adl.id
-                adl_a.project_id = project_id
-                adl_a.cycle_id = cycle_id
-            except Exception as exc:
-                print(exc)
-                adl__ok = False
+            
+            adl_a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=None, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+            if not adl_a:
+                try:
+                    adl_a = AggregatedStatus()
+                    adl_a.administrative_level_id = adl.id
+                    adl_a.project_id = project_id
+                    adl_a.cycle_id = cycle_id
+                    adl_a.task = None
+                    adl_a.facilitator = None
+                except Exception as exc:
+                    print(exc)
+                    adl__ok = False
             if adl__ok:
                 adl_a.last_activity = aggreg_last_activity.last_activity
                 adl_a.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
@@ -238,19 +240,20 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int):
                 if children_agg:
                     aggreg_last_activity = children_agg.latest('last_activity')
 
-                a = None
                 _ok = True
-                try:
-                    a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None)
-                except AggregatedStatus.DoesNotExist as exc:
-                    a = AggregatedStatus()
-                    a.administrative_level_id = adl.id
-                    a.project_id = project_id
-                    a.cycle_id = cycle_id
-                    a.task_id = task.id
-                except Exception as exc:
-                    print(exc)
-                    _ok = False
+                
+                a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                if not a:
+                    try:
+                        a = AggregatedStatus()
+                        a.administrative_level_id = adl.id
+                        a.project_id = project_id
+                        a.cycle_id = cycle_id
+                        a.task_id = task.id
+                        a.facilitator = None
+                    except Exception as exc:
+                        print(exc)
+                        _ok = False
                 if _ok:
                     a.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
                     a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
@@ -264,19 +267,20 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int):
 
                 aggreg_last_activity = aggregs.latest('last_activity') #.order_by('last_activity').last()
             
-                adl_a = None
                 adl__ok = True
-                try:
-                    adl_a = AggregatedStatus.objects.get(administrative_level_id=adl.id, task=None, project_id=project_id, cycle_id=cycle_id, facilitator=None)
-                except AggregatedStatus.DoesNotExist as exc:
-                    adl_a = AggregatedStatus()
-                    adl_a.administrative_level_id = adl.id
-                    adl_a.project_id = project_id
-                    adl_a.cycle_id = cycle_id
-                    adl_a.task = None
-                except Exception as exc:
-                    print(exc)
-                    adl__ok = False
+                
+                adl_a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task=None, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                if not adl_a:
+                    try:
+                        adl_a = AggregatedStatus()
+                        adl_a.administrative_level_id = adl.id
+                        adl_a.project_id = project_id
+                        adl_a.cycle_id = cycle_id
+                        adl_a.task = None
+                        adl_a.facilitator = None
+                    except Exception as exc:
+                        print(exc)
+                        adl__ok = False
                 if adl__ok:
                     adl_a.last_activity = aggreg_last_activity.last_activity
                     adl_a.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
@@ -319,12 +323,12 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                 facilitator_doc = doc
                 break
 
-        docs = [doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
+        docs = [doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
         print(len(docs))
 
         if facilitator_doc:
             doc = facilitator_doc
-            cvds = get_cvds(doc)
+            cvds = get_cvds(project.couch_id, cycle.couch_id, doc)
             for _task in docs:
                 _task = _task.get('doc')
                 for cvd in cvds:
@@ -341,19 +345,20 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         #By village
                         # print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
                         for ad_id in cvd['villages']:
-                            a = None
+                            
                             _ok = True
-                            try:
-                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None)
-                            except AggregatedStatus.DoesNotExist as exc:
-                                a = AggregatedStatus()
-                                a.administrative_level_id = int(ad_id['id'])
-                                a.project_id = project_id
-                                a.cycle_id = cycle_id
-                                a.task_id = int(_task["sql_id"])
-                            except Exception as exc:
-                                print(exc)
-                                _ok = False
+                            
+                            a = AggregatedStatus.objects.filter(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                            if not a:
+                                try:
+                                    a = AggregatedStatus()
+                                    a.administrative_level_id = int(ad_id['id'])
+                                    a.project_id = project_id
+                                    a.cycle_id = cycle_id
+                                    a.task_id = int(_task["sql_id"])
+                                except Exception as exc:
+                                    print(exc)
+                                    _ok = False
                             if _ok:
                                 a.total_tasks_completed = 1 if _task['completed'] else 0
                                 a.total_tasks = 1
@@ -385,26 +390,27 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     #Backup
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     backup_db_docs = backup_db.all_docs(include_docs=True)['rows']
-    backup_db_docs = [doc for doc in backup_db_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
+    backup_db_docs = [doc for doc in backup_db_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
     for _task in backup_db_docs:
         _task = _task.get('doc')
         if _task.get('type') == 'task' and _task.get('sql_id'):
             _adl = mis_objects_call.get_object(AdministrativeLevel, id=int(_task['administrative_level_id']))
             if _adl and _adl.cvd:
                 for adl_o in _adl.cvd.get_villages():
-                    a = None
+                    
                     _ok = True
-                    try:
-                        a = AggregatedStatus.objects.get(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None)
-                    except AggregatedStatus.DoesNotExist as exc:
-                        a = AggregatedStatus()
-                        a.administrative_level_id = adl_o.id
-                        a.project_id = project_id
-                        a.cycle_id = cycle_id
-                        a.task_id = int(_task["sql_id"])
-                    except Exception as exc:
-                        print(exc)
-                        _ok = False
+                    
+                    a = AggregatedStatus.objects.filter(administrative_level_id=adl_o.id, task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                    if not a:
+                        try:
+                            a = AggregatedStatus()
+                            a.administrative_level_id = adl_o.id
+                            a.project_id = project_id
+                            a.cycle_id = cycle_id
+                            a.task_id = int(_task["sql_id"])
+                        except Exception as exc:
+                            print(exc)
+                            _ok = False
                     if _ok:
                         a.total_tasks_completed = 1 if _task['completed'] else 0
                         a.total_tasks = 1

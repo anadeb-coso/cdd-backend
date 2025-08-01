@@ -277,56 +277,79 @@ def get_cascade_administrative_levels_by_administrative_level_ids(_ids, request=
 
         ads = []
         for ad_obj in ad_objects:
-            ads += list(ad_obj.administrativelevel_set.get_queryset())
+            ads += list(ad_obj.administrativelevel_set.get_queryset().order_by('name'))
         
         _type = ad_objects[0].type  # Utiliser le type du premier objet trouvé
+        
+        communes = []
+        cantons = []
 
-        # Définir les filtres en fonction du type d'ID
+        if _type == "Prefecture":
+            communes = list(administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[a.id for a in ads]).order_by('name'))
+            cantons = list(administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[c.id for c in communes]).order_by('name'))
+            
+        elif _type == "Commune":
+            communes = ads
+            cantons = list(administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(parent_id__in=[c.id for c in communes]).order_by('name'))
+            
+        elif _type == "Canton":
+            cantons = ads
+
         filters = {
             "Region": {
-                "prefectures": ads, 
-                "communes": "parent_id__in=[o.id for o in ads]",
-                "cantons": "parent_id__in=[o.id for o in communes]",
-                "villages": "parent_id__in=[o.id for o in cantons]",
+                "regions": {'type': 'Region'},
+                "prefectures": ads,
+                "communes": {'parent_id__in': [o.id for o in ads]},
+                "cantons": {'parent_id__in': [o.id for o in communes]},
+                "villages": {'parent_id__in': [o.id for o in cantons]},
             },
             "Prefecture": {
-                "prefectures": "type=Prefecture",
+                "regions": {'type': 'Region'},
+                "prefectures": {'type': 'Prefecture'},
                 "communes": ads,
-                "cantons": "parent_id__in=[o.id for o in communes]",
-                "villages": "parent_id__in=[o.id for o in cantons]",
+                "cantons": {'parent_id__in': [o.id for o in communes]},
+                "villages": {'parent_id__in': [o.id for o in cantons]},
             },
             "Commune": {
-                "prefectures": "type=Prefecture",
-                "communes": "type=Commune",
+                "regions": {'type': 'Region'},
+                "prefectures": {'type': 'Prefecture'},
+                "communes": {'type': 'Commune'},
                 "cantons": ads,
-                "villages": "parent_id__in=[o.id for o in cantons]",
+                "villages": {'parent_id__in': [o.id for o in cantons]},
             },
             "Canton": {
-                "prefectures": "type=Prefecture",
-                "communes": "type=Commune",
-                "cantons": "type=Canton",
+                "regions": {'type': 'Region'},
+                "prefectures": {'type': 'Prefecture'},
+                "communes": {'type': 'Commune'},
+                "cantons": {'type': 'Canton'},
                 "villages": ads,
             },
             "Village": {
-                "prefectures": "type=Prefecture",
-                "communes": "type=Commune",
-                "cantons": "type=Canton",
+                "regions": {'type': 'Region'},
+                "prefectures": {'type': 'Prefecture'},
+                "communes": {'type': 'Commune'},
+                "cantons": {'type': 'Canton'},
                 "villages": ad_objects,
             }
         }
 
+
         # Appliquer les filtres pour obtenir les niveaux administratifs
         levels = filters.get(_type, {
-            "prefectures": "type=Prefecture",
-            "communes": "type=Commune",
-            "cantons": "type=Canton",
-            "villages": "type=Village",
+            "prefectures": "type='Prefecture'",
+            "communes": "type='Commune'",
+            "cantons": "type='Canton'",
+            "villages": "type='Village'",
         })
 
         for key, query in levels.items():
-            datas[key] = get_administrative_levels_under_json(
-                administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(eval(query))
-            )
+            if isinstance(query, dict):  # C'est un filtre Django
+                datas[key] = get_administrative_levels_under_json(
+                    administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(**query)
+                )
+            elif isinstance(query, list):  # C'est une liste d'objets déjà filtrés
+                datas[key] = get_administrative_levels_under_json(query)
+
 
         # Si un projet est spécifié dans la session, ajouter les facilitateurs
         if request:

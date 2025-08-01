@@ -28,8 +28,20 @@ from dashboard.facilitators.functions import (
 from subprojects.models import Project as ProjectMis, Cycle as CycleMis
 
 
+def _get_on_list(_ids):
+    if not _ids:
+        return []
+    if type(_ids) is not list:
+        _ids = [_ids]
+    return [_ for _ in _ids if _ not in ('', ' ', None)]
+
 class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
+        phases_id = _get_on_list(self.request.GET.getlist('phase_name[]'))
+        activities_id = _get_on_list(self.request.GET.getlist('activity_name[]'))
+        tasks_id = _get_on_list(self.request.GET.getlist('task_name[]'))
+
+
         phase_name = request.GET.get('phase_name', None)
         activity_name = request.GET.get('activity_name', None)
         task_name = request.GET.get('task_name', None)
@@ -42,26 +54,29 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
                 phase_id = int(phase_name)
             if activity_name:
                 activity_id = int(activity_name)
+                
+        if (activity_name and phase_name) or (phases_id and activities_id):
+            _phases = Phase.objects.filter(Q(name=phase_name) | Q(id=phase_id) | Q(id__in=phases_id), project_id=self.request.session.get('project_id'))
+            _activities = Activity.objects.filter(Q(name=activity_name) | Q(id=activity_id) | Q(id__in=activities_id), project_id=self.request.session.get('project_id'))
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
+            activities = [elem for sous_liste in [_phase.activity_set.get_queryset().order_by("phase__order", "order") for _phase in _phases] for elem in sous_liste]
+            tasks = [elem for sous_liste in [_activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order") for _activity in _activities] for elem in sous_liste]
+    
+        elif phase_name or phase_id or phases_id:
+            _phases = Phase.objects.filter(Q(name=phase_name) | Q(id=phase_id) | Q(id__in=phases_id), project_id=self.request.session.get('project_id'))
+            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
+            activities = [elem for sous_liste in [_phase.activity_set.get_queryset().order_by("phase__order", "order") for _phase in _phases] for elem in sous_liste]
+            tasks = [elem for sous_liste in [_phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order") for _phase in _phases] for elem in sous_liste]
         
-        if activity_name and phase_name:
-            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
-            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
+        elif activity_name or activity_id or activities_id:
+            _activities = Activity.objects.filter(Q(name=activity_name) | Q(id=activity_id) | Q(id__in=activities_id), project_id=self.request.session.get('project_id'))
             phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
-            activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
-            tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
-        elif phase_name:
-            phase = Phase.objects.get(Q(name=phase_name) | Q(id=phase_id), project_id=self.request.session.get('project_id'))
-            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
-            activies = phase.activity_set.get_queryset().order_by("phase__order", "order")
-            tasks = phase.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
-        elif activity_name:
-            activity = Activity.objects.get(Q(name=activity_name) | Q(id=activity_id), project_id=self.request.session.get('project_id'))
-            phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
-            activies = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
-            tasks = activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order")
+            activities = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
+            tasks = [elem for sous_liste in [_activity.task_set.get_queryset().order_by("phase__order", "activity__order", "order") for _activity in _activities] for elem in sous_liste]
+        
         else:
             phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("order")
-            activies = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
+            activities = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "order")
             tasks = Task.objects.get_objects_by_general_filtre(request=self.request, attrs=None).order_by("phase__order", "activity__order", "order")
 
         datas = {'phases': [], 'activities': [], 'tasks': []}
@@ -70,7 +85,7 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
             for p in phases:
                 datas['phases'].append((p.id, p.name))
             
-            for a in activies:
+            for a in activities:
                 datas['activities'].append((a.id, a.name))
             
             for t in tasks:
@@ -79,7 +94,7 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
             for p in phases:
                 datas['phases'].append((p.name, p.name))
             
-            for a in activies:
+            for a in activities:
                 datas['activities'].append((a.name, a.name))
             
             for t in tasks:
@@ -91,9 +106,15 @@ class GetChoicesForNextPhaseActivitiesTasksView(AJAXRequestMixin, LoginRequiredM
 
 class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
     def get(self, request, *args, **kwargs):
-        phase_id = int(request.GET.get('phase_name') if request.GET.get('phase_name') else 0)
-        activity_id = int(request.GET.get('activity_name') if request.GET.get('activity_name') else 0)
-        task_id = int(request.GET.get('task_name') if request.GET.get('task_name') else 0)
+        phase_id = self.request.GET.getlist('phases_id[]')
+        activity_id = self.request.GET.getlist('activities_id[]')
+        task_id = self.request.GET.getlist('tasks_id[]')
+
+        if not phase_id and not activity_id and not task_id:
+            phase_id = int(request.GET.get('phase_name') if request.GET.get('phase_name') else 0)
+            activity_id = int(request.GET.get('activity_name') if request.GET.get('activity_name') else 0)
+            task_id = int(request.GET.get('task_name') if request.GET.get('task_name') else 0)
+
         show_all_if_none = request.GET.get('show_all_if_none') in ('true', True)
 
         # nsc = NoSQLClient()
@@ -134,7 +155,11 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
         # return self.render_to_json_response(datas, safe=False)
 
         return self.render_to_json_response(
-            get_cascade_phase_activity_task_by_their_id(phase_id, activity_id, task_id, self.request.session.get('project_id'), self.request.session.get('cycle_id'), show_all_if_none), 
+            get_cascade_phase_activity_task_by_their_id(
+                _get_on_list(phase_id), _get_on_list(activity_id), _get_on_list(task_id), 
+                self.request.session.get('project_id'), 
+                self.request.session.get('cycle_id'), show_all_if_none
+            ), 
             safe=False
         )
 

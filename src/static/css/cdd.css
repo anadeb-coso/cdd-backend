@@ -32444,6 +32444,19 @@ a.text-muted:hover {
     white-space: nowrap;
 }
 
+.status-badge-no-size {
+    font-family: poppinsbold;
+    font-size: 13px;
+    line-height: 20px;
+    border-radius: 13px;
+    color: #ffffff;
+    display: inline-block;
+    text-align: center;
+    vertical-align: middle;
+    padding-top: 3.25px;
+    white-space: nowrap;
+}
+
 .completed-tasks-badge {
     width: 36px;
     height: 36px;

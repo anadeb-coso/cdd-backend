@@ -57,6 +57,17 @@ class AdministrativeLevel(BaseModel):
             return float("%.2f" % ((_percent if _percent else 0)*100))
         return None
 
+    def to_json_p(self, adl_object, no_cvd=False, cvd_with_villages=False):
+        return {
+            "name": adl_object.name,
+            "id": adl_object.id,
+            "type": adl_object.type,
+            "couch_id": adl_object.no_sql_db_id,
+            "parent": adl_object.to_json_p(adl_object.parent) if adl_object.parent else None,
+            "cvd": adl_object.cvd.to_json_p(adl_object.cvd, with_villages=cvd_with_villages) if adl_object.cvd and not no_cvd else None,
+            "geographical_unit": {"attributed_number_in_canton": adl_object.geographical_unit.attributed_number_in_canton} if adl_object.geographical_unit else None
+        }
+
 class GeographicalUnit(BaseModel):
     canton = models.ForeignKey('AdministrativeLevel', null=True, blank=True, on_delete=models.CASCADE)
     attributed_number_in_canton = models.IntegerField()
@@ -156,7 +167,22 @@ class CVD(BaseModel):
     def __str__(self):
         return self.get_name()
     
-
+    def to_json_p(self, adl_object, with_villages=False):
+        if with_villages:
+            villages = [adl.to_json_p(adl) for adl in adl_object.get_villages()]
+            return {
+                "name": adl_object.name,
+                "id": adl_object.id,
+                "headquarters_village": adl_object.headquarters_village.to_json_p(adl_object.headquarters_village, no_cvd=True),
+                "villages": villages,
+                "villages_ids": [v.get('id') for v in villages]
+            }
+        return {
+            "name": adl_object.name,
+            "id": adl_object.id,
+            "headquarters_village": adl_object.headquarters_village.to_json_p(adl_object.headquarters_village, no_cvd=True)
+        }
+    
 def update_or_create_amd_couch(sender, instance, **kwargs):
     print("test", instance.id, kwargs['created'])
     client = CddClient()

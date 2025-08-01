@@ -32,11 +32,17 @@ $(document).on("click", "#add", function () {
     let administrative_id = selected_region.val();
     if(administrative_id && administrative_id !== "0" && administrative_id !== 0){
         selected_regions.push(administrative_id);
-        let region_name = $('#' + selected_region[0].id + ' option:selected').text();
+        let option_selected = $('#' + selected_region[0].id + ' option:selected');
+
         let selected_region_json = {
-            "name": region_name,
-            "id": administrative_id
+            "name": option_selected.text(),
+            "id": administrative_id,
+            "project_id": option_selected.data("project_id"),
+            "project_name": option_selected.data("project_name"),
+            "cycle_id": option_selected.data("cycle_id"),
+            "cycle_name": option_selected.data("cycle_name")
         };
+
         selected_regions_json.push(selected_region_json);
         $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
         $(this).addClass('disabled');
@@ -45,22 +51,26 @@ $(document).on("click", "#add", function () {
             return this.options[this.selectedIndex].text;
         }).get().reverse().join(", ");
         let region_html = "<a class='tag mt-2' >" +
-            "<i value='" + administrative_id + "' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>" +
-            region_long_name + "</a>";
+            "<i value='" + administrative_id + `_${option_selected.data("project_id")}_${option_selected.data("cycle_id")}` + "' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>" +
+            `<b>${region_long_name}</b>` + ` | ${option_selected.data("project_name")} - ${option_selected.data("cycle_name")}` + "</a>";
         $("#selected_regions").append(region_html);
         toggleSubmitButton();
     }
 });
 
 $(document).on("click", ".remove-region", function () {
-    let administrative_id = $(this).attr('value');
+    let ad_p_c = $(this).attr('value').split('_');
+    let administrative_id = ad_p_c[0];
+    let project_id = ad_p_c[1];
+    let cycle_id = ad_p_c[2];
+
     $(this).parent().remove();
     $('#' + administrative_id).prop('disabled', false);
     selected_regions = $.grep(selected_regions, function (e) {
         return e !== administrative_id;
     });
     selected_regions_json = $.grep(selected_regions_json, function (e) {
-        return e.id !== administrative_id;
+        return !(e.id === administrative_id && e.project_id === project_id && e.cycle_id === cycle_id);
     });
     $("#id_administrative_levels").val(JSON.stringify(selected_regions_json));
     toggleSubmitButton();
@@ -116,7 +126,9 @@ function loadNextLevelRegions(current_level, url, placeholder) {
                     let options = '<option value></option>';
                     $.each(data, function (index, value) {
                         let administrative_id = value.administrative_id;
-                        let option = '<option id="' + administrative_id + '" value="' + administrative_id + '"';
+                        let option = '<option id="' + administrative_id + '" value="' + administrative_id + '"' + 
+                        '" data-project_id="' + value.project_id + '"' + '" data-project_name="' + value.project_name + '"' +
+                        '" data-cycle_id="' + value.cycle_id + '"' + '" data-cycle_name="' + value.cycle_name + '"';
                         if (selected_regions.includes(administrative_id)) {
                             option += ' disabled ';
                         }
@@ -128,7 +140,14 @@ function loadNextLevelRegions(current_level, url, placeholder) {
                         } else {
                             option += '>';
                         }
+
+                        /*if(value.name){
+                            option += value.name + ` | ${value.project_name} - ${value.cycle_name}` + '</option>';
+                        }else{
+                            option += value.name + '</option>';
+                        }*/
                         option += value.name + '</option>';
+                        
                         options += option
 
                     });
