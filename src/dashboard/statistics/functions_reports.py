@@ -17,6 +17,7 @@ from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from process_manager.models import Project
+from dashboard.statistics.utils import comparer_chaines, normaliser_chaine
 
 from no_sql_client import NoSQLClient
 
@@ -27,19 +28,19 @@ def get_task_by_administrativelevel_id_and_task_id(list, ad_id, task_id):
             return doc
     return None
 
-def get_task_by_task_id(list, task_id):
+def get_task_by_task_id(list, task_id, task_name=None):
     docs = []
     for o in list:
         doc = o.get("doc")
-        if doc.get('type') == "task" and doc.get('sql_id') == task_id:
+        if doc.get('type') == "task" and (doc.get('sql_id') == task_id or normaliser_chaine(doc.get('name')) == task_name):
             docs.append(doc)
     return docs
 
-def get_task_by_task_ids(list, tasks_ids):
+def get_task_by_task_ids(list, tasks_ids, tasks_names=[]):
     docs = []
     for o in list:
         doc = o.get("doc")
-        if doc.get('type') == "task" and doc.get('sql_id') in tasks_ids:
+        if doc.get('type') == "task" and (doc.get('sql_id') in tasks_ids or normaliser_chaine(doc.get('name')) in tasks_names):
             docs.append(doc)
     return docs
 
@@ -147,7 +148,7 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
 
         fc_tasks = [doc for doc in fc_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
                             
-        docs = get_task_by_task_id(fc_tasks, 59)
+        docs = get_task_by_task_id(fc_tasks, 59, normaliser_chaine("Soutenir la communauté dans la sélection des priorités par sous-composante (1.1, 1.2 et 1.3) à soumettre à la discussion du CCD lors de la réunion cantonale d'arbitrage"))
         ok_unc = False
         ok_havent_p = False
         ok_havent_three_p = False
@@ -205,7 +206,7 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
     bk_database = nsc.get_db("backup_db_facilitators_docs")
     bk_tasks = bk_database.all_docs(include_docs=True)['rows']
     bk_tasks = [doc for doc in bk_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]            
-    docs = get_task_by_task_id(bk_tasks, 59)
+    docs = get_task_by_task_id(bk_tasks, 59, normaliser_chaine("Soutenir la communauté dans la sélection des priorités par sous-composante (1.1, 1.2 et 1.3) à soumettre à la discussion du CCD lors de la réunion cantonale d'arbitrage"))
     
     administrative_level_cvd_villages = []
     for _doc in docs:
@@ -390,7 +391,15 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
             
         fc_tasks = [doc for doc in fc_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
                 
-        docs = get_task_by_task_ids(fc_tasks, [59, 45, 47])
+        docs = get_task_by_task_ids(
+            fc_tasks, 
+            [59, 45, 47], 
+            [
+                normaliser_chaine("Soutenir la communauté dans la sélection des priorités par sous-composante (1.1, 1.2 et 1.3) à soumettre à la discussion du CCD lors de la réunion cantonale d'arbitrage"),
+                normaliser_chaine("Elaboration du plan d'action villageois (PAV)"),
+                normaliser_chaine("Appui au CCD dans l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet")
+            ]
+        )
         ok_unc = False
         ok_havent_p = False
         ok_havent_three_p = False
@@ -511,7 +520,15 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
     bk_database = nsc.get_db("backup_db_facilitators_docs")
     bk_tasks = bk_database.all_docs(include_docs=True)['rows']
     bk_tasks = [doc for doc in bk_tasks if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]              
-    docs = get_task_by_task_ids(bk_tasks, [59, 45, 47])
+    docs = get_task_by_task_ids(
+        bk_tasks, 
+        [59, 45, 47],
+        [
+            normaliser_chaine("Soutenir la communauté dans la sélection des priorités par sous-composante (1.1, 1.2 et 1.3) à soumettre à la discussion du CCD lors de la réunion cantonale d'arbitrage"),
+            normaliser_chaine("Elaboration du plan d'action villageois (PAV)"),
+            normaliser_chaine("Appui au CCD dans l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet")
+        ]
+    )
     
     for _doc in docs:
             

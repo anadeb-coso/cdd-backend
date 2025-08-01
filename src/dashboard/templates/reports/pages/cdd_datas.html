@@ -26,7 +26,21 @@
                       </div>
                 </div>
 
-                <div class="col-6">
+                <div class="col-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="" id="id_include_all_id_and_adl">
+                        <label class="form-check-label" for="id_include_all_id_and_adl">
+                            {% translate "Include Ids and all administrative levels history" %}
+                        </label>
+                      </div>
+                </div>
+                
+                <div class="clearfix"></div>
+            </div>
+
+
+            <div class="row">
+                <div class="col-12">
                     <div class="float-right mb-3">
                         <a href="{% url 'dashboard:statistics:app_excel_reports_cdd_dtas' %}"
                         class="btn btn-primary btn-sm rounded-xl reports_prorities_situation" id="app_excel_reports_cdd_dtas">
@@ -81,7 +95,9 @@
                 `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
                 `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type + 
                 `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}") + 
-                `&include_form_fields=` + (id_include_form_fields.checked ? 1 : 0) + `&include_history=` + (id_include_history.checked ? 1 : 0);
+                `&include_form_fields=` + ($('#id_include_form_fields').checked ? 1 : 0) + `&include_history=` + ($('#id_include_history').checked ? 1 : 0) + 
+                `&include_all_id_and_adl=` + ($('#id_include_all_id_and_adl').checked ? 1 : 0) + 
+                `&id_phase=` + $('#id_phase').val() + `&id_activity=` + $('#id_activity').val() + `&id_task=` + $('#id_task').val();
 
                 if(!['', ' ', null, undefined, []].includes(val_facilitator)){
                     url += `&facilitator_db_name=` + val_facilitator;

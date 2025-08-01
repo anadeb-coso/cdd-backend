@@ -4,7 +4,7 @@ from dashboard.mixins import PageMixin
 from django.utils.translation import gettext_lazy
 from .forms import ReportsFacilitatorsStatusForm, FacilitatorsMultiForm
 from authentication.models import Facilitator
-from dashboard.facilitators.forms import FilterFacilitatorForm, FilterFacilitatorFormMultiChoices
+from dashboard.facilitators.forms import FilterFacilitatorForm, FilterFacilitatorFormMultiChoices, FilterTaskFormMultiChoices
 from ...facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from ...facilitators.repository.facilitator_criteria import FacilitatorCriteria
 
@@ -52,7 +52,19 @@ class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
         # )
         
         context['breadcrumb'] = False
+        context['form'] = FilterFacilitatorFormMultiChoices(
+            initial={
+                'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id')
+            }
+        )
         context['form_f'] = FacilitatorsMultiForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], projects__in=[self.request.session.get('project_id')]))
+        context['form_task'] = FilterTaskFormMultiChoices(
+            initial={
+                'project_id': self.request.session.get('project_id'),
+                'cycle_id': self.request.session.get('cycle_id')
+            }
+        )
 
         return context
 

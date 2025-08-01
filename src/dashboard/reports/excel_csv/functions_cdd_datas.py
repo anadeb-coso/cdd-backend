@@ -19,7 +19,9 @@ from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 
 from no_sql_client import NoSQLClient
-from cdd.constants import INVALID_CHARS, HEADERS_FORM_FIELDS, HEADERS_HISTORY
+from cdd.constants import (
+    INVALID_CHARS, HEADERS_FORM_FIELDS, HEADERS_HISTORY, HEADERS_IDS_AND_ADL, HEADERS_FIRST_ORDER, DATAFRAME_CDD_DATAS_BY_ORDER
+)
 
 
 
@@ -28,16 +30,22 @@ def all_cdd_datas(facilitator_dbs_name, params={"type":"All", "ids_administrativ
     project_name = params.get('session_project_name')
     include_form_fields = params.get('include_form_fields')
     include_history = params.get('include_history')
+    include_all_id_and_adl = params.get('include_all_id_and_adl')
+    ids_task = params.get('ids_task')
 
     headers_to_skip = []
-    if not include_form_fields and not include_history:
-        headers_to_skip = HEADERS_FORM_FIELDS + HEADERS_HISTORY
-    elif not include_form_fields:
-        headers_to_skip = HEADERS_FORM_FIELDS
-    elif not include_history:
-        headers_to_skip = HEADERS_HISTORY
+    if not include_form_fields:
+        headers_to_skip.extend(HEADERS_FORM_FIELDS)
+    if not include_history:
+        headers_to_skip.extend(HEADERS_HISTORY)
+    if not include_all_id_and_adl:
+        headers_to_skip.extend(HEADERS_IDS_AND_ADL)
+    
 
     nsc = NoSQLClient()
+
+    all_cantons = mis_objects_call.filter_objects(AdministrativeLevel, type="Canton")
+    dict_all_cantons = {str(_.id): _.name for _ in all_cantons}
     
     _type = params.get("type")
     liste_villages = get_cascade_villages_by_administrative_level_id(params.get("ids_administrativelevel"))
@@ -83,9 +91,13 @@ def all_cdd_datas(facilitator_dbs_name, params={"type":"All", "ids_administrativ
                 flat_doc[dict_item[0]] = int(dict_item[1]) if type(dict_item[1]) is bool else dict_item[1]
 
     selector = {
-        "type": "task"
+        "type": "task",
+        'project_id': params.get('session_project_couch_id'),
+        'cycle_id': params.get('session_cycle_couch_id')
     }
     
+    if ids_task:
+        selector["sql_id"] = {"$in": ids_task}
     if village_ids:
         selector["administrative_level_id"] = {"$in": village_ids}
 
@@ -106,6 +118,8 @@ def all_cdd_datas(facilitator_dbs_name, params={"type":"All", "ids_administrativ
                 if k not in headers_to_skip:
                     append_data_to_dict(flat_doc, (k, v))
             flat_doc = dict(sorted(flat_doc.items()))
+            flat_doc['canton_name'] = dict_all_cantons.get(flat_doc.get('canton_sql_id'))
+
             if flat_doc.get("name"):
                 sheet_name = re.sub(INVALID_CHARS, ' ', flat_doc["name"])
                 if flat_doc.get("task_order"):
@@ -125,17 +139,29 @@ def all_cdd_datas(facilitator_dbs_name, params={"type":"All", "ids_administrativ
     if all_datas_order:
         first_sheet = list(all_datas_order.keys())[0]
         df = pd.DataFrame(all_datas_order[first_sheet])
-        
-        with pd.ExcelWriter("media/"+file_path) as writer:
-            df.to_excel(writer, sheet_name=first_sheet, index=False)
-            
-            for k, v in all_datas_order.items():
-                if k != first_sheet:
-                    pd.DataFrame(
-                        v
-                    ).to_excel(writer, sheet_name=k, index=False)
 
-        
+        dictionnaire_feuilles = {}
+
+        for nom_feuille, data in all_datas_order.items():
+            df = pd.DataFrame(data)
+            
+            # Trie alphabétique des colonnes
+            df = df[sorted(df.columns)].sort_values(by=DATAFRAME_CDD_DATAS_BY_ORDER)
+
+            colonnes = df.columns.tolist()
+            if any(elt for elt in HEADERS_FIRST_ORDER if elt in colonnes):
+                nouvelles_colonnes = HEADERS_FIRST_ORDER + [col for col in colonnes if col not in HEADERS_FIRST_ORDER]
+                df = df[nouvelles_colonnes]
+
+            dictionnaire_feuilles[nom_feuille] = df
+
+        # Écriture dans le fichier Excel
+        with pd.ExcelWriter("media/" + file_path) as writer:
+            for feuille, df in dictionnaire_feuilles.items():
+                df.to_excel(writer, sheet_name=feuille, index=False)
+    else:
+        pd.DataFrame([]).to_excel("media/"+file_path)
+
     if platform == "win32":
         # windows
         return file_path.replace("/", "\\\\")

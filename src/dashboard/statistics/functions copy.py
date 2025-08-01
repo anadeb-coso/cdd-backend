@@ -52,7 +52,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
     
     project_mis = mis_objects_call.filter_objects(MisProject, name=params.get('session_project_name')).first()
     project_mis_id = project_mis.id if project_mis else 1
-    
+    print(project_mis)
     if facilitator_dbs_name:
         fs = Facilitator.objects.filter(develop_mode=False, training_mode=False, no_sql_db_name__in=facilitator_dbs_name)
     else:
@@ -739,11 +739,6 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "Observations", "Observations", "Observations", "Observations", "Observations", "ind_177"),
         ("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "DB_NAME", "ind_178")
     ]
-
-    liste_villages_ids = [v["id"] for v in liste_villages]
-    
-    all_project_adl = {str(adl.id): adl.to_json_p(adl, cvd_with_villages=True) for adl in (project_mis.administrative_levels.filter(id__in=liste_villages_ids) if liste_villages else project_mis.administrative_levels.all())}
-    
     cols = pd.MultiIndex.from_tuples(d_cols)
     datas = {}
     for col in d_cols:
@@ -753,40 +748,25 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
         dict_administrative_levels_with_infos = {}
         already_count_facilitator = False
         facilitator_db = nsc.get_db(f.no_sql_db_name)
-
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
-        # query_result_docs = facilitator_db.get_query_result({
-        #     "type": {"$in": ["task", "facilitator"]},
-        #     "$or": [
-        #         {
-        #             'project_id': project.couch_id,
-        #             'cycle_id': cycle_id
-        #         },
-        #         {
-        #             'project_id': project.couch_id
-        #         }
-        #     ]
-            
-        # }, limit=1000000)[:]
-                
-        query_result_docs = [doc.get('doc') for doc in query_result_docs if doc.get('doc') and (doc.get('doc').get('type') == "facilitator" or (doc.get('doc').get('type') == "task" and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id))]
-        
-        f_docs = [doc for doc in query_result_docs if doc.get('type') == "facilitator"]
-
         f_doc = None
         cvds = []
-        if f_docs:
-            f_doc = f_docs[0]
-            cvds = get_cvds(project.couch_id, cycle_id, f_doc)
-    
+        for doc in query_result_docs:
+            doc = doc.get('doc')
+            if doc.get('type') == "facilitator":
+                f_doc = doc
+                cvds = get_cvds(project.couch_id, cycle_id, f_doc)
+                break
+        query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
+        
         if f_doc:
             for cvd in cvds:
                 administrative_level_cvd_village = cvd.get('village')
                 if administrative_level_cvd_village:
                     # administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
-                    administrativelevel_obj = all_project_adl.get(str(administrative_level_cvd_village['id'])) #project_mis.administrative_levels.filter(id=int(administrative_level_cvd_village['id'])).first()
+                    administrativelevel_obj = project_mis.administrative_levels.filter(id=int(administrative_level_cvd_village['id'])).first()
                     
-                    if administrativelevel_obj and administrativelevel_obj.get('cvd'):
+                    if administrativelevel_obj and administrativelevel_obj.cvd:
                         # _ok = True
                         # if liste_villages:
                         #     _ok = False
@@ -795,31 +775,26 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                         #             _ok = True
                         #             break
                         # if _ok:
-                        # if (facilitator_dbs_name and (
-                        #     not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
-                        # )) or (
-                        #     not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
-                        # ):
                         if (facilitator_dbs_name and (
-                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and any(v for v in liste_villages if v["id"] in administrativelevel_obj['cvd']['villages_ids']))
+                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
                         )) or (
-                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and any(v for v in liste_villages if v["id"] in administrativelevel_obj['cvd']['villages_ids']))
+                            not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
                         ):
                             pass
                         else:
                             continue
-                        
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj['cvd']['id'] #count + 1
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj['parent']['parent']['parent']['parent']['name']
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj['parent']['parent']['parent']['name']
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj['parent']['parent']['name']
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj['parent']['name']
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj['cvd']['name']
+
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
                         # villages = ""
                         # for o in administrativelevel_obj.cvd.get_villages():
                         #     villages += f'{o.name} ; '
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o['name'] for o in administrativelevel_obj['cvd']['villages']])
-                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj['geographical_unit']['attributed_number_in_canton']
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
+                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
                         
                         total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
@@ -827,11 +802,12 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                         total_JEUNES_H_DEPLACES_INTERNES, total_JEUNES_F_DEPLACES_INTERNES, total_H_DEPLACES_INTERNES, total_F_DEPLACES_INTERNES = 0, 0, 0, 0
                         total_JEUNES_H_COMMUNAUTES_ACCUEIL, total_JEUNES_F_COMMUNAUTES_ACCUEIL, total_H_COMMUNAUTES_ACCUEIL, total_F_COMMUNAUTES_ACCUEIL = 0, 0, 0, 0
                         
-                        for _ in query_result_docs:
-                            # _ = doc.get('doc')
+                        for doc in query_result_docs:
+                            _ = doc.get('doc')
                             if _.get('type') == "task" and str(administrative_level_cvd_village["id"]) == str(_["administrative_level_id"]):
                                 form_response = _.get("form_response")
                                 if form_response:
+                                    value = None
 
                                     if _.get('sql_id') in [20] or comparer_chaines(_.get('name'), "Etablissement du profil du village"): #Etablissement du profil du village
 
@@ -839,43 +815,49 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                         old_form_response = old_forms[-1].get("form_response") if old_forms else []
 
                                         # Eff. Population
-                                        population = None
                                         try:
-                                            population = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                            value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
                                         except Exception as exc:
-                                            if not population:
+                                            if not value:
                                                 try:
-                                                    population = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                 except:
                                                     try:
-                                                        population = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
-                                                        population = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = population
+                                                        value = None
+                                        population = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                                         # End Eff. Population
 
 
                                         """Réfugiés"""
                                         # "Eff. Population", "Réfugiés", "Eff. (<=35)", "H"
+                                        population_refugees_young_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_refugees_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                             except:
-                                                population_refugees_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                         except Exception as exc:
-                                            population_refugees_young_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "H", "ind_9_10")][count] = population_refugees_young_h
+                                            value = None
+                                        population_refugees_young_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "H", "ind_9_10")][count] = value
                                         # End "Eff. Population", "Réfugiés", "Eff. (<=35)", "H"
 
                                         # "Eff. Population", "Réfugiés", "Eff. (<=35)", "F"
+                                        population_refugees_young_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_refugees_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                             except:
-                                                population_refugees_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                         except Exception as exc:
-                                            population_refugees_young_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "F", "ind_9_11")][count] = population_refugees_young_f
+                                            value = None
+                                        population_refugees_young_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "F", "ind_9_11")][count] = value
                                         # End "Eff. Population", "Réfugiés", "Eff. (<=35)", "F"
 
                                         population_refugees_young = (population_refugees_young_f if population_refugees_young_f else 0) + (population_refugees_young_h if population_refugees_young_h else 0)
@@ -883,25 +865,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                                         # "Eff. Population", "Réfugiés", "Eff. (>35)", "H"
+                                        population_refugees_old_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_refugees_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                             except:
-                                                population_refugees_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                         except Exception as exc:
-                                            population_refugees_old_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "H", "ind_9_13")][count] = population_refugees_old_h
+                                            value = None
+                                        population_refugees_old_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "H", "ind_9_13")][count] = value
                                         # End "Eff. Population", "Réfugiés", "Eff. (>35)", "H"
 
                                         # "Eff. Population", "Réfugiés", "Eff. (>35)", "F"
+                                        population_refugees_old_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_refugees_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                             except:
-                                                population_refugees_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                         except Exception as exc:
-                                            population_refugees_old_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "F", "ind_9_14")][count] = population_refugees_old_f
+                                            value = None
+                                        population_refugees_old_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "F", "ind_9_14")][count] = value
                                         # End "Eff. Population", "Réfugiés", "Eff. (>35)", "F"
                                         
                                         population_refugees_old = (population_refugees_old_f if population_refugees_old_f else 0) + (population_refugees_old_h if population_refugees_old_h else 0)
@@ -914,25 +902,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
                                         """Déplacés internes"""
                                         # "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H"
+                                        population_internally_displaced_persons_young_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_internally_displaced_persons_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
                                             except:
-                                                population_internally_displaced_persons_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
                                         except Exception as exc:
-                                            population_internally_displaced_persons_young_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H", "ind_9_17")][count] = population_internally_displaced_persons_young_h
+                                            value = None
+                                        population_internally_displaced_persons_young_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H", "ind_9_17")][count] = value
                                         # End "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H"
 
                                         # "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F"
+                                        population_internally_displaced_persons_young_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_internally_displaced_persons_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
                                             except:
-                                                population_internally_displaced_persons_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
                                         except Exception as exc:
-                                            population_internally_displaced_persons_young_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F", "ind_9_18")][count] = population_internally_displaced_persons_young_f
+                                            value = None
+                                        population_internally_displaced_persons_young_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F", "ind_9_18")][count] = value
                                         # End "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F"
 
                                         population_internally_displaced_persons_young = (population_internally_displaced_persons_young_f if population_internally_displaced_persons_young_f else 0) + (population_internally_displaced_persons_young_h if population_internally_displaced_persons_young_h else 0)
@@ -940,25 +934,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                                         # "Eff. Population", "Déplacés internes", "Eff. (>35)", "H"
+                                        population_internally_displaced_persons_old_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_internally_displaced_persons_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
                                             except:
-                                                population_internally_displaced_persons_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
                                         except Exception as exc:
-                                            population_internally_displaced_persons_old_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "H", "ind_9_20")][count] = population_internally_displaced_persons_old_h
+                                            value = None
+                                        population_internally_displaced_persons_old_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "H", "ind_9_20")][count] = value
                                         # End "Eff. Population", "Déplacés internes", "Eff. (>35)", "H"
 
                                         # "Eff. Population", "Déplacés internes", "Eff. (>35)", "F"
+                                        population_internally_displaced_persons_old_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_internally_displaced_persons_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
                                             except:
-                                                population_internally_displaced_persons_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
                                         except Exception as exc:
-                                            population_internally_displaced_persons_old_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "F", "ind_9_21")][count] = population_internally_displaced_persons_old_f
+                                            value = None
+                                        population_internally_displaced_persons_old_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "F", "ind_9_21")][count] = value
                                         # End "Eff. Population", "Déplacés internes", "Eff. (>35)", "F"
                                         
                                         population_internally_displaced_persons_old = (population_internally_displaced_persons_old_f if population_internally_displaced_persons_old_f else 0) + (population_internally_displaced_persons_old_h if population_internally_displaced_persons_old_h else 0)
@@ -971,25 +971,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
                                         """Communautés d'accueil"""
                                         # "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H"
+                                        population_host_communities_young_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_host_communities_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35CommunauteAcceuil"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                             except:
-                                                population_host_communities_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35CommunauteAcceuil"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                         except Exception as exc:
-                                            population_host_communities_young_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H", "ind_9_24")][count] = population_host_communities_young_h
+                                            value = None
+                                        population_host_communities_young_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H", "ind_9_24")][count] = value
                                         # End "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H"
 
                                         # "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F"
+                                        population_host_communities_young_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_host_communities_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35CommunauteAcceuil"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                             except:
-                                                population_host_communities_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35CommunauteAcceuil"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                         except Exception as exc:
-                                            population_host_communities_young_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F", "ind_9_25")][count] = population_host_communities_young_f
+                                            value = None
+                                        population_host_communities_young_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F", "ind_9_25")][count] = value
                                         # End "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F"
 
                                         population_host_communities_young = (population_host_communities_young_f if population_host_communities_young_f else 0) + (population_host_communities_young_h if population_host_communities_young_h else 0)
@@ -997,25 +1003,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                                         # "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H"
+                                        population_host_communities_old_h = None
+                                        value = None
                                         try:
                                             try:
-                                                population_host_communities_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35CommunauteAcceuil"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                             except:
-                                                population_host_communities_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35CommunauteAcceuil"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                         except Exception as exc:
-                                            population_host_communities_old_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H", "ind_9_27")][count] = population_host_communities_old_h
+                                            value = None
+                                        population_host_communities_old_h = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H", "ind_9_27")][count] = value
                                         # End "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H"
 
                                         # "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F"
+                                        population_host_communities_old_f = None
+                                        value = None
                                         try:
                                             try:
-                                                population_host_communities_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35CommunauteAcceuil"]
+                                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                             except:
-                                                population_host_communities_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35CommunauteAcceuil"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                         except Exception as exc:
-                                            population_host_communities_old_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F", "ind_9_28")][count] = population_host_communities_old_f
+                                            value = None
+                                        population_host_communities_old_f = value
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F", "ind_9_28")][count] = value
                                         # End "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F"
                                         
                                         population_host_communities_old = (population_host_communities_old_f if population_host_communities_old_f else 0) + (population_host_communities_old_h if population_host_communities_old_h else 0)
@@ -1028,103 +1040,109 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                                         # "Eff. Population", "Eff. (<=35)", "H"
-                                        percent_young_h = None
                                         population_young_h = None
+                                        value = None
+                                        percent_young_h = None
                                         try:
                                             try:
-                                                population_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                                 percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                                 percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                             except:
-                                                population_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                                 percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                                 percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
 
                                             if percent_young_f and percent_young_h:
                                                 t = percent_young_f+percent_young_f
                                                 if t == 100:
-                                                    population_young_h = ((population_young_h*percent_young_h)/100) if population_young_h and percent_young_h else None
+                                                    value = ((value*percent_young_h)/100) if value and percent_young_h else None
                                                 else:
-                                                    population_young_h = percent_young_h
+                                                    value = percent_young_h
                                         except Exception as exc:
-                                            if not population_young_h:
+                                            if not value:
                                                 try:
-                                                    population_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
                                                 except:
                                                     try:
-                                                        population_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
                                                     except:
-                                                        population_young_h = None
-                                        population_young_h = population_young_h if population_young_h else (population_refugees_young_h + population_internally_displaced_persons_young_h + population_host_communities_young_h if population_refugees_young_h != None and population_internally_displaced_persons_young_h != None and population_host_communities_young_h != None else None)
+                                                        value = None
+                                        population_young_h = value if value else (population_refugees_young_h + population_internally_displaced_persons_young_h + population_host_communities_young_h if population_refugees_young_h != None and population_internally_displaced_persons_young_h != None and population_host_communities_young_h != None else None)
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "H", "ind_9_4")][count] = population_young_h
                                         # End "Eff. Population", "Eff. (<=35)", "H"
 
                                         # "Eff. Population", "Eff. (<=35)", "F"
+                                        value = None
                                         percent_young_f = None
                                         population_young_f = None
                                         try:
                                             try:
-                                                population_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                                 percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                                 percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                             except:
-                                                population_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                                 percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                                 percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                                 
                                             if percent_young_f and percent_young_h:
                                                 t = percent_young_f+percent_young_f
                                                 if t == 100:
-                                                    population_young_f = ((population_young_f*percent_young_f)/100) if population_young_f and percent_young_f else None
+                                                    value = ((value*percent_young_f)/100) if value and percent_young_f else None
                                                 else:
-                                                    population_young_f = percent_young_f
+                                                    value = percent_young_f
                                         except Exception as exc:
-                                            if not population_young_f:
+                                            if not value:
                                                 try:
-                                                    population_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
                                                 except:
                                                     try:
-                                                        population_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                                        value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
                                                     except:
-                                                        population_young_f = None
-                                        population_young_f = population_young_f if population_young_f else (population_refugees_young_f + population_internally_displaced_persons_young_f + population_host_communities_young_f if population_refugees_young_f != None and population_internally_displaced_persons_young_f != None and population_host_communities_young_f != None else None)
+                                                        value = None
+                                        population_young_f = value if value else (population_refugees_young_f + population_internally_displaced_persons_young_f + population_host_communities_young_f if population_refugees_young_f != None and population_internally_displaced_persons_young_f != None and population_host_communities_young_f != None else None)
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "F", "ind_9_5")][count] = population_young_f
                                         # End "Eff. Population", "Eff. (<=35)", "F"
                                         
                                         # "Eff. Population", "Eff. Jeunes"
+                                        young = None
+                                        value = None
                                         try:
-                                            young = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                            value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                         except Exception as exc:
                                             try:
-                                                young = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                                value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                             except Exception as exc:
-                                                young = None
-                                        young = young if young else ((population_young_f if population_young_f else 0) + (population_young_h if population_young_h else 0))
+                                                value = None
+                                        young = value if value else ((population_young_f if population_young_f else 0) + (population_young_h if population_young_h else 0))
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Jeunes", "ind_9_3")][count] = young
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "T", "ind_9_6")][count] = young
                                         # End "Eff. Population", "Eff. Jeunes"
 
                                         # "Eff. Population", "Eff. (>35)", "H"
+                                        population_old_h = None
                                         try:
-                                            population_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
                                         except:
                                             try:
-                                                population_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
                                             except:
-                                                population_old_h = None
-                                        population_old_h = population_old_h if population_old_h else (population_refugees_old_h + population_internally_displaced_persons_old_h + population_host_communities_old_h if population_refugees_old_h != None and population_internally_displaced_persons_old_h != None and population_host_communities_old_h != None else None)
+                                                value = None
+                                        population_old_h = value if value else (population_refugees_old_h + population_internally_displaced_persons_old_h + population_host_communities_old_h if population_refugees_old_h != None and population_internally_displaced_persons_old_h != None and population_host_communities_old_h != None else None)
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "H", "ind_9_7")][count] = population_old_h
                                         # End "Eff. Population", "Eff. (>35)", "H"
 
                                         # "Eff. Population", "Eff. (>35)", "F"
+                                        population_old_f = None
                                         try:
-                                            population_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
                                         except:
                                             try:
-                                                population_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
                                             except:
-                                                population_old_f = None
-                                        population_old_f = population_old_f if population_old_f else (population_refugees_old_f + population_internally_displaced_persons_old_f + population_host_communities_old_f if population_refugees_old_f != None and population_internally_displaced_persons_old_f != None and population_host_communities_old_f != None else None)
+                                                value = None
+                                        population_old_f = value if value else (population_refugees_old_f + population_internally_displaced_persons_old_f + population_host_communities_old_f if population_refugees_old_f != None and population_internally_displaced_persons_old_f != None and population_host_communities_old_f != None else None)
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "F", "ind_9_8")][count] = population_old_f
                                         # End "Eff. Population", "Eff. (>35)", "F"
 
@@ -1132,43 +1150,45 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "T", "ind_9_9")][count] = old
 
                                         
+                                        value = None
                                         try:
-                                            population_nombre_h = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
+                                            value = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
                                         except Exception as exc:
                                             try:
-                                                population_nombre_h = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
+                                                value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
                                             except Exception as exc:
-                                                population_nombre_h = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = population_nombre_h if population_nombre_h else ((population_old_h if population_old_h else 0) + (population_young_h if population_young_h else 0) if population_old_h or population_young_h else None)
+                                                value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = value if value else ((population_old_h if population_old_h else 0) + (population_young_h if population_young_h else 0) if population_old_h or population_young_h else None)
 
+                                        value = None
                                         try:
-                                            population_nombre_f = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
+                                            value = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
                                         except Exception as exc:
                                             try:
-                                                population_nombre_f = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
+                                                value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
                                             except Exception as exc:
-                                                population_nombre_f = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = population_nombre_f if population_nombre_f else ((population_old_f if population_old_f else 0) + (population_young_f if population_young_f else 0) if population_old_f or population_young_f else None)
+                                                value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = value if value else ((population_old_f if population_old_f else 0) + (population_young_f if population_young_f else 0) if population_old_f or population_young_f else None)
 
 
 
                                         try:
-                                            total_house_holds = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                                         except Exception as exc:
                                             try:
-                                                total_house_holds = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                                             except Exception as exc:
-                                                total_house_holds = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = total_house_holds
+                                                value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
 
                                         try:
-                                            nombre_ethniques = get_datas_dict(form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
+                                            value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
                                         except Exception as exc:
                                             try:
-                                                nombre_ethniques = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
+                                                value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
                                             except Exception as exc:
-                                                nombre_ethniques = None
-                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "ind_10_1")][count] = nombre_ethniques
+                                                value = None
+                                        datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "ind_10_1")][count] = value
 
 
                                        
@@ -3341,12 +3361,15 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and _.get('doc').get('project_id') == project.couch_id]
-    
-    administrative_level_cvd_villages = [_.get('doc')["administrative_level_id"] for _ in query_result_docs if _.get('doc') and _.get('doc')["administrative_level_id"] not in administrative_level_cvd_villages]
+    administrative_level_cvd_villages = []
+    for _ in query_result_docs:
+        doc = _.get('doc')
+        if doc and doc["administrative_level_id"] not in administrative_level_cvd_villages:
+            administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
-        administrativelevel_obj = all_project_adl.get(str(administrative_level_cvd_village)) #administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj['cvd']:
+        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
+        if administrativelevel_obj.cvd:
             # _ok = True
             # if liste_villages:
             #     _ok = False
@@ -3356,26 +3379,26 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
             #             break
             # if _ok:
             if (facilitator_dbs_name and (
-                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and any(v for v in liste_villages if v["id"] in administrativelevel_obj['cvd']['villages_ids']))
+                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
             )) or (
-                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and any(v for v in liste_villages if v["id"] in administrativelevel_obj['cvd']['villages_ids']))
+                not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
             ):
                 pass
             else:
                 continue
 
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj['cvd']['id'] #count + 1
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj['parent']['parent']['parent']['parent']['name']
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj['parent']['parent']['parent']['name']
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj['parent']['parent']['name']
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj['parent']['name']
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj['cvd']['name']
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ID CVD", "ind_0")][count] = administrativelevel_obj.cvd.id #count + 1
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Région", "Région", "Région", "Région", "ind_1")][count] = administrativelevel_obj.parent.parent.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Préfecture", "Préfecture", "Préfecture", "Préfecture", "ind_2")][count] = administrativelevel_obj.parent.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj.parent.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj.parent.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj.cvd.name
             # villages = ""
             # for o in administrativelevel_obj.cvd.get_villages():
             #     villages += f'{o.name} ; '
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o['name'] for o in administrativelevel_obj['cvd']['villages']])
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj['geographical_unit']['attributed_number_in_canton']
-            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o.name for o in administrativelevel_obj.cvd.get_villages()])
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj.geographical_unit.attributed_number_in_canton
+            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = ''
             
             total_H, total_F, total_JEUNES_H, total_JEUNES_F, total_JEUNES, total_MENAGES, total_ETHNIES = 0, 0, 0, 0, 0, 0, 0
             
@@ -3384,6 +3407,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                 if _.get('type') == "task" and str(administrative_level_cvd_village) == str(_["administrative_level_id"]):
                     form_response = _.get("form_response")
                     if form_response:
+                        value = None
 
                         if _.get('sql_id') in [20] or comparer_chaines(_.get('name'), "Etablissement du profil du village"): #Etablissement du profil du village
 
@@ -3391,43 +3415,49 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                             old_form_response = old_forms[-1].get("form_response") if old_forms else []
 
                             # Eff. Population
-                            population = None
                             try:
-                                population = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
+                                value = get_datas_dict(form_response, "population", 1)["populationTotaleDuVillage"]
                             except Exception as exc:
-                                if not population:
+                                if not value:
                                     try:
-                                        population = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                     except:
                                         try:
-                                            population = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
-                                            population = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = population
+                                            value = None
+                            population = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = value
                             # End Eff. Population
 
 
                             """Réfugiés"""
                             # "Eff. Population", "Réfugiés", "Eff. (<=35)", "H"
+                            population_refugees_young_h = None
+                            value = None
                             try:
                                 try:
-                                    population_refugees_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                 except:
-                                    population_refugees_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                             except Exception as exc:
-                                population_refugees_young_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "H", "ind_9_10")][count] = population_refugees_young_h
+                                value = None
+                            population_refugees_young_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "H", "ind_9_10")][count] = value
                             # End "Eff. Population", "Réfugiés", "Eff. (<=35)", "H"
 
                             # "Eff. Population", "Réfugiés", "Eff. (<=35)", "F"
+                            population_refugees_young_f = None
+                            value = None
                             try:
                                 try:
-                                    population_refugees_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                 except:
-                                    population_refugees_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                             except Exception as exc:
-                                population_refugees_young_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "F", "ind_9_11")][count] = population_refugees_young_f
+                                value = None
+                            population_refugees_young_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (<=35)", "F", "ind_9_11")][count] = value
                             # End "Eff. Population", "Réfugiés", "Eff. (<=35)", "F"
 
                             population_refugees_young = (population_refugees_young_f if population_refugees_young_f else 0) + (population_refugees_young_h if population_refugees_young_h else 0)
@@ -3435,25 +3465,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                             # "Eff. Population", "Réfugiés", "Eff. (>35)", "H"
+                            population_refugees_old_h = None
+                            value = None
                             try:
                                 try:
-                                    population_refugees_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                 except:
-                                    population_refugees_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                             except Exception as exc:
-                                population_refugees_old_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "H", "ind_9_13")][count] = population_refugees_old_h
+                                value = None
+                            population_refugees_old_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "H", "ind_9_13")][count] = value
                             # End "Eff. Population", "Réfugiés", "Eff. (>35)", "H"
 
                             # "Eff. Population", "Réfugiés", "Eff. (>35)", "F"
+                            population_refugees_old_f = None
+                            value = None
                             try:
                                 try:
-                                    population_refugees_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                 except:
-                                    population_refugees_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                             except Exception as exc:
-                                population_refugees_old_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "F", "ind_9_14")][count] = population_refugees_old_f
+                                value = None
+                            population_refugees_old_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Réfugiés", "Eff. (>35)", "F", "ind_9_14")][count] = value
                             # End "Eff. Population", "Réfugiés", "Eff. (>35)", "F"
                             
                             population_refugees_old = (population_refugees_old_f if population_refugees_old_f else 0) + (population_refugees_old_h if population_refugees_old_h else 0)
@@ -3466,25 +3502,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
                             """Déplacés internes"""
                             # "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H"
+                            population_internally_displaced_persons_young_h = None
+                            value = None
                             try:
                                 try:
-                                    population_internally_displaced_persons_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
                                 except:
-                                    population_internally_displaced_persons_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35DeplaceInterne"]
                             except Exception as exc:
-                                population_internally_displaced_persons_young_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H", "ind_9_17")][count] = population_internally_displaced_persons_young_h
+                                value = None
+                            population_internally_displaced_persons_young_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H", "ind_9_17")][count] = value
                             # End "Eff. Population", "Déplacés internes", "Eff. (<=35)", "H"
 
                             # "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F"
+                            population_internally_displaced_persons_young_f = None
+                            value = None
                             try:
                                 try:
-                                    population_internally_displaced_persons_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
                                 except:
-                                    population_internally_displaced_persons_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35DeplaceInterne"]
                             except Exception as exc:
-                                population_internally_displaced_persons_young_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F", "ind_9_18")][count] = population_internally_displaced_persons_young_f
+                                value = None
+                            population_internally_displaced_persons_young_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F", "ind_9_18")][count] = value
                             # End "Eff. Population", "Déplacés internes", "Eff. (<=35)", "F"
 
                             population_internally_displaced_persons_young = (population_internally_displaced_persons_young_f if population_internally_displaced_persons_young_f else 0) + (population_internally_displaced_persons_young_h if population_internally_displaced_persons_young_h else 0)
@@ -3492,25 +3534,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                             # "Eff. Population", "Déplacés internes", "Eff. (>35)", "H"
+                            population_internally_displaced_persons_old_h = None
+                            value = None
                             try:
                                 try:
-                                    population_internally_displaced_persons_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
                                 except:
-                                    population_internally_displaced_persons_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35DeplaceInterne"]
                             except Exception as exc:
-                                population_internally_displaced_persons_old_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "H", "ind_9_20")][count] = population_internally_displaced_persons_old_h
+                                value = None
+                            population_internally_displaced_persons_old_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "H", "ind_9_20")][count] = value
                             # End "Eff. Population", "Déplacés internes", "Eff. (>35)", "H"
 
                             # "Eff. Population", "Déplacés internes", "Eff. (>35)", "F"
+                            population_internally_displaced_persons_old_f = None
+                            value = None
                             try:
                                 try:
-                                    population_internally_displaced_persons_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
                                 except:
-                                    population_internally_displaced_persons_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35DeplaceInterne"]
                             except Exception as exc:
-                                population_internally_displaced_persons_old_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "F", "ind_9_21")][count] = population_internally_displaced_persons_old_f
+                                value = None
+                            population_internally_displaced_persons_old_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Déplacés internes", "Eff. (>35)", "F", "ind_9_21")][count] = value
                             # End "Eff. Population", "Déplacés internes", "Eff. (>35)", "F"
                             
                             population_internally_displaced_persons_old = (population_internally_displaced_persons_old_f if population_internally_displaced_persons_old_f else 0) + (population_internally_displaced_persons_old_h if population_internally_displaced_persons_old_h else 0)
@@ -3523,25 +3571,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
                             """Communautés d'accueil"""
                             # "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H"
+                            population_host_communities_young_h = None
+                            value = None
                             try:
                                 try:
-                                    population_host_communities_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                                 except:
-                                    population_host_communities_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35Refugie"]
                             except Exception as exc:
-                                population_host_communities_young_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H", "ind_9_24")][count] = population_host_communities_young_h
+                                value = None
+                            population_host_communities_young_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H", "ind_9_24")][count] = value
                             # End "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "H"
 
                             # "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F"
+                            population_host_communities_young_f = None
+                            value = None
                             try:
                                 try:
-                                    population_host_communities_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                                 except:
-                                    population_host_communities_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35Refugie"]
                             except Exception as exc:
-                                population_host_communities_young_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F", "ind_9_25")][count] = population_host_communities_young_f
+                                value = None
+                            population_host_communities_young_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F", "ind_9_25")][count] = value
                             # End "Eff. Population", "Communautés d'accueil", "Eff. (<=35)", "F"
 
                             population_host_communities_young = (population_host_communities_young_f if population_host_communities_young_f else 0) + (population_host_communities_young_h if population_host_communities_young_h else 0)
@@ -3549,25 +3603,31 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                             # "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H"
+                            population_host_communities_old_h = None
+                            value = None
                             try:
                                 try:
-                                    population_host_communities_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                                 except:
-                                    population_host_communities_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35Refugie"]
                             except Exception as exc:
-                                population_host_communities_old_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H", "ind_9_27")][count] = population_host_communities_old_h
+                                value = None
+                            population_host_communities_old_h = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H", "ind_9_27")][count] = value
                             # End "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "H"
 
                             # "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F"
+                            population_host_communities_old_f = None
+                            value = None
                             try:
                                 try:
-                                    population_host_communities_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                    value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                                 except:
-                                    population_host_communities_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35Refugie"]
                             except Exception as exc:
-                                population_host_communities_old_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F", "ind_9_28")][count] = population_host_communities_old_f
+                                value = None
+                            population_host_communities_old_f = value
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F", "ind_9_28")][count] = value
                             # End "Eff. Population", "Communautés d'accueil", "Eff. (>35)", "F"
                             
                             population_host_communities_old = (population_host_communities_old_f if population_host_communities_old_f else 0) + (population_host_communities_old_h if population_host_communities_old_h else 0)
@@ -3580,147 +3640,155 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
 
 
                             # "Eff. Population", "Eff. (<=35)", "H"
-                            percent_young_h = None
                             population_young_h = None
+                            value = None
+                            percent_young_h = None
                             try:
                                 try:
-                                    population_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                     percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                     percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                 except:
-                                    population_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                     percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                     percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
 
                                 if percent_young_f and percent_young_h:
                                     t = percent_young_f+percent_young_f
                                     if t == 100:
-                                        population_young_h = ((population_young_h*percent_young_h)/100) if population_young_h and percent_young_h else None
+                                        value = ((value*percent_young_h)/100) if value and percent_young_h else None
                                     else:
-                                        population_young_h = percent_young_h
+                                        value = percent_young_h
                             except Exception as exc:
-                                if not population_young_h:
+                                if not value:
                                     try:
-                                        population_young_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
                                     except:
                                         try:
-                                            population_young_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesMoins35"]
                                         except:
-                                            population_young_h = None
-                            population_young_h = population_young_h if population_young_h else (population_refugees_young_h + population_internally_displaced_persons_young_h + population_host_communities_young_h if population_refugees_young_h != None and population_internally_displaced_persons_young_h != None and population_host_communities_young_h != None else None)
+                                            value = None
+                            population_young_h = value if value else (population_refugees_young_h + population_internally_displaced_persons_young_h + population_host_communities_young_h)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "H", "ind_9_4")][count] = population_young_h
                             # End "Eff. Population", "Eff. (<=35)", "H"
 
                             # "Eff. Population", "Eff. (<=35)", "F"
+                            value = None
                             percent_young_f = None
                             population_young_f = None
                             try:
                                 try:
-                                    population_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                     percent_young_f = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                     percent_young_h = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                 except:
-                                    population_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                     percent_young_f = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionFemmes"]
                                     percent_young_h = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesProportionHomme"]
                                     
                                 if percent_young_f and percent_young_h:
                                     t = percent_young_f+percent_young_f
                                     if t == 100:
-                                        population_young_f = ((population_young_f*percent_young_f)/100) if population_young_f and percent_young_f else None
+                                        value = ((value*percent_young_f)/100) if value and percent_young_f else None
                                     else:
-                                        population_young_f = percent_young_f
+                                        value = percent_young_f
                             except Exception as exc:
-                                if not population_young_f:
+                                if not value:
                                     try:
-                                        population_young_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                        value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
                                     except:
                                         try:
-                                            population_young_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
+                                            value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesMoins35"]
                                         except:
-                                            population_young_f = None
-                            population_young_f = population_young_f if population_young_f else (population_refugees_young_f + population_internally_displaced_persons_young_f + population_host_communities_young_f if population_refugees_young_f != None and population_internally_displaced_persons_young_f != None and population_host_communities_young_f != None else None)
+                                            value = None
+                            population_young_f = value if value else (population_refugees_young_f + population_internally_displaced_persons_young_f + population_host_communities_young_f)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "F", "ind_9_5")][count] = population_young_f
                             # End "Eff. Population", "Eff. (<=35)", "F"
                             
                             # "Eff. Population", "Eff. Jeunes"
+                            young = None
+                            value = None
                             try:
-                                young = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                value = get_datas_dict(form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                             except Exception as exc:
                                 try:
-                                    young = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
+                                    value = get_datas_dict(old_form_response, "donnees", 1)["populationPersonnesJeunes"]["populationPersonnesJeunesTotal"]
                                 except Exception as exc:
-                                    young = None
-                            young = young if young else ((population_young_f if population_young_f else 0) + (population_young_h if population_young_h else 0))
+                                    value = None
+                            young = value if value else (population_young_f + population_young_h)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Jeunes", "ind_9_3")][count] = young
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (<=35)", "T", "ind_9_6")][count] = young
                             # End "Eff. Population", "Eff. Jeunes"
 
                             # "Eff. Population", "Eff. (>35)", "H"
+                            population_old_h = None
                             try:
-                                population_old_h = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
                             except:
                                 try:
-                                    population_old_h = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHommesPlus35"]
                                 except:
-                                    population_old_h = None
-                            population_old_h = population_old_h if population_old_h else (population_refugees_old_h + population_internally_displaced_persons_old_h + population_host_communities_old_h if population_refugees_old_h != None and population_internally_displaced_persons_old_h != None and population_host_communities_old_h != None else None)
+                                    value = None
+                            population_old_h = value if value else (population_refugees_old_h + population_internally_displaced_persons_old_h + population_host_communities_old_h)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "H", "ind_9_7")][count] = population_old_h
                             # End "Eff. Population", "Eff. (>35)", "H"
 
                             # "Eff. Population", "Eff. (>35)", "F"
+                            population_old_f = None
                             try:
-                                population_old_f = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
                             except:
                                 try:
-                                    population_old_f = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalFemmesPlus35"]
                                 except:
-                                    population_old_f = None
-                            population_old_f = population_old_f if population_old_f else (population_refugees_old_f + population_internally_displaced_persons_old_f + population_host_communities_old_f if population_refugees_old_f != None and population_internally_displaced_persons_old_f != None and population_host_communities_old_f != None else None)
+                                    value = None
+                            population_old_f = value if value else (population_refugees_old_f + population_internally_displaced_persons_old_f + population_host_communities_old_f)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "F", "ind_9_8")][count] = population_old_f
                             # End "Eff. Population", "Eff. (>35)", "F"
 
-                            old = ((population_old_f if population_old_f else 0)+(population_old_h if population_old_h else 0)) if population_old_f or population_old_h else (population - young if population and young else None)
+                            old = (population_old_f+population_old_h) if population_old_f and population_old_h else (population - young if population and young else None)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. (>35)", "T", "ind_9_9")][count] = old
 
                             
+                            value = None
                             try:
-                                population_nombre_h = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
+                                value = get_datas_dict(form_response, "population", 1)["populationNombreDeHommes"]
                             except Exception as exc:
                                 try:
-                                    population_nombre_h = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
+                                    value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeHommes"]
                                 except Exception as exc:
-                                    population_nombre_h = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = population_nombre_h if population_nombre_h else ((population_old_h if population_old_h else 0) + (population_young_h if population_young_h else 0) if population_old_h or population_young_h else None)
+                                    value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Hommes", "ind_9_1")][count] = value if value else (population_old_h + population_young_h if population_old_h and population_young_h else None)
 
+                            value = None
                             try:
-                                population_nombre_f = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
+                                value = get_datas_dict(form_response, "population", 1)["populationNombreDeFemmes"]
                             except Exception as exc:
                                 try:
-                                    population_nombre_f = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
+                                    value = get_datas_dict(old_form_response, "population", 1)["populationNombreDeFemmes"]
                                 except Exception as exc:
-                                    population_nombre_f = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = population_nombre_f if population_nombre_f else ((population_old_f if population_old_f else 0) + (population_young_f if population_young_f else 0) if population_old_f or population_young_f else None)
+                                    value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Femmes", "ind_9_2")][count] = value if value else (population_old_f + population_young_f if population_old_f and population_young_f else None)
 
 
 
                             try:
-                                total_house_holds = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                             except Exception as exc:
                                 try:
-                                    total_house_holds = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["totalHouseHolds"]
                                 except Exception as exc:
-                                    total_house_holds = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = total_house_holds
+                                    value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "Nbre total ménages dans le village", "ind_10")][count] = value
 
                             try:
-                                nombre_ethniques = get_datas_dict(form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
+                                value = get_datas_dict(form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
                             except Exception as exc:
                                 try:
-                                    nombre_ethniques = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
+                                    value = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["nombreEthniques"]
                                 except Exception as exc:
-                                    nombre_ethniques = None
-                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "ind_10_1")][count] = nombre_ethniques
+                                    value = None
+                            datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "Nbre total groupes ethniques dans le village", "ind_10_1")][count] = value
 
 
                             

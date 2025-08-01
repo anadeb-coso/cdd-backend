@@ -104,7 +104,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                 doc = doc.get('doc')
                 if doc.get('type') == "facilitator":
                     f_doc = doc
-                    cvds = get_cvds(f_doc)
+                    cvds = get_cvds(request.session.get('project_couch_id'), cycle_id, f_doc)
                     name_with_sex = f"{f_doc['sex']} {f_doc['name']}" if f_doc.get('sex') else f_doc['name']
                     name = f_doc['name']
                     sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
@@ -245,7 +245,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                 doc = doc.get('doc')
                 if doc.get('type') == "facilitator":
                     f_doc = doc
-                    cvds = get_cvds(f_doc)
+                    cvds = get_cvds(request.session.get('project_couch_id'), cycle_id, f_doc)
                     name_with_sex = f"{f_doc['sex']} {f_doc['name']}" if f_doc.get('sex') else f_doc['name']
                     name = f_doc['name']
                     sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
@@ -538,7 +538,7 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
             doc = doc.get('doc')
             if doc.get('type') == "facilitator":
                 f_doc = doc
-                cvds = get_cvds(f_doc)
+                cvds = get_cvds(project.couch_id, cycle_id, f_doc)
                 break
 
         query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
@@ -854,7 +854,7 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
             doc = doc.get('doc')
             if doc.get('type') == "facilitator":
                 f_doc = doc
-                cvds = get_cvds(f_doc)
+                cvds = get_cvds(project.couch_id, cycle_id, f_doc)
                 break
 
         query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]
@@ -1109,7 +1109,7 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
             doc = doc.get('doc')
             if doc.get('type') == "facilitator":
                 f_doc = doc
-                cvds = get_cvds(f_doc)
+                cvds = get_cvds(project.couch_id, cycle_id, f_doc)
                 break
             
         query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id]

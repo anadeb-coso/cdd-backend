@@ -14,6 +14,8 @@ from .functions import get_global_statistic_under_file_excel_or_csv, save_csv_da
 from authentication.permissions import AdminPermissionRequiredMixin
 from .functions_reports import priorities_pav_pac_situation, priorities_situation
 from dashboard.reports.excel_csv.functions_cdd_datas import all_cdd_datas
+from process_manager.models import Task
+from cdd.utils import timeout
 
 
 class StatisticView(PageMixin, LoginRequiredMixin, TemplateView):
@@ -70,6 +72,10 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
         },
     ]
 
+    # @timeout(timeout_sec=600)
+    # def dispatch(self, request, *args, **kwargs):
+    #     return super().dispatch(request, *args, **kwargs)
+
     def _get_ids_list(self, elt: str):
         if type(elt) is str:
             return [_elt for _elt in elt.split(',') if _elt and _elt not in (None, 'None', 'null', 'undefined')]
@@ -107,19 +113,19 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
                 _ids = ids_region
                  
         file_path = ""
-        try:
-            file_path = get_global_statistic_under_file_excel_or_csv(
-                facilitator_dbs_name=facilitator_dbs_name,
-                params={
-                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                    "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name'), 
-                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
-                }
-            )
+        # try:
+        file_path = get_global_statistic_under_file_excel_or_csv(
+            facilitator_dbs_name=facilitator_dbs_name,
+            params={
+                "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                "session_project_id": self.request.session.get('project_id'), 
+                "session_project_name": self.request.session.get('project_name'), 
+                "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+            }
+        )
 
-        except Exception as exc:
-            messages.info(request, gettext_lazy("An error has occurred..."))
+        # except Exception as exc:
+        #     messages.info(request, gettext_lazy("An error has occurred..."))
 
         if not file_path:
             return redirect('dashboard:facilitators:list')
@@ -359,6 +365,7 @@ class CddDatasCSVView(PageMixin, LoginRequiredMixin, TemplateView):
 
         include_form_fields = request.GET.get('include_form_fields') in (1,"1")
         include_history = request.GET.get('include_history') in (1,"1")
+        include_all_id_and_adl = request.GET.get('include_all_id_and_adl') in (1,"1")
         
         type_field = request.GET.get('type_field')
         _ids = []
@@ -381,23 +388,39 @@ class CddDatasCSVView(PageMixin, LoginRequiredMixin, TemplateView):
                 _ids = ids_region
 
 
+        ids_phase = self._get_ids_list(request.GET.get('id_phase'))
+        ids_activity = self._get_ids_list(request.GET.get('id_activity'))
+        ids_task = self._get_ids_list(request.GET.get('id_task'))
+
+        if ids_task:
+            ids_task = [_[0] for _ in list(Task.objects.filter(id__in=ids_task).values_list('id'))]
+        elif ids_activity:
+            ids_task = [_[0] for _ in list(Task.objects.filter(activity_id__in=ids_activity).values_list('id'))]
+        elif ids_phase:
+            ids_task = [_[0] for _ in list(Task.objects.filter(phase_id__in=ids_phase).values_list('id'))]
+        
+        
         file_path = ""
-        # try:
-        file_path = all_cdd_datas(
-            facilitator_dbs_name=facilitator_dbs_name,
-            params={
-                "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                "session_project_id": self.request.session.get('project_id'), 
-                "session_project_name": self.request.session.get('project_name'), 
-                "include_form_fields": include_form_fields,
-                "include_history": include_history
-            }
-        )
+        try:
+            file_path = all_cdd_datas(
+                facilitator_dbs_name=facilitator_dbs_name,
+                params={
+                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
+                    "session_project_id": self.request.session.get('project_id'), 
+                    "session_project_couch_id": self.request.session.get('project_couch_id'), 
+                    "session_project_name": self.request.session.get('project_name'), 
+                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id'), 
+                    "include_form_fields": include_form_fields,
+                    "include_history": include_history,
+                    "include_all_id_and_adl": include_all_id_and_adl,
+                    "ids_task": ids_task
+                }
+            )
 
-        # except Exception as exc:
-        #     messages.info(request, gettext_lazy("An error has occurred..."))
-        print(file_path)
-
+        except Exception as exc:
+            messages.info(request, gettext_lazy("An error has occurred..."))
+        
+        
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:

@@ -9,7 +9,7 @@
     <div class="row">
         <div class="col-12">
             <div class="clearfix"></div>
-            <div class="row">
+            <div class="row filter_fields">
                 <div class="col-1 administrative-level-filter">
                     {% bootstrap_field form.region show_label=False %}
                 </div>
@@ -35,6 +35,18 @@
                         id="clear_all_filters">
                         {% translate "Clear all filters" %}
                     </a>
+                </div>
+            </div>
+
+            <div class="row filter_fields" id="task-filter">
+                <div class="col-3 task-filter">
+                    {% bootstrap_field form_task.phase show_label=False %}
+                </div>
+                <div class="col-3 task-filter">
+                    {% bootstrap_field form_task.activity show_label=False %}
+                </div>
+                <div class="col-4 task-filter">
+                    {% bootstrap_field form_task.task show_label=False %}
                 </div>
             </div>
 
@@ -152,6 +164,7 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
         let id_facilitator = $('#id_facilitator');
+        $('#task-filter').hide();
         $(document).ready(function () {
             {% get_current_language as lang %}
             let administrative_level_ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"];
@@ -273,6 +286,12 @@
 
             
             function callNavLinkPage(){
+                if(current_nav_link.includes('cdd_datas')){
+                    $('#task-filter').show();
+                }else{
+                    $('#task-filter').hide();
+                }
+
                 if(!current_nav_links.includes('statistics') && current_nav_link.includes('statistics')){
                     loadStatistics(administrative_level_id, administrative_level_type);
                 }else if(!current_nav_links.includes('facilitators_evolutions') && current_nav_link.includes('facilitators_evolutions')){
@@ -355,12 +374,18 @@
 
 
             $("#clear_all_filters").on("click", function () {
-                $('.administrative-level-filter input').val('');
+                /*$('.administrative-level-filter input').val('');
                 $('.administrative-level-filter select').val(null).trigger('change.select2');
+                
+                $('.filter_fields input').val('');
+                $('.filter_fields select').val(null).trigger('change.select2');
+
                 administrative_level_id = null;
                 administrative_level_type = null;
                 current_nav_links = [];
-                callNavLinkPage();
+                callNavLinkPage();*/
+                
+                location.reload();
             });
 
             $('.nav-tab-toggle').on('click', function () {
@@ -370,6 +395,18 @@
 
 
         });
+    </script>
+
+    
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+            let cascade_url = "{% url 'dashboard:process_manager:get_choices_for_next_phases_activities_tasks' %}";
+            ajax_request_cascade(cascade_url, "id_phase", true);
+            ajax_request_cascade(cascade_url, "id_activity", true);
+            
+        }); 
     </script>
 
 {% endblock %}
@@ -407,6 +444,19 @@
            placeholder: "{% translate 'Facilitator' %}",
            allowClear: true,
        });
+       
+         $("#id_phase").select2({
+            placeholder: "{% translate 'Phase' %}",
+            allowClear: true,
+        });
+         $("#id_activity").select2({
+            placeholder: "{% translate 'Activity' %}",
+            allowClear: true,
+        });
+         $("#id_task").select2({
+            placeholder: "{% translate 'Task' %}",
+            allowClear: true,
+        });
 
         $('b[role="presentation"]').hide();
         $('.select2-selection__arrow').append(

@@ -70,7 +70,7 @@ class Generate(View):
                     doc = doc.get('doc')
                     if doc.get('type') == "facilitator":
                         f_doc = doc
-                        cvds = get_cvds(f_doc)
+                        cvds = get_cvds(request.session.get('project_couch_id'), self.request.session.get('cycle_couch_id'), f_doc)
                         name_with_sex = f"{f_doc['sex']} {f_doc['name']}" if f_doc.get('sex') else f_doc['name']
                         name = f_doc['name']
                         sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
@@ -204,7 +204,7 @@ class Generate(View):
                     doc = doc.get('doc')
                     if doc.get('type') == "facilitator":
                         f_doc = doc
-                        cvds = get_cvds(f_doc)
+                        cvds = get_cvds(request.session.get('project_couch_id'), self.request.session.get('cycle_couch_id'), f_doc)
                         name_with_sex = f"{f_doc['sex']} {f_doc['name']}" if f_doc.get('sex') else f_doc['name']
                         name = f_doc['name']
                         sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
