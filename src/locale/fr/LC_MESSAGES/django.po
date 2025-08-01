@@ -1751,6 +1751,10 @@ msgid "Include history"
 msgstr "Inclure les historiques"
 
 #: .\dashboard
+msgid "Include Ids and all administrative levels history"
+msgstr "Inclure les Ids et les historiques des niveaux administratifs"
+
+#: .\dashboard
 msgid "Include form fields"
 msgstr "Inclure les champs du formulaire"
 
@@ -2033,3 +2037,27 @@ msgstr "Nous avons détecté plusieurs cycles pour ce projet. Nous avons choisi 
 #: .\dashboard
 msgid "No projects found. If you have any questions, please contact the system administrator."
 msgstr "Aucun projet trouvé. Pour toute question, veuillez contacter l'administrateur du système."
+
+#: .\dashboard
+msgid "Invalidated (Reset in progress)"
+msgstr "Invalidée (Remise en cours)"
+
+#: .\dashboard
+msgid "In progress"
+msgstr "En cours"
+
+#: .\dashboard
+msgid "Not started"
+msgstr "Non démarrée"
+
+#: .\dashboard
+msgid "Invalidated (Updated after invalidation)"
+msgstr "Invalidée (Mise à jour après invalidation)"
+
+#: .\dashboard
+msgid "Invalidated (Not returned after invalidation)"
+msgstr "Invalidée (Non revenue après invalidation)"
+
+#: .\dashboard
+msgid "Completed (Awaiting validation)"
+msgstr "Achevée (En attente de validation)"
