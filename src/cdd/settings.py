@@ -297,3 +297,7 @@ CORS_ALLOW_METHODS = ["GET", "POST", "OPTIONS", "PATCH", "PUT"]
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'Access-Control-Allow-Origin',
 ]
+
+
+# Timeout global des vues (en secondes)
+VIEW_DEFAULT_TIMEOUT = 600  # Utilisé dans un décorateur personnalisé
