@@ -8,6 +8,12 @@ def exists_id(liste, id):
             return True
     return False
 
+def exists_id_in_a_dict_by_project_and_cycle(liste, id, project_couch_id, cycle_couch_id):
+    for o in liste:
+        if o.get('id') == id and o.get('project_id') == project_couch_id and o.get('cycle_id') == cycle_couch_id:
+            return o
+    return False
+
 def exists_id_in_a_dict(liste, id):
     for o in liste:
         if o.get('id') == id:

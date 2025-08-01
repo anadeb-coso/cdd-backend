@@ -81,3 +81,14 @@ HEADERS_HISTORY = [
    "updated_history", "updated_after_invalidation", "actions_by", "users_involved_in_task", "completed_history", 
    "updated_after_invalidation_history", "action_by", "action_complete_by",
 ]
+
+HEADERS_IDS_AND_ADL = [
+    '_id', '_rev', 'activity_id', 'cycle_id', 'phase_id', 'project_id', 'support_attachments', 'order', 'type', 
+    'activity_sql_id', 'phase_sql_id', 'cycles', 'cvd_sql_id', 'cvd_unit', 'cvd_village', 'cvd_villages'
+]
+
+HEADERS_FIRST_ORDER = [
+    'canton_name', 'canton_sql_id', 'administrative_level_name', 'administrative_level_id', 'name', 'activity_name', 'phase_name', 'description'
+]
+
+DATAFRAME_CDD_DATAS_BY_ORDER = ['canton_name', 'administrative_level_name']

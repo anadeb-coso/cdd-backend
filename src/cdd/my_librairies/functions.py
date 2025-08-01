@@ -5,10 +5,11 @@ def strip_accents(s):
                   if unicodedata.category(c) != 'Mn')
    
    
-def get_datas_dict(reponses_datas, key, level: int = 1):
+def get_datas_dict(reponses_datas, key, level: int = 1, default={}):
    for i in range(len(reponses_datas)):
       elt = reponses_datas[i]
       if level == 1:
          for k,v in elt.items():
-            if k == key:
-               return v
+               if k == key:
+                  return v if v else default
+   return default
