@@ -1,0 +1,144 @@
+{
+  "_id": "_design/task_stats",
+  "views": {
+    "status_count": {
+      "map": "function(doc) { if(doc.type==='task' && doc.project_id && doc.administrative_level_id) { emit([doc.project_id, doc.administrative_level_id], { total:1, completed: doc.completed?1:0, invalid: doc.validated===false?1:0, invalid_revised: (doc.validated===false && doc.updated_after_invalidation===true)?1:0 }); } }",
+      "reduce": "function(keys, values, rereduce) { var result={total:0, completed:0, invalid:0, invalid_revised:0}; values.forEach(function(v){ result.total += v.total; result.completed += v.completed; result.invalid += v.invalid; result.invalid_revised += v.invalid_revised; }); return result; }"
+    }
+  }
+}
+//js
+/*export async function fetchTaskStatusStatsByVillage(adminIds) {
+  try {
+    const projectId = project.couch_id;
+
+    // On récupère tous les stats groupés par projet + admin level
+    const response = await axios.get(
+      `${COUCHDB_URL}/_design/task_stats/_view/status_count?group=true`,
+      { auth: { username, password } }
+    );
+
+    const stats = {};
+    response.data.rows.forEach(row => {
+      const [proj, adminId] = row.key;
+      if (proj === projectId && adminIds.includes(adminId)) {
+        stats[adminId] = row.value;
+      }
+    });
+    
+    // let r = Object.keys(stats).map(adminId => ({
+    //   administrative_level_id: adminId,
+    //   ...stats[adminId]
+    // }));
+
+    return stats;
+
+  } catch (err) {
+    console.error("Erreur récupération stats :", err);
+    return [];
+  }
+}*/
+
+
+
+
+//By project_id, adm_id, phase_id, activity_id == Used
+{
+  "_id": "_design/task_stats",
+  "views": {
+    "status_count_full": {
+      "map": "function(doc) { if(doc.type==='task' && doc.project_id && doc.administrative_level_id) { var base = { total:1, completed: doc.completed?1:0, invalid: doc.validated===false?1:0, invalid_revised: (doc.validated===false && doc.updated_after_invalidation===true)?1:0 }; emit([doc.project_id, doc.administrative_level_id], base); if(doc.phase_id) { emit([doc.project_id, doc.administrative_level_id,'phase',doc.phase_id], base); } if(doc.activity_id) { emit([doc.project_id, doc.administrative_level_id,'activity',doc.activity_id], base); } } }",
+      "reduce": "function(keys, values, rereduce) { var result={total:0, completed:0, invalid:0, invalid_revised:0}; values.forEach(function(v){ result.total += v.total; result.completed += v.completed; result.invalid += v.invalid; result.invalid_revised += v.invalid_revised; }); return result; }"
+    }
+  }
+}
+//js
+/*
+export async function fetchTaskStatsFull(adminIds) {
+  try {
+    const projectId = project.couch_id;
+
+    const response = await axios.get(
+      `${COUCHDB_URL}/_design/task_stats/_view/status_count_full?group=true`,
+      { auth: { username, password } }
+    );
+    
+    const stats = {};
+
+    response.data.rows.forEach(row => {
+      const key = row.key;
+      const value = row.value;
+      const adminId = key[1];
+
+      if (!adminIds.includes(adminId)) return;
+
+      if (!stats[adminId]) stats[adminId] = { total:0, completed:0, invalid:0, invalid_revised:0 };
+
+      if (key.length === 2) {
+        // clé globale
+        stats[adminId].total = value.total;
+        stats[adminId].completed = value.completed;
+        stats[adminId].invalid = value.invalid;
+        stats[adminId].invalid_revised = value.invalid_revised;
+      } else if (key[2] === 'phase') {
+        stats[adminId][`phase_id_${key[3]}`] = value;
+      } else if (key[2] === 'activity') {
+        stats[adminId][`activity_id_${key[3]}`] = value;
+      }
+    });
+    
+    return stats;
+
+  } catch (err) {
+    console.error("Erreur récupération stats :", err);
+    return {};
+  }
+}
+*/
+
+
+
+//By phase_id, activity_id
+{
+  "_id": "_design/task_stats",
+  "views": {
+    "status_count_by_phase_activity": {
+      "map": "function(doc) { if(doc.type==='task' && doc.project_id && doc.phase_id && doc.activity_id) { emit([doc.project_id, doc.phase_id, doc.activity_id], { total:1, completed: doc.completed?1:0, invalid: doc.validated===false?1:0, invalid_revised: (doc.validated===false && doc.updated_after_invalidation===true)?1:0 }); } }",
+      "reduce": "function(keys, values, rereduce) { var result={total:0, completed:0, invalid:0, invalid_revised:0}; values.forEach(function(v){ result.total += v.total; result.completed += v.completed; result.invalid += v.invalid; result.invalid_revised += v.invalid_revised; }); return result; }"
+    }
+  }
+}
+//js
+/*export async function fetchTaskStatusByPhaseActivity(phasesActivities) {
+  // phasesActivities = [{ phase_id: '123', activity_id: '456' }, ...]
+  try {
+    const projectId = "58660287a4a18a4fdd82579233411488";
+
+    const response = await axios.get(
+      `${COUCHDB_URL}/_design/task_stats/_view/status_count_by_phase_activity?group=true`,
+      { auth: { username, password } }
+    );
+
+    const stats = {};
+    response.data.rows.forEach(row => {
+      const [proj, phaseId, activityId] = row.key;
+      if (proj === projectId &&
+          phasesActivities.some(pa => pa.phase_id === phaseId && pa.activity_id === activityId)) {
+        stats[`${phaseId}_${activityId}`] = row.value;
+      }
+    });
+
+    return Object.keys(stats).map(key => {
+      const [phase_id, activity_id] = key.split('_');
+      return {
+        phase_id,
+        activity_id,
+        ...stats[key]
+      };
+    });
+
+  } catch (err) {
+    console.error("Erreur récupération stats :", err);
+    return [];
+  }
+}*/
