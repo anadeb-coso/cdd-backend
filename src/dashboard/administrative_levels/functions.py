@@ -7,6 +7,7 @@ from dashboard.facilitators.repository.db_facilitator_repository import Facilita
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
+from cdd.models_base import CustomQuerySet
 
 
 # Créer un logger pour le débogage
@@ -348,6 +349,8 @@ def get_cascade_administrative_levels_by_administrative_level_ids(_ids, request=
                     administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(**query)
                 )
             elif isinstance(query, list):  # C'est une liste d'objets déjà filtrés
+                datas[key] = get_administrative_levels_under_json(query)
+            elif isinstance(query, CustomQuerySet):
                 datas[key] = get_administrative_levels_under_json(query)
 
 

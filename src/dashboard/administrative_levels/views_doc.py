@@ -194,7 +194,9 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         queryset = []
         nsc = NoSQLClient()
         selector = {
-            "type": "task"
+            "type": "task",
+            "project_id": self.request.session.get('project_couch_id'),
+            "cycle_id": self.request.session.get('cycle_couch_id')
         }
         # if "administrative_level" in self.request.GET and self.request.GET[
         #     "administrative_level"
@@ -224,7 +226,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             "$in": [v['administrative_id'] for v in liste_villages]
         }
         selector["sql_id"] = {
-            "$in": [45, 47]
+            "$in": [45, 47, 130, 132, 94, 96] # COSO, FA-COSO, PURS
         }
         
         object_list = []
@@ -263,7 +265,7 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                     # )]
                 for i in (_.get("attachments") if _.get("attachments") else []):
                     if (
-                        _.get("sql_id") in (45, 47) and
+                        _.get("sql_id") in [45, 47, 130, 132, 94, 96] and # COSO, FA-COSO, PURS
                         i.get("attachment") and "document du plan d'actions" in str(i.get("name")).lower()
                     ):
                         _attachments = [a["name"].lower() for a in attachments]
