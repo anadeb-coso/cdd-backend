@@ -229,6 +229,8 @@
             <div class="card">
                 <div class="card-body table-responsive">
                     <div id="facilitators-list"></div>
+
+                    <p>{% translate "Total facilitators" %} ({{ project_names }}) : {{ total_facilitators }} | {% translate "Last table update" %} : {{ last_update|date:"d/m/Y à H:i" }} </p>
                 </div>
                 <div class="overlay" id="spin">
                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
