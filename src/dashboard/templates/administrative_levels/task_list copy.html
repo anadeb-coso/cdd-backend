@@ -306,10 +306,10 @@
                                             <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
                                         </a>
                                     {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             {% translate "Download" %}
                                         </a><br />
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             <iframe style="float: left;"
                                                 src='https://view.officeapps.live.com/op/embed.aspx?src={{ attach.attachment.uri|imgAWSS3Filter }}'
                                                 width="250" height="300" frameborder='0'>
@@ -320,7 +320,7 @@
                                             </iframe>
                                         </a>
                                     {% else %}
-                                        <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                         <!-- class="btn btn-primary" data-toggle="modal"
                                         data-target="#item-attach-{{ forloop.counter }}" -->
                                             <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />

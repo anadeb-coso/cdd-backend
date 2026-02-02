@@ -430,14 +430,14 @@
                                     <div class="carousel-item text-center" #slideid{{ forloop.counter0 }}>
                                         {% if attachment.type == 'Photo' %}
                                             <a class="attachment-modal-link" target="_blank"
-                                               href="{{ attachment.attachment.uri|imgAWSS3Filter }}">
+                                               href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}">
                                                 <img class="img-fluid mx-auto d-block"
                                                      src="{{ attachment.attachment.uri|imgAWSS3Filter }}"
                                                      alt="{{ attachment.task }}" style="max-width: 100%; height: auto;">
                                             </a>
                                         {% else %}
                                             <a class="align-items-center justify-content-center attachment-modal-link"
-                                               target="_blank" href="{{ attachment.attachment.uri|imgAWSS3Filter }}">
+                                               target="_blank" href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}">
                                                 <embed src="{{ attachment.attachment.uri|imgAWSS3Filter }}" type="application/pdf" height="100%">
                                             </a>
                                         {% endif %}

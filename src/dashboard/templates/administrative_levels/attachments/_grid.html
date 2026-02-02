@@ -28,7 +28,7 @@
                     {% if attachment.attachment.uri|is_pdf %}
 
                     {% else %}
-                    <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                    <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
                         <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" class="card-img-top second-target" alt="{{ attachment.task }}">
                     </a>
                     {% endif %}

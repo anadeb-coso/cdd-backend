@@ -159,11 +159,11 @@
                                 <iframe src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="250" height="300"></iframe>
                             </a>
                         {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
-                            <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                            <a href="{% url 'download_from_url' %}?url={{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank">
                                 Download {{ attach.name }}
                             </a>
                         {% else %}
-                            <a href="{{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                            <a href="{% url 'download_from_url' %}?url={{ attach.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                 <img src="{{ attach.attachment.uri|imgAWSS3Filter }}" width="200" height="200" />
                             </a>
                         {% endif %}

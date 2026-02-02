@@ -47,10 +47,10 @@
                                             ></iframe>
                                         </a>
                                     {% elif ".docx" in attachment.attachment.uri or ".doc" in attachment.attachment.uri %}
-                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             {% translate "Download" %}
                                         </a><br />
-                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                             <iframe style="float: left;"
                                                 src='https://view.officeapps.live.com/op/embed.aspx?src={{ attachment.attachment.uri|imgAWSS3Filter }}'
                                                 {% comment %} width="250" height="300"  {% endcomment %}
@@ -63,10 +63,10 @@
                                             </iframe>
                                         </a>
                                     {% else %}
-                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
+                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
                                         <!-- class="btn btn-primary" data-toggle="modal"
                                         data-target="#item-attach-{{ forloop.counter }}" -->
-                                            <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" 
+                                            <img src="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" 
                                             {% comment %} width="200" height="200"  {% endcomment %}
                                             width="100%"
                                             />
@@ -87,7 +87,7 @@
 
 
                     {% else %}
-                    <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
+                    <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
                         <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" class="card-img-top second-target" alt="{{ attachment.task }}">
                     </a>
                     {% endif %}
