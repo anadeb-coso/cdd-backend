@@ -100,7 +100,10 @@ def user_manager_email_notification(user, mail_type, motif, deadline):
             [user['email']], 
             [user['email']]
         )
-        return _("Mail sent successfully")
+        if msg == 'error':
+            return _("An error occurred while sending the email")
+        else:
+            return _("Mail sent successfully")
     except Exception as exc:
         return _("An error occurred while sending the email")
         
