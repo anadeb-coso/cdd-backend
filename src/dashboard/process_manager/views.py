@@ -218,14 +218,16 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 }
                 actions_by.insert(0, action_by)
                 #End
-
-                nsc.update_doc_uncontrolled(db, task['_id'], {
+                _data = {
                     "validated": bool(action_code),
                     "date_validated": date_validated if bool(action_code) else None,
                     "action_by": action_by,
                     "actions_by": actions_by
-                    }
-                )
+                }
+                if "updated_after_invalidation" in task and not bool(action_code):
+                    _data["updated_after_invalidation"] = False
+
+                nsc.update_doc_uncontrolled(db, task['_id'], _data)
 
                 #Send Mail - SMS
                 if not bool(action_code):
@@ -289,10 +291,10 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     if facilitator_grm:
                         facilitator_object = Facilitator.objects.filter(email=facilitator_grm['representative']['email']).first()
                 
-
+                    msg = 'error'
                     try:
                         msg = send_email(
-                            subject,
+                            f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {subject}',
                             "mail/send/comment",
                             {
                                 "datas": {
@@ -314,11 +316,14 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                                 },
                                 "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                             },
-                            list(set([facilitator_email, facilitator_object.email, request.user.email])) if facilitator_email else [facilitator_object.email, request.user.email]
+                            list(set([facilitator_email, facilitator_object.email, request.user.email])) if facilitator_email else [facilitator_object.email, request.user.email],
+                            project_name=task.get("project_name", self.request.session.get('project_name', 'COSO'))
                         )
                         mail_message = gettext_lazy("Mail sent successfully")
                     except Exception as exc:
                         # print(exc)
+                        pass
+                    if msg == 'error':
                         mail_message = gettext_lazy("An error occurred while sending the email")
 
                     try:
@@ -457,6 +462,12 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
                 messages.success(request, "No cycle is defined for this project")
 
             
+            tree_structure_projects = projects[0].build_the_tree_structure()
+            self.request.session['tree_structure_projects_ids'] = [p.id for p in tree_structure_projects]
+            self.request.session['tree_structure_projects_names'] = [p.name for p in tree_structure_projects]
+
+            self.request.session['tree_structure_projects_mis_ids'] = [mis_objects_call.get_object(ProjectMis, name=p.name).id for p in tree_structure_projects]
+
             next_page = self.request.GET.get('next')
             if next_page:
                 return HttpResponseRedirect(resolve_url(next_page or settings.LOGIN_REDIRECT_URL))
