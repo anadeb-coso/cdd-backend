@@ -38,7 +38,8 @@ parameterized==0.8.1
 platformdirs==2.5.2
 pluggy==1.0.0
 pre-commit==2.18.1
-psycopg2-binary==2.9.3
+# psycopg2-binary==2.9.3
+psycopg2-binary==2.9.9
 py==1.11.0
 pycodestyle==2.8.0
 pyflakes==2.4.0
@@ -51,7 +52,7 @@ pytz==2022.1
 PyYAML==6.0
 requests==2.27.1
 ruamel.yaml==0.17.21
-ruamel.yaml.clib==0.2.6
+ruamel.yaml.clib #==0.2.6
 s3transfer==0.6.0
 six==1.16.0
 soupsieve==2.3.2.post1
@@ -63,9 +64,11 @@ urllib3==1.26.9
 virtualenv==20.14.1
 celery==5.2.7
 django-celery-results==2.5.0
-pandas==1.5.0
+numpy==1.23.3
 openpyxl==3.0.10
+pandas==1.5.0
 twilio==8.5.0
 shortuuid==1.0.1
 Pillow
 django-cors-headers==3.10.0
+djangorestframework-simplejwt==4.8.0

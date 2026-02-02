@@ -69,3 +69,4 @@ twilio==8.5.0
 shortuuid==1.0.1
 Pillow
 django-cors-headers==3.10.0
+djangorestframework-simplejwt==4.8.0
