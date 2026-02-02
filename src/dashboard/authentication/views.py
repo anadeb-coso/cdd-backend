@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.http import Http404
 
 from authentication.models import Facilitator
+from process_manager.models import Project
 
 
 def handler400(request, exception):
@@ -162,7 +163,7 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             else:
                 User.objects.using('mis').create(**a_dict)
                 user = User.objects.using('mis').get(username=instance.username)
-            print(groups, user_permissions)
+            # print(groups, user_permissions)
             instance.groups.set([])
             user.groups.set([])
             instance.user_permissions.set([])
@@ -173,7 +174,10 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             for u_p in user_permissions:
                 instance.user_permissions.add(u_p)
                 user.user_permissions.add(Permission.objects.using('mis').get(name=u_p.name))
-                
+            
+            if not self.id and hasattr(user, 'projects'):
+                instance.projects.add(*(Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()))
+
             instance.save()
             user.save(using='mis')
             #End
