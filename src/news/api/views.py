@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from datetime import datetime
 import locale
+from django.urls import reverse_lazy
 
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 # from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
@@ -92,6 +93,10 @@ class RestSaveNews(APIView):
                         pass
                     else:
                         locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+                        try:
+                            url = f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:news:detail', args=[news.id])}"
+                        except:
+                            url = "#"
                         msg = send_email(
                             f"Nouvelle - COSO : {news.title}",
                             "mail/send/news",
@@ -100,7 +105,7 @@ class RestSaveNews(APIView):
                                 },
                                 "user": {
                                 },
-                                "url": f"",
+                                "url": url,
                                 "news": news,
                                 "event_date": news.event_date.strftime('%A %d %B %Y à %H:%M') if news.event_date else None,
                                 "publication_date": news.publication_date.strftime('%A %d %B %Y à %H:%M') if news.publication_date else None,
@@ -108,15 +113,17 @@ class RestSaveNews(APIView):
                                 "files_count": news.get_files().count() if news.get_files().count() <= 3 else 3,
                                 "villages_exist": (len([ad for ad in news.administrative_levels if ad.get('type') == "Village"]) != 0) if news.administrative_levels else False
                             },
-                            [
-                                (subscrib.user.email if subscrib.user else subscrib.facilitator.email) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
-                            ],
+                            list(filter(None, [
+                                (subscrib.user.email if subscrib.user else (subscrib.facilitator.email if (subscrib.facilitator and not subscrib.facilitator.develop_mode and not subscrib.facilitator.training_mode) else None)) for subscrib in  Subscription.objects.filter(category_id=news.category_id)
+                            ])),
                             [
                                 "cosotogosig@gmail.com"
                             ]
                         )
-                        
-                        mail_message = gettext_lazy("Mail sent successfully")
+                        if msg == 'error':
+                            mail_message = gettext_lazy("An error occurred while sending the email")
+                        else:
+                            mail_message = gettext_lazy("Mail sent successfully")
                 except Exception as exc:
                     print(exc)
                     mail_message = gettext_lazy("An error occurred while sending the email")
