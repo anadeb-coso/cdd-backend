@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 from pathlib import Path
 import os
 import environ
+from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from corsheaders.defaults import default_headers
 
@@ -69,6 +70,8 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'django_celery_results',
     'corsheaders',
+    'rest_framework_simplejwt',
+    'rest_framework.authtoken',
 ]
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
@@ -208,9 +211,28 @@ NO_SQL_PASS = env('NO_SQL_PASS')
 NO_SQL_URL = env('NO_SQL_URL')
 
 
+#REST API & TOKEN
+# REST_FRAMEWORK = {
+#     # https://github.com/tfranzel/drf-spectacular
+#     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+# }
 REST_FRAMEWORK = {
-    # https://github.com/tfranzel/drf-spectacular
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
+}
+REST_AUTH_REGISTER_SERIALIZERS = {
+    'REGISTER_SERIALIZER': 'accounts.serializers.CustomRegisterSerializer',
+}
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=3650),  # 10 ans (365 jours × 10)
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=3650),  # 10 ans aussi si besoin
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': False,
+    'UPDATE_LAST_LOGIN': False,
 }
 
 
@@ -269,6 +291,7 @@ EMAIL_PORT = env('EMAIL_PORT')
 EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
 # Twilio
 # https://www.twilio.com/docs

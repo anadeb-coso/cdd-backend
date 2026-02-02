@@ -6,7 +6,8 @@ from process_manager.models import EmailAddressesWhichSendEmails
 def send_email(
         subject, template_path_without_extension, datas, 
         to,
-        cc = []):
+        cc = [],
+        project_name = None):
     """
     [
             "sig.anadeb@gmail.com", 
@@ -16,8 +17,10 @@ def send_email(
             "mass.zato36@gmail.com"
     ]
     """
+#     to = ['adaboub20100@gmail.com']
+#     cc = []
     if not cc:
-        e = EmailAddressesWhichSendEmails.objects.filter(name="task_invalidated_coso").first()
+        e = EmailAddressesWhichSendEmails.objects.filter(name="task_invalidated_coso", project__name=project_name).first()
         if e:
             cc = e.email_addresses if e.email_addresses else []
 
@@ -31,7 +34,7 @@ def send_email(
         msg.attach_alternative(html_content, "text/html")
         msg.content_subtype = 'html'
         result = msg.send()
-
+        print('ici success')
         return "success"
     except Exception as e:
         return "error"

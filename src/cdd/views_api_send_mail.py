@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse_lazy
 from django.contrib.auth.models import User
+from datetime import datetime
 
 
 from cdd.utils import get_administrative_region_name
@@ -26,9 +27,10 @@ class RestSendMail(APIView):
         # print(fields_updated)
         # print(attachments_updated)
 
-        subject = f'{_("Invalidated task reviewed by the Facilitator")} : {task.get("name")}'
+        subject = f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {_("Invalidated task reviewed by the Facilitator")} : {task.get("name")}'
         administrative_region_name = get_administrative_region_name(task.get("administrative_level_id"))
         
+        msg = 'error'
         try:
             locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
             msg = send_email(
@@ -54,12 +56,15 @@ class RestSendMail(APIView):
                     },
                     "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                 },
-                [facilitator.get('email'), task['action_by']['user_email']]
+                [facilitator.get('email'), task['action_by']['user_email']],
+                project_name=task.get("project_name", "COSO")
                 # ["adaboubvincent@gmail.com"],
                 # ["adaboubvincent@gmail.com"]
             )
             mail_message = _("Mail sent successfully")
         except Exception as exc:
+            pass
+        if msg == 'error':
             mail_message = _("An error occurred while sending the email")
             return Response(
                 {

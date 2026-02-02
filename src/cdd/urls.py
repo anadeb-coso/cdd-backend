@@ -20,7 +20,7 @@ from django.urls import path
 from django.conf.urls.i18n import i18n_patterns
 
 from . import views
-from cdd.my_librairies.download_file import download_file_view
+from cdd.my_librairies.download_file import download_file_view, download_from_url
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
@@ -41,9 +41,8 @@ urlpatterns = [
     path('super/', include('cdd.urls_super')),
     
     path('api/', include('cdd.urls_api')),
-    path('download-file-view/<str:path>/<str:content_type>/', 
-         download_file_view, 
-         name='download_file_view'),
+    path('download-file-view/<str:path>/<str:content_type>/', download_file_view, name='download_file_view'),
+    path('download-from-url/', download_from_url, name='download_from_url'),
 ]
 
 urlpatterns += i18n_patterns(
