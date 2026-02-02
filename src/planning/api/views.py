@@ -26,7 +26,7 @@ class RestSaveActivity(APIView):
     serializer_class = SaveActivitySerializer
     
     def post(self, request, *args, **kwargs):
-        # try:
+        try:
             id = request.data.get('id')
             user = None
 
@@ -59,7 +59,7 @@ class RestSaveActivity(APIView):
                         f'{activity.planned_datetime_start.strftime("%l")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %F %Y")} {gettext_lazy("to")} {activity.planned_datetime_end.strftime("%l")} {gettext_lazy("the")} {activity.planned_datetime_end.strftime("%d %F %Y")}'
                     )
                     msg = send_email(
-                        f'{gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
+                        f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
                         "mail/send/comment",
                         {
                             "datas": {
@@ -79,22 +79,26 @@ class RestSaveActivity(APIView):
                         [e for e in list([
                             activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None)
                         ] + [(v.user.email if v.user else (v.facilitator.email if v.facilitator else None)) for v in activity.get_activities_validate()]) if e],
-                        []
+                        [],
+                        project_name=activity.project.name if activity.project else None
                     )
-                    mail_message = gettext_lazy("Mail sent successfully")
+                    if msg == 'error':
+                        mail_message = gettext_lazy("An error occurred while sending the email")
+                    else:
+                        mail_message = gettext_lazy("Mail sent successfully")
                 except:
                     mail_message = gettext_lazy("An error occurred while sending the email")
                 
             if not id:
                 if request.data.get('username'):
-                    user = User.objects.filter(username=request.data.get('username')).first()
+                    user = User.objects.filter(Q(email=request.data.get('username')) | Q(username=request.data.get('username')), is_active=True).first()
                     user = Facilitator.objects.filter(
-                        username=request.data.get('username'),
+                        Q(email=request.data.get('username')) | Q(username=request.data.get('username')), active=True
                     ).first() if not user else user
                 if not user and request.data.get('email'):
-                    user = User.objects.filter(email=request.data.get('email')).first()
+                    user = User.objects.filter(Q(email=request.data.get('email')) | Q(username=request.data.get('email')), is_active=True).first()
                     user = Facilitator.objects.filter(
-                            email=request.data.get('email'),
+                            Q(email=request.data.get('email')) | Q(username=request.data.get('email')), active=True
                         ).first() if not user else user
                 
                 if user and not hasattr(user, 'no_sql_user'):
@@ -110,11 +114,11 @@ class RestSaveActivity(APIView):
                     many=False).data, 
                 status=status.HTTP_200_OK
             )
-        # except Exception as exc:
-        #     return Response(
-        #         {'error': exc.__str__()}, 
-        #         status=status.HTTP_404_NOT_FOUND
-        #     )
+        except Exception as exc:
+            return Response(
+                {'error': exc.__str__(), 'status': 'error'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class RestSaveActivityFile(APIView):
@@ -373,6 +377,19 @@ class RestGetActivityByAttributes(APIView):
     
     def post(self, request, *args, **kwargs):
         try:
+            if 'project_id' in request.data:
+                project_id = request.data['project_id']
+                del request.data['project_id']
+                project = Project.objects.get(id=project_id)
+                tree_projects = project.build_the_tree_structure()
+                request.data['project_id__in'] = [p.id for p in tree_projects]
+            if 'facilitator__username' in request.data and request.data['facilitator__username'] and '@' in request.data['facilitator__username']:
+                username = request.data['facilitator__username']
+                request.data['facilitator__username'] = Facilitator.objects.get(email=username).username
+            if 'user__username' in request.data and request.data['user__username'] and '@' in request.data['user__username']:
+                username = request.data['user__username']
+                request.data['user__username'] = User.objects.get(email=username).username
+
             return Response(
                 ActivitySerializer(
                     Activity.objects.filter(**dict(request.data)),

@@ -45,6 +45,14 @@ class Activity(BaseModel):
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="planning_activities")
+    
+    total_men_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total men present over 35"))
+    total_women_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total women present over 35"))
+    total_people_present_over_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present over 35"))
+    total_men_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total men present under 35"))
+    total_women_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total women present under 35"))
+    total_people_present_under_35 = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present under 35"))
+    total_people_present = models.IntegerField(null=True, blank=True, verbose_name=_("Total people present"))
 
     def get_files(self):
         return self.activityfile_set.get_queryset().order_by("-date_taken")
