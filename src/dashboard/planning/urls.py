@@ -19,6 +19,7 @@ urlpatterns = [
     
     path('download-anonyme-planning/', views.PlanningDownloadAnonymeView.as_view(), name='download_anonyme_planning'),
     path('reports/', views.PlanningCSVView.as_view(), name="app_excel_reports_planning"),
+    path('reports-anonymous/', views.PlanningAnonymousCSVView.as_view(), name="app_excel_reports_planning_anonymous"),
 
     path('map-tracking-user/', include('dashboard.planning.urls_map')),
 ]

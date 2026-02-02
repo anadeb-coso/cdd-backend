@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
@@ -15,6 +15,7 @@ import json
 import pytz
 from django.shortcuts import redirect
 import locale
+import itertools
 
 from authentication.models import Facilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
@@ -35,11 +36,13 @@ from cdd.utils import elements_communs
 from dashboard.planning.forms import TaskPlanCommentForm, DownloadAnonymePlanningForm
 from subprojects.models import Project as MisProject
 from process_manager.models import Project, Phase, Activity as ProcessActivity
-from planning.models import Activity, ActivityComment, ActivityValidate, ActivityFile
+from planning.models import Activity, ActivityComment, ActivityValidate, ActivityFile, ValidationGroupsProcess
 from cdd.functions import is_datetime_in_past_or_now, times_split, get_dates_between
 from dashboard.planning.functions_reports import planning_csv
 from cdd.my_librairies.mail.send_mail import send_email
 from dashboard.templatetags.custom_tags import get_group_high
+from authentication.functions import get_group_high as auth_get_group_high
+from authentication import PROFESSIONAL_GROUPS, FACILITATORS_TYPES_WITH_GROUP_NAME
 
 
 class PlanMixin:
@@ -110,8 +113,24 @@ class PlanningListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['facilitators_users'] = sorted([
             {'username': f_u.username, 'name': f_u.name if hasattr(f_u, 'no_sql_user') else f"{f_u.last_name} {f_u.first_name}"} for f_u in (list(context['facilitators']) + list(context['users']))
         ], key=lambda obj: obj["name"] if obj["name"] else '')
+        
+        context['user_groups'] = sorted([
+            {'name': g.name, 'label': auth_get_group_high(g)} for g in Group.objects.all() if auth_get_group_high(g) != gettext_lazy("User").__str__()
+        ], key=lambda item: item['label'])
 
-            
+        context['user_groups'].append({'name': 'Others', 'label': gettext_lazy("Others").__str__()})
+        
+        validators_g_process = ValidationGroupsProcess.objects.filter(
+            validators_groups__in=set(self.request.user.groups.values_list('id', flat=True)),
+            project__in=self.request.session.get('tree_structure_projects_ids')
+        )
+
+        planners_groups = [p_g.name for v_g_p in validators_g_process for p_g in v_g_p.planners_groups.all()]
+
+        for user_group in context['user_groups']:
+            if user_group['name'] in planners_groups:
+                user_group['attr'] = 'selected'
+
         return context
     
 
@@ -158,37 +177,73 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             return 2
     
     def get_results(self):
+        nsc = NoSQLClient()
+        eadls = nsc.get_db('eadls')
         
         project = Project.objects.get(id=self.request.session.get('project_id'))
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        tree_projects = project.build_the_tree_structure()
+        tree_projects_names = [p.name for p in tree_projects]
+        tree_projects_ids = [p.id for p in tree_projects]
 
-        id_region = self.request.GET.get('id_region')
-        id_prefecture = self.request.GET.get('id_prefecture')
-        id_commune = self.request.GET.get('id_commune')
-        id_canton = self.request.GET.get('id_canton')
-        id_village = self.request.GET.get('id_village')
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+        tree_projects_mis = mis_objects_call.filter_objects(MisProject, name__in=tree_projects_names)
+
+        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        tree_projects_mis_ids = [p.id for p in tree_projects_mis]
+
         type_field = self.request.GET.get('type_field')
 
-        ids_canton = self.request.GET.getlist('id_canton[]')
-        ids_village = self.request.GET.getlist('id_village[]')
+        ids_canton = list(filter(None, self.request.GET.getlist('id_canton[]')))
+        ids_village = list(filter(None, self.request.GET.getlist('id_village[]')))
 
         current_week = self.request.GET.get('current_week')
         current_monday_date = self.request.GET.get('current_monday_date')
         show_my_calendar = self.request.GET.get('show_my_calendar') in ('true', True)
+        my_area = self.request.GET.get('my_area') in ('true', True)
         task_status = self.request.GET.get('task_status', 'All')
         task_type = self.request.GET.get('task_type', 'All')
-        username_facilitator_user = self.request.GET.getlist('username_facilitator_user[]')
+        username_facilitator_user = list(filter(None, self.request.GET.getlist('username_facilitator_user[]')))
+
+        user_groups = list(filter(None, self.request.GET.getlist('user_groups[]')))
 
         is_training = bool(self.request.GET.get('is_training', "False") == "True")
         is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
 
-        # if (id_village in (None, 'null', '', 'All') and current_week in (None, 'null', '', 'All') and \
-        #         task_status in (None, 'null', '', 'All') and username_facilitator_user in (None, 'null', '', 'All')):
-        #     id_canton = id_canton if id_canton != '' else '1973'
-        #     type_field = type_field if type_field != 'all' else 'canton'
         
-
+        #AREA
+        liste_my_area_villages_ids = []
+        if my_area:
+            try:
+                facilitator_grm = eadls.get_query_result({
+                    "type": "adl",
+                    "representative.email": self.request.user.email
+                })[:][0]
+                liste_my_area_villages_ids = facilitator_grm['administrative_regions']
+                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
+                liste_my_area_villages_ids = list(set(
+                    (liste_my_area_villages_ids if liste_my_area_villages_ids else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
+                ))
+            except:
+                pass
+            liste_my_area_villages_ids = [int(ad) for ad in liste_my_area_villages_ids if str(ad).isdigit()]
+            
+        #END AREA
+        
+        def get_facilitators_emails(villages_ids):
+            facilitators_stabilized = eadls.get_view_result(
+                "_design/adl_village_filter", "by_village_id", 
+                keys=[int(v) for v in villages_ids], 
+                include_docs=True
+            )
+            if facilitators_stabilized:
+                f_s_emails = []
+                for row in facilitators_stabilized[:]:
+                    elt = row['doc']
+                    if elt and elt.get('representative') and elt.get('representative').get('email') not in f_s_emails:
+                        f_s_emails.append(elt.get('representative').get('email'))
+            
+            return f_s_emails
+        
         if current_week and current_week != 'null':
             current_week = current_week
             current_monday_date_object = datetime.strptime(current_monday_date, "%Y/%m/%d").date()
@@ -201,170 +256,126 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         _id = []
         facilitators = []
         liste_villages_ids = None
-        
-        if (id_region or id_prefecture or id_commune or ids_canton or ids_village) and type_field != 'clear':
-            if id_region:
-                _id = id_region
-            if id_prefecture:
-                _id = id_prefecture
-            if id_commune:
-                _id = id_commune
+        criteria = {
+            'develop_mode': is_develop,
+            'training_mode': is_training,
+            'projects__id': tree_projects_ids
+        }
+
+        if (ids_canton or ids_village) and type_field != 'clear':
             if ids_canton:
                 _id = ids_canton
             if ids_village:
                 _id = ids_village
-
-            liste_prefectures = []
-            liste_communes = []
-            liste_cantons = []
+                
             liste_villages = []
 
             liste_villages = get_cascade_villages_by_administrative_level_id(_id)
             liste_villages_ids = [int(v['administrative_id']) for v in liste_villages]
+            
+            liste_villages_ids = list(set(liste_villages_ids) & set(liste_my_area_villages_ids)) if liste_my_area_villages_ids else liste_villages_ids
+            
+            criteria['email__in'] = get_facilitators_emails(liste_villages_ids)
 
-            if type(_id) is list and _id:
-                assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
-                    administrative_level_id__in=liste_villages_ids,
-                    project_id=project_mis_id,
-                    activated=True
-                )
+        if liste_my_area_villages_ids and 'email__in' not in criteria:
+            criteria['email__in'] = get_facilitators_emails(liste_my_area_villages_ids)
+        
 
-                criteria = FacilitatorCriteria(
-                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=is_develop,
-                    training_mode=is_training,
-                    # active=True,
-                    projects__id=[self.request.session.get('project_id')]
-                )
-            else:
-                criteria = FacilitatorCriteria(
-                    develop_mode=is_develop,
-                    training_mode=is_training,
-                    # active=True,
-                    projects__id=[self.request.session.get('project_id')]
-                )
-        else:
-            is_training = bool(self.request.GET.get('is_training', "False") == "True")
-            is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
-            criteria = FacilitatorCriteria(
-                develop_mode=is_develop,
-                training_mode=is_training,
-                # active=True,
-                projects__id=[self.request.session.get('project_id')]
-            )
         facilitators = []
         users = []
-        
-        if username_facilitator_user:
-            facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-            users = User.objects.filter(projects__in=[self.request.session.get('project_id')])
-            if 'All' not in username_facilitator_user and '' not in username_facilitator_user:
-                facilitators = facilitators.filter(username__in=username_facilitator_user)
-                users = users.filter(username__in=((username_facilitator_user+[self.request.user.id]) if show_my_calendar else username_facilitator_user))
-            
+        criteria_users = {'projects__in': tree_projects_ids}
+
+        if show_my_calendar:
+            users = User.objects.filter(username__in=(username_facilitator_user+[self.request.user.username]))
+        elif (username_facilitator_user or user_groups):
+
+            if username_facilitator_user and 'All' not in username_facilitator_user and '' not in username_facilitator_user:
+                criteria['username__in'] = username_facilitator_user
+                criteria_users['username__in'] = ((username_facilitator_user+[self.request.user.username]) if show_my_calendar else username_facilitator_user)
+            if user_groups and 'All' not in user_groups and '' not in user_groups:
+                groups = user_groups.copy()
+                if 'Others' in user_groups:
+                    groups = Group.objects.exclude(name__in=PROFESSIONAL_GROUPS).values_list('name', flat=True)
+                criteria_users['groups__name__in'] = groups
+                
+                roles = [FACILITATORS_TYPES_WITH_GROUP_NAME.get(r) for r in user_groups if r in FACILITATORS_TYPES_WITH_GROUP_NAME]
+                if roles:
+                    criteria['facilitator_type__in'] = roles
+                else:
+                    criteria['facilitator_type__in'] = groups
+
+            facilitators = FacilitatorRepository().find_by_criteria(criteria=FacilitatorCriteria(**criteria)).distinct()
+            users = User.objects.filter(**criteria_users).distinct()
+
         _facilitators =  {
-            str(current_week): [
-                # {
-                #     "person": "DJOLOGUE Kanfiguin",
-                #     "tasks": [
-                #         { "day": 0, "task": "Tâche 1", "color": "#b2dfdb", "datetime": "2024-08-13T08:00" },
-                #         { "day": 0, "task": "Tâche 11", "color": "#b2dfdb", "datetime": "2024-08-13T17:00" },
-                #         { "day": 4, "task": "Tâche 2", "color": "#ffccbc", "datetime": "2024-08-13T12:00" }
-                #     ]
-                # }
-            ]
+            str(current_week): []
         }
-        
-        """
-        # nsc = NoSQLClient()
-        # for f in facilitators:
-        #     facilitator_database = nsc.get_db(f.no_sql_db_name)
-        #     query_result = facilitator_database.get_query_result({
-        #         "type": {
-        #             "$in": ['task', 'free_task']
-        #         },
-        #         "planning_dates": {
-        #             # "$exists": True
-        #             "$in": week_dates
-        #         }
-        #     })
-        #     _f = None
-        #     if query_result and query_result[:]:
-        #         tasks_planed = []
-
-        #         for task in query_result[:]:
-        #             tasks_planed += [
-        #                 {
-        #                     "planning": p,
-        #                     "day": datetime.strptime(p['planned_date'], "%Y-%m-%d").date().weekday(),
-        #                     "task": task['name'],
-        #                     "color": PHASES_COLORS[PHASES_WITH_THEIR_NUMBERS[task['phase_name']]],
-        #                     "datetime": p['planned_datetime_start'],
-        #                     "task_order": task.get('task_order'),
-        #                     "task__id": task.get('_id'),
-        #                     "no_sql_db_name": f.no_sql_db_name
-        #                 } for p in task['planning'] if p['planned_date'] in week_dates and (
-        #                         (task_status == 'completed' and (p.get('completed') or p.get('is_another'))) or (task_status == 'pending' and (not p.get('completed') and not p.get('is_another'))) or (task_status in  ('All', ''))
-        #                 )
-        #             ]
-
-        #         _f = {
-        #             # 'facilitator': f, 
-        #             'person': f.name, 'tasks': tasks_planed}
-
-
-        #     if _f:
-        #         _facilitators[str(current_week)].append(_f)
-
-        # return _facilitators
-        """
 
         planned_date_list = [datetime.strptime(d, '%Y-%m-%d').date() for d in week_dates]
         planned_datetime_list = [parse_datetime(f"{d}T00:00:00.000000Z").replace(tzinfo=pytz.UTC) for d in week_dates]
         planned_datetime_list_query = Q()
-        # planned_datetime_list_query |= (Q(planned_datetime_start__lte=planned_datetime_list[0]) & Q(planned_datetime_end__gte=planned_datetime_list[0]))
-        # planned_datetime_list_query |= (Q(planned_datetime_start__lte=planned_datetime_list[-1]) & Q(planned_datetime_end__gte=planned_datetime_list[-1]))
+        
         for _date in planned_datetime_list:
             planned_datetime_list_query |= (Q(planned_datetime_start__lte=_date) & Q(planned_datetime_end__gte=_date))
 
-        activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | Q(Q(type="vacation") & planned_datetime_list_query), project_id=project.id)
-        
-        if show_my_calendar:
-            activities = activities.filter(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
-        
-        if facilitators:
-            activities.filter(facilitator_id__in=[f.id for f in facilitators])
-        
-        if task_type == "free_tasks":
-            activities = activities.filter(type="free_task")
-        elif task_type == "existing_tasks":
-            activities = activities.filter(type="task")
-        elif task_type == "vacations":
-            activities = activities.filter(type="vacation")
+        # activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | Q(Q(type="vacation") & planned_datetime_list_query), project_id__in=tree_projects_ids)#, project_id=project.id)
+        query = Q(
+            Q(planned_date__in=planned_date_list) | planned_datetime_list_query,
+            project_id__in=tree_projects_ids
+        )
 
-        if task_status == 'completed':
-            activities = activities.filter(Q(completed=True) | Q(is_another=True))
-        elif task_status == 'validated':
-            activities = activities.filter(validated=True)
-        elif task_status == 'not_validated':
-            activities = activities.filter(validated=False)
-        elif task_status == 'pending':
-            activities = activities.filter(validated=None)
-        elif task_status == 'pending_to_review':
-            activities = activities.filter(edit_after_invalidation=True)
-        elif task_status == 'undo':
-            activities = activities.filter(undo=True)
-        elif task_status == 'pending_to_do':
-            activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(validated=True))
-        elif task_status == 'deadline_passed':
-            activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(planned_datetime_end__lte=timezone.now())).exclude(undo=True)
-            
-        if liste_villages_ids != None:
-            query = Q()
-            for item in liste_villages_ids:
-                query |= Q(administrative_level_ids__contains=[item])
-            activities = activities.filter(query)
+        if show_my_calendar:
+            # activities = activities.filter(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
+            query &= Q(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
         
+        # if task_type == "free_tasks":
+        #     activities = activities.filter(type="free_task")
+        # elif task_type == "existing_tasks":
+        #     activities = activities.filter(type="task")
+        # elif task_type == "vacations":
+        #     activities = activities.filter(type="vacation")
+        type_map = {"free_tasks": "free_task", "existing_tasks": "task", "vacations": "vacation"}
+        if task_type in type_map:
+            query &= Q(type=type_map[task_type])
+
+        # if task_status == 'completed':
+        #     activities = activities.filter(Q(completed=True) | Q(is_another=True))
+        # elif task_status == 'validated':
+        #     activities = activities.filter(validated=True)
+        # elif task_status == 'not_validated':
+        #     activities = activities.filter(validated=False)
+        # elif task_status == 'pending':
+        #     activities = activities.filter(validated=None)
+        # elif task_status == 'pending_to_review':
+        #     activities = activities.filter(edit_after_invalidation=True)
+        # elif task_status == 'undo':
+        #     activities = activities.filter(undo=True)
+        # elif task_status == 'pending_to_do':
+        #     activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(validated=True))
+        # elif task_status == 'deadline_passed':
+        #     activities = activities.filter(Q(completed=None) & Q(is_another=None) & Q(planned_datetime_end__lte=timezone.now())).exclude(undo=True)
+        status_filters = {
+            'completed': Q(Q(completed=True) | Q(is_another=True)),
+            'validated': Q(validated=True),
+            'not_validated': Q(validated=False),
+            'pending': Q(validated=None),
+            'pending_to_review': Q(edit_after_invalidation=True),
+            'undo': Q(undo=True),
+            'pending_to_do': Q(completed=None, is_another=None, validated=True),
+            'deadline_passed': Q(Q(completed=None, is_another=None, planned_datetime_end__lte=timezone.now()) & ~Q(undo=True)),
+        }
+        if task_status in status_filters:
+            query &= status_filters[task_status]
+            
+        if not self.request.user.groups.filter(name="Supervisor").exists() and liste_villages_ids != None and not my_area:
+            _query = Q()
+            for item in liste_villages_ids:
+                _query |= Q(administrative_level_ids__contains=[item])
+            # activities = activities.filter(_query)
+            query &= _query
+        
+        activities = Activity.objects.filter(query)
+
         if not show_my_calendar:
             activities_facilitators = activities.filter(facilitator__in=facilitators)
             for f in facilitators:
@@ -424,7 +435,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
 
 
         activities_users = activities.filter(user__in=users)
-        # users = User.objects.filter(id__in=list(set([u[0] for u in activities.values_list('user')])))
+        
         for u in users:
             activities_u = activities_users.filter(user_id=u.id)
             if activities_u.exists():
@@ -566,6 +577,7 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
 
 
         context['task'] = model_to_dict(activity)
+        context['task']['project_name'] = activity.project.name
         context['task']['phase_name'] = activity.phase.name if activity.phase else None
         context['task']['activity_name'] = activity.name
         context['task']['user'] = model_to_dict(activity.user) if activity.user else None
@@ -599,6 +611,7 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
         context['activity_status_color_description'] = VALIDATION_PROCESS_COLORS_DESCRIPTION[
             context['activity_status_color']
         ]
+        context['COMPONENTS'] = COMPONENTS
 
         return context
 
@@ -748,7 +761,7 @@ class SaveValidationView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin
                         f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")} {gettext_lazy("to")} {activity.planned_datetime_end.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_end.strftime("%d %B %Y")}'
                     )
                     msg = send_email(
-                        f'{gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
+                        f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
                         "mail/send/comment",
                         {
                             "datas": {
@@ -774,7 +787,8 @@ class SaveValidationView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin
                         [e for e in list([
                             activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None)
                         ] + [(v.user.email if v.user else (v.facilitator.email if v.facilitator else None)) for v in activity.get_activities_validate()]) if e],
-                        []
+                        [],
+                        project_name=self.request.session.get('project_name', 'COSO')
                     )
                     mail_message = gettext_lazy("Mail sent successfully")
                 except:
@@ -889,7 +903,15 @@ class AddTaskPlanView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, JSON
         # context['administrativelevls'] = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, type="Village")
         context['phases'] = Phase.objects.filter(project_id=self.request.session.get('project_id'))
         context['activities'] = ProcessActivity.objects.filter(project_id=self.request.session.get('project_id'))
-        context['activities_dict'] = json.dumps([model_to_dict(o) for o in context['activities']])
+        # context['activities_dict'] = json.dumps([model_to_dict(o) for o in context['activities']])
+        activities_data = []
+        for activity in context['activities']:
+            d = model_to_dict(activity)
+            d['cycles'] = list(activity.cycles.values("id", "name", "description", "project", "couch_id", "order", "capacity_attachments"))  # dict avec id + name
+            activities_data.append(d)
+
+        context['activities_dict'] = json.dumps(activities_data)
+
         TIMES_H = times_split()
         context['times_split'] = [{ 'name': TIMES_H[i], 'id': i } for i in range(len(TIMES_H))]
         context['TYPES_VACATION'] = TYPES_VACATION
@@ -910,6 +932,13 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         is_period_dates = self.request.POST.get('is_period_dates') in ('true', True)
         is_free_task = self.request.POST.get('is_free_task') in ('true', True)
         comment = self.request.POST.get('comment')
+        total_men_present_over_35 = self.request.POST.get('total_men_present_over_35')
+        total_women_present_over_35 = self.request.POST.get('total_women_present_over_35')
+        total_people_present_over_35 = self.request.POST.get('total_people_present_over_35')
+        total_men_present_under_35 = self.request.POST.get('total_men_present_under_35')
+        total_women_present_under_35 = self.request.POST.get('total_women_present_under_35')
+        total_people_present_under_35 = self.request.POST.get('total_people_present_under_35')
+        total_people_present = self.request.POST.get('total_people_present')
         undo_comment = self.request.POST.get('undo_comment')
         free_task_title = self.request.POST.get('free_task_title')
         administrative_level_ids = self.request.POST.getlist('administrative_level_ids[]')
@@ -966,6 +995,13 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 }
 
             activity.comment = comment
+            activity.total_men_present_over_35 = total_men_present_over_35
+            activity.total_women_present_over_35 = total_women_present_over_35
+            activity.total_people_present_over_35 = total_people_present_over_35
+            activity.total_men_present_under_35 = total_men_present_under_35
+            activity.total_women_present_under_35 = total_women_present_under_35
+            activity.total_people_present_under_35 = total_people_present_under_35
+            activity.total_people_present = total_people_present
             activity.undo_comment = undo_comment
         else:
             if activity_id not in (None, 'None', 'null', '') and type_action == "edit":
@@ -981,7 +1017,7 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                             f'{activity.planned_datetime_start.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_start.strftime("%d %B %Y")} {gettext_lazy("to")} {activity.planned_datetime_end.strftime("%A")} {gettext_lazy("the")} {activity.planned_datetime_end.strftime("%d %B %Y")}'
                         )
                         msg = send_email(
-                            f'{gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
+                            f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {gettext_lazy("Activity Invalided")} : {activity.name} ({activity_plan_date})',
                             "mail/send/comment",
                             {
                                 "datas": {
@@ -1005,7 +1041,8 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                             [e for e in list([
                                 activity.user.email if activity.user else (activity.facilitator.email if activity.facilitator else None)
                             ] + [(v.user.email if v.user else (v.facilitator.email if v.facilitator else None)) for v in activity.get_activities_validate()]) if e],
-                            []
+                            [],
+                            project_name=self.request.session.get('project_name', 'COSO')
                         )
                         mail_message = gettext_lazy("Mail sent successfully")
                     except:
@@ -1088,6 +1125,40 @@ class PlanningDownloadAnonymeView(PageMixin, generic.TemplateView):
 
 
 class PlanningCSVView(PageMixin, LoginRequiredMixin, generic.TemplateView):
+    """Class to download statistic under excel file"""
+
+    template_name = 'planning/list.html'
+    context_object_name = 'Download'
+    title = gettext_lazy("Download")
+    active_level1 = 'planning'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def get(self, request, *args, **kwargs):
+
+        file_path = ""
+        try:
+            file_path = planning_csv(self.request)
+
+        except Exception as exc:
+            messages.info(request, gettext_lazy("An error has occurred..."))
+
+        if not file_path:
+            return redirect('dashboard:facilitators:list')
+        else:
+            # return download_file.download(
+            #     request, 
+            #     file_path,
+            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            # )
+            return HttpResponse(file_path)
+        
+
+class PlanningAnonymousCSVView(PageMixin, generic.TemplateView):
     """Class to download statistic under excel file"""
 
     template_name = 'planning/list.html'
