@@ -723,6 +723,10 @@ msgstr "JE SUIS SÛR"
 msgid "YOU'RE SURE TO DELETE THIS USER?"
 msgstr "VOUS ÊTES SÛR DE SUPPRIMER CET UTILISATEUR ?"
 
+#: .\dashboard\templates\authentication\delete.html
+msgid "YOU'RE SURE TO DELETE THIS OBJECT?"
+msgstr "VOUS ÊTES SÛR DE SUPPRIMER CET OBJET ?"
+
 #: .\dashboard\templates\authentication\login.html
 msgid "CDD"
 msgstr "DCC"
@@ -971,6 +975,10 @@ msgid "Total"
 msgstr "Total"
 
 #: .\dashboard\administrative_levels
+msgid "Total facilitators"
+msgstr "Total facilitateurs"
+
+#: .\dashboard\administrative_levels
 msgid "Men"
 msgstr "Hommes"
 
@@ -1043,6 +1051,10 @@ msgid "Task Status"
 msgstr "Statut de la tâche"
 
 #: .\dashboard\planning
+msgid "Status"
+msgstr "Statut"
+
+#: .\dashboard\planning
 msgid "Detail"
 msgstr "Détail"
 
@@ -1109,6 +1121,14 @@ msgstr "Total de femmes présentes moins de 35 ans"
 #: .\dashboard\news
 msgid "Total people present under 35"
 msgstr "Total de personnes présentes moins de 35 ans"
+
+#: .\dashboard\news
+msgid "Total men present"
+msgstr "Total d'hommes présents"
+
+#: .\dashboard\news
+msgid "Total women present"
+msgstr "Total de femmes présentes"
 
 #: .\dashboard\news
 msgid "Total people present"
@@ -1316,7 +1336,7 @@ msgstr "Je valide"
 
 #: .\dashboard
 msgid "I confirm that I have read all the details about this activity"
-msgstr "Je confirme d'avoir lu toutes les détails sur cette activité"
+msgstr "Je confirme avoir lu tous les détails concernant cette activité"
 
 #: .\dashboard
 msgid "Add your comment here"
@@ -1467,6 +1487,10 @@ msgid "Vacation type"
 msgstr "Type de congé"
 
 #: .\dashboard
+msgid "Activity type"
+msgstr "Type d'activités"
+
+#: .\dashboard
 msgid "Absence date"
 msgstr "Date d'absence"
 
@@ -1589,6 +1613,10 @@ msgstr "Non défini(e)"
 #: .\dashboard
 msgid "Download my planning"
 msgstr "Télécharger mon planning"
+
+#: .\dashboard
+msgid "Download the schedule"
+msgstr "Téléchargez le planning"
 
 #: .\dashboard
 msgid "Planned activity on"
@@ -1959,6 +1987,22 @@ msgid "Technical facilitators"
 msgstr "Facilitateurs techniques"
 
 #: .\dashboard
+msgid "Community Facilitator"
+msgstr "Animateur Communautaire"
+
+#: .\dashboard
+msgid "Technical Facilitator"
+msgstr "Facilitateur Technique"
+
+#: .\dashboard
+msgid "Community Facilitators"
+msgstr "Animateurs Communautaires"
+
+#: .\dashboard
+msgid "Technical Facilitators"
+msgstr "Facilitateurs Techniques"
+
+#: .\dashboard
 msgid "Facilitator type"
 msgstr "Type d'Animateur/facilitateur"
 
@@ -2061,3 +2105,131 @@ msgstr "Invalidée (Non revenue après invalidation)"
 #: .\dashboard
 msgid "Completed (Awaiting validation)"
 msgstr "Achevée (En attente de validation)"
+
+#: .\dashboard
+msgid "Vil. Affected"
+msgstr "Vil. Affecté"
+
+#: .\dashboard
+msgid "Stabilization"
+msgstr "Stabilisation"
+
+#: .\dashboard\administrative_levels
+msgid "Last table update"
+msgstr "Dernière mise à jour du tableau"
+
+#: .\dashboard\administrative_levels
+msgid "Activities planned for this week"
+msgstr "Activités planifiées dans cette semaine"
+
+#: .\dashboard\administrative_levels
+msgid "No activities planned this week"
+msgstr "Aucune activité planifiée cette semaine"
+
+#: .\dashboard
+msgid "Percentage of evolution in villages of initial allocation"
+msgstr "Pourcentage d'évolution des villages d'affectection initiale"
+
+#: .\dashboard
+msgid "Percentage of evolution in stabilization villages"
+msgstr "Pourcentage d'évolution des villages de stabilisation"
+
+#: .\dashboard
+msgid "Overall percentage"
+msgstr "Pourcentage global"
+
+#: .\dashboard
+msgid "Report of the evolution of Community Animators"
+msgstr "Rapport d'évolution des Animateurs Communautaires"
+
+#: .\dashboard
+msgid "Review after invalidation"
+msgstr "Révision après invalidation"
+
+#: .\dashboard
+msgid "Invalidated Unreview"
+msgstr "Invalidée non révisé"
+
+#: .\dashboard
+msgid "Waiting Validation"
+msgstr "En attente de validation"
+
+#: .\dashboard
+msgid "An error occurred while sending the email"
+msgstr "Une erreur s'est produite lors de l'envoi de l'e-mail"
+
+#: .\dashboard
+msgid "Affected"
+msgstr "Affecté"
+
+#: .\dashboard
+msgid "Please log in with your username instead:"
+msgstr "Veuillez plutôt vous connecter avec votre nom d'utilisateur :"
+
+#: .\dashboard
+msgid "Local Economic Development Specialist"
+msgstr "Spécialiste Développement Economique Local"
+
+#: .\dashboard
+msgid "Youth Program Specialist"
+msgstr "Spécialiste Programme jeunesse"
+
+#: .\dashboard
+msgid "Communication Specialist"
+msgstr "Spécialiste en Communication"
+
+#: .\dashboard
+msgid "Others"
+msgstr "Autres"
+
+#: .\dashboard
+msgid "Facilitators in my area"
+msgstr "Les AC & FT de ma zone"
+
+#: .\dashboard
+msgid "Investment cycle"
+msgstr "Cycle d'investissement"
+
+#: .\dashboard
+msgid "Tasks"
+msgstr "Tâches"
+
+#: .\dashboard
+msgid "Activities"
+msgstr "Activités"
+
+#: .\dashboard
+msgid "Create"
+msgstr "Créer"
+
+#: .\dashboard
+msgid "Create Phase"
+msgstr "Créer Phase"
+
+#: .\dashboard
+msgid "Create Activity"
+msgstr "Créer Activité"
+
+#: .\dashboard
+msgid "Create Task"
+msgstr "Créer Tâche"
+
+#: .\dashboard
+msgid "Update"
+msgstr "Mise à jour"
+
+#: .\dashboard
+msgid "Update Phase"
+msgstr "Mise à jour de Phase"
+
+#: .\dashboard
+msgid "Update Activity"
+msgstr "Mise à jour d'Activité"
+
+#: .\dashboard
+msgid "Update Task"
+msgstr "Mise à jour de Tâche"
+
+#: .\dashboard
+msgid "This action will also delete objects linked to this object"
+msgstr "Cette action supprimera également les objets liés à cet objet."
