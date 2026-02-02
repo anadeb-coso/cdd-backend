@@ -108,7 +108,7 @@ class FacilitatorProjectListView(ListAPIView):
     queryset = Project.objects.all()
     def get_queryset(self):
         username = self.request.GET.get('username')
-        return list(set(list(super().get_queryset().filter(Q(facilitators__username=username) | Q(users__username=username)))))
+        return list(set(list(super().get_queryset().filter(Q(facilitators__username=username) | Q(facilitators__email=username) | Q(users__username=username) | Q(users__email=username)))))
 
 
 class FacilitatorNOSQLDBListView(APIView):

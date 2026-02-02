@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
@@ -30,7 +30,7 @@ from cdd.models_base import BaseModel, CustomQuerySet
 class Project(BaseModel):
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField()
-    parent = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE, related_name="children")
     couch_id = models.CharField(max_length=255, blank=True)
     facilitators = models.ManyToManyField(Facilitator, related_name="projects", default=[], blank=True)
     users = models.ManyToManyField(User, related_name="projects", default=[], blank=True)
@@ -77,6 +77,53 @@ class Project(BaseModel):
 
     def get_cycles(self):
         return self.cycle_set.get_queryset()
+
+    @property
+    def root(self):
+        root = self
+        while root.parent:
+            root = root.parent
+        return root
+    
+    def build_the_tree_structure(self):
+        """
+        Construit l'arborescence complète (ascendants + descendants)
+        en partant de ce projet.
+        Retourne une liste ordonnée de projets.
+        """
+        visited = set()
+
+        # --- 1. Remonter jusqu'au parent racine ---
+        root = self
+        while root.parent:
+            root = root.parent
+
+        result = []
+
+        # --- 2. Descente récursive depuis la racine ---
+        def dfs(project):
+            if project.id in visited:
+                return
+            visited.add(project.id)
+            result.append(project)
+
+            # On explore tous les enfants (ordre alphabétique si besoin)
+            for child in project.children.all().order_by("name"):
+                dfs(child)
+
+        dfs(root)
+
+        # --- 3. Garder seulement les projets liés à self ---
+        # on coupe la liste à partir de self, et on garde descendants
+        if self in result:
+            start_index = result.index(self)
+            return result[:start_index+1] + [
+                p for p in result[start_index+1:]
+                if p.parent and (p.parent == self or p.parent in result[:start_index+1])
+            ]
+        return result
+
+
 
 # The Cycle object on couch looks like this
 # {
@@ -425,6 +472,12 @@ class AggregatedStatus(BaseModel):
     total_tasks = models.IntegerField(default=0)
     total_tasks_completed = models.IntegerField(default=0)
     last_activity = models.DateTimeField(blank=True, null=True)
+
+    total_tasks_validated = models.IntegerField(default=0)
+    total_tasks_invalidated = models.IntegerField(default=0)
+    total_tasks_invalidated_review = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview = models.IntegerField(default=0)
+    total_tasks_waiting_validation = models.IntegerField(default=0)
     
     objects = CustomQuerySet.as_manager()
 
@@ -438,6 +491,53 @@ class AggregatedStatus(BaseModel):
             print(exc)
             return None
         
+class AggregatedStatusFacilitator(BaseModel):
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycle = models.ForeignKey("Cycle", on_delete=models.CASCADE)
+    facilitator = models.ForeignKey(Facilitator, on_delete=models.CASCADE)
+
+    total_tasks_current_project = models.IntegerField(default=0)
+    total_tasks_completed_current_project = models.IntegerField(default=0)
+    last_activity_current_project = models.DateTimeField(blank=True, null=True)
+    total_tasks_stabilized = models.IntegerField(default=0)
+    total_tasks_completed_stabilized = models.IntegerField(default=0)
+    last_activity_stabilized = models.DateTimeField(blank=True, null=True)
+    total_tasks = models.IntegerField(default=0)
+    total_tasks_completed = models.IntegerField(default=0)
+    last_activity = models.DateTimeField(blank=True, null=True)
+
+    total_tasks_validated_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_review_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_current_project = models.IntegerField(default=0)
+    total_tasks_waiting_validation_current_project = models.IntegerField(default=0)
+
+    total_tasks_validated_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_review_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_stabilized = models.IntegerField(default=0)
+    total_tasks_waiting_validation_stabilized = models.IntegerField(default=0)
+    
+    total_tasks_validated = models.IntegerField(default=0)
+    total_tasks_invalidated = models.IntegerField(default=0)
+    total_tasks_invalidated_review = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview = models.IntegerField(default=0)
+    total_tasks_waiting_validation = models.IntegerField(default=0)
+    
+    cvds_number_current_project = models.IntegerField(default=0)
+    villages_number_current_project = models.IntegerField(default=0)
+    cvds_number_stabilized = models.IntegerField(default=0)
+    villages_number_stabilized = models.IntegerField(default=0)
+    cvds_number = models.IntegerField(default=0)
+    villages_number = models.IntegerField(default=0)
+
+    last_task_done_current_project = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL, related_name='last_task_done_current_project_facilitators')
+    last_task_done_stabilized = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL, related_name='last_task_done_stabilized_facilitators')
+    last_task_done = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL, related_name='last_task_done_facilitators')
+
+    administrative_level_headquarters_villages_infos = models.JSONField(default=[])
+
+    new_update_exists = models.BooleanField(default=True)
 
 
 class Wave(BaseModel):
@@ -538,6 +638,7 @@ class FacilitatorDeployment(BaseModel):
 class EmailAddressesWhichSendEmails(BaseModel):
     name = models.CharField(max_length=255)
     email_addresses = models.JSONField()
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
 
 
 class ProcessAddOrRemoveADL(BaseModel):
@@ -599,4 +700,23 @@ def create_or_update_project(sender, instance, **kwargs):
         #     instance.facilitators.add(*instance.parent.facilitators.all())
             # instance = instance.save_and_return_object()
 
+def delete_process_design_doc(sender, instance, **kwargs) -> bool:
+    nsc = NoSQLClient()
+    nsc_database = nsc.get_db("process_design")
+
+    try:
+        doc = nsc_database[
+            instance.couch_id
+        ]
+        print(doc)
+
+        doc.delete()
+        return True
+    except Exception as exc:
+        return False
+
+
 post_save.connect(create_or_update_project, sender=Project)
+post_delete.connect(delete_process_design_doc, sender=Phase)
+post_delete.connect(delete_process_design_doc, sender=Activity)
+post_delete.connect(delete_process_design_doc, sender=Task)

@@ -202,15 +202,19 @@ class EmailAddressesWhichSendEmailsAdmin(admin.ModelAdmin):
     fields = (
         'name',
         'email_addresses',
+        'project',
     )
     list_display = (
         'id',
         'name',
+        'project',
     )
     search_fields = (
         'id',
         'name',
         'email_addresses',
+        'project__name',
+        'project__description',
     )
 
 admin.site.register(Project, ProjectAdmin)
