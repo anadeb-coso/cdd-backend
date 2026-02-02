@@ -2,6 +2,7 @@ from django.contrib.auth.hashers import check_password
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from django.db.models import Q
+# from rest_framework_simplejwt.tokens import RefreshToken
 
 from authentication.models import Facilitator
 from django.contrib.auth.models import User
@@ -57,6 +58,8 @@ class CredentialSerializer(serializers.Serializer):
     name = serializers.CharField(allow_blank=True, allow_null=True)
     is_superuser = serializers.BooleanField(allow_null=True)
     groups = serializers.JSONField(allow_null=True)
+    # refresh = serializers.CharField(allow_blank=True, allow_null=True)
+    # access = serializers.CharField(allow_blank=True, allow_null=True)
     
 class UserAuthSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -85,6 +88,10 @@ class UserAuthSerializer(serializers.Serializer):
             msg = _('Must include "username" and "password".')
             raise serializers.ValidationError(msg, code='authorization')
         
+        
+        if '@' in username:
+            raise serializers.ValidationError(f'{_("Please log in with your username instead:")} {user.username}', code='authorization')
+        
         attrs['no_sql_user'] = None
         attrs['no_sql_pass'] = None
         attrs['no_sql_db_name'] = None
@@ -109,6 +116,10 @@ class UserAuthSerializer(serializers.Serializer):
             attrs['email'] = user.email
             attrs['is_superuser'] = user.is_superuser
             attrs['groups'] = ['Superuser'] + list([g.name for g in user.groups.all()]) if user.is_superuser else list([g.name for g in user.groups.all()])
-            
+        
+        # Générer un token JWT
+        # refresh = RefreshToken.for_user(user)
+        # attrs['refresh'] = str(refresh),
+        # attrs['access'] = str(refresh.access_token),
             
         return attrs

@@ -37,14 +37,46 @@ class Facilitator(BaseModel):
     phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))
     sex = models.CharField(max_length=5, null=True, blank=True, verbose_name=_('sex'))
     
-    total_tasks = None #models.IntegerField(default=0)
-    total_tasks_completed = None #models.IntegerField(default=0)
-    last_activity = None #models.DateTimeField(blank=True, null=True)
+    total_tasks_current_project = None
+    total_tasks_completed_current_project = None
+    last_activity_current_project = None
+    total_tasks_stabilized = None
+    total_tasks_completed_stabilized = None
+    last_activity_stabilized = None
+    total_tasks = None
+    total_tasks_completed = None
+    last_activity = None
 
+    total_tasks_validated_current_project = None
+    total_tasks_invalidated_current_project = None
+    total_tasks_invalidated_review_current_project = None
+    total_tasks_invalidated_unreview_current_project = None
+    total_tasks_waiting_validation_current_project = None
+
+    total_tasks_validated_stabilized = None
+    total_tasks_invalidated_stabilized = None
+    total_tasks_invalidated_review_stabilized = None
+    total_tasks_invalidated_unreview_stabilized = None
+    total_tasks_waiting_validation_stabilized = None
+    
+    total_tasks_validated = None
+    total_tasks_invalidated = None
+    total_tasks_invalidated_review = None
+    total_tasks_invalidated_unreview = None
+    total_tasks_waiting_validation = None
+    
+    cvds_number_current_project = None
+    villages_number_current_project = None
+    cvds_number_stabilized = None
+    villages_number_stabilized = None
+    cvds_number = None
+    villages_number = None
+
+    last_task_done_current_project = None
+    last_task_done_stabilized = None
+    last_task_done = None
 
     __current_password = None
-    cvds_number = 0
-    villages_number = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -265,6 +297,13 @@ class Facilitator(BaseModel):
         
     
     def get_all_infos(self):
+        
+        _percent_current_project = self.total_tasks_completed_current_project/self.total_tasks_current_project if self.total_tasks_current_project else 0
+        percent_current_project = float("%.2f" % ((_percent_current_project if _percent_current_project else 0)*100))
+        
+        _percent_stabilized = self.total_tasks_completed_stabilized/self.total_tasks_stabilized if self.total_tasks_stabilized else 0
+        percent_stabilized = float("%.2f" % ((_percent_stabilized if _percent_stabilized else 0)*100))
+        
         _percent = self.total_tasks_completed/self.total_tasks if self.total_tasks else 0
         percent = float("%.2f" % ((_percent if _percent else 0)*100))
 
@@ -274,7 +313,11 @@ class Facilitator(BaseModel):
             "username": self.username, 
             "tel": self.phone, 
             'last_activity_date': self.last_activity, 
+            "percent_current_project": percent_current_project, 
+            "percent_stabilized": percent_stabilized, 
             "percent": percent, 
+            "cvd_current_project": f"{self.cvds_number_current_project}/{self.villages_number_current_project}",
+            "cvd_stabilized": f"{self.cvds_number_stabilized}/{self.villages_number_stabilized}",
             "cvd": f"{self.cvds_number}/{self.villages_number}"
         }
     

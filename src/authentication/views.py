@@ -46,7 +46,9 @@ class AuthenticateAPIView(APIView):
             'last_name': serializer.validated_data['last_name'],
             'email': serializer.validated_data['email'],
             'is_superuser': serializer.validated_data['is_superuser'],
-            'groups': serializer.validated_data['groups']
+            'groups': serializer.validated_data['groups'],
+            # 'access': serializer.validated_data['access'],
+            # 'refresh': serializer.validated_data['refresh']
         }
         credential_serializer = CredentialSerializer(data=credentials)
         credential_serializer.is_valid(raise_exception=True)

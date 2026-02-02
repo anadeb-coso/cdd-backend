@@ -55,6 +55,27 @@ class AdminPermissionRequiredMixin(UserPassesTestMixin):
         return super(AdminPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)
 
 
+class FullStackPermissionRequiredMixin(UserPassesTestMixin):
+    permission_required = None
+
+    def test_func(self):
+        return True if(self.request.user.is_authenticated and (
+            self.request.user.groups.filter(name="FullStack").exists()
+            or 
+            self.request.user.groups.filter(name="Admin").exists()
+            or 
+            bool(self.request.user.is_superuser)
+        )) else False
+    
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            return page_not_found(self.request, _('Page not found').__str__())
+        return super().handle_no_permission()
+
+    def dispatch(self, request, *args, **kwargs):
+        return super(FullStackPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)
+    
+
 class CDDSpecialistPermissionRequiredMixin(UserPassesTestMixin):
     permission_required = None
 

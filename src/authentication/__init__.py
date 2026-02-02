@@ -9,3 +9,15 @@ FACILITATORS_TYPES_PLURAL = [
     ('community_facilitator', _('Community facilitators')),
     ('technical_facilitator', _('Technical facilitators'))
 ]
+
+FACILITATORS_TYPES_WITH_GROUP_NAME = {
+    'CommunityFacilitator': 'community_facilitator',
+    'TechnicalFacilitator': 'technical_facilitator'
+}
+
+PROFESSIONAL_GROUPS = [
+    'Minister', 'Advisor', 'GeneralManager', 'NationalCoordinator', 'RegionalCoordinator', 'Director', 
+    'Evaluator', 'Financial', 'ProcurementSpecialist', 'KnowledgeManager', 'CDDSpecialist', 'Accountant', 'Infra', 'YouthProgramSpecialist', 'LocalEconomicDevelopmentSpecialist', 'CommunicationSpecialist', 'FullStack',
+    'Supervisor',
+    'CommunityFacilitator', 'TechnicalFacilitator'
+]
