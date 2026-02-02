@@ -12,7 +12,7 @@
                 class="fas fa-times text-danger img-croix" 
                 style="font-size: 17px; position: absolute; top: 5px; right: 5px; cursor: pointer; z-index: 9;"></i>
             {% endif %}
-            <a href="{{ file.url|imgAWSS3Filter }}" target="_blank" 
+            <a href="{% url 'download_from_url' %}?url={{ file.url|imgAWSS3Filter }}" target="_blank" 
                 style="font-size: 17px; position: absolute; top: 5px; left: 5px; cursor: pointer; z-index: 9;" >
                 <i class="fas fa-eye text-info" ></i>
             </a>

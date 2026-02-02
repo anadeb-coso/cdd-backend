@@ -86,6 +86,10 @@
     <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
 <script type="text/javascript">
 
+    {% comment %} if(String("{{ DOMAIN_PATH }}").toLowerCase().includes(".elasticbeanstalk.com")){
+        window.location.replace(`https://dcc.coso-togo.com/fr/planning/download-anonyme-planning/?username={{ username_facilitator_user }}`);
+    } {% endcomment %}
+
     function formatDate(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -109,7 +113,7 @@
                 date_end_selected: $('#id_date_end').val(),
             }
       
-            var url = "{% url 'dashboard:planning:app_excel_reports_planning' %}"; // L'URL de téléchargement
+            var url = "{% url 'dashboard:planning:app_excel_reports_planning_anonymous' %}"; // L'URL de téléchargement
             
             $.ajax({
               url: url,
@@ -119,8 +123,17 @@
                 
                 let path = response.replaceAll('/', '___').replaceAll('\\', '___');
                 let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
-                window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
-                
+                {% comment %} window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None'); {% endcomment %}
+                var finalUrl = download_file_view_url.replace('path', path).replace('content_type', 'None');
+
+                // Creation d’un lien invisible pour forcer le téléchargement
+                var link = document.createElement("a");
+                link.href = finalUrl;
+                link.download = "";   // precision que c'est un fichier (navigateur mobile)
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
     
                 $("#download-message").hide();
                 $("#download-complete-message").show();

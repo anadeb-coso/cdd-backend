@@ -30,7 +30,7 @@
 
         <span>{{ currentMondayDate|date:'F Y' }}</span>
 
-        <span id="id_download_tasks_file" class="float-md-right text-primary text-bold"><i class="fas fa-file-excel"></i></span>
+        <span id="id_download_tasks_file" class="float-md-right text-primary text-bold" title="{% translate 'Download the schedule' %}"><i class="fas fa-file-excel"></i></span>
 
         <span class="float-md-right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
         <span id="download-message" class="float-md-right" style="display:none;">{% translate "Download in progress..." %}</span>
@@ -333,8 +333,10 @@ renderCalendar(currentWeek);
                 is_training: "{{ is_training }}",
                 is_develop: "{{ is_develop }}",
                 show_my_calendar: show_my_calendar.is(':checked'),
+                my_area: my_area.is(':checked'),
                 task_status: id_task_status.val(),
                 task_type: id_task_type.val(),
+                user_groups: id_user_group.val(),
                 username_facilitator_user: id_username_facilitator_user.val(),
                 
                 current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,

@@ -65,7 +65,10 @@
                 {% comment %} {% if task.administrative_level_ids %}
                  (CVD : <b>{{ task.administrative_level_name }}</b>)
                  {% endif %} {% endcomment %}
-                 <p style="font-size: 12px;">{% translate 'Planned by' %}: {% if task.user %}{{ task.user.last_name }} {{ task.user.first_name }} {% elif task.facilitator %}{{ task.facilitator.name }}{% else %}{% translate 'Not found' %}{% endif %}</p>
+                 <p style="font-size: 12px;">
+                    {% translate 'Planned by' %}: {% if task.user %}{{ task.user.last_name }} {{ task.user.first_name }} {% elif task.facilitator %}{{ task.facilitator.name }}{% else %}{% translate 'Not found' %}{% endif %}</br>
+                    {{ task.project_name }}
+                 </p>
             </h5>
             <div class="col-sm-2 text-right">
                 <div>
@@ -397,6 +400,56 @@
                                         <div class="clearfix"></div>
                                     </div>
 
+                                    <div class="form-group row" id="id_total_men_present_over_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total men present over 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" min="0" required class="form-control" id="id_total_men_present_over_35" />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_women_present_over_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total women present over 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" min="0" required class="form-control" id="id_total_women_present_over_35" />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_people_present_over_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total people present over 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" class="form-control" id="id_total_people_present_over_35" disabled />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_men_present_under_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total men present under 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" min="0" required class="form-control" id="id_total_men_present_under_35" />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_women_present_under_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total women present under 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" min="0" required class="form-control" id="id_total_women_present_under_35" />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_people_present_under_35_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total people present under 35" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" class="form-control" id="id_total_people_present_under_35" disabled />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+                                    <div class="form-group row" id="id_total_people_present_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Total people present" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-9">
+                                            <input type="number" class="form-control" id="id_total_people_present" disabled />
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
                                     <br />
 
                                     {% comment %} <input type="file" id="fileInput"> {% endcomment %}
@@ -529,6 +582,63 @@
                                     <div class="col-sm-9">
                                         
                                         <textarea readonly class="form-control" rows="5">{% if task.comment %}{{ task.comment }}{% else %}{% translate 'Comment not mentioned' %}{% endif %}</textarea>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total men present over 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_men_present_over_35 %}{{ task.total_men_present_over_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total women present over 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_women_present_over_35 %}{{ task.total_women_present_over_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total people present over 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_people_present_over_35 %}{{ task.total_people_present_over_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total men present under 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_men_present_under_35 %}{{ task.total_men_present_under_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total women present under 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_women_present_under_35 %}{{ task.total_women_present_under_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total people present under 35" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_people_present_under_35 %}{{ task.total_people_present_under_35 }}{% else %}0{% endif %}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Total people present" %}</label>
+                                    <div class="col-sm-9">
+                                        
+                                        <input type="text" readonly value="{% if task.total_people_present %}{{ task.total_people_present }}{% else %}0{% endif %}" class="form-control" />
                                     </div>
                                     <div class="clearfix"></div>
                                 </div>
@@ -701,6 +811,13 @@
         let id_phase_selected = $("#id_phase_selected");
         let id_activity_selected = $("#id_activity_selected");
         let id_report_activity = $("#id_report_activity");
+        let id_total_men_present_over_35 = $("#id_total_men_present_over_35");
+        let id_total_women_present_over_35 = $("#id_total_women_present_over_35");
+        let id_total_people_present_over_35 = $("#id_total_people_present_over_35");
+        let id_total_men_present_under_35 = $("#id_total_men_present_under_35");
+        let id_total_women_present_under_35 = $("#id_total_women_present_under_35");
+        let id_total_people_present_under_35 = $("#id_total_people_present_under_35");
+        let id_total_people_present = $("#id_total_people_present");
         let id_component_selected = $("#id_component_selected");
         
         let id_task_is_completed_content = $("#id_task_is_completed_content");
@@ -713,6 +830,13 @@
         let id_phase_selected_content = $("#id_phase_selected_content");
         let id_activity_selected_content = $("#id_activity_selected_content");
         let id_report_activity_content = $("#id_report_activity_content");
+        let id_total_men_present_over_35_content = $("#id_total_men_present_over_35_content");
+        let id_total_women_present_over_35_content = $("#id_total_women_present_over_35_content");
+        let id_total_people_present_over_35_content = $("#id_total_people_present_over_35_content");
+        let id_total_men_present_under_35_content = $("#id_total_men_present_under_35_content");
+        let id_total_women_present_under_35_content = $("#id_total_women_present_under_35_content");
+        let id_total_people_present_under_35_content = $("#id_total_people_present_under_35_content");
+        let id_total_people_present_content = $("#id_total_people_present_content");
         let id_component_selected_content = $("#id_component_selected_content");
 
         let id_save_completed_activity = $("#id_save_completed_activity");
@@ -927,18 +1051,73 @@
         id_activity_selected_content.hide();
         id_component_selected_content.hide();
         id_report_activity_content.hide();
+        id_total_men_present_over_35_content.hide();
+        id_total_women_present_over_35_content.hide();
+        id_total_people_present_over_35_content.hide();
+        id_total_men_present_under_35_content.hide();
+        id_total_women_present_under_35_content.hide();
+        id_total_people_present_under_35_content.hide();
+        id_total_people_present_content.hide();
+
+        function update_total_people(){
+            id_total_people_present_over_35.val(
+                (Number(id_total_men_present_over_35.val()) ?? 0)+(Number(id_total_women_present_over_35.val()) ?? 0)
+            );
+            id_total_people_present_under_35.val(
+                (Number(id_total_men_present_under_35.val()) ?? 0)+(Number(id_total_women_present_under_35.val()) ?? 0)
+            );
+            id_total_people_present.val(
+                (Number(id_total_people_present_over_35.val()) ?? 0)+(Number(id_total_people_present_under_35.val()) ?? 0)
+            );
+        }
+        id_total_men_present_over_35.on('change keyup', function(){
+            console.log(888)
+            update_total_people();
+        });
+        id_total_women_present_over_35.on('change keyup', function(){
+            update_total_people();
+        });
+        id_total_men_present_under_35.on('change keyup', function(){
+            update_total_people();
+        });
+        id_total_women_present_under_35.on('change keyup', function(){
+            update_total_people();
+        });
 
         id_task_is_completed.click(function(){
             if(id_task_is_completed.is(':checked')){
                 id_report_activity_content.show();
+                id_total_men_present_over_35_content.show();
+                id_total_women_present_over_35_content.show();
+                id_total_people_present_over_35_content.show();
+                id_total_men_present_under_35_content.show();
+                id_total_women_present_under_35_content.show();
+                id_total_people_present_under_35_content.show();
+                id_total_people_present_content.show();
+
                 id_task_is_not_completed_content.hide();
                 
                 id_task_is_not_completed.prop('checked', false).val(null);
             }else{
                 id_report_activity_content.hide();
+                id_total_men_present_over_35_content.hide();
+                id_total_women_present_over_35_content.hide();
+                id_total_people_present_over_35_content.hide();
+                id_total_men_present_under_35_content.hide();
+                id_total_women_present_under_35_content.hide();
+                id_total_people_present_under_35_content.hide();
+                id_total_people_present_content.hide();
+
                 id_task_is_not_completed_content.show();
 
                 id_report_activity.val(null);
+                id_total_men_present_over_35.val(null);
+                id_total_women_present_over_35.val(null);
+                id_total_people_present_over_35.val(null);
+                id_total_men_present_under_35.val(null);
+                id_total_women_present_under_35.val(null);
+                id_total_people_present_under_35.val(null);
+                id_total_people_present.val(null);
                 id_task_is_not_completed.prop('checked', false).val(null);
 
                 id_save_completed_activity.prop('disabled', true);
@@ -961,6 +1140,14 @@
                 id_activity_selected_content.hide();
                 id_component_selected_content.hide();
                 id_report_activity_content.hide();
+                id_total_men_present_over_35_content.hide();
+                id_total_women_present_over_35_content.hide();
+                id_total_people_present_over_35_content.hide();
+                id_total_men_present_under_35_content.hide();
+                id_total_women_present_under_35_content.hide();
+                id_total_people_present_under_35_content.hide();
+                id_total_people_present_content.hide();
+
                 id_task_is_completed_content.show();
 
                 id_comment_undo_activity.val(null);
@@ -972,6 +1159,13 @@
                 id_activity_selected.val(null).trigger('change.select2');
                 id_component_selected.val(null).trigger('change.select2');
                 id_report_activity.val(null);
+                id_total_men_present_over_35.val(null);
+                id_total_women_present_over_35.val(null);
+                id_total_people_present_over_35.val(null);
+                id_total_men_present_under_35.val(null);
+                id_total_women_present_under_35.val(null);
+                id_total_people_present_under_35.val(null);
+                id_total_people_present.val(null);
                 id_task_is_completed.prop('checked', false).val(null);
 
                 id_save_completed_activity.prop('disabled', true);
@@ -985,6 +1179,13 @@
                 id_activity_selected_content.show();
                 id_component_selected_content.show();
                 id_report_activity_content.show();
+                id_total_men_present_over_35_content.show();
+                id_total_women_present_over_35_content.show();
+                id_total_people_present_over_35_content.show();
+                id_total_men_present_under_35_content.show();
+                id_total_women_present_under_35_content.show();
+                id_total_people_present_under_35_content.show();
+                id_total_people_present_content.show();
             }else{
                 id_is_free_activity_done_content.hide();
                 id_administrative_levels_selected_content.hide();
@@ -993,6 +1194,13 @@
                 id_activity_selected_content.hide();
                 id_component_selected_content.hide();
                 id_report_activity_content.hide();
+                id_total_men_present_over_35_content.hide();
+                id_total_women_present_over_35_content.hide();
+                id_total_people_present_over_35_content.hide();
+                id_total_men_present_under_35_content.hide();
+                id_total_women_present_under_35_content.hide();
+                id_total_people_present_under_35_content.hide();
+                id_total_people_present_content.hide();
 
                 id_is_free_activity_done.prop('checked', false).val(null);
                 id_administrative_levels_selected.val(null).trigger('change.select2');
@@ -1001,6 +1209,13 @@
                 id_activity_selected.val(null).trigger('change.select2');
                 id_component_selected.val(null).trigger('change.select2');
                 id_report_activity.val(null);
+                id_total_men_present_over_35.val(null);
+                id_total_women_present_over_35.val(null);
+                id_total_people_present_over_35.val(null);
+                id_total_men_present_under_35.val(null);
+                id_total_women_present_under_35.val(null);
+                id_total_people_present_under_35.val(null);
+                id_total_people_present.val(null);
             }
         });
         id_is_free_activity_done.click(function(){
@@ -1023,10 +1238,10 @@
         function disabled_undisabled_btn() {
             if(
                 (!id_task_is_completed.is(':checked') && !id_task_is_not_completed.is(':checked')) || 
-                (id_task_is_completed.is(':checked') && ['', null].includes(id_report_activity.val())) || 
+                (id_task_is_completed.is(':checked') && (['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val()))) || 
                 (id_task_is_not_completed.is(':checked') && ['', null].includes(id_comment_undo_activity.val())) || 
-                (id_is_another_activity.is(':checked') && !id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_report_activity.val()))) || 
-                (id_is_another_activity.is(':checked') && id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_report_activity.val())))
+                (id_is_another_activity.is(':checked') && !id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val()))) || 
+                (id_is_another_activity.is(':checked') && id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val())))
             ){
                 id_save_completed_activity.prop('disabled', true);
             }else{
@@ -1129,6 +1344,13 @@
                     process_activity_id: id_activity_selected.val(),
                     component: id_component_selected.val(),
                     comment: id_report_activity.val(),
+                    total_men_present_over_35: id_total_men_present_over_35.val(),
+                    total_women_present_over_35: id_total_women_present_over_35.val(),
+                    total_people_present_over_35: id_total_people_present_over_35.val(),
+                    total_men_present_under_35: id_total_men_present_under_35.val(),
+                    total_women_present_under_35: id_total_women_present_under_35.val(),
+                    total_people_present_under_35: id_total_people_present_under_35.val(),
+                    total_people_present: id_total_people_present.val(),
                     type_action: 'report',
                 },
                 success: function (response) {

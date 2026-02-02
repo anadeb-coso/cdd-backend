@@ -170,6 +170,7 @@
         <div class="col-12">
             
             <div class="card">
+
                 <div class="p-2 row facilitators-filter">
 
                     <div class="col-3 col-lg mb-2 mb-lg-0">
@@ -180,20 +181,10 @@
                             <i id="nextWeek" class="nav-icon fa fa-chevron-right text-success" style="cursor: pointer;"></i>
                         </div>
                     </div>
-
-
-                    <div class="col-1 col-lg mb-2 mb-lg-0">
-                        <div class="form-check justify-content-center" style="margin-top: 12px !important; margin-left: 13px;">
-                            <input class="form-check-input" type="checkbox" value="" id="show_my_calendar">
-                            <label class="form-check-label" for="show_my_calendar">
-                                {% translate "For me" %} 
-                            </label>
-                        </div>
-                    </div>
                     
                     <div class="col-1 col-lg mb-2 mb-lg-0">
                         <div class="form-group" id="group_task_type">
-                            <select class="form-control" id="id_task_type" name="task_type" style="width: 100%;">
+                            <select class="form-control" id="id_task_type" name="task_type" style="width: 100%;" title="{% translate 'Activity type' %}">
                                 <option value="All" >{% translate 'All' %}</option>
                                 <option value="free_tasks">{% translate 'Free tasks' %}</option>
                                 <option value="existing_tasks">{% translate 'Existing tasks' %}</option>
@@ -206,7 +197,7 @@
                     
                     <div class="col-1 col-lg mb-2 mb-lg-0">
                         <div class="form-group" id="group_task_status">
-                            <select class="form-control" id="id_task_status" name="task_status" style="width: 100%;">
+                            <select class="form-control" id="id_task_status" name="task_status" style="width: 100%;" title="{% translate 'Status' %}">
                                 <option value="All" >{% translate 'All' %}</option>
                                 <option value="pending">{% translate 'Pending validation' %}</option>
                                 <option value="completed">{% translate 'Completed' %}</option>
@@ -216,19 +207,6 @@
                                 <option value="pending_to_do">{% translate 'Pending to do' %}</option>
                                 <option value="undo">{% translate 'Undo' %}</option>
                                 <option value="deadline_passed">{% translate 'Deadline passed' %}</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    
-                    
-                    <div class="col-1 col-lg mb-2 mb-lg-0">
-                        <div class="form-group" id="group_facilitators">
-                            <select class="form-control" id="id_username_facilitator_user" name="facilitato" style="width: 100%;" multiple>
-                                <option value="All" selected>{% translate 'All' %}</option>
-                                {% for facilitator_user in facilitators_users %}
-                                    <option value="{{ facilitator_user.username }}">{{ facilitator_user.name }}</option>
-                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -247,6 +225,58 @@
                         </a>
                     </div>
                 </div>
+                
+                
+                <div class="p-2 row facilitators-filter">
+                    {% comment %} <div class="col-1  mb-2 mb-lg-0">
+                    </div> {% endcomment %}
+
+                    <div class="col-2  mb-2 mb-lg-0">
+                        <div class="form-check justify-content-center" style="margin-top: 9px !important; margin-left: 25px;">
+                            <input class="form-check-input" type="checkbox" value="" id="show_my_calendar">
+                            <label class="form-check-label" for="show_my_calendar">
+                                {% translate "For me" %} 
+                            </label>
+                        </div>
+                    </div>
+
+                    {% if user|has_group:"Supervisor" %}
+                        <div class="col-2  mb-2 mb-lg-0">
+                            <div class="form-check justify-content-center" style="margin-top: 9px !important; margin-left: 25px;">
+                                <input class="form-check-input" type="checkbox" value="" id="my_area">
+                                <label class="form-check-label" for="my_area">
+                                    {% translate "Facilitators in my area" %} 
+                                </label>
+                            </div>
+                        </div>
+                    {% endif %}
+                
+                    <div class="col-{% if user|has_group:"Supervisor" %}5{% else %}6{% endif %}  mb-2 mb-lg-0">
+                        <div class="form-group" id="group_user_groups">
+                            <select class="form-control" id="id_user_group" name="user_group" style="width: 100%;" multiple title="{% translate 'Group' %}">
+                                <option value="All">{% translate 'All' %}</option>
+                                {% for user_group in user_groups %}
+                                    <option value="{{ user_group.name }}" {% if user_group.attr %}{{ user_group.attr }}{% endif%}>{{ user_group.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                
+                    <div class="col-{% if user|has_group:"Supervisor" %}3{% else %}4{% endif %}  mb-2 mb-lg-0">
+                        <div class="form-group" id="group_facilitators">
+                            <select class="form-control" id="id_username_facilitator_user" name="facilitato" style="width: 100%;" multiple title="{% translate 'User' %}">
+                                <option value="All">{% translate 'All' %}</option>
+                                {% for facilitator_user in facilitators_users %}
+                                    <option value="{{ facilitator_user.username }}">{{ facilitator_user.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    
+                </div>
+
             </div>
 
             <div class="card">
@@ -321,12 +351,15 @@
         let id_canton = $('#id_canton');
         let id_village = $('#id_village');
 
+        let id_user_group = $('#id_user_group');
         let id_username_facilitator_user = $('#id_username_facilitator_user');
         let id_task_status = $('#id_task_status');
         let id_task_type = $('#id_task_type');
         let show_my_calendar = $('#show_my_calendar');
+        let my_area = $('#my_area');
 
         show_my_calendar.prop('checked', true).val(true);
+        my_area.prop('checked', true).val(true);
         
         let currentYear = new Date().getFullYear();
         var currentWeek = null;
@@ -372,8 +405,10 @@
                 is_training: "{{ is_training }}",
                 is_develop: "{{ is_develop }}",
                 show_my_calendar: show_my_calendar.is(':checked'),
+                my_area: my_area.is(':checked'),
                 task_status: id_task_status.val(),
                 task_type: id_task_type.val(),
+                user_groups: id_user_group.val(),
                 username_facilitator_user: id_username_facilitator_user.val(),
                 
                 current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
@@ -436,8 +471,10 @@
                     is_training: "{{ is_training }}",
                     is_develop: "{{ is_develop }}",
                     show_my_calendar: show_my_calendar.is(':checked'),
+                    my_area: my_area.is(':checked'),
                     task_status: id_task_status.val(),
                     task_type: id_task_type.val(),
+                    user_groups: id_user_group.val(),
                     username_facilitator_user: id_username_facilitator_user.val(),
                     
                     current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
@@ -496,6 +533,9 @@
             
         });
         $('.facilitators-filter #show_my_calendar').on('change', function () {
+            loadFacilitators(type_field);
+        });
+        $('.facilitators-filter #my_area').on('change', function () {
             loadFacilitators(type_field);
         });
 
@@ -635,24 +675,34 @@
     <script type="text/javascript">
         $("#id_task_status").select2({
             placeholder: "{% translate 'Task Status' %}",
+            title: "{% translate 'Task Status' %}",
             allowClear: true
         });
         $("#id_task_type").select2({
             placeholder: "{% translate 'Task type' %}",
+            title: "{% translate 'Task type' %}",
             allowClear: true
         });
+        $("#id_user_group").select2({
+            placeholder: "{% translate 'Group' %}",
+            title: "{% translate 'Groups' %}",
+            allowClear: true,
+        });
         $("#id_username_facilitator_user").select2({
-            placeholder: "{% translate 'Facilitators' %}",
+            placeholder: "{% translate 'Users' %}",
+            title: "{% translate 'Users' %}",
             allowClear: true,
         });
         $("#id_canton").select2({
             placeholder: "{% translate 'Canton' %}",
+            title: "{% translate 'Canton' %}",
             allowClear: true,
         });
         {% comment %} $('#id_canton option[value="1973"]').attr("selected",true);
         $('#id_canton').val("1973").trigger('change.select2'); {% endcomment %}
         $("#id_village").select2({
             placeholder: "{% translate 'Village' %}",
+            title: "{% translate 'Village' %}",
             allowClear: true,
         });
 
