@@ -9,7 +9,7 @@ from django.utils.dateparse import parse_datetime
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
 from no_sql_client import NoSQLClient
-from process_manager.models import AggregatedStatus, Task, Cycle, Project
+from process_manager.models import AggregatedStatus, Task, Cycle, Project, AggregatedStatusFacilitator
 from administrativelevels.models import AdministrativeLevel
 from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
@@ -222,72 +222,101 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int):
                 adl_a.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
                 adl_a.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum'] 
                 adl_a.save()
+                
+        print(adl.name)
     
-    #Canton|Commune|Prefecture|Region
-    for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
-        adls = mis_objects_call.filter_objects(AdministrativeLevel, type=type_adl)
+    # #Canton|Commune|Prefecture|Region
+    # for type_adl in ['Canton', 'Commune', 'Prefecture', 'Region']:
+    #     adls = mis_objects_call.filter_objects(AdministrativeLevel, type=type_adl)
         
-        for adl in adls:
-            if type_adl == 'Canton':
-                _adls_ids = list(set([v.cvd.headquarters_village.id for v in adl.children if v and v.cvd and v.cvd.headquarters_village]))
-            else:
-                _adls_ids = [adm.id for adm in adl.children]
+    #     for adl in adls:
+    #         if type_adl == 'Canton':
+    #             _adls_ids = list(set([v.cvd.headquarters_village.id for v in adl.children if v and v.cvd and v.cvd.headquarters_village]))
+    #         else:
+    #             _adls_ids = [adm.id for adm in adl.children]
             
-            for task in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by('id'):
-                children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
+    #         for task in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by('id'):
+    #             children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
                 
-                aggreg_last_activity = None
-                if children_agg:
-                    aggreg_last_activity = children_agg.latest('last_activity')
+    #             aggreg_last_activity = None
+    #             if children_agg:
+    #                 aggreg_last_activity = children_agg.latest('last_activity')
 
-                _ok = True
+    #             _ok = True
                 
-                a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
-                if not a:
-                    try:
-                        a = AggregatedStatus()
-                        a.administrative_level_id = adl.id
-                        a.project_id = project_id
-                        a.cycle_id = cycle_id
-                        a.task_id = task.id
-                        a.facilitator = None
-                    except Exception as exc:
-                        print(exc)
-                        _ok = False
-                if _ok:
-                    a.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
-                    a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
-                    a.total_tasks = sum([agg.total_tasks for agg in children_agg])
-                    a.save()
+    #             a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+    #             if not a:
+    #                 try:
+    #                     a = AggregatedStatus()
+    #                     a.administrative_level_id = adl.id
+    #                     a.project_id = project_id
+    #                     a.cycle_id = cycle_id
+    #                     a.task_id = task.id
+    #                     a.facilitator = None
+    #                 except Exception as exc:
+    #                     print(exc)
+    #                     _ok = False
+    #             if _ok:
+    #                 a.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
+    #                 a.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
+    #                 a.total_tasks = sum([agg.total_tasks for agg in children_agg])
+    #                 a.save()
             
             
-            aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id, cycle_id=cycle_id, facilitator=None)
+    #         aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id, cycle_id=cycle_id, facilitator=None)
             
-            if aggregs.exists():
+    #         if aggregs.exists():
 
-                aggreg_last_activity = aggregs.latest('last_activity') #.order_by('last_activity').last()
+    #             aggreg_last_activity = aggregs.latest('last_activity') #.order_by('last_activity').last()
             
-                adl__ok = True
+    #             adl__ok = True
                 
-                adl_a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task=None, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
-                if not adl_a:
-                    try:
-                        adl_a = AggregatedStatus()
-                        adl_a.administrative_level_id = adl.id
-                        adl_a.project_id = project_id
-                        adl_a.cycle_id = cycle_id
-                        adl_a.task = None
-                        adl_a.facilitator = None
-                    except Exception as exc:
-                        print(exc)
-                        adl__ok = False
-                if adl__ok:
-                    adl_a.last_activity = aggreg_last_activity.last_activity
-                    adl_a.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
-                    adl_a.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum'] 
-                    adl_a.save()
+    #             adl_a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task=None, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+    #             if not adl_a:
+    #                 try:
+    #                     adl_a = AggregatedStatus()
+    #                     adl_a.administrative_level_id = adl.id
+    #                     adl_a.project_id = project_id
+    #                     adl_a.cycle_id = cycle_id
+    #                     adl_a.task = None
+    #                     adl_a.facilitator = None
+    #                 except Exception as exc:
+    #                     print(exc)
+    #                     adl__ok = False
+    #             if adl__ok:
+    #                 adl_a.last_activity = aggreg_last_activity.last_activity
+    #                 adl_a.total_tasks_completed = aggregs.aggregate(Sum('total_tasks_completed'))['total_tasks_completed__sum']
+    #                 adl_a.total_tasks = aggregs.aggregate(Sum('total_tasks'))['total_tasks__sum'] 
+    #                 adl_a.save()
                       
     #End Canton|Commune|Prefecture|Region
+
+"""
+from process_manager.models import AggregatedStatus, AggregatedStatusFacilitator
+from dashboard.tasks import sync_celery_tasks_re, sync_aggregated_status_on_adl
+for projet in [(4,1,'COSO'), (6,3,'FA-COSO'), (5,2,'PURS')]: #COSO, FA-COSO, PURS
+    print(projet)
+    AggregatedStatus.objects.filter(project_id=projet[0]).delete()
+    sync_celery_tasks_re(projet[0], projet[1])
+    sync_aggregated_status_on_adl(projet[0], projet[1])
+    AggregatedStatusFacilitator.objects.filter(project_id=projet[0], cycle_id=projet[1]).update(new_update_exists=True)
+
+
+from process_manager.models import AggregatedStatus, AggregatedStatusFacilitator
+from dashboard.tasks import sync_celery_tasks_re, sync_aggregated_status_on_adl
+from dashboard.utils import search_facilitators_db_with_villages_stabilized
+for projet in [(6,3,'FA-COSO')]: #COSO, FA-COSO, PURS (4,1,'COSO'), (6,3,'FA-COSO'), (5,2,'PURS')
+    print(projet)
+    #AggregatedStatus.objects.filter(project_id=projet[0]).delete()
+    sync_celery_tasks_re(projet[0], projet[1])
+    sync_aggregated_status_on_adl(projet[0], projet[1])
+    AggregatedStatusFacilitator.objects.filter(project_id=projet[0], cycle_id=projet[1]).update(new_update_exists=True)
+
+
+search_facilitators_db_with_villages_stabilized("COSO")
+
+
+"""
 
 def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=None):
     project = Project.objects.get(id=project_id)
@@ -295,8 +324,6 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     nsc = NoSQLClient()
     count_facilitator = 0
     print("Start")
-
-    cycle = Cycle.objects.get(id=cycle_id)
 
     if no_sql_db:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, no_sql_db_name=no_sql_db)
@@ -310,8 +337,8 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
         # print()
         print(count_facilitator, f.no_sql_db_name, f.username)
         count_facilitator += 1
-        nbr_tasks_completed = 0
-        nbr_tasks = 0
+        # nbr_tasks_completed = 0
+        # nbr_tasks = 0
         last_activity_date = "0000-00-00 00:00:00"
         facilitator_db = nsc.get_db(f.no_sql_db_name)
         docs = facilitator_db.all_docs(include_docs=True)['rows']
@@ -323,7 +350,7 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                 facilitator_doc = doc
                 break
 
-        docs = [doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
+        docs = sorted([doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task'], key=lambda obj: obj["doc"]["completed"])
         print(len(docs))
 
         if facilitator_doc:
@@ -334,9 +361,9 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                 for cvd in cvds:
                     _village = cvd['village']
                     if _task.get('type') == 'task' and _task.get('sql_id') and str(_task.get('administrative_level_id')) == str(_village['id']):
-                        if _task['completed']:
-                            nbr_tasks_completed += 1
-                        nbr_tasks += 1
+                        # if _task['completed']:
+                        #     nbr_tasks_completed += 1
+                        # nbr_tasks += 1
 
                         last_updated = datetime_complet_str(_task.get('last_updated'))
                         if last_updated and last_activity_date < last_updated:
@@ -362,6 +389,38 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                             if _ok:
                                 a.total_tasks_completed = 1 if _task['completed'] else 0
                                 a.total_tasks = 1
+
+                                # Validation status
+                                a.total_tasks_validated = 1 if _task.get("validated") else 0
+                                a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
+                                if _task.get("validated") == False:
+                                    a.total_tasks_invalidated = 1
+
+                                    updated_after_invalidation = _task.get("updated_after_invalidation")
+                                    if not updated_after_invalidation:
+                                        action_by = _task.get("action_by", {})
+                                        if type(action_by) is list:
+                                            if action_by:
+                                                action_by = action_by[0] or {}
+                                            else:
+                                                action_by = {}
+                                        action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
+                                        if action_by_action_date and _task.get("last_updated"):
+                                            action_by_action_date = datetime_complet_str(action_by_action_date)
+                                            action_last_updated = datetime_complet_str(_task.get("last_updated"))
+                                            if action_last_updated and action_by_action_date < action_last_updated:
+                                                updated_after_invalidation = True
+                                    if updated_after_invalidation:
+                                        a.total_tasks_invalidated_review = 1
+                                        a.total_tasks_invalidated_unreview = 0
+                                    else:
+                                        a.total_tasks_invalidated_unreview = 1
+                                        a.total_tasks_invalidated_review = 0
+
+                                else:
+                                    a.total_tasks_invalidated = 0
+                                # End - Validation status
+
                                 _l_act = datetime_complet_str(_task.get('last_updated'))
                                 a_last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else parse_datetime(_l_act) #datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
                                 if a_last_activity is not None:
@@ -393,8 +452,14 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     backup_db_docs = [doc for doc in backup_db_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
     for _task in backup_db_docs:
         _task = _task.get('doc')
-        if _task.get('type') == 'task' and _task.get('sql_id'):
-            _adl = mis_objects_call.get_object(AdministrativeLevel, id=int(_task['administrative_level_id']))
+        if _task.get('type') == 'task' and _task.get('sql_id') and _task.get('administrative_level_id'):
+            _adl = None
+            _adls = mis_objects_call.filter_objects(AdministrativeLevel, id=int(_task['administrative_level_id']))
+            if _adls:
+                _adl = _adls.first()
+            else:
+                print("ADL doesn't exists : ", _task['administrative_level_id'], _task['administrative_level_name'], "Canton ID : ", _task['canton_sql_id'])
+
             if _adl and _adl.cvd:
                 for adl_o in _adl.cvd.get_villages():
                     
@@ -414,6 +479,38 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                     if _ok:
                         a.total_tasks_completed = 1 if _task['completed'] else 0
                         a.total_tasks = 1
+
+                        # Validation status
+                        a.total_tasks_validated = 1 if _task.get("validated") else 0
+                        a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
+                        if _task.get("validated") == False:
+                            a.total_tasks_invalidated = 1
+
+                            updated_after_invalidation = _task.get("updated_after_invalidation")
+                            if not updated_after_invalidation:
+                                action_by = _task.get("action_by", {})
+                                if type(action_by) is list:
+                                    if action_by:
+                                        action_by = action_by[0] or {}
+                                    else:
+                                        action_by = {}
+                                action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
+                                if action_by_action_date and _task.get("last_updated"):
+                                    action_by_action_date = datetime_complet_str(action_by_action_date)
+                                    action_last_updated = datetime_complet_str(_task.get("last_updated"))
+                                    if action_last_updated and action_by_action_date < action_last_updated:
+                                        updated_after_invalidation = True
+                            if updated_after_invalidation:
+                                a.total_tasks_invalidated_review = 1
+                                a.total_tasks_invalidated_unreview = 0
+                            else:
+                                a.total_tasks_invalidated_unreview = 1
+                                a.total_tasks_invalidated_review = 0
+
+                        else:
+                            a.total_tasks_invalidated = 0
+                        # End - Validation status
+
                         _l_act = datetime_complet_str(_task.get('last_updated'))
                         a_last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else parse_datetime(_l_act) #datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
                         if a_last_activity is not None:
@@ -424,4 +521,6 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     
     # sync_aggregated_status_on_adl(project_id)
     
+    # AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
+
     print("End")

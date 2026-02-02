@@ -139,65 +139,66 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
         task = _doc.get('doc')
         if task and task.get('cycle_id') == cycle.couch_id and task.get('type') == "task":
         
-            _village = mis_objects_call.get_object(AdministrativeLevel, id=int(task.get("administrative_level_id")))
-            cvd = _village.cvd
-            count, exists = get_cvd_index(datas, cvd.id if cvd else 0)
+            _village = mis_objects_call.filter_objects(AdministrativeLevel, id=int(task.get("administrative_level_id"))).first()
+            if _village:
+                cvd = _village.cvd
+                count, exists = get_cvd_index(datas, cvd.id if cvd else 0)
 
-            if not exists:
-                assign_facilitators = mis_objects_call.filter_objects(
-                    AssignAdministrativeLevelToFacilitator, 
-                    project_id=project_id,
-                    administrative_level_id=int(task.get("administrative_level_id"))
-                )
-                # facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
-                # _f_s = []
-                # if facilitators_stabilized:
-                #     for elt in facilitators_stabilized[:]:
-                #         if elt.get('value') and elt.get('value') not in _f_s:
-                #             _f_s.append(elt['value'])
-                
-                facilitators_stabilized = eadls.get_view_result(
-                        "_design/adl_village_filter", "by_village_id", 
-                        keys=[int(task.get("administrative_level_id"))], 
-                        include_docs=True
+                if not exists:
+                    assign_facilitators = mis_objects_call.filter_objects(
+                        AssignAdministrativeLevelToFacilitator, 
+                        project_id=project_id,
+                        administrative_level_id=int(task.get("administrative_level_id"))
                     )
-                _f_s = []
-                if facilitators_stabilized:
-                    for row in facilitators_stabilized[:]:
-                        elt = row['doc']
-                        if elt not in _f_s:
-                            _f_s.append(elt['value'])
+                    # facilitators_stabilized = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=[task.get("administrative_level_id")])
+                    # _f_s = []
+                    # if facilitators_stabilized:
+                    #     for elt in facilitators_stabilized[:]:
+                    #         if elt.get('value') and elt.get('value') not in _f_s:
+                    #             _f_s.append(elt['value'])
+                    
+                    facilitators_stabilized = eadls.get_view_result(
+                            "_design/adl_village_filter", "by_village_id", 
+                            keys=[int(task.get("administrative_level_id"))], 
+                            include_docs=True
+                        )
+                    _f_s = []
+                    if facilitators_stabilized:
+                        for row in facilitators_stabilized[:]:
+                            elt = row['doc']
+                            if elt not in _f_s:
+                                _f_s.append(elt['value'])
 
-                            
-                _facilitators = Facilitator.objects.filter(
-                    Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) | 
-                    Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]), 
-                    active=True
+                                
+                    _facilitators = Facilitator.objects.filter(
+                        Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) | 
+                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]), 
+                        active=True
+                    )
+
+                last_task_completed = get_last_task_completed(
+                    datas_dict_cvd_with_last_task["task"][count] if (
+                        datas_dict_cvd_with_last_task["task"].get(count)
+                    ) else None, 
+                    task
                 )
+                datas_dict_cvd_with_last_task["ID CVD"][count] = cvd.id if cvd else 0
+                datas_dict_cvd_with_last_task["task"][count] = last_task_completed
 
-            last_task_completed = get_last_task_completed(
-                datas_dict_cvd_with_last_task["task"][count] if (
-                    datas_dict_cvd_with_last_task["task"].get(count)
-                ) else None, 
-                task
-            )
-            datas_dict_cvd_with_last_task["ID CVD"][count] = cvd.id if cvd else 0
-            datas_dict_cvd_with_last_task["task"][count] = last_task_completed
-
-            datas["ID CVD"][count] = cvd.id if cvd else 0
-            datas["REGION"][count] = _village.parent.parent.parent.parent.name
-            datas["PREFECTURE"][count] = _village.parent.parent.parent.name
-            datas["COMMUNE"][count] = _village.parent.parent.name
-            datas["CANTON"][count] = _village.parent.name
-            datas["CVD"][count] = cvd.name if cvd and cvd.name else task.get("administrative_level_name")
-            datas["VILLAGES"][count] = " ; ".join([v.name for v in cvd.get_villages()]) if cvd else _village.name
-            datas["PHASE"][count] = last_task_completed.get("phase_name") if last_task_completed else ""
-            datas["ACTIVITE"][count] = last_task_completed.get("activity_name") if last_task_completed else ""
-            datas["TACHE"][count] = last_task_completed.get("name") if last_task_completed else ""
-            if not exists:
-                datas["AC"][count] = " ; ".join([f.name for f in _facilitators if f.name])
-                datas["PHONE"][count] = " ; ".join([f.phone for f in _facilitators if f.phone])
-            
+                datas["ID CVD"][count] = cvd.id if cvd else 0
+                datas["REGION"][count] = _village.parent.parent.parent.parent.name
+                datas["PREFECTURE"][count] = _village.parent.parent.parent.name
+                datas["COMMUNE"][count] = _village.parent.parent.name
+                datas["CANTON"][count] = _village.parent.name
+                datas["CVD"][count] = cvd.name if cvd and cvd.name else task.get("administrative_level_name")
+                datas["VILLAGES"][count] = " ; ".join([v.name for v in cvd.get_villages()]) if cvd else _village.name
+                datas["PHASE"][count] = last_task_completed.get("phase_name") if last_task_completed else ""
+                datas["ACTIVITE"][count] = last_task_completed.get("activity_name") if last_task_completed else ""
+                datas["TACHE"][count] = last_task_completed.get("name") if last_task_completed else ""
+                if not exists:
+                    datas["AC"][count] = " ; ".join([f.name for f in _facilitators if f.name])
+                    datas["PHONE"][count] = " ; ".join([f.phone for f in _facilitators if f.phone])
+                
 
     if not os.path.exists("media/utils/exports"):
             os.makedirs("media/utils/exports")

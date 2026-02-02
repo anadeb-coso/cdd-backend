@@ -205,8 +205,8 @@ def structure_the_fields_labels(task):
                         ii = 0
                         value = order_dict(task.get('sql_id'), field, value)
                         for field5, value5 in value.items():
-                            fields1 = fields_options.get(field).get('fields')
                             try:
+                                fields1 = fields_options.get(field).get('fields')
                                 label1 = fields1[field5].get('label') if fields1[field5].get('label') else utils_structure_the_words(field5)
                             except Exception as ex:
                                 label1 = utils_structure_the_words(field5)
@@ -335,6 +335,7 @@ def get_group_high(user):
         - Director  : Director
         - Advisor  : Advisor
         - Minister  : Minister
+        etc.
     """
     if user:
         if user.is_superuser:
@@ -370,12 +371,25 @@ def get_group_high(user):
             return gettext_lazy("Accountant").__str__()
         if user.groups.filter(name="Infra").exists():
             return gettext_lazy("Infra").__str__()
+        
+        if user.groups.filter(name="YouthProgramSpecialist").exists():
+            return gettext_lazy("Youth Program Specialist").__str__()
+        if user.groups.filter(name="LocalEconomicDevelopmentSpecialist").exists():
+            return gettext_lazy("Local Economic Development Specialist").__str__()
+        if user.groups.filter(name="CommunicationSpecialist").exists():
+            return gettext_lazy("Communication Specialist").__str__()
+        if user.groups.filter(name="CommunityFacilitator").exists():
+            return gettext_lazy("Community Facilitator").__str__()
+        if user.groups.filter(name="TechnicalFacilitator").exists():
+            return gettext_lazy("Technical Facilitator").__str__()
+        
         if user.groups.filter(name="Supervisor").exists():
             return gettext_lazy("Supervisor").__str__()
         
         if user.groups.filter(name="Validator").exists():
             return gettext_lazy("Validator").__str__()
-
+        
+        
 
     return gettext_lazy("User").__str__()
 

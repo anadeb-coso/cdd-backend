@@ -23,6 +23,10 @@ def settings_vars(request):
         "PROJECTS": Project.objects.filter(users__in=[request.user.id]) if request.user.is_authenticated else [],
         "CYCLES": Cycle.objects.filter(project_id=request.session.get('project_id')),
 
+        "PROJECTS_IDS": request.session.get('tree_structure_projects_ids'),
+        "PROJECTS_NAMES": request.session.get('tree_structure_projects_names'),
+        "PROJECTS_MIS_IDS": request.session.get('tree_structure_projects_mis_ids'),
+        
         "CDD_URL_BASE": settings.CDD_URL_BASE,
         "MIS_URL_BASE": settings.MIS_URL_BASE,
         "GRM_URL_BASE": settings.GRM_URL_BASE,
