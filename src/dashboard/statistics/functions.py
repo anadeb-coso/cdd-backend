@@ -754,7 +754,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
         already_count_facilitator = False
         facilitator_db = nsc.get_db(f.no_sql_db_name)
 
-        query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+        # query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
         # query_result_docs = facilitator_db.get_query_result({
         #     "type": {"$in": ["task", "facilitator"]},
         #     "$or": [
@@ -768,8 +768,21 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
         #     ]
             
         # }, limit=1000000)[:]
+        query_result_docs = facilitator_db.get_query_result({
+            "$or": [
+                {
+                    "type": "facilitator",
+                },
+                {
+                    "type": "task",
+                    'project_id': project.couch_id,
+                    'cycle_id': cycle_id
+                }
+            ]
+        }, limit=1000000)[:]
+
                 
-        query_result_docs = [doc.get('doc') for doc in query_result_docs if doc.get('doc') and (doc.get('doc').get('type') == "facilitator" or (doc.get('doc').get('type') == "task" and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id))]
+        # query_result_docs = [doc.get('doc') for doc in query_result_docs if doc.get('doc') and (doc.get('doc').get('type') == "facilitator" or (doc.get('doc').get('type') == "task" and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id))]
         
         f_docs = [doc for doc in query_result_docs if doc.get('type') == "facilitator"]
 
@@ -3342,11 +3355,11 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and _.get('doc').get('project_id') == project.couch_id]
     
-    administrative_level_cvd_villages = [_.get('doc')["administrative_level_id"] for _ in query_result_docs if _.get('doc') and _.get('doc')["administrative_level_id"] not in administrative_level_cvd_villages]
+    administrative_level_cvd_villages = list(set([_.get('doc')["administrative_level_id"] for _ in query_result_docs if _.get('doc')])) #and _.get('doc')["administrative_level_id"] not in administrative_level_cvd_villages
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
         administrativelevel_obj = all_project_adl.get(str(administrative_level_cvd_village)) #administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj['cvd']:
+        if administrativelevel_obj and administrativelevel_obj['cvd']:
             # _ok = True
             # if liste_villages:
             #     _ok = False

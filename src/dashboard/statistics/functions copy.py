@@ -3368,8 +3368,8 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
-        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj.cvd:
+        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(administrative_level_cvd_village)).first()
+        if administrativelevel_obj and administrativelevel_obj.cvd:
             # _ok = True
             # if liste_villages:
             #     _ok = False
