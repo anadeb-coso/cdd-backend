@@ -1,0 +1,212 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            
+            {% if user.is_superuser or user|has_group:"FullStack" %}
+                <div class="float-right mb-3 ml-3">
+                    <a href="
+                    {% if class_object == 'Phase' %}
+                    {% url 'dashboard:process_manager:tasks:phase_create' %}
+                    {% elif class_object == 'Activity' %}
+                    {% url 'dashboard:process_manager:tasks:activity_create' %}
+                    {% elif class_object == 'Task' %}
+                    {% url 'dashboard:process_manager:tasks:task_create' %}
+                    {% else %}
+                    #
+                    {% endif %}
+                    "
+                    class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-plus mr-2"></i>
+                        {% translate "Create" %}
+                    </a>
+                </div>
+
+                {% if class_object != 'Phase' %}
+                <div class="float-right mb-3 ml-3">
+                    <a href="{% url 'dashboard:process_manager:tasks:phase_list' %}"
+                    class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-list mr-2"></i>
+                        {% translate "Phases" %}
+                    </a>
+                </div>
+                {% endif %}
+
+                {% if class_object != 'Activity' %}
+                <div class="float-right mb-3 ml-3">
+                    <a href="{% url 'dashboard:process_manager:tasks:activity_list' %}"
+                    class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-list mr-2"></i>
+                        {% translate "Activities" %}
+                    </a>
+                </div>
+                {% endif %}
+                
+                {% if class_object != 'Task' %}
+                <div class="float-right mb-3 ml-3">
+                    <a href="{% url 'dashboard:process_manager:tasks:task_list' %}"
+                    class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fa fa-list mr-2"></i>
+                        {% translate "Tasks" %}
+                    </a>
+                </div>
+                {% endif %}
+
+            {% endif %}
+
+            <div class="clearfix"></div>
+             
+            
+            <div class="input-group mb-3 search-bar">
+                <div class="input-group-prepend">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+            </div>
+
+            <div class="card">
+                <div class="card-body table-responsive">
+
+
+
+
+
+
+                    
+                    <div class="card">
+                        <div class="card-body table-responsive">
+                            <table id="table" class="table">
+                                <thead>
+                                <tr>
+                                    <th >{% translate 'Name' %}</th>
+                                    {% if class_object == 'Task' %}
+                                    <th >{% translate 'Activty' %}</th>
+                                    {% endif %}
+                                    {% if class_object == 'Activity' or class_object == 'Task' %}
+                                    <th >{% translate 'Phase' %}</th>
+                                    {% endif %}
+                                    <th >{% translate 'Project' %}</th>
+                                    {% if user.is_superuser or user|has_group:"FullStack" %}<th >
+                                        {% translate 'Action' %}</th>
+                                    {% endif %}
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for object in objects %}
+                                    <tr>
+                                        <td align="left">{{ object.name }}</td>
+
+                                        {% if class_object == 'Task' %}
+                                        <td align="left">{{ object.activity.name }}</td>
+                                        {% endif %}
+                                        {% if class_object == 'Activity' or class_object == 'Task' %}
+                                        <td align="left">{{ object.phase.name }}</td>
+                                        {% endif %}
+                                        <td>{{ object.project.name }}</td>
+
+                                        {% if user.is_superuser or user|has_group:"FullStack" %}
+                                        {% if class_object == 'Phase' %}
+                                        <td>
+                                            <a href="{% url 'dashboard:process_manager:tasks:phase_update' object.pk %}" 
+                                                class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                                <span class="_web">{% translate 'Edit profile' %}</span>
+                                                <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                            </a>
+                                            <a href="{% url 'dashboard:process_manager:tasks:phase_delete' object.pk %}" 
+                                                class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                                <span class="_web">{% translate 'Delete' %}</span>
+                                                <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                            </a>
+                                        </td>
+                                        {% elif class_object == 'Activity' %}
+                                        <td>
+                                            <a href="{% url 'dashboard:process_manager:tasks:activity_update' object.pk %}" 
+                                                class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                                <span class="_web">{% translate 'Edit profile' %}</span>
+                                                <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                            </a>
+                                            <a href="{% url 'dashboard:process_manager:tasks:activity_delete' object.pk %}" 
+                                                class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                                <span class="_web">{% translate 'Delete' %}</span>
+                                                <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                            </a>
+                                        </td>
+                                        {% elif class_object == 'Task' %}
+                                        <td>
+                                            <a href="{% url 'dashboard:process_manager:tasks:task_update' object.pk %}" 
+                                                class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                                <span class="_web">{% translate 'Edit profile' %}</span>
+                                                <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                            </a>
+                                            <a href="{% url 'dashboard:process_manager:tasks:task_delete' object.pk %}" 
+                                                class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                                <span class="_web">{% translate 'Delete' %}</span>
+                                                <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                            </a>
+                                        </td>
+                                        {% endif %}
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+
+    <!-- DataTables export files -->
+    {% include 'layouts/datatable-js.html' %}
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+
+            let table = $('#table').DataTable({
+                language: {
+                    url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+                },
+                dom: "Blrtip",
+                buttons: [ 'copy', 'excel', 'colvis' ],
+                {% comment %} columnDefs: [
+                    {
+                        targets: 1,
+                        orderable: false,
+                        searchable: false,
+                    }
+                ], {% endcomment %}
+                lengthMenu: [10, 20, 50, 100],
+                pageLength: 10,
+                order: []
+            });
+            $('#search').on('keyup', function () {
+                table.search($(this).val()).draw();
+            });
+        });
+    </script>
+    
+
+
+{% endblock %}
+
+{% block select2 %}
+    
+    
+{% endblock select2 %}
