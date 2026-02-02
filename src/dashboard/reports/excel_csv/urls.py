@@ -12,4 +12,7 @@ urlpatterns = [
     path('existences-cvd-excel-csv/', views.GetExistencesCVDExcelCSVRport.as_view(), name="app_excel_csv_existences_cvd"),
     path('villages-priorities-excel-csv/', views.GetVillagesPrioritiesExcelCSVRport.as_view(), name="app_excel_csv_villages_priorities"),
 
+
+    path('facilitators-status-excel-csv/', views.GetFacilitatorStatusExcelCSVRport.as_view(), name="app_excel_csv_facilitators_status_p"),
+
 ]

@@ -671,8 +671,8 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
         
     for administrative_level_cvd_village in administrative_level_cvd_villages:
-        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj.cvd:
+        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(administrative_level_cvd_village)).first()
+        if administrativelevel_obj and administrativelevel_obj.cvd:
             _ok = True
             if liste_villages:
                 _ok = False
@@ -930,8 +930,8 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
-        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj.cvd:
+        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(administrative_level_cvd_village)).first()
+        if administrativelevel_obj and administrativelevel_obj.cvd:
             _ok = True
             if liste_villages:
                 _ok = False
@@ -1313,8 +1313,8 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
             administrative_level_cvd_villages.append(doc["administrative_level_id"])
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
-        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village))
-        if administrativelevel_obj.cvd:
+        administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(administrative_level_cvd_village)).first()
+        if administrativelevel_obj and administrativelevel_obj.cvd:
             _ok = True
             if liste_villages:
                 _ok = False

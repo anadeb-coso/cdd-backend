@@ -13,6 +13,7 @@ from .functions import (
     get_existences_cvd_under_file_excel_or_csv,
     get_village_priorities_under_file_excel_or_csv
 )
+from .facilitators_status import get_facilitator_status_excel_csv_under_file_excel_or_csv
 
 
 
@@ -241,6 +242,43 @@ class GetVillagesPrioritiesExcelCSVRport(PageMixin, LoginRequiredMixin, Template
                 "session_project_id": self.request.session.get('project_id'),
                 "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
             }
+        )
+
+        # except Exception as exc:
+        #     messages.info(request, gettext_lazy("An error has occurred..."))
+
+        if not file_path:
+            return redirect('dashboard:facilitators:list')
+        else:
+            return download_file.download(
+                request, 
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        
+
+
+class GetFacilitatorStatusExcelCSVRport(PageMixin, LoginRequiredMixin, TemplateView):
+    """Class to download Facilitator under excel file"""
+
+    template_name = None
+    context_object_name = 'Download'
+    title = gettext_lazy("Download")
+    active_level1 = 'reports'
+    breadcrumb = [
+        {
+            'url': '',
+            'title': title
+        },
+    ]
+
+    def get(self, request, facilitator_db_name=None, *args, **kwargs):
+
+        file_path = ""
+        # try:
+        file_path = get_facilitator_status_excel_csv_under_file_excel_or_csv(
+            request,
+            facilitator_db_name=facilitator_db_name
         )
 
         # except Exception as exc:
