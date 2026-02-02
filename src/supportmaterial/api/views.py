@@ -13,7 +13,7 @@ class RestGetSubjects(APIView):
     permission_classes = ()
     
     def post(self, request, *args, **kwargs):
-        print(777777777777)
+        
         # try:
         return Response(
             SubjectSerializer(

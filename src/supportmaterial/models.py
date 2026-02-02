@@ -66,6 +66,6 @@ class SupportingMaterial(BaseModel):
     
     class Meta:
         unique_together = [
-            ['subject', 'name'], ['subject', 'rank'], 
+            # ['subject', 'name'], ['subject', 'rank'], 
             ['lesson', 'name'], ['lesson', 'rank']
         ]
