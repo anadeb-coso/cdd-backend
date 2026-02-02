@@ -1,0 +1,156 @@
+{% load static i18n custom_tags math_filters %}
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+      <meta charset="utf-8" />
+        <title>{% translate "Facilitators" %}</title>
+        
+        <style type="text/css">
+            body {
+                font-weight: 100;
+                font-size: 12px;
+            }
+            .tablePrincipal tr th{
+                font-family: algerian;
+            }
+
+            .hrItem {
+                border: none;
+                height: 3px;
+                /* Set the hr color 
+                color: #333; old IE */
+                background-color: #e4ecf3; /* Modern Browsers */
+                color: #e4ecf3;
+            }
+            
+            .center{
+                text-align: center;
+            }
+            #content table tr, #content table td {
+                padding-top: 7px !important;
+            }
+            @page {
+                 size: a4 portrait;
+                 margin: 15px;
+                 margin-bottom: 86pt;
+                 @frame footer_frame {           /* Static Frame */
+                    -pdf-frame-content: footer_content;
+                    width: 100%; bottom: 0pt; height: 86pt;
+                }
+                  
+            }
+
+            
+            
+            
+        </style>
+    </head>
+    
+    <body bgcolor="#e4ecf3">
+                
+        <div id="footer_content">
+            {% include 'reports/pdf/footer.html' %}
+        </div>
+
+        <div id="content">
+            <div id="header_content">
+                {% include 'reports/pdf/entete.html' %}
+            </div>
+
+            <table>
+                <tr width="100%" >
+                    <th align="center" style="font-size: 25px; ">
+                        {% translate "Report of the evolution of Community Animators" %}
+                    </th>
+                </tr>
+            </table>
+
+            
+            <br />
+            <span>
+                {% translate "Last table update" %} : {{ last_update|date:"d/m/Y à H:i" }}
+            </span>
+
+            <p>
+
+                <table border="1" align="center">
+                    <thead>
+                    <tr>
+                        <th width="3%">{% translate 'N°' %}</th>
+                        <th width="50%">{% translate 'Name' %}</th>
+                        
+                        <th width="5%" align="center" >G<br />C</th>
+                        <th width="5%" align="center" >G<br />P</th>
+                        <th width="5%" align="center" >G<br />T</th>
+                        <th width="7%" align="center" >G<br />%</th>
+                        
+                        <th width="5%" align="center" >A<br />C</th>
+                        <th width="5%" align="center" >A<br />P</th>
+                        <th width="5%" align="center" >A<br />T</th>
+                        <th width="7%" align="center" >A<br />%</th>
+                        
+                        <th width="5%" align="center" >S<br />C</th>
+                        <th width="5%" align="center" >S<br />P</th>
+                        <th width="5%" align="center" >S<br />T</th>
+                        <th width="7%" align="center" >S<br />%</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        
+                        {% for k, v in facilitators.items %}
+                            {% with  v|get:"facilitator" as facilitator %}
+                                <tr>
+                                    <td align="center">{{ forloop.counter }}</td>
+                                    <td align="left" >&nbsp;<span>{{ facilitator.name }}</span></td>
+
+                                    <td align="center">{{ facilitator.total_tasks_completed }}</td>
+                                    <td align="center">{{facilitator.total_tasks|sub:facilitator.total_tasks_completed }}</td>
+                                    <td align="center">{{ facilitator.total_tasks }}</td>
+                                    <td align="center"><b>{{ facilitator.percent|floatformat:"2"  }}%</b></td>
+                                    
+                                    <td align="center">{{ facilitator.total_tasks_completed_current_project }}</td>
+                                    <td align="center">{{facilitator.total_tasks_current_project|sub:facilitator.total_tasks_completed_current_project }}</td>
+                                    <td align="center">{{ facilitator.total_tasks_current_project }}</td>
+                                    <td align="center"><b>{{ facilitator.percent_current_project|floatformat:"2"  }}%</b></td>
+                                    
+                                    <td align="center">{{ facilitator.total_tasks_completed_stabilized }}</td>
+                                    <td align="center">{{facilitator.total_tasks_stabilized|sub:facilitator.total_tasks_completed_stabilized }}</td>
+                                    <td align="center">{{ facilitator.total_tasks_stabilized }}</td>
+                                    <td align="center"><b>{{ facilitator.percent_stabilized|floatformat:"2"  }}%</b></td>
+                                </tr>
+                            {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <br />
+                <hr />
+            </p>
+            <div style="bottom: 0px !important">
+                <hr />
+                <p>
+                    <b>G :</b> {% translate "Global" %}, 
+                    <b>A :</b> {% translate "Affected" %}, 
+                    <b>S :</b> {% translate "Stabilized" %}, 
+                    <b>C :</b> {% translate "Completed" %}, 
+                    <b>P :</b> {% translate "Pending" %}, 
+                    <b>T :</b> {% translate "Total" %}, 
+                    <b>V :</b> {% translate "Validated" %}, 
+                    <b>I :</b> {% translate "Invalidated" %}, 
+                    <b>IR :</b> {% translate "Review after invalidation" %}, 
+                    <b>IUR :</b> {% translate "Invalidated Unreview" %}, 
+                    <b>WV :</b> {% translate "Waiting Validation" %}, 
+                    <b>% :</b> {% translate 'Percentage' %}.
+                </p>
+            </div>
+
+
+            <div style="page-break-before:always"></div>
+                
+
+        </div>
+      
+
+
+    </body>
+</html>

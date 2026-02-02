@@ -1,0 +1,193 @@
+{% load static i18n custom_tags math_filters %}
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+      <meta charset="utf-8" />
+        <title>{% translate "Facilitators" %}</title>
+        
+        <style type="text/css">
+            body {
+                font-weight: 100;
+                font-size: 12px;
+            }
+            .tablePrincipal tr th{
+                font-family: algerian;
+            }
+
+            .hrItem {
+                border: none;
+                height: 3px;
+                /* Set the hr color 
+                color: #333; old IE */
+                background-color: #e4ecf3; /* Modern Browsers */
+                color: #e4ecf3;
+            }
+            
+            .center{
+                text-align: center;
+            }
+            #content table tr, #content table td {
+                padding-top: 7px !important;
+            }
+            @page {
+                 size: a4 portrait;
+                 margin: 15px;
+                 margin-bottom: 86pt;
+                 @frame footer_frame {           /* Static Frame */
+                    -pdf-frame-content: footer_content;
+                    width: 100%; bottom: 0pt; height: 86pt;
+                }
+                  
+            }
+
+            
+            
+            
+        </style>
+    </head>
+    
+    <body bgcolor="#e4ecf3">
+                
+        <div id="footer_content">
+            {% include 'reports/pdf/footer.html' %}
+        </div>
+
+        <div id="content">
+            {% for k, v in facilitators.items %}
+                {% with  v|get:"facilitator" as facilitator %}
+                    <div id="header_content">
+                        {% include 'reports/pdf/entete.html' %}
+                    </div>
+
+                    <table>
+                        <tr width="100%" >
+                            <th align="center" style="font-size: 25px; ">
+                                {% translate "Report of the evolution of Community Animators" %}
+                            </th>
+                        </tr>
+                    </table>
+
+                    <p>
+                        {% translate "Report of" %} : {{ last_update|date:"d/m/Y à H:i" }}
+                    </p>
+
+                    <span>
+                        <b>{% translate "Name" %}</b> : {{ facilitator.name }}
+                    </span><br />
+                    <span>
+                        <b>{% translate "Sex" %}</b> : {% if facilitator.sex == 'M.' %}M{% elif facilitator.sex == 'Mme' %}F{% else %}I{% endif %}
+                    </span><br />
+                    <span>
+                        <b>{% translate "Phone" %}</b> : {{ facilitator.phone }}
+                    </span><br />
+                    <span>
+                        <b>{% translate "Email" %}</b> : {{ k }}
+                    </span><br />
+                    <span>
+                        <b>{% translate "Percentage of evolution in villages of initial allocation" %}</b> : {{ facilitator.percent_current_project }}%
+                    </span><br />
+                    <span>
+                        <b>{% translate "Percentage of evolution in stabilization villages" %}</b> : {{ facilitator.percent_stabilized }}%
+                    </span><br />
+                    <span>
+                        <b>{% translate "Overall percentage" %}</b> : {{ facilitator.percent }}%
+                    </span><br />
+                        
+                    {% with  v|get:"projects" as projects %}
+                        {% for k_p, v_f in projects.items %}
+                            <h1>{% translate "Project" %} : {{ k_p }}</h1>
+                            <span>
+                                <b>{% translate "Percentage of evolution in villages of initial allocation" %}</b> : {{ v_f.percent_current_project }}%
+                            </span><br />
+                            <span>
+                                <b>{% translate "Percentage of evolution in stabilization villages" %}</b> : {{ v_f.percent_stabilized }}%
+                            </span><br />
+                            <span>
+                                <b>{% translate "Overall percentage" %}</b> : {{ v_f.percent }}%
+                            </span><br />
+                            <p>
+
+                                <table border="1" align="center">
+                                    <thead>
+                                    <tr>
+                                        <th width="3%">{% translate 'N°' %}</th>
+                                        <th width="50%">{% translate 'Village/CVD' %}</th>
+                                        <th width="5%" align="center" >C</th>
+                                        <th width="5%" align="center" >P</th>
+                                        <th width="5%" align="center" >T</th>
+                                        <th width="7%" align="center" >%</th>
+                                        <th width="5%" align="center" >V</th>
+                                        <th width="5%" align="center" >I</th>
+                                        <th width="5%" align="center" >IR</th>
+                                        <th width="5%" align="center" >IUR</th>
+                                        <th width="5%" align="center" >WV</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for village_d in v_f.administrative_level_headquarters_villages_infos %}
+                                            <tr {% if village_d|get:"type" == "stabilized" or village_d|get:"in_the_both" %} style="font-weight: bold" {% endif %}>
+                                                <td align="center">{% if village_d|get:"type" == "current_project" %}*{% endif %}{{ forloop.counter }}</td>
+                                                <td align="left" >&nbsp;<span>{{ village_d|get:"village_name" }}</span></td>
+                                                <td align="center">{{ village_d|get:"total_tasks_completed" }}</td>
+                                                {% with village_d|get:"total_tasks_completed" as total_tasks_completed %}
+                                                    {% with village_d|get:"total_tasks" as total_tasks %}
+                                                        <td align="center">{{ total_tasks|sub:total_tasks_completed }}</td>
+                                                    {% endwith %}
+                                                {% endwith %}
+                                                <td align="center">{{ village_d|get:"total_tasks" }}</td>
+                                                <td align="center">{{ village_d|get:"percent"|floatformat:"2"  }}%</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_validated" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_invalidated" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_invalidated_review" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_invalidated_unreview" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_waiting_validation" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        <tr>
+                                            <td colspan="2"><b>Total</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_completed }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks|sub:v_f.total_tasks_completed }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks }}</b></td>
+                                            <td align="center"><b>{{ v_f.percent|floatformat:"2" }}%</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_validated }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_invalidated }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_invalidated_review }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_invalidated_unreview }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_waiting_validation }}</b></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <br />
+                                <hr />
+                            </p>
+                        {% if not forloop.last %}<div style="page-break-before:always"></div>{% endif %}
+                        {% endfor %}
+
+
+                        <div style="bottom: 0px !important">
+                            <hr />
+                            <p>
+                                <b>C :</b> {% translate "Completed" %}, 
+                                <b>P :</b> {% translate "Pending" %}, 
+                                <b>T :</b> {% translate "Total" %}, 
+                                <b>V :</b> {% translate "Validated" %}, 
+                                <b>I :</b> {% translate "Invalidated" %}, 
+                                <b>IR :</b> {% translate "Review after invalidation" %}, 
+                                <b>IUR :</b> {% translate "Invalidated Unreview" %}, 
+                                <b>WV :</b> {% translate "Waiting Validation" %}, 
+                                <b>% :</b> {% translate 'Percentage' %}.
+                            </p>
+                        </div>
+
+                    {% endwith %}
+                    <div style="page-break-before:always"></div>
+                {% endwith %}
+            {% endfor %}
+
+        </div>
+      
+
+
+    </body>
+</html>
