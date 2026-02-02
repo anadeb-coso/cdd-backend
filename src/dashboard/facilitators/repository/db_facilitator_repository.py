@@ -11,20 +11,26 @@ class FacilitatorRepository:
 
     def __build_query(self, criteria: FacilitatorCriteria):
         query = Facilitator.objects
-        if criteria.active is not None:
-            query = query.filter(active=criteria.active)
         if criteria.id__in is not None:
             query = query.filter(id__in=criteria.id__in)
-        if criteria.training_mode is not None:
-            query = query.filter(training_mode=criteria.training_mode)
-        if criteria.projects__id is not None:
-            query = query.filter(projects__in=criteria.projects__id)
-        if criteria.develop_mode is not None:
-            query = query.filter(develop_mode=criteria.develop_mode)
+        if criteria.email__in is not None:
+            query = query.filter(email__in=criteria.email__in)
         if criteria.no_sql_pass is not None:
             query = query.filter(no_sql_pass=criteria.no_sql_pass)
         if criteria.no_sql_user is not None:
             query = query.filter(no_sql_user=criteria.no_sql_user)
         if criteria.facilitator_type is not None:
             query = query.filter(facilitator_type=criteria.facilitator_type)
+        if criteria.facilitator_type__in is not None:
+            query = query.filter(facilitator_type__in=criteria.facilitator_type__in)
+        if criteria.username__in is not None:
+            query = query.filter(username__in=criteria.username__in)
+        if criteria.training_mode is not None:
+            query = query.filter(training_mode=criteria.training_mode)
+        if criteria.projects__id is not None:
+            query = query.filter(projects__in=criteria.projects__id)
+        if criteria.develop_mode is not None:
+            query = query.filter(develop_mode=criteria.develop_mode)
+        if criteria.active is not None:
+            query = query.filter(active=criteria.active)
         return query

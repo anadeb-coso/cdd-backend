@@ -7,9 +7,10 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy
 from django.views import generic
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 import itertools
+from django.db.models import Q
 
 from process_manager.models import Phase, Activity, Project, ProcessAddOrRemoveADL, Cycle
 from authentication.models import Facilitator
@@ -27,10 +28,11 @@ from .functions import (
     get_cvds, single_task_by_cvd, get_db_task,
     get_search_for_stabilized_facilitator_dbs
 )
+from cdd.constants import VALIDATION_PROCESS_COLORS
 from administrativelevels import models as administrativelevels_models
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
-from cdd.functions import datetime_complet_str, exists_id_in_a_dict, exists_id_in_a_dict_by_project_and_cycle
+from cdd.functions import datetime_complet_str, exists_id_in_a_dict, exists_id_in_a_dict_by_project_and_cycle, is_datetime_in_past_or_now
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs
 from dashboard.tasks import sync_celery_tasks_re
@@ -39,7 +41,9 @@ from .repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
 from cdd.my_librairies.functions import get_datas_dict
-from process_manager.models import AggregatedStatus, Task, Cycle, Project
+from process_manager.models import AggregatedStatus, Task, Cycle, Project, AggregatedStatusFacilitator
+from planning.models import Activity as ActivityPlanning
+
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -76,9 +80,27 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['region_id'] = self.request.GET.get('region_id')
         context['type_facilitator'] = self.request.GET.get('type_facilitator')
         context['type_of_facilitator_list'] = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
+
+
+        is_training = bool(self.request.GET.get('is_training', "False") == "True")
+        is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
+        criteria = FacilitatorCriteria(
+            develop_mode=is_develop,
+            training_mode=is_training,
+            active=(False if context['type_facilitator']=='inactive' else True),
+            projects__id=[self.request.session.get('project_id')],
+            facilitator_type=context['type_of_facilitator_list']
+        )
+        context['total_facilitators'] = FacilitatorRepository().find_by_criteria(criteria=criteria).count()
+
+        context['project_names'] = f"{', '.join([p.name for p in Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()])}"
+
+        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id')).first().updated_date
+        self.title = f"{self.title} {context['last_update'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')}" if context['last_update'] else self.title
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
-            sync_celery_tasks_re()
+            # sync_celery_tasks_re()
+            AggregatedStatusFacilitator.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id')).update(new_update_exists=True)
             
         return context
 
@@ -206,13 +228,13 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
             liste_villages = [int(v['administrative_id']) for v in liste_villages]
 
             if type(_id) is not list:
-                assign_facilitators = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                assign_facilitators_id_list = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
                     administrative_level_id__in=liste_villages,
                     project_id=project_mis_id,
                     activated=True
-                )
+                ).values_list('facilitator_id', flat=True)
                 criteria = FacilitatorCriteria(
-                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                    id__in=list(set([int(facilitator_id) for facilitator_id in assign_facilitators_id_list])),
                     develop_mode=False,
                     training_mode=False,
                     active=(False if type_facilitator=='inactive' else True),
@@ -221,7 +243,12 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 )
 
             else:
+                assign_facilitators_id_list = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                    project_id=project_mis_id,
+                    activated=True
+                ).values_list('facilitator_id', flat=True)
                 criteria = FacilitatorCriteria(
+                    id__in=list(set([int(facilitator_id) for facilitator_id in assign_facilitators_id_list])),
                     develop_mode=False,
                     training_mode=False,
                     active=(False if type_facilitator=='inactive' else True),
@@ -230,9 +257,14 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 )
 
         else:
+            assign_facilitators_id_list = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+                project_id=project_mis_id,
+                activated=True
+            ).values_list('facilitator_id', flat=True)
             is_training = bool(self.request.GET.get('is_training', "False") == "True")
             is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
             criteria = FacilitatorCriteria(
+                id__in=list(set([int(facilitator_id) for facilitator_id in assign_facilitators_id_list])),
                 develop_mode=is_develop,
                 training_mode=is_training,
                 active=(False if type_facilitator=='inactive' else True),
@@ -295,54 +327,282 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
 
         #     _facilitators.append(f)
 
-
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-        docs_eadls = eadls.all_docs(include_docs=True)['rows']
-        docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
-
-        # Récupérer tous les facilitateurs en une seule requête
-        facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-
-        # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
-        adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
-
-        adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
-        adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
-
         # Liste des facilitateurs à retourner
         _facilitators = []
 
-        aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
-        
-        # Parcours des facilitateurs
-        for f in facilitators:
+        # Récupérer tous les facilitateurs en une seule requête
+        facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+        agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'))
+        dict_agg_s_fs = {str(ag.facilitator.id): ag
+            #  {
+            #     "total_tasks_current_project" : ag.total_tasks_current_project,
+            #     "total_tasks_completed_current_project" : ag.total_tasks_completed_current_project,
+            #     "last_activity_current_project" : ag.last_activity_current_project,
+            #     "total_tasks_stabilized" : ag.total_tasks_stabilized,
+            #     "total_tasks_completed_stabilized" : ag.total_tasks_completed_stabilized,
+            #     "last_activity_stabilized" : ag.last_activity_stabilized,
+            #     "total_tasks" : ag.total_tasks,
+            #     "total_tasks_completed" : ag.total_tasks_completed,
+            #     "last_activity" : ag.last_activity,
 
-            administrative_levels_ids = [str(adl['id']) for adl in f.administrative_levels if adl['project_id'] == self.request.session.get('project_couch_id')] if f.administrative_levels else []
-            administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
-            administrative_levels_ids_stabilize = [ad_id for ad_id in administrative_levels_ids_stabilize if int(ad_id) in adl_villages_ids] if administrative_levels_ids_stabilize else []
+            #     "total_tasks_validated_current_project" : ag.total_tasks_validated_current_project,
+            #     "total_tasks_invalidated_current_project" : ag.total_tasks_invalidated_current_project,
+            #     "total_tasks_invalidated_review_current_project" : ag.total_tasks_invalidated_review_current_project,
+            #     "total_tasks_invalidated_unreview_current_project" : ag.total_tasks_invalidated_unreview_current_project,
+            #     "total_tasks_waiting_validation_current_project" : ag.total_tasks_waiting_validation_current_project,
 
-            _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
+            #     "total_tasks_validated_stabilized" : ag.total_tasks_validated_stabilized,
+            #     "total_tasks_invalidated_stabilized" : ag.total_tasks_invalidated_stabilized,
+            #     "total_tasks_invalidated_review_stabilized" : ag.total_tasks_invalidated_review_stabilized,
+            #     "total_tasks_invalidated_unreview_stabilized" : ag.total_tasks_invalidated_unreview_stabilized,
+            #     "total_tasks_waiting_validation_stabilized" : ag.total_tasks_waiting_validation_stabilized,
+                
+            #     "total_tasks_validated" : ag.total_tasks_validated,
+            #     "total_tasks_invalidated" : ag.total_tasks_invalidated,
+            #     "total_tasks_invalidated_review" : ag.total_tasks_invalidated_review,
+            #     "total_tasks_invalidated_unreview" : ag.total_tasks_invalidated_unreview,
+            #     "total_tasks_waiting_validation" : ag.total_tasks_waiting_validation,
+                
+            #     "cvds_number_current_project" : ag.cvds_number_current_project,
+            #     "villages_number_current_project" : ag.villages_number_current_project,
+            #     "cvds_number_stabilized" : ag.cvds_number_stabilized,
+            #     "villages_number_stabilized" : ag.villages_number_stabilized,
+            #     "cvds_number" : ag.cvds_number,
+            #     "villages_number" : ag.villages_number,
 
-            adl_headquarters_villages_uniques = set(str(elt) for elt in adl_headquarters_villages) & set(_administrative_levels_ids)
+            #     "last_task_done_current_project" : ag.last_task_done_current_project,
+            #     "last_task_done_stabilized" : ag.last_task_done_stabilized,
+            #     "last_task_done" : ag.last_task_done
+            # }
+          for ag in agg_s_fs}
+        havent_update = len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3
+        if havent_update:
+            for f in facilitators:
+                _f = dict_agg_s_fs.get(str(f.id))
+                if _f:
+                    f.total_tasks_current_project = _f.total_tasks_current_project
+                    f.total_tasks_completed_current_project = _f.total_tasks_completed_current_project
+                    f.last_activity_current_project = _f.last_activity_current_project
+                    f.total_tasks_stabilized = _f.total_tasks_stabilized
+                    f.total_tasks_completed_stabilized = _f.total_tasks_completed_stabilized
+                    f.last_activity_stabilized = _f.last_activity_stabilized
+                    f.total_tasks = _f.total_tasks
+                    f.total_tasks_completed = _f.total_tasks_completed
+                    f.last_activity = _f.last_activity
 
-            children_agg = [agg for agg in aggregs if str(agg.administrative_level_id) in _administrative_levels_ids]
+                    f.total_tasks_validated_current_project = _f.total_tasks_validated_current_project
+                    f.total_tasks_invalidated_current_project = _f.total_tasks_invalidated_current_project
+                    f.total_tasks_invalidated_review_current_project = _f.total_tasks_invalidated_review_current_project
+                    f.total_tasks_invalidated_unreview_current_project = _f.total_tasks_invalidated_unreview_current_project
+                    f.total_tasks_waiting_validation_current_project = _f.total_tasks_waiting_validation_current_project
 
-            f.villages_number = len(_administrative_levels_ids)
-            f.cvds_number = len(adl_headquarters_villages_uniques)
+                    f.total_tasks_validated_stabilized = _f.total_tasks_validated_stabilized
+                    f.total_tasks_invalidated_stabilized = _f.total_tasks_invalidated_stabilized
+                    f.total_tasks_invalidated_review_stabilized = _f.total_tasks_invalidated_review_stabilized
+                    f.total_tasks_invalidated_unreview_stabilized = _f.total_tasks_invalidated_unreview_stabilized
+                    f.total_tasks_waiting_validation_stabilized = _f.total_tasks_waiting_validation_stabilized
+                    
+                    f.total_tasks_validated = _f.total_tasks_validated
+                    f.total_tasks_invalidated = _f.total_tasks_invalidated
+                    f.total_tasks_invalidated_review = _f.total_tasks_invalidated_review
+                    f.total_tasks_invalidated_unreview = _f.total_tasks_invalidated_unreview
+                    f.total_tasks_waiting_validation = _f.total_tasks_waiting_validation
+                    
+                    f.cvds_number_current_project = _f.cvds_number_current_project
+                    f.villages_number_current_project = _f.villages_number_current_project
+                    f.cvds_number_stabilized = _f.cvds_number_stabilized
+                    f.villages_number_stabilized = _f.villages_number_stabilized
+                    f.cvds_number = _f.cvds_number
+                    f.villages_number = _f.villages_number
 
-            # Filtrer les éléments qui ont un last_activity valide (non-None)
-            valid_aggregs = [agg for agg in children_agg if agg.last_activity is not None]
+                    f.last_task_done_current_project = _f.last_task_done_current_project
+                    f.last_task_done_stabilized = _f.last_task_done_stabilized
+                    f.last_task_done = _f.last_task_done
 
-            # Calculer la dernière activité si possible
-            aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
+                _facilitators.append(f)
+        else:
+            nsc = NoSQLClient()
+            eadls = nsc.get_db('eadls')
+            docs_eadls = eadls.all_docs(include_docs=True)['rows']
+            docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
 
-            # Assigner la dernière activité et les totaux des tâches
-            f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
-            f.total_tasks_completed = sum(agg.total_tasks_completed for agg in children_agg)
-            f.total_tasks = sum(agg.total_tasks for agg in children_agg)
+            # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
+            adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
 
-            _facilitators.append(f)
+            adls_with_names = {str(adl.id): adl.name for adl in adls}
+
+            adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
+            adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
+
+
+            aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None, task__isnull=False)
+            
+            # Parcours des facilitateurs
+            for f in facilitators:
+
+                ag_f = dict_agg_s_fs.get(str(f.id))
+                if not ag_f:
+                    ag_f = AggregatedStatusFacilitator()
+                    ag_f.project_id = self.request.session.get('project_id')
+                    ag_f.cycle_id = self.request.session.get('cycle_id')
+                    ag_f.facilitator_id = f.id
+
+                administrative_levels_ids = [str(adl['id']) for adl in f.administrative_levels if adl['project_id'] == self.request.session.get('project_couch_id')] if f.administrative_levels else []
+                administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
+                administrative_levels_ids_stabilize = [ad_id for ad_id in administrative_levels_ids_stabilize if int(ad_id) in adl_villages_ids] if administrative_levels_ids_stabilize else []
+
+                adl_headquarters_villages_uniques_current_project = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids)
+                children_agg_current_project = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids]
+                f.villages_number_current_project = len(administrative_levels_ids)
+                f.cvds_number_current_project = len(adl_headquarters_villages_uniques_current_project)
+                ag_f.villages_number_current_project = f.villages_number_current_project
+                ag_f.cvds_number_current_project = f.cvds_number_current_project
+
+                adl_headquarters_villages_uniques_stabilized = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids_stabilize)
+                children_agg_stabilized = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids_stabilize]
+                f.villages_number_stabilized = len(administrative_levels_ids_stabilize)
+                f.cvds_number_stabilized = len(adl_headquarters_villages_uniques_stabilized)
+                ag_f.villages_number_stabilized = f.villages_number_stabilized
+                ag_f.cvds_number_stabilized = f.cvds_number_stabilized
+
+
+                _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
+                adl_headquarters_villages_uniques = set(str(elt) for elt in adl_headquarters_villages) & set(_administrative_levels_ids)
+                children_agg = [agg for agg in aggregs if str(agg.administrative_level_id) in _administrative_levels_ids]
+                f.villages_number = len(_administrative_levels_ids)
+                f.cvds_number = len(adl_headquarters_villages_uniques)
+                ag_f.villages_number = f.villages_number
+                ag_f.cvds_number = f.cvds_number
+
+                # Filtrer les éléments qui ont un last_activity valide (non-None)
+                valid_aggregs_current_project = [agg for agg in children_agg_current_project if agg.last_activity is not None]
+                valid_aggregs_stabilized = [agg for agg in children_agg_stabilized if agg.last_activity is not None]
+                valid_aggregs = [agg for agg in children_agg if agg.last_activity is not None]
+
+                # Calculer la dernière activité si possible
+                aggreg_last_activity_current_project = max(valid_aggregs_current_project, key=lambda x: x.last_activity, default=None) if valid_aggregs_current_project else None
+                aggreg_last_activity_stabilized = max(valid_aggregs_stabilized, key=lambda x: x.last_activity, default=None) if valid_aggregs_stabilized else None
+                aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
+
+                aggreg_last_task_done_current_project = max([ag for ag in valid_aggregs_current_project if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_current_project else None
+                aggreg_last_task_done_stabilized = max([ag for ag in valid_aggregs_stabilized if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_stabilized else None
+                aggreg_last_task_done = max([ag for ag in valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs else None
+
+
+                # Assigner la dernière activité et les totaux des tâches
+                f.last_activity_current_project = aggreg_last_activity_current_project.last_activity if aggreg_last_activity_current_project else None
+                f.total_tasks_completed_current_project = sum(agg.total_tasks_completed for agg in children_agg_current_project)
+                f.total_tasks_current_project = sum(agg.total_tasks for agg in children_agg_current_project)
+                f.total_tasks_validated_current_project = sum(agg.total_tasks_validated for agg in children_agg_current_project)
+                f.total_tasks_invalidated_current_project = sum(agg.total_tasks_invalidated for agg in children_agg_current_project)
+                f.total_tasks_invalidated_review_current_project = sum(agg.total_tasks_invalidated_review for agg in children_agg_current_project)
+                f.total_tasks_invalidated_unreview_current_project = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_current_project)
+                f.total_tasks_waiting_validation_current_project = sum(agg.total_tasks_waiting_validation for agg in children_agg_current_project)
+                ag_f.last_activity_current_project = f.last_activity_current_project
+                ag_f.total_tasks_completed_current_project = f.total_tasks_completed_current_project
+                ag_f.total_tasks_current_project = f.total_tasks_current_project
+                ag_f.total_tasks_validated_current_project = f.total_tasks_validated_current_project
+                ag_f.total_tasks_invalidated_current_project = f.total_tasks_invalidated_current_project
+                ag_f.total_tasks_invalidated_review_current_project = f.total_tasks_invalidated_review_current_project
+                ag_f.total_tasks_invalidated_unreview_current_project = f.total_tasks_invalidated_unreview_current_project
+                ag_f.total_tasks_waiting_validation_current_project = f.total_tasks_waiting_validation_current_project
+                
+                f.last_activity_stabilized = aggreg_last_activity_stabilized.last_activity if aggreg_last_activity_stabilized else None
+                f.total_tasks_completed_stabilized = sum(agg.total_tasks_completed for agg in children_agg_stabilized)
+                f.total_tasks_stabilized = sum(agg.total_tasks for agg in children_agg_stabilized)
+                f.total_tasks_validated_stabilized = sum(agg.total_tasks_validated for agg in children_agg_stabilized)
+                f.total_tasks_invalidated_stabilized = sum(agg.total_tasks_invalidated for agg in children_agg_stabilized)
+                f.total_tasks_invalidated_review_stabilized = sum(agg.total_tasks_invalidated_review for agg in children_agg_stabilized)
+                f.total_tasks_invalidated_unreview_stabilized = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_stabilized)
+                f.total_tasks_waiting_validation_stabilized = sum(agg.total_tasks_waiting_validation for agg in children_agg_stabilized)
+                ag_f.last_activity_stabilized = f.last_activity_stabilized
+                ag_f.total_tasks_completed_stabilized = f.total_tasks_completed_stabilized
+                ag_f.total_tasks_stabilized = f.total_tasks_stabilized
+                ag_f.total_tasks_validated_stabilized = f.total_tasks_validated_stabilized
+                ag_f.total_tasks_invalidated_stabilized = f.total_tasks_invalidated_stabilized
+                ag_f.total_tasks_invalidated_review_stabilized = f.total_tasks_invalidated_review_stabilized
+                ag_f.total_tasks_invalidated_unreview_stabilized = f.total_tasks_invalidated_unreview_stabilized
+                ag_f.total_tasks_waiting_validation_stabilized = f.total_tasks_waiting_validation_stabilized
+
+                f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
+                f.total_tasks_completed = sum(agg.total_tasks_completed for agg in children_agg)
+                f.total_tasks = sum(agg.total_tasks for agg in children_agg)
+                f.total_tasks_validated = sum(agg.total_tasks_validated for agg in children_agg)
+                f.total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in children_agg)
+                f.total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in children_agg)
+                f.total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in children_agg)
+                f.total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in children_agg)
+                ag_f.last_activity = f.last_activity
+                ag_f.total_tasks_completed = f.total_tasks_completed
+                ag_f.total_tasks = f.total_tasks
+                ag_f.total_tasks_validated = f.total_tasks_validated
+                ag_f.total_tasks_invalidated = f.total_tasks_invalidated
+                ag_f.total_tasks_invalidated_review = f.total_tasks_invalidated_review
+                ag_f.total_tasks_invalidated_unreview = f.total_tasks_invalidated_unreview
+                ag_f.total_tasks_waiting_validation = f.total_tasks_waiting_validation
+
+                f.last_task_done_current_project = aggreg_last_task_done_current_project.task if aggreg_last_task_done_current_project else None
+                f.last_task_done_stabilized = aggreg_last_task_done_stabilized.task if aggreg_last_task_done_stabilized else None
+                f.last_task_done = aggreg_last_task_done.task if aggreg_last_task_done else None
+                ag_f.last_task_done_current_project = f.last_task_done_current_project
+                ag_f.last_task_done_stabilized = f.last_task_done_stabilized
+                ag_f.last_task_done = f.last_task_done
+
+                adl_headquarters_villages_infos = []
+                for k, v in {'current_project': adl_headquarters_villages_uniques_current_project, 'stabilized': adl_headquarters_villages_uniques_stabilized}.items():
+                    for adl_h_id in v:
+                        if k == 'stabilized' and adl_h_id in adl_headquarters_villages_uniques_current_project:
+                            continue
+
+                        _children_aggs = [agg for agg in aggregs if str(agg.administrative_level_id) == adl_h_id]
+                        
+                        # Filtrer les éléments qui ont un last_activity valide (non-None)
+                        _valid_aggregs = [agg for agg in _children_aggs if agg.last_activity is not None]
+
+                        # Calculer la dernière activité si possible
+                        _aggreg_last_activity = max(_valid_aggregs, key=lambda x: x.last_activity, default=None) if _valid_aggregs else None
+                        _aggreg_last_task_done = max([ag for ag in _valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if _valid_aggregs else None
+                        
+                        # Assigner la dernière activité et les totaux des tâches
+                        _last_activity = _aggreg_last_activity.last_activity if _aggreg_last_activity else None
+                        _total_tasks_completed = sum(agg.total_tasks_completed for agg in _children_aggs)
+                        _total_tasks = sum(agg.total_tasks for agg in _children_aggs)
+                        _total_tasks_validated = sum(agg.total_tasks_validated for agg in _children_aggs)
+                        _total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in _children_aggs)
+                        _total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in _children_aggs)
+                        _total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in _children_aggs)
+                        _total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in _children_aggs)
+                        _last_task_done = {
+                            'id': _aggreg_last_task_done.task.id,
+                            'name': _aggreg_last_task_done.task.name,
+                            'phase_name': _aggreg_last_task_done.task.phase.name,
+                            'activity_name': _aggreg_last_task_done.task.activity.name,
+                            'order': _aggreg_last_task_done.task.order,
+                            'task_order': _aggreg_last_task_done.task.task_order,
+                        } if _aggreg_last_task_done and _aggreg_last_task_done.task else None
+                        _type = k
+                        
+                        adl_headquarters_villages_infos.append({
+                            'village_name': adls_with_names.get(adl_h_id),
+                            'last_activity': _last_activity.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if _last_activity else None,
+                            'total_tasks_completed': _total_tasks_completed,
+                            'total_tasks': _total_tasks,
+                            'percent': float("%.2f" % (((_total_tasks_completed/_total_tasks)*100) if _total_tasks else 0)),
+                            'total_tasks_validated': _total_tasks_validated,
+                            'total_tasks_invalidated': _total_tasks_invalidated,
+                            'total_tasks_invalidated_review': _total_tasks_invalidated_review,
+                            'total_tasks_invalidated_unreview': _total_tasks_invalidated_unreview,
+                            'total_tasks_waiting_validation': _total_tasks_waiting_validation,
+                            'last_task_done': _last_task_done,
+                            'type': _type,
+                            'in_the_both': adl_h_id in adl_headquarters_villages_uniques_current_project and adl_h_id in adl_headquarters_villages_uniques_stabilized
+                        })
+
+                ag_f.administrative_level_headquarters_villages_infos = adl_headquarters_villages_infos
+                ag_f.new_update_exists = False
+                ag_f.save()
+                
+                _facilitators.append(f)
 
 
 
@@ -368,13 +628,13 @@ class FacilitatorsPercentListView(FacilitatorMixin, AJAXRequestMixin, LoginRequi
         if self.request.session.get('project_couch_id'):
             selector['project_id'] = self.request.session.get('project_couch_id')
 
-        docs = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        docs = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
         
         nsc = NoSQLClient()
         
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             _db = nsc.get_db(k_db_name)
-            docs += _db.get_query_result(selector, limit=10000)[:]
+            docs += _db.get_query_result(selector, limit=1000000)[:]
 
         return docs
 
@@ -421,7 +681,7 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             facilitator_db = nsc.get_db(f)
             # docs = facilitator_db.get_query_result({"type": "task"})
             
-            docs = facilitator_db.get_query_result(selector, limit=10000)[:]
+            docs = facilitator_db.get_query_result(selector, limit=1000000)[:]
             
             nsc = NoSQLClient()
             project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
@@ -436,7 +696,7 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator_db[query_result[0]['_id']])
             for k_db_name, v in no_sql_dbs_names_with_village_ids.items():
                 _db = nsc.get_db(k_db_name)
-                docs += _db.get_query_result(selector, limit=10000)[:]
+                docs += _db.get_query_result(selector, limit=1000000)[:]
             
 
             total_tasks_completed = 0
@@ -487,7 +747,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             selector["administrative_level_id"] = administrative_level_id
 
         # return self.facilitator_db.get_query_result(selector)
-        results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        results = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
         
         nsc = NoSQLClient()
         # print(self.no_sql_dbs_names_with_village_ids)
@@ -495,7 +755,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
             _db = nsc.get_db(k_db_name)
-            results += _db.get_query_result(selector, limit=10000)[:]
+            results += _db.get_query_result(selector, limit=1000000)[:]
         return results
     
     def get_context_data(self, **kwargs):
@@ -540,7 +800,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
                 _selector['cycle_id'] = self.request.session.get('cycle_couch_id')
             if self.request.session.get('project_couch_id'):
                 _selector['project_id'] = self.request.session.get('project_couch_id')
-            facilitator_docs = _db.get_query_result(_selector, limit=10000)[:]
+            facilitator_docs = _db.get_query_result(_selector, limit=1000000)[:]
 
             for doc in facilitator_docs:
                 if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
@@ -750,14 +1010,14 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             selector["validated"] = False
             
         # return self.facilitator_db.get_query_result(selector)
-        results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        results = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
         
         nsc = NoSQLClient()
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
             _db = nsc.get_db(k_db_name)
-            results += _db.get_query_result(selector, limit=10000)[:]
+            results += _db.get_query_result(selector, limit=1000000)[:]
         return results
 
     def get_queryset(self):
@@ -1228,6 +1488,24 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
     template_name = 'facilitators/facilitator_detail_for_list.html'
     context_object_name = 'facilitator_detail_for_list'
 
+    def get_color_status_number(self, elt):
+        if elt.type == "vacation":
+            return (2 if elt.validated == False else 0) if elt.validated != True  else 6
+
+        if elt.validated == None:
+            return 0
+        elif elt.validated == True:
+            if elt.completed or elt.is_another:
+                return 3
+            elif elt.undo:
+                return 4
+            elif is_datetime_in_past_or_now(elt.planned_datetime_end):
+                return 5
+            else:
+                return 1
+        else:
+            return 2
+        
     def get_results(self):
         administrative_level_id = self.request.GET.get('administrative_level')
         selector = {
@@ -1243,14 +1521,14 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
             selector["administrative_level_id"] = administrative_level_id
 
         # return self.facilitator_db.get_query_result(selector)
-        results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        results = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
         
         nsc = NoSQLClient()
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
             _db = nsc.get_db(k_db_name)
-            results += _db.get_query_result(selector, limit=10000)[:]
+            results += _db.get_query_result(selector, limit=1000000)[:]
         return results
 
     def get_queryset(self):
@@ -1279,6 +1557,7 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
         context['adminLevelId'] = self.request.GET.get('administrative_level')
         context['facilitator_id'] = self.kwargs.get('id')
         context['village_name'] = self.request.GET.get('villageName')
+        context['village_id'] = self.request.GET.get('villageId')
 
         if object_list:
             for _ in object_list:
@@ -1347,60 +1626,121 @@ class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequ
                                         'total_tasks_completed'] / dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                         'total_tasks']) * 100) if dict_administrative_levels_with_infos.get('villages').get(village.get('name'))[
                                         'total_tasks'] else 0
+                            dict_administrative_levels_with_infos.get('villages').get(village.get('name'))['villageId'] = village.get("id")
 
-                            # if _.get('completed') is False:
-                            #     _["planned_date"] = "2024-2-28 23:17:2"
-                            # else:
-                            #     _["planned_date"] = "2024-2-28 13:17:2"
 
-                            if (_.get('completed') is False and _.get('planned_date')
-                                    and (
-                                            self.request.GET.get('villageName') == ''
-                                            or self.request.GET.get('villageName') is None
-                                            or village.get('name') == self.request.GET.get('villageName')
-                                    )
-                            ):
-                                date = datetime.strptime(_.get('planned_date').split(' ')[0], '%Y-%m-%d')
-                                hour =  datetime.strptime(_.get('planned_date'), '%Y-%m-%d %H:%M:%S')
+                            # if (_.get('completed') is False and _.get('planned_date')
+                            #         and (
+                            #                 self.request.GET.get('villageName') == ''
+                            #                 or self.request.GET.get('villageName') is None
+                            #                 or village.get('name') == self.request.GET.get('villageName')
+                            #         )
+                            # ):
+                            #     date = datetime.strptime(_.get('planned_date').split(' ')[0], '%Y-%m-%d')
+                            #     hour =  datetime.strptime(_.get('planned_date'), '%Y-%m-%d %H:%M:%S')
 
-                                if dict_administrative_levels_with_infos.get('upcomingEvents').get(date) is not None:
-                                    if dict_administrative_levels_with_infos.get('upcomingEvents').get(
-                                            date).get(hour) is not None:
-                                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour].append(
+                            #     if dict_administrative_levels_with_infos.get('upcomingEvents').get(date) is not None:
+                            #         if dict_administrative_levels_with_infos.get('upcomingEvents').get(
+                            #                 date).get(hour) is not None:
+                            #             dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour].append(
 
-                                                    {
-                                                        "village": village.get('name'),
-                                                        "name": _.get('name'),
-                                                        "phase_name": _.get('phase_name'),
-                                                        "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
-                                                            village.get('name'))[
-                                                            'percentage_tasks_completed']
-                                                                }
+                            #                         {
+                            #                             "village": village.get('name'),
+                            #                             "name": _.get('name'),
+                            #                             "phase_name": _.get('phase_name'),
+                            #                             "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                            #                                 village.get('name'))[
+                            #                                 'percentage_tasks_completed']
+                            #                                     }
 
-                                            )
-                                    else:
-                                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
-                                            {
-                                                "village": village.get('name'),
-                                                "name": _.get('name'),
-                                                "phase_name": _.get('phase_name'),
-                                                "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
-                                                    village.get('name'))[
-                                                    'percentage_tasks_completed']
+                            #                 )
+                            #         else:
+                            #             dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                            #                 {
+                            #                     "village": village.get('name'),
+                            #                     "name": _.get('name'),
+                            #                     "phase_name": _.get('phase_name'),
+                            #                     "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                            #                         village.get('name'))[
+                            #                         'percentage_tasks_completed']
+                            #                     }
+                            #             ]
+                            #     else:
+                            #         dict_administrative_levels_with_infos.get('upcomingEvents')[date] = {}
+                            #         dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                            #             {
+                            #                 "village": village.get('name'),
+                            #                 "name": _.get('name'),
+                            #                 "phase_name": _.get('phase_name'),
+                            #                 "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
+                            #                     village.get('name'))[
+                            #                     'percentage_tasks_completed']
+                            #             }
+                            #         ]
+
+        
+        today = datetime.today()
+        current_monday_date_object = today - timedelta(days=today.weekday())
+        week_dates = [(current_monday_date_object + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
+        planned_date_list = [datetime.strptime(d, '%Y-%m-%d').date() for d in week_dates]
+
+        activities = ActivityPlanning.objects.filter(
+            Q(facilitator__no_sql_db_name=self.facilitator_db_name) & 
+            Q(planned_date__in=planned_date_list) & 
+            (
+                Q(validated=None) | Q(validated=True, completed=None)
+            )
+        )
+        if context['village_id'] and str(context['village_id']).isdigit():
+            query = Q()
+            query |= Q(administrative_level_ids__contains=[int(context['village_id'])])
+            activities = activities.filter(query)
+
+        if activities.exists():
+            for activity in activities:
+                date = activity.planned_datetime_start
+                hour =  activity.planned_datetime_start
+                color_index = self.get_color_status_number(activity)
+
+                if dict_administrative_levels_with_infos.get('upcomingEvents').get(date) is not None:
+                    if dict_administrative_levels_with_infos.get('upcomingEvents').get(
+                            date).get(hour) is not None:
+                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour].append(
+
+                                    {
+                                        "village": ", ".join([adm['name'] for adm in activity.administrative_levels]) if activity.administrative_levels else None,
+                                        "name": activity.name,
+                                        "color": VALIDATION_PROCESS_COLORS[color_index],
+                                        "text_color": "white" if color_index in [5, 6] else "black",
+                                        "phase_name": None,
+                                        "percentage_tasks_completed": None
                                                 }
-                                        ]
-                                else:
-                                    dict_administrative_levels_with_infos.get('upcomingEvents')[date] = {}
-                                    dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
-                                        {
-                                            "village": village.get('name'),
-                                            "name": _.get('name'),
-                                            "phase_name": _.get('phase_name'),
-                                            "percentage_tasks_completed": dict_administrative_levels_with_infos.get('villages').get(
-                                                village.get('name'))[
-                                                'percentage_tasks_completed']
-                                        }
-                                    ]
+
+                            )
+                    else:
+                        dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                            {
+                                "village": ", ".join([adm['name'] for adm in activity.administrative_levels]) if activity.administrative_levels else None,
+                                "name": activity.name,
+                                "color": VALIDATION_PROCESS_COLORS[color_index],
+                                "text_color": "white" if color_index in [5, 6] else "black",
+                                "phase_name": None,
+                                "percentage_tasks_completed": None
+                                }
+                        ]
+                else:
+                    dict_administrative_levels_with_infos.get('upcomingEvents')[date] = {}
+                    dict_administrative_levels_with_infos.get('upcomingEvents')[date][hour] = [
+                        {
+                            "village": ", ".join([adm['name'] for adm in activity.administrative_levels]) if activity.administrative_levels else None,
+                            "name": activity.name,
+                            "color": VALIDATION_PROCESS_COLORS[color_index],
+                            "text_color": "white" if color_index in [5, 6] else "black",
+                            "phase_name": None,
+                            "percentage_tasks_completed": None
+                        }
+                    ]
+
 
 
         context['total_tasks_completed'] = total_tasks_completed

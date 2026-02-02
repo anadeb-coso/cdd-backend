@@ -9,7 +9,7 @@ from process_manager.models import Project
 from subprojects.models import Project as ProjectMis
 
 def get_cvds(project_couch_id, cycle_couch_id, facilitator, ald_ids: list = [], administratives_stabilized: list = []):
-    administrative_levels_project = [_ for _ in facilitator['administrative_levels'] if _.get('cycle_id') == cycle_couch_id and _.get('project_id') == project_couch_id]
+    administrative_levels_project = [_ for _ in facilitator['administrative_levels'] if (not cycle_couch_id or _.get('cycle_id') == cycle_couch_id) and (not project_couch_id or _.get('project_id') == project_couch_id)]
     administrative_levels_project_ids = [_.get('id') for _ in administrative_levels_project]
     geographical_units = [_ for _ in facilitator.get('geographical_units') if any(elem in administrative_levels_project_ids for elem in _['villages'])]
     CVDs = []
@@ -71,7 +71,7 @@ def get_headquarters_village_id(cvds, village_id):
     for cvd in cvds:
         for village in cvd['villages']:
             if village['id'] == village_id:
-                print(cvd)
+                # print(cvd)
                 return cvd['village']['id']
     return None
 
@@ -107,7 +107,7 @@ def clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(no_sql_
         for _doc in fc_docs:
             doc = _doc.get('doc')
             if doc.get('type') in ('task', 'activity', 'phase') and doc.get('administrative_level_id') == adl_id:
-                print(doc)
+                # print(doc)
                 try:
                     nsc.delete_document(backup_db, doc["_id"])
                 except:

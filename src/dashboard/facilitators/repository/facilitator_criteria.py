@@ -11,3 +11,6 @@ class FacilitatorCriteria:
     no_sql_pass: Optional[str] = None
     no_sql_user: Optional[str] = None
     facilitator_type: Optional[str] = None
+    facilitator_type__in: Optional[List[str]] = None
+    username__in: Optional[List[str]] = None
+    email__in: Optional[List[str]] = None

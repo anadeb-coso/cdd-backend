@@ -17,6 +17,7 @@ from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_ur
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject
+from administrativelevels.models import AdministrativeLevel
 
 
 class FacilitatorMixin(LoginRequiredMixin):
@@ -139,7 +140,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
             _db = nsc.get_db(k_db_name)
             facilitator_docs = _db.get_query_result(
                 {"type": "task", 'cycle_id': self.request.session.get('cycle_couch_id'), 'project_id': self.request.session.get('project_couch_id'), "administrative_level_id": {"$in": v['ids']}}, 
-                limit=10000
+                limit=1000000
             )[:]
             for doc in facilitator_docs:
                 if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
@@ -207,11 +208,27 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
                 selector["form_response"] = []
             elif is_validated == "In_progress":
                 selector["completed"] = False
-                selector["form_response"] = { "$elemMatch": {} }
+                selector["$or"] = [
+                    {"form_response": { "$elemMatch": {} }},
+                    {
+                        "$and": [
+                            {"form_response": {"$exists": True}},
+                            {"form_response": {"$ne": []}}
+                        ]
+                    }
+                ]
             elif is_validated == "Invalidated_reset_in_progress":
                 selector["completed"] = False
                 selector["validated"] = False
-                selector["form_response"] = { "$elemMatch": {} }
+                selector["$or"] = [
+                    {"form_response": { "$elemMatch": {} }},
+                    {
+                        "$and": [
+                            {"form_response": {"$exists": True}},
+                            {"form_response": {"$ne": []}}
+                        ]
+                    }
+                ]
             elif is_validated == "Completed_awaiting_validation":
                 selector["completed"] = True
                 selector["validated"] = { "$exists": False }
@@ -261,24 +278,26 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             #             r.append(task)
             #     return r
 
-        results = self.facilitator_db.get_query_result(selector, limit=10000)[:]
+        results = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
         
         nsc = NoSQLClient()
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
             _db = nsc.get_db(k_db_name)
-            results += _db.get_query_result(selector, limit=10000)[:]
+            results += _db.get_query_result(selector, limit=1000000)[:]
         return results
     
-
     def get_queryset(self):
+        return []
+    
+    def _get_queryset(self, object_list):
         index = int(self.request.GET.get('index'))
         offset = int(self.request.GET.get('offset'))
         phases = Phase.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
         activities = Activity.objects.get_objects_by_general_filtre(request=self.request, attrs=None)
 
-        object_list = single_task_by_cvd(self.get_results(), self.cvds)
+        object_list = single_task_by_cvd(object_list, self.cvds)
 
         if object_list:
             for _ in object_list:
@@ -298,6 +317,11 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        object_list = self.get_results()
+
+        context['tasks'] = self._get_queryset(object_list)
+
         total_tasks_completed = 0
         total_tasks_uncompleted = 0
         total_tasks_validated = 0
@@ -313,8 +337,6 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         total_tasks_invalidated_not_returned_after_invalidation = 0
 
         dict_administrative_levels_with_infos = {}
-
-        object_list = self.get_results()
 
         if object_list:
             for _ in object_list:

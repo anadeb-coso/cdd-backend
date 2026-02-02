@@ -203,7 +203,7 @@ class FacilitatorForm(forms.Form):
         self.fields['administrative_levels'].widget.attrs['class'] = "hidden"
 
         if project_id is not None:
-            self.fields['projects'].initial = Project.objects.filter(Q(id=project_id) | Q(parent_id=project_id) | Q(project__in=[project_id]), users__in=[user_id])
+            self.fields['projects'].initial = Project.objects.filter(Q(id=project_id) | Q(parent_id=project_id), users__in=[user_id]) # | Q(project__in=[project_id])
 
 
 
