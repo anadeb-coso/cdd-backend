@@ -29,6 +29,28 @@ class Facilitator(BaseModel):
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     administrative_levels = models.JSONField(null=True, blank=True)
     administrative_levels_ids = models.JSONField(null=True, blank=True)
+    geographical_units = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="""
+            Geographical units assigned with their CVD groups.
+            Structure: [
+                {
+                    "sql_id": "111",
+                    "name": "TIMANGA (CINKASSE)/KALYADA",
+                    "villages": ["1986"],
+                    "cvd_groups": [
+                        {
+                            "sql_id": "208",
+                            "name": "TIMANGA (CINKASSE)",
+                            "village_cvd": 1986,
+                            "villages": ["1986"]
+                        }
+                    ]
+                }
+            ]
+            """
+    )
     
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
