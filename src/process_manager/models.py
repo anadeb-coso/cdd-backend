@@ -746,7 +746,8 @@ class TaskSubmission(BaseModel):
     facilitator = models.ForeignKey(
         'authentication.Facilitator',
         on_delete=models.CASCADE,
-        related_name='task_submissions'
+        related_name='task_submissions',
+        null=True
     )
     administrative_level_id = models.IntegerField(
         help_text="ID del nivel administrativo (village/canton)"
@@ -840,7 +841,15 @@ class TaskSubmissionHistory(BaseModel):
     facilitator = models.ForeignKey(
         'authentication.Facilitator',
         on_delete=models.CASCADE,
-        help_text="Facilitator who made the change"
+        help_text="Facilitator who made the change",
+        null=True
+    )
+
+    # Fields for migration (temporary)
+    missing_facilitator = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="TEMPORARY: For tracking missing facilitators during migration"
     )
 
     # Snapshot of data at the time of editing
@@ -908,7 +917,15 @@ class TaskUserInvolvement(BaseModel):
     )
     facilitator = models.ForeignKey(
         'authentication.Facilitator',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        null=True
+    )
+
+    # Fields for migration (temporary)
+    missing_facilitator = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="TEMPORARY: For tracking missing facilitators during migration"
     )
 
     first_intervention_date = models.DateTimeField()
