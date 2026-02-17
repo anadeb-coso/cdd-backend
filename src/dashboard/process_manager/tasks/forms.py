@@ -23,6 +23,9 @@ class ProcessTaskManagerBaseForm(forms.ModelForm):
         
         self.fields['couch_id'].widget.attrs['readonly'] = 'readonly' 
 
+        if 'name_normalized' in self.fields:
+            self.fields['name_normalized'].widget.attrs['readonly'] = 'readonly'
+
 
 class PhaseForm(ProcessTaskManagerBaseForm):
 
