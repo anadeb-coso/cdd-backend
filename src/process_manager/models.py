@@ -6,6 +6,7 @@ from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
 from cdd.models_base import BaseModel, CustomQuerySet
+from cdd.functions import normalize_text
 
 # class BaseModel(models.Model):
 #     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
@@ -150,6 +151,9 @@ class Cycle(BaseModel):
     couch_id = models.CharField(max_length=255, blank=True)
     order = models.IntegerField()
     capacity_attachments = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ['project', 'order']
     
     def __str__(self):
         return f"{self.name} ({self.project.name})"
@@ -217,6 +221,7 @@ class Cycle(BaseModel):
 # }
 class Phase(BaseModel):
     name = models.CharField(max_length=255)
+    name_normalized = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     cycles = models.ManyToManyField("Cycle", related_name="phases", default=[], blank=False)
@@ -234,8 +239,10 @@ class Phase(BaseModel):
         capacity_attachments = []
         if self.capacity_attachments:
             capacity_attachments = self.capacity_attachments
+        self.name_normalized = normalize_text(self.name)
         data = {
             "name": self.name,
+            "name_normalized": self.name_normalized,
             "type": "phase",
             "description": self.description,
             "order": self.order,
@@ -259,6 +266,7 @@ class Phase(BaseModel):
                 new_document['project_id'] = self.project.couch_id
                 new_document['project_name'] = self.project.name
                 new_document['name'] = self.name
+                new_document['name_normalized'] = self.name_normalized
                 new_document['order'] = self.order
                 new_document['description'] = self.description
                 new_document['capacity_attachments'] = capacity_attachments
@@ -292,6 +300,7 @@ class Phase(BaseModel):
 # }
 class Activity(BaseModel):
     name = models.CharField(max_length=255)
+    name_normalized = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     cycles = models.ManyToManyField("Cycle", related_name="activities", default=[], blank=False)
@@ -312,8 +321,10 @@ class Activity(BaseModel):
         capacity_attachments = []
         if self.capacity_attachments:
             capacity_attachments = self.capacity_attachments
+        self.name_normalized = normalize_text(self.name)
         data = {
             "name": self.name,
+            "name_normalized": self.name_normalized,
             "type": "activity",
             "description": self.description,
             "order": self.order,
@@ -342,6 +353,7 @@ class Activity(BaseModel):
                 new_document['project_name'] = self.project.name
                 new_document['phase_name'] = self.phase.name
                 new_document['name'] = self.name
+                new_document['name_normalized'] = self.name_normalized
                 new_document['order'] = self.order
                 new_document['description'] = self.description
                 new_document['total_tasks'] = self.total_tasks
@@ -375,6 +387,7 @@ class Activity(BaseModel):
 #   "form": []
 class Task(BaseModel):
     name = models.CharField(max_length=255)
+    name_normalized = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     description = models.TextField()
     project = models.ForeignKey("Project", on_delete=models.CASCADE)
     cycles = models.ManyToManyField("Cycle", related_name="tasks", default=[], blank=False)
@@ -403,6 +416,7 @@ class Task(BaseModel):
         capacity_attachments = []
         if self.capacity_attachments:
             capacity_attachments = self.capacity_attachments
+        self.name_normalized = normalize_text(self.name)
         data = {
             "type": "task",
             "project_id": self.project.couch_id,
@@ -412,6 +426,7 @@ class Task(BaseModel):
             "activity_id": self.activity.couch_id,
             "activity_name": self.activity.name,
             "name": self.name,
+            "name_normalized": self.name_normalized,
             "order": self.order,
             "task_order": self.task_order,
             "description": self.description,
@@ -443,6 +458,7 @@ class Task(BaseModel):
                 new_document['activity_id'] = self.activity.couch_id
                 new_document['activity_name'] = self.activity.name
                 new_document['name'] = self.name
+                new_document['name_normalized'] = self.name_normalized
                 new_document['order'] = self.order
                 new_document['description'] = self.description
                 new_document['support_attachments'] = True if attachments else False
@@ -535,7 +551,7 @@ class AggregatedStatusFacilitator(BaseModel):
     last_task_done_stabilized = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL, related_name='last_task_done_stabilized_facilitators')
     last_task_done = models.ForeignKey("Task", blank=True, null=True, on_delete=models.SET_NULL, related_name='last_task_done_facilitators')
 
-    administrative_level_headquarters_villages_infos = models.JSONField(default=[])
+    administrative_level_headquarters_villages_infos = models.JSONField(default=list)
 
     new_update_exists = models.BooleanField(default=True)
 
