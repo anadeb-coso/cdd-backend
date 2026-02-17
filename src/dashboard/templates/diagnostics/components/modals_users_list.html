@@ -1,0 +1,438 @@
+{% load bootstrap4 static i18n custom_tags %}
+
+<!-- Modal  modal-dialog-centered facilitators community -->
+<div class="modal fade" id="card-item-facilitators-community" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "Facilitators" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body  table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="table-facilitators-community-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="table-facilitators-community" class="table-bordered w-100">
+                    <thead>
+                    <tr>
+                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                        <th width="2%">{% translate 'Edit' %}</th>
+                        <th width="28%">{% translate 'Name' %}</th>
+                        {% else %}
+                        <th width="30%">{% translate 'Name' %}</th>
+                        {% endif %}
+                        <th width="2%">{% translate 'Sex' %}</th>
+                        <th width="15%">{% translate 'Username' %}</th>
+                        <th width="7%">{% translate 'Tel' %}</th>
+                        <th width="11%">{% translate 'Last Activity' %}</th>
+                        <th width="7%"
+                            title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">{% translate 'Percent' %}</br>{% translate 'Vil. Affected' %}</th>
+                        <th width="7%"
+                            title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">{% translate 'Percent' %}</br>{% translate 'Stabilization' %}</th>
+                        <th width="7%"
+                            title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}">{% translate 'Percent' %}</br>{% translate 'Global' %}</th>
+                        <th width="3%">{% translate 'CVD' %}</br>{% translate 'Vil. Affected' %}</th>
+                        <th width="3%">{% translate 'CVD' %}</br>{% translate 'Stabilization' %}</th>
+                        <th width="3%">{% translate 'CVD' %}</br>{% translate 'Global' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for facilitator in object.facilitators %}
+                        <tr {% if not facilitator.active %} style="color: red;" {% endif %} id="{{ facilitator.no_sql_db_name }}" >
+                            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                            <td>
+                                <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
+                                    class="" title="{% translate 'See profile' %}">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                            </td>
+                            {% endif %}
+
+                            {% for key, value in facilitator.get_all_infos.items %}
+                                {% if key == "percent" or key == "percent_current_project" or key == "percent_stabilized" %}
+                                    <td
+                                            title="{% translate 'Red: <10% ; Orange: <30% ; Purple: <50% ; Black: <70% ; Blue sky: <90% ; Blue: <100% ; Green: 100%' %}"
+                                            style="color:
+                                                    {% if value < 10 %}red
+                                                    {% elif value < 30 %}orange
+                                                    {% elif value < 50 %}purple
+                                                    {% elif value < 70 %}black
+                                                    {% elif value < 90 %}#04e1e1
+                                                    {% elif value < 100 %}blue
+                                                    {% else %}green
+                                                    {% endif %}; font-weight: bold;
+                                                    "
+                                    >{% if value %}{{ value|get_to_percent_str }}{% elif key == "percent_current_project" and facilitator.cvds_number_current_project %}{{ value|get_to_percent_str }}{% elif key == "percent_stabilized" and facilitator.cvds_number_stabilized %}{{ value|get_to_percent_str }}{% elif key == "percent" and facilitator.cvds_number %}{{ value|get_to_percent_str }}{% else %}-{% endif %}
+                                    </td>
+                                {% elif key == "last_activity_date" %}
+                                    <td title="{{ value }}">
+                                        {% if value %}
+                                            {{ value|date:"Y/m/d P" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                {% elif forloop.counter == 1 %}
+                                    <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
+                                        href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
+                                        target="_blank" title="{% translate 'See profile' %}"><span>{{ value }}</span></a></td>
+                                {% else %}
+                                    <td>{{ value }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal facilitators community -->
+
+
+<!-- Modal  modal-dialog-centered technical facilitators -->
+<div class="modal fade" id="card-item-technical-facilitators" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "Technical facilitators" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body  table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="table-technical-facilitators-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="table-technical-facilitators" class="table-bordered w-100">
+                    <thead>
+                        <tr>
+                            
+                            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                            <th width="2%">{% translate 'Edit' %}</th>
+                            <th width="18%">{% translate 'Name' %}</th>
+                            {% else %}
+                            <th width="20%">{% translate 'Name' %}</th>
+                            {% endif %}
+                            <th width="3%">{% translate 'Sex' %}</th>
+                            <th width="17%">{% translate 'Tel/Email' %}</th>
+                            <th width="5%">{% translate 'Canton' %}</th>
+                            <th width="5%">{% translate 'Nbr locality' %}</th>
+                            <th width="50%">{% translate 'Locality' %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for facilitator in object.technical_facilitators_stabilized %}
+                        {% with facilitator|get_facilitator_by_email as facilitator_object %}
+                        {% if facilitator_object and facilitator_object.no_sql_db_name %}
+                        <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
+                            
+                            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                            <td align="left">
+                                <a href="https://mgp.coso-togo.com/fr/administrative-levels/{{facilitator|get:'_id'}}/" target="_blank"
+                                    class="" title="{% translate 'See profile' %}">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                            </td>
+                            {% endif %}
+
+                            <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator_object.no_sql_db_name }}"
+                                    href="{% url 'dashboard:facilitators:detail' facilitator_object.no_sql_db_name %}"
+                                    target="_blank" title="{% translate 'See profile' %}"><span>{{ facilitator.representative.name }}</span></a></td>
+
+                            <td align="left">{{ facilitator_object.sex }}</td>
+                            <td align="left">
+                                {{ facilitator.representative.phone }}<br />
+                                {{ facilitator.representative.email }}
+                            </td>
+
+                            {% with facilitator.administrative_regions_objects|administrative_regions_objects as administrative_regions_objects %}
+                            <td align="left">{{ administrative_regions_objects.cantons }}</td>
+                            <td align="center">{{ administrative_regions_objects.villages_numbers }}</td>
+                            <td align="left">{{ administrative_regions_objects.villages }}</td>
+                            {% endwith %}
+                        </tr>
+                        {% endif %}
+                        {% endwith %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal technical facilitators -->
+
+
+
+
+<!-- Modal  modal-dialog-centered supervisors -->
+<div class="modal fade" id="card-item-supervisors" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "Supervisors" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body  table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="table-supervisors-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="table-supervisors" class="table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th >{% translate 'Name' %}</th>
+                            <th >{% translate 'Username' %}</th>
+                            <th >{% translate 'Email' %}</th>
+                            <th >{% translate 'Group' %}</th>
+                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                                {% translate 'Action' %}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for user_obj in object.supervisors %}
+                        <tr>
+                            <td align="left">{{ user_obj.get_full_name }}</td>
+                            <td>{{ user_obj.username }}</td>
+                            <td>{{ user_obj.email }}</td>
+                            <td>{{ user_obj|get_group_high }}</td>
+                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            <td>
+                                <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
+                                    class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                    <span class="_web">{% translate 'Edit' %}</span>
+                                    <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                </a>
+                                <a href="{% url 'dashboard:authentication:user_delete' user_obj.pk %}" 
+                                    class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                    <span class="_web">{% translate 'Delete' %}</span>
+                                    <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                </a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    
+                </table>
+
+            </div>
+
+        </div>
+
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal supervisors -->
+ 
+
+
+<!-- Modal  modal-dialog-centered CDD Specialists -->
+<div class="modal fade" id="card-item-CDDSpecialists" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "CDD Specialists" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body  table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="table-CDDSpecialists-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="table-CDDSpecialists" class="table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th >{% translate 'Name' %}</th>
+                            <th >{% translate 'Username' %}</th>
+                            <th >{% translate 'Email' %}</th>
+                            <th >{% translate 'Group' %}</th>
+                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                                {% translate 'Action' %}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for user_obj in object.CDDSpecialists %}
+                        <tr>
+                            <td align="left">{{ user_obj.get_full_name }}</td>
+                            <td>{{ user_obj.username }}</td>
+                            <td>{{ user_obj.email }}</td>
+                            <td>{{ user_obj|get_group_high }}</td>
+                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            <td>
+                                <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
+                                    class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                    <span class="_web">{% translate 'Edit' %}</span>
+                                    <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                </a>
+                                <a href="{% url 'dashboard:authentication:user_delete' user_obj.pk %}" 
+                                    class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                    <span class="_web">{% translate 'Delete' %}</span>
+                                    <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                </a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    
+                </table>
+
+            </div>
+
+        </div>
+
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal CDD Specialists -->
+ 
+
+
+<!-- Modal  modal-dialog-centered others users -->
+<div class="modal fade" id="card-item-others-users" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "Specialists/Others" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body  table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="table-others-users-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="table-others-users" class="table-bordered w-100">
+                    <thead>
+                        <tr>
+                            <th >{% translate 'Name' %}</th>
+                            <th >{% translate 'Username' %}</th>
+                            <th >{% translate 'Email' %}</th>
+                            <th >{% translate 'Group' %}</th>
+                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                                {% translate 'Action' %}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for user_obj in object.others_users %}
+                        <tr>
+                            <td align="left">{{ user_obj.get_full_name }}</td>
+                            <td>{{ user_obj.username }}</td>
+                            <td>{{ user_obj.email }}</td>
+                            <td>{{ user_obj|get_group_high }}</td>
+                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            <td>
+                                <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
+                                    class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                    <span class="_web">{% translate 'Edit' %}</span>
+                                    <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                </a>
+                                <a href="{% url 'dashboard:authentication:user_delete' user_obj.pk %}" 
+                                    class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
+                                    <span class="_web">{% translate 'Delete' %}</span>
+                                    <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                </a>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    
+                </table>
+
+            </div>
+
+        </div>
+
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal others users -->
