@@ -12,17 +12,17 @@
                         <div class="card">
                             <div class="card-body" id="filters">
                                 <div class="row">
-                                    <div class="col-12">
+                                    {% comment %} <div class="col-12">
                                         <h2 class="text-primary text-bold">{% translate "Filter by" %}</h2>
-                                    </div>
+                                    </div> {% endcomment %}
                                     {% for field in form %}
                                         {% if forloop.counter <= 3 %}
                                         <div class="col-4">
-                                            {% bootstrap_field field %}
+                                            {% bootstrap_field field show_label=False %}
                                         </div>
                                         {% else %}
                                         <div class="col-2">
-                                            {% bootstrap_field field %}
+                                            {% bootstrap_field field show_label=False %}
                                         </div>
                                         {% endif %}
                                     {% endfor %}
