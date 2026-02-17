@@ -1,0 +1,239 @@
+{% load bootstrap4 static i18n custom_tags %}
+
+<div class="card transparent">
+    <div class="clearfix">
+        <div class="float-left">
+            <h6 class="text-danger">{% translate 'Users' %} {{PROJECT_NAME }}</h6>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Community Facilitators" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-facilitators-community">
+                        {{ object.community_facilitators_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Technical Facilitators" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-technical-facilitators">
+                        {{ object.technical_facilitators_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Supervisors" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-supervisors">
+                        {{ object.supervisors_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "CDD Specialists" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-CDDSpecialists">
+                        {{ object.CDDSpecialists_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Specialists/Others" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-others-users">
+                        {{ object.others_users_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Total Users" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em;">{{ object.total_users }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    
+    <div class="clearfix">
+        <div class="float-left">
+            <h6 class="text-danger">{% translate 'All users' %}</h6>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Community Facilitators" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-global-facilitators-community">
+                        {{ object.global_community_facilitators_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Technical Facilitators" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-global-technical-facilitators">
+                        {{ object.global_technical_facilitators_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Supervisors" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-global-supervisors">
+                        {{ object.global_supervisors_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "CDD Specialists" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-global-CDDSpecialists">
+                        {{ object.global_CDDSpecialists_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Specialists/Others" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" 
+                        data-toggle="modal" data-target="#card-item-global-others-users">
+                        {{ object.global_others_users_count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-2">
+            <div class="card h-75">
+                <div class="card-body" >
+                    <p>{% translate "Total Users" %}</p>
+                    <p class="text-bold" style="font-size: 1.7em;">{{ object.global_total_users }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+{% include "diagnostics/components/modals_users_list.html" %}
+{% include "authentication/components/modals_for_global_users_list.html" %}
+
+
+<script type="text/javascript">
+
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+
+            jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+                "numeric-comma-pre": function (a) {
+                    var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                    return isNaN(x) ? 0 : x;
+                },
+                "numeric-comma-asc": function (a, b) {
+                    return a - b;
+                },
+                "numeric-comma-desc": function (a, b) {
+                    return b - a;
+                }
+            });
+            
+            
+            let users_ids_modals_tables = [
+                "table-facilitators-community", "table-technical-facilitators", "table-supervisors", "table-CDDSpecialists", "table-others-users",
+                "table-global-facilitators-community", "table-global-technical-facilitators", "table-global-supervisors", 
+                "table-global-CDDSpecialists", "table-global-others-users"
+            ]
+            let user_id_modal_table;
+            const table_stats = {};
+            for(var i=0; i<users_ids_modals_tables.length; i++){
+                user_id_modal_table = users_ids_modals_tables[i];
+                console.log(user_id_modal_table)
+                if ($.fn.DataTable.isDataTable(`#${user_id_modal_table}`)) {
+                    $(`#${user_id_modal_table}`).DataTable().destroy();
+                    $(`#${user_id_modal_table}`).empty(); 
+                }
+
+                table_stats[user_id_modal_table] = $(`#${user_id_modal_table}`).DataTable({
+                    autoWidth: false,
+                    responsive: true,
+                    scrollX: false,
+                    language: {
+                        url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+                    },
+                    columnDefs: [
+                        { 
+                            type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10, 11] : []
+                        }
+                    ],
+                    {% comment %} dom: "ltipr",
+                        columnDefs: [
+                            {
+                                targets: 1,
+                                orderable: false,
+                                searchable: false,
+                            },
+
+                            {
+                                targets: 'no-sort', orderable: false
+                            },
+                        ], {% endcomment %}
+                    dom: 'Blrtip',
+                    buttons: ['copy', 'excel', 'pdf', 'colvis'],
+                    lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+                    pageLength: 10,
+                    order: []
+                });
+                $(`#${user_id_modal_table}-search`).on('keyup', function () {
+                    table_stats[user_id_modal_table].search($(this).val()).draw();
+                });
+            }
+
+                        
+        });
+    </script>
