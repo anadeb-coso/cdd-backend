@@ -25,7 +25,8 @@ class PageMixin(object):
     def dispatch(self, request, *args, **kwargs):
         next_url = self.request.get_full_path()
         if "/process-manager/select-project/" not in next_url and self.request.user.is_authenticated and (
-                not self.request.session.get('project_id') or not self.request.session.get('tree_structure_projects_ids')
+                not self.request.session.get('project_id') or not self.request.session.get('tree_structure_projects_ids') 
+                or (request.user.groups.filter(name__in=["Supervisor"]).exists() and not self.request.session.get('cantons_stabilized_ids'))
             ): # If the user is authenticated and no project selected
             # auth_logout(self.request) #log out user
             
