@@ -591,3 +591,49 @@ def check_if_activity_is_enable_to_validate(activity, user):
 @register.filter
 def check_if_user_auth_is_in_project(user, project_id):
     return user.projects.filter(id=project_id).exists()
+
+
+@register.filter
+def separate_with_space(value, unit=None, show_float=False):
+    if unit:
+        unit = " " + unit
+    else:
+        unit = ""
+    
+    if not show_float and value:
+        value = round(float(value))
+
+    if value != 0 and (not value or not str(value).replace('-','').replace('.','',1).replace(',','',1).isdigit()):
+        return ""
+    
+
+    float_values = str(value).split(',')
+    if len(float_values) > 1:
+        float_value = float_values[-1]
+    else:
+        float_value = float_values[0]
+    float_values = str(float_value).split('.')
+    if len(float_values) > 1:
+        float_value = float_values[-1]
+    else:
+        float_value = None
+
+
+
+    value = str(value).split(',')[0].split('.')[0]
+    l = len(str(int(value)))
+    if l in (0, 1) and int(value) < 1:
+        return str(int(value)) + unit
+    
+    list_value_str = list(value)
+    list_value_str.reverse()
+    money_format = ""
+    for i in range(1, len(list_value_str)+1):
+        money_format += list_value_str[i-1]
+        if i%3 == 0 :
+            money_format += " "
+
+    list_money_format = list(money_format)
+    list_money_format.reverse()
+
+    return "".join(list_money_format) + "." + float_value + unit if float_value else "".join(list_money_format) + unit
