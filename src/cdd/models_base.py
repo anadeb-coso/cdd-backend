@@ -72,23 +72,28 @@ class CustomQuerySet(models.QuerySet):
     def get_adl_actifs(self, request, attrs, *args, **kwargs):
         if attrs:
             if 'project_id' in attrs:
-                attrs['administrative_levels_projects__in'] = [attrs.get('project_id')]
+                attrs['administrative_levels_projects__in'] = [attrs.get('project_id')] if type(attrs.get('project_id')) is not list else attrs.get('project_id')
                 del attrs['project_id']
             if 'cycle_id' in attrs:
-                attrs['administrative_levels_cycles__in'] = [attrs.get('cycle_id')]
+                attrs['administrative_levels_cycles__in'] = [attrs.get('cycle_id')] if type(attrs.get('cycle_id')) is not list else attrs.get('cycle_id')
                 del attrs['cycle_id']
             return self.filter(**attrs)
         else:
             return self.filter(
-                administrative_levels_projects__in=[request.session.get('project_mis_id')], 
-                administrative_levels_cycles__in=[request.session.get('cycle_mis_id')]
+                administrative_levels_projects__in=([request.session.get('project_mis_id')] if type(request.session.get('project_mis_id')) is not list else request.session.get('project_mis_id')), 
+                administrative_levels_cycles__in=([request.session.get('cycle_mis_id')] if type(request.session.get('cycle_mis_id')) is not list else request.session.get('cycle_mis_id'))
             )
     
     def get_process_manager_actifs(self, request, attrs, *args, **kwargs):
         if attrs:
             if 'cycle_id' in attrs:
-                attrs['cycles__in'] = [attrs.get('cycle_id')]
+                if attrs.get('cycle_id'):
+                    attrs['cycles__in'] = [attrs.get('cycle_id')] if type(attrs.get('cycle_id')) is not list else attrs.get('cycle_id')
                 del attrs['cycle_id']
+            if 'project_id' in attrs:
+                if attrs.get('project_id'):
+                    attrs['project__in'] = [attrs.get('project_id')] if type(attrs.get('project_id')) is not list else attrs.get('project_id')
+                del attrs['project_id']
             return self.filter(**attrs)
         else:
             return self.filter(project_id=request.session.get('project_id'), cycles__in=[request.session.get('cycle_id')])
