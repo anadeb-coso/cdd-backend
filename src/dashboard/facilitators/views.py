@@ -26,7 +26,8 @@ from authentication.permissions import (
     )
 from .functions import (
     get_cvds, single_task_by_cvd, get_db_task,
-    get_search_for_stabilized_facilitator_dbs
+    get_search_for_stabilized_facilitator_dbs,
+    update_facilitators_stats
 )
 from cdd.constants import VALIDATION_PROCESS_COLORS
 from administrativelevels import models as administrativelevels_models
@@ -43,7 +44,7 @@ from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_ur
 from cdd.my_librairies.functions import get_datas_dict
 from process_manager.models import AggregatedStatus, Task, Cycle, Project, AggregatedStatusFacilitator
 from planning.models import Activity as ActivityPlanning
-
+from dashboard.tasks import bulk_objects_create_or_update
 
 
 class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -95,7 +96,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
         context['project_names'] = f"{', '.join([p.name for p in Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()])}"
 
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id')).first().updated_date
+        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).last().updated_date
         self.title = f"{self.title} {context['last_update'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')}" if context['last_update'] else self.title
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
@@ -272,341 +273,280 @@ class FacilitatorListTableView(LoginRequiredMixin, generic.ListView):
                 facilitator_type=type_of_facilitator_list
             )
 
-        # facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-        # _facilitators = []
-        # for f in facilitators:
-        #     assigns = get_assign_adl_by_facilitatr(f.id, project_id=project_mis_id, activated=True)
-        #     if assigns:
-        #         for assign in assigns:
-        #             adl = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id=assign.administrative_level_id).first()
-        #             f.villages_number += 1
-        #             if adl and adl.cvd and adl.cvd.headquarters_village and adl.cvd.headquarters_village.id == adl.id:
-        #                 f.cvds_number += 1
-        #         _facilitators.append(f)
-
-
-        # nsc = NoSQLClient()
-        # eadls = nsc.get_db('eadls')
-        # docs_eadls = eadls.all_docs(include_docs=True)['rows']
-        # docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[v['id'] for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
-        
-        # # Récupérer tous les facilitateurs en une seule requête
-        # facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-
-        # adls = mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
-
-        # adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
-
-        # # Liste des facilitateurs à retourner
-        # _facilitators = []
-
-        # aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
-        # print(aggregs)
-        # # Parcours des facilitateurs
-        # for f in facilitators:
-
-        #     administrative_levels_ids = f.administrative_levels_ids if f.administrative_levels_ids else []
-        #     administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
-        #     administrative_levels_ids_stabilize = administrative_levels_ids_stabilize if administrative_levels_ids_stabilize else []
-
-        #     _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
-        #     print(_administrative_levels_ids)
-        #     children_agg = aggregs.filter(administrative_level_id__in=_administrative_levels_ids)
-        #     print(children_agg)
-            
-        #     f.villages_number = len(_administrative_levels_ids)
-        #     f.cvds_number = len(adl_headquarters_villages & set(_administrative_levels_ids))
-
-        #     aggreg_last_activity = None
-        #     if children_agg:
-        #         aggreg_last_activity = children_agg.latest('last_activity')
-
-        #     f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
-        #     f.total_tasks_completed = sum([agg.total_tasks_completed for agg in children_agg])
-        #     f.total_tasks = sum([agg.total_tasks for agg in children_agg])
-
-        #     _facilitators.append(f)
-
         # Liste des facilitateurs à retourner
-        _facilitators = []
+        # _facilitators = []
 
         # Récupérer tous les facilitateurs en une seule requête
         facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-        agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'))
-        dict_agg_s_fs = {str(ag.facilitator.id): ag
-            #  {
-            #     "total_tasks_current_project" : ag.total_tasks_current_project,
-            #     "total_tasks_completed_current_project" : ag.total_tasks_completed_current_project,
-            #     "last_activity_current_project" : ag.last_activity_current_project,
-            #     "total_tasks_stabilized" : ag.total_tasks_stabilized,
-            #     "total_tasks_completed_stabilized" : ag.total_tasks_completed_stabilized,
-            #     "last_activity_stabilized" : ag.last_activity_stabilized,
-            #     "total_tasks" : ag.total_tasks,
-            #     "total_tasks_completed" : ag.total_tasks_completed,
-            #     "last_activity" : ag.last_activity,
+        # agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'))
+        # dict_agg_s_fs = {str(ag.facilitator.id): ag for ag in agg_s_fs}
+        # havent_update = len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3
+        # if havent_update:
+        #     for f in facilitators:
+        #         _f = dict_agg_s_fs.get(str(f.id))
+        #         if _f:
+        #             f.total_tasks_current_project = _f.total_tasks_current_project
+        #             f.total_tasks_completed_current_project = _f.total_tasks_completed_current_project
+        #             f.last_activity_current_project = _f.last_activity_current_project
+        #             f.total_tasks_stabilized = _f.total_tasks_stabilized
+        #             f.total_tasks_completed_stabilized = _f.total_tasks_completed_stabilized
+        #             f.last_activity_stabilized = _f.last_activity_stabilized
+        #             f.total_tasks = _f.total_tasks
+        #             f.total_tasks_completed = _f.total_tasks_completed
+        #             f.last_activity = _f.last_activity
 
-            #     "total_tasks_validated_current_project" : ag.total_tasks_validated_current_project,
-            #     "total_tasks_invalidated_current_project" : ag.total_tasks_invalidated_current_project,
-            #     "total_tasks_invalidated_review_current_project" : ag.total_tasks_invalidated_review_current_project,
-            #     "total_tasks_invalidated_unreview_current_project" : ag.total_tasks_invalidated_unreview_current_project,
-            #     "total_tasks_waiting_validation_current_project" : ag.total_tasks_waiting_validation_current_project,
+        #             f.total_tasks_validated_current_project = _f.total_tasks_validated_current_project
+        #             f.total_tasks_invalidated_current_project = _f.total_tasks_invalidated_current_project
+        #             f.total_tasks_invalidated_review_current_project = _f.total_tasks_invalidated_review_current_project
+        #             f.total_tasks_invalidated_unreview_current_project = _f.total_tasks_invalidated_unreview_current_project
+        #             f.total_tasks_waiting_validation_current_project = _f.total_tasks_waiting_validation_current_project
 
-            #     "total_tasks_validated_stabilized" : ag.total_tasks_validated_stabilized,
-            #     "total_tasks_invalidated_stabilized" : ag.total_tasks_invalidated_stabilized,
-            #     "total_tasks_invalidated_review_stabilized" : ag.total_tasks_invalidated_review_stabilized,
-            #     "total_tasks_invalidated_unreview_stabilized" : ag.total_tasks_invalidated_unreview_stabilized,
-            #     "total_tasks_waiting_validation_stabilized" : ag.total_tasks_waiting_validation_stabilized,
-                
-            #     "total_tasks_validated" : ag.total_tasks_validated,
-            #     "total_tasks_invalidated" : ag.total_tasks_invalidated,
-            #     "total_tasks_invalidated_review" : ag.total_tasks_invalidated_review,
-            #     "total_tasks_invalidated_unreview" : ag.total_tasks_invalidated_unreview,
-            #     "total_tasks_waiting_validation" : ag.total_tasks_waiting_validation,
-                
-            #     "cvds_number_current_project" : ag.cvds_number_current_project,
-            #     "villages_number_current_project" : ag.villages_number_current_project,
-            #     "cvds_number_stabilized" : ag.cvds_number_stabilized,
-            #     "villages_number_stabilized" : ag.villages_number_stabilized,
-            #     "cvds_number" : ag.cvds_number,
-            #     "villages_number" : ag.villages_number,
-
-            #     "last_task_done_current_project" : ag.last_task_done_current_project,
-            #     "last_task_done_stabilized" : ag.last_task_done_stabilized,
-            #     "last_task_done" : ag.last_task_done
-            # }
-          for ag in agg_s_fs}
-        havent_update = len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3
-        if havent_update:
-            for f in facilitators:
-                _f = dict_agg_s_fs.get(str(f.id))
-                if _f:
-                    f.total_tasks_current_project = _f.total_tasks_current_project
-                    f.total_tasks_completed_current_project = _f.total_tasks_completed_current_project
-                    f.last_activity_current_project = _f.last_activity_current_project
-                    f.total_tasks_stabilized = _f.total_tasks_stabilized
-                    f.total_tasks_completed_stabilized = _f.total_tasks_completed_stabilized
-                    f.last_activity_stabilized = _f.last_activity_stabilized
-                    f.total_tasks = _f.total_tasks
-                    f.total_tasks_completed = _f.total_tasks_completed
-                    f.last_activity = _f.last_activity
-
-                    f.total_tasks_validated_current_project = _f.total_tasks_validated_current_project
-                    f.total_tasks_invalidated_current_project = _f.total_tasks_invalidated_current_project
-                    f.total_tasks_invalidated_review_current_project = _f.total_tasks_invalidated_review_current_project
-                    f.total_tasks_invalidated_unreview_current_project = _f.total_tasks_invalidated_unreview_current_project
-                    f.total_tasks_waiting_validation_current_project = _f.total_tasks_waiting_validation_current_project
-
-                    f.total_tasks_validated_stabilized = _f.total_tasks_validated_stabilized
-                    f.total_tasks_invalidated_stabilized = _f.total_tasks_invalidated_stabilized
-                    f.total_tasks_invalidated_review_stabilized = _f.total_tasks_invalidated_review_stabilized
-                    f.total_tasks_invalidated_unreview_stabilized = _f.total_tasks_invalidated_unreview_stabilized
-                    f.total_tasks_waiting_validation_stabilized = _f.total_tasks_waiting_validation_stabilized
+        #             f.total_tasks_validated_stabilized = _f.total_tasks_validated_stabilized
+        #             f.total_tasks_invalidated_stabilized = _f.total_tasks_invalidated_stabilized
+        #             f.total_tasks_invalidated_review_stabilized = _f.total_tasks_invalidated_review_stabilized
+        #             f.total_tasks_invalidated_unreview_stabilized = _f.total_tasks_invalidated_unreview_stabilized
+        #             f.total_tasks_waiting_validation_stabilized = _f.total_tasks_waiting_validation_stabilized
                     
-                    f.total_tasks_validated = _f.total_tasks_validated
-                    f.total_tasks_invalidated = _f.total_tasks_invalidated
-                    f.total_tasks_invalidated_review = _f.total_tasks_invalidated_review
-                    f.total_tasks_invalidated_unreview = _f.total_tasks_invalidated_unreview
-                    f.total_tasks_waiting_validation = _f.total_tasks_waiting_validation
+        #             f.total_tasks_validated = _f.total_tasks_validated
+        #             f.total_tasks_invalidated = _f.total_tasks_invalidated
+        #             f.total_tasks_invalidated_review = _f.total_tasks_invalidated_review
+        #             f.total_tasks_invalidated_unreview = _f.total_tasks_invalidated_unreview
+        #             f.total_tasks_waiting_validation = _f.total_tasks_waiting_validation
                     
-                    f.cvds_number_current_project = _f.cvds_number_current_project
-                    f.villages_number_current_project = _f.villages_number_current_project
-                    f.cvds_number_stabilized = _f.cvds_number_stabilized
-                    f.villages_number_stabilized = _f.villages_number_stabilized
-                    f.cvds_number = _f.cvds_number
-                    f.villages_number = _f.villages_number
+        #             f.cvds_number_current_project = _f.cvds_number_current_project
+        #             f.villages_number_current_project = _f.villages_number_current_project
+        #             f.cvds_number_stabilized = _f.cvds_number_stabilized
+        #             f.villages_number_stabilized = _f.villages_number_stabilized
+        #             f.cvds_number = _f.cvds_number
+        #             f.villages_number = _f.villages_number
 
-                    f.last_task_done_current_project = _f.last_task_done_current_project
-                    f.last_task_done_stabilized = _f.last_task_done_stabilized
-                    f.last_task_done = _f.last_task_done
+        #             f.last_task_done_current_project = _f.last_task_done_current_project
+        #             f.last_task_done_stabilized = _f.last_task_done_stabilized
+        #             f.last_task_done = _f.last_task_done
 
-                _facilitators.append(f)
-        else:
-            nsc = NoSQLClient()
-            eadls = nsc.get_db('eadls')
-            docs_eadls = eadls.all_docs(include_docs=True)['rows']
-            docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
+        #         _facilitators.append(f)
+        # else:
+        #     ag_f_bucket_create = []
+        #     ag_f_bucket_update = []
 
-            # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
-            adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
+        #     nsc = NoSQLClient()
+        #     eadls = nsc.get_db('eadls')
+        #     docs_eadls = eadls.all_docs(include_docs=True)['rows']
+        #     docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
 
-            adls_with_names = {str(adl.id): adl.name for adl in adls}
+        #     # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
+        #     adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
 
-            adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
-            adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
+        #     adls_with_names = {str(adl.id): adl.name for adl in adls}
+
+        #     adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
+        #     adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
 
 
-            aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None, task__isnull=False)
+        #     aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None, task__isnull=False)
             
-            # Parcours des facilitateurs
-            for f in facilitators:
+        #     # Parcours des facilitateurs
+        #     for f in facilitators:
+        #         ag_f_action = "update"
+        #         ag_f = dict_agg_s_fs.get(str(f.id))
+        #         if not ag_f:
+        #             ag_f = AggregatedStatusFacilitator()
+        #             ag_f.project_id = self.request.session.get('project_id')
+        #             ag_f.cycle_id = self.request.session.get('cycle_id')
+        #             ag_f.facilitator_id = f.id
+        #             ag_f_action = "create"
 
-                ag_f = dict_agg_s_fs.get(str(f.id))
-                if not ag_f:
-                    ag_f = AggregatedStatusFacilitator()
-                    ag_f.project_id = self.request.session.get('project_id')
-                    ag_f.cycle_id = self.request.session.get('cycle_id')
-                    ag_f.facilitator_id = f.id
+        #         administrative_levels_ids = [str(adl['id']) for adl in f.administrative_levels if adl['project_id'] == self.request.session.get('project_couch_id')] if f.administrative_levels else []
+        #         administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
+        #         administrative_levels_ids_stabilize = [ad_id for ad_id in administrative_levels_ids_stabilize if int(ad_id) in adl_villages_ids] if administrative_levels_ids_stabilize else []
 
-                administrative_levels_ids = [str(adl['id']) for adl in f.administrative_levels if adl['project_id'] == self.request.session.get('project_couch_id')] if f.administrative_levels else []
-                administrative_levels_ids_stabilize = docs_eadls_dict.get(f.email)
-                administrative_levels_ids_stabilize = [ad_id for ad_id in administrative_levels_ids_stabilize if int(ad_id) in adl_villages_ids] if administrative_levels_ids_stabilize else []
+        #         adl_headquarters_villages_uniques_current_project = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids)
+        #         children_agg_current_project = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids]
+        #         f.villages_number_current_project = len(administrative_levels_ids)
+        #         f.cvds_number_current_project = len(adl_headquarters_villages_uniques_current_project)
+        #         ag_f.villages_number_current_project = f.villages_number_current_project
+        #         ag_f.cvds_number_current_project = f.cvds_number_current_project
 
-                adl_headquarters_villages_uniques_current_project = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids)
-                children_agg_current_project = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids]
-                f.villages_number_current_project = len(administrative_levels_ids)
-                f.cvds_number_current_project = len(adl_headquarters_villages_uniques_current_project)
-                ag_f.villages_number_current_project = f.villages_number_current_project
-                ag_f.cvds_number_current_project = f.cvds_number_current_project
-
-                adl_headquarters_villages_uniques_stabilized = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids_stabilize)
-                children_agg_stabilized = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids_stabilize]
-                f.villages_number_stabilized = len(administrative_levels_ids_stabilize)
-                f.cvds_number_stabilized = len(adl_headquarters_villages_uniques_stabilized)
-                ag_f.villages_number_stabilized = f.villages_number_stabilized
-                ag_f.cvds_number_stabilized = f.cvds_number_stabilized
-
-
-                _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
-                adl_headquarters_villages_uniques = set(str(elt) for elt in adl_headquarters_villages) & set(_administrative_levels_ids)
-                children_agg = [agg for agg in aggregs if str(agg.administrative_level_id) in _administrative_levels_ids]
-                f.villages_number = len(_administrative_levels_ids)
-                f.cvds_number = len(adl_headquarters_villages_uniques)
-                ag_f.villages_number = f.villages_number
-                ag_f.cvds_number = f.cvds_number
-
-                # Filtrer les éléments qui ont un last_activity valide (non-None)
-                valid_aggregs_current_project = [agg for agg in children_agg_current_project if agg.last_activity is not None]
-                valid_aggregs_stabilized = [agg for agg in children_agg_stabilized if agg.last_activity is not None]
-                valid_aggregs = [agg for agg in children_agg if agg.last_activity is not None]
-
-                # Calculer la dernière activité si possible
-                aggreg_last_activity_current_project = max(valid_aggregs_current_project, key=lambda x: x.last_activity, default=None) if valid_aggregs_current_project else None
-                aggreg_last_activity_stabilized = max(valid_aggregs_stabilized, key=lambda x: x.last_activity, default=None) if valid_aggregs_stabilized else None
-                aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
-
-                aggreg_last_task_done_current_project = max([ag for ag in valid_aggregs_current_project if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_current_project else None
-                aggreg_last_task_done_stabilized = max([ag for ag in valid_aggregs_stabilized if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_stabilized else None
-                aggreg_last_task_done = max([ag for ag in valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs else None
+        #         adl_headquarters_villages_uniques_stabilized = set(str(elt) for elt in adl_headquarters_villages) & set(administrative_levels_ids_stabilize)
+        #         children_agg_stabilized = [agg for agg in aggregs if str(agg.administrative_level_id) in administrative_levels_ids_stabilize]
+        #         f.villages_number_stabilized = len(administrative_levels_ids_stabilize)
+        #         f.cvds_number_stabilized = len(adl_headquarters_villages_uniques_stabilized)
+        #         ag_f.villages_number_stabilized = f.villages_number_stabilized
+        #         ag_f.cvds_number_stabilized = f.cvds_number_stabilized
 
 
-                # Assigner la dernière activité et les totaux des tâches
-                f.last_activity_current_project = aggreg_last_activity_current_project.last_activity if aggreg_last_activity_current_project else None
-                f.total_tasks_completed_current_project = sum(agg.total_tasks_completed for agg in children_agg_current_project)
-                f.total_tasks_current_project = sum(agg.total_tasks for agg in children_agg_current_project)
-                f.total_tasks_validated_current_project = sum(agg.total_tasks_validated for agg in children_agg_current_project)
-                f.total_tasks_invalidated_current_project = sum(agg.total_tasks_invalidated for agg in children_agg_current_project)
-                f.total_tasks_invalidated_review_current_project = sum(agg.total_tasks_invalidated_review for agg in children_agg_current_project)
-                f.total_tasks_invalidated_unreview_current_project = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_current_project)
-                f.total_tasks_waiting_validation_current_project = sum(agg.total_tasks_waiting_validation for agg in children_agg_current_project)
-                ag_f.last_activity_current_project = f.last_activity_current_project
-                ag_f.total_tasks_completed_current_project = f.total_tasks_completed_current_project
-                ag_f.total_tasks_current_project = f.total_tasks_current_project
-                ag_f.total_tasks_validated_current_project = f.total_tasks_validated_current_project
-                ag_f.total_tasks_invalidated_current_project = f.total_tasks_invalidated_current_project
-                ag_f.total_tasks_invalidated_review_current_project = f.total_tasks_invalidated_review_current_project
-                ag_f.total_tasks_invalidated_unreview_current_project = f.total_tasks_invalidated_unreview_current_project
-                ag_f.total_tasks_waiting_validation_current_project = f.total_tasks_waiting_validation_current_project
+        #         _administrative_levels_ids = list(set(administrative_levels_ids + administrative_levels_ids_stabilize))
+        #         adl_headquarters_villages_uniques = set(str(elt) for elt in adl_headquarters_villages) & set(_administrative_levels_ids)
+        #         children_agg = [agg for agg in aggregs if str(agg.administrative_level_id) in _administrative_levels_ids]
+        #         f.villages_number = len(_administrative_levels_ids)
+        #         f.cvds_number = len(adl_headquarters_villages_uniques)
+        #         ag_f.villages_number = f.villages_number
+        #         ag_f.cvds_number = f.cvds_number
+
+        #         # Filtrer les éléments qui ont un last_activity valide (non-None)
+        #         valid_aggregs_current_project = [agg for agg in children_agg_current_project if agg.last_activity is not None]
+        #         valid_aggregs_stabilized = [agg for agg in children_agg_stabilized if agg.last_activity is not None]
+        #         valid_aggregs = [agg for agg in children_agg if agg.last_activity is not None]
+
+        #         # Calculer la dernière activité si possible
+        #         aggreg_last_activity_current_project = max(valid_aggregs_current_project, key=lambda x: x.last_activity, default=None) if valid_aggregs_current_project else None
+        #         aggreg_last_activity_stabilized = max(valid_aggregs_stabilized, key=lambda x: x.last_activity, default=None) if valid_aggregs_stabilized else None
+        #         aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
+
+        #         aggreg_last_task_done_current_project = max([ag for ag in valid_aggregs_current_project if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_current_project else None
+        #         aggreg_last_task_done_stabilized = max([ag for ag in valid_aggregs_stabilized if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_stabilized else None
+        #         aggreg_last_task_done = max([ag for ag in valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs else None
+
+
+        #         # Assigner la dernière activité et les totaux des tâches
+        #         f.last_activity_current_project = aggreg_last_activity_current_project.last_activity if aggreg_last_activity_current_project else None
+        #         f.total_tasks_completed_current_project = sum(agg.total_tasks_completed for agg in children_agg_current_project)
+        #         f.total_tasks_current_project = sum(agg.total_tasks for agg in children_agg_current_project)
+        #         f.total_tasks_validated_current_project = sum(agg.total_tasks_validated for agg in children_agg_current_project)
+        #         f.total_tasks_invalidated_current_project = sum(agg.total_tasks_invalidated for agg in children_agg_current_project)
+        #         f.total_tasks_invalidated_review_current_project = sum(agg.total_tasks_invalidated_review for agg in children_agg_current_project)
+        #         f.total_tasks_invalidated_unreview_current_project = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_current_project)
+        #         f.total_tasks_waiting_validation_current_project = sum(agg.total_tasks_waiting_validation for agg in children_agg_current_project)
+        #         ag_f.last_activity_current_project = f.last_activity_current_project
+        #         ag_f.total_tasks_completed_current_project = f.total_tasks_completed_current_project
+        #         ag_f.total_tasks_current_project = f.total_tasks_current_project
+        #         ag_f.total_tasks_validated_current_project = f.total_tasks_validated_current_project
+        #         ag_f.total_tasks_invalidated_current_project = f.total_tasks_invalidated_current_project
+        #         ag_f.total_tasks_invalidated_review_current_project = f.total_tasks_invalidated_review_current_project
+        #         ag_f.total_tasks_invalidated_unreview_current_project = f.total_tasks_invalidated_unreview_current_project
+        #         ag_f.total_tasks_waiting_validation_current_project = f.total_tasks_waiting_validation_current_project
                 
-                f.last_activity_stabilized = aggreg_last_activity_stabilized.last_activity if aggreg_last_activity_stabilized else None
-                f.total_tasks_completed_stabilized = sum(agg.total_tasks_completed for agg in children_agg_stabilized)
-                f.total_tasks_stabilized = sum(agg.total_tasks for agg in children_agg_stabilized)
-                f.total_tasks_validated_stabilized = sum(agg.total_tasks_validated for agg in children_agg_stabilized)
-                f.total_tasks_invalidated_stabilized = sum(agg.total_tasks_invalidated for agg in children_agg_stabilized)
-                f.total_tasks_invalidated_review_stabilized = sum(agg.total_tasks_invalidated_review for agg in children_agg_stabilized)
-                f.total_tasks_invalidated_unreview_stabilized = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_stabilized)
-                f.total_tasks_waiting_validation_stabilized = sum(agg.total_tasks_waiting_validation for agg in children_agg_stabilized)
-                ag_f.last_activity_stabilized = f.last_activity_stabilized
-                ag_f.total_tasks_completed_stabilized = f.total_tasks_completed_stabilized
-                ag_f.total_tasks_stabilized = f.total_tasks_stabilized
-                ag_f.total_tasks_validated_stabilized = f.total_tasks_validated_stabilized
-                ag_f.total_tasks_invalidated_stabilized = f.total_tasks_invalidated_stabilized
-                ag_f.total_tasks_invalidated_review_stabilized = f.total_tasks_invalidated_review_stabilized
-                ag_f.total_tasks_invalidated_unreview_stabilized = f.total_tasks_invalidated_unreview_stabilized
-                ag_f.total_tasks_waiting_validation_stabilized = f.total_tasks_waiting_validation_stabilized
+        #         f.last_activity_stabilized = aggreg_last_activity_stabilized.last_activity if aggreg_last_activity_stabilized else None
+        #         f.total_tasks_completed_stabilized = sum(agg.total_tasks_completed for agg in children_agg_stabilized)
+        #         f.total_tasks_stabilized = sum(agg.total_tasks for agg in children_agg_stabilized)
+        #         f.total_tasks_validated_stabilized = sum(agg.total_tasks_validated for agg in children_agg_stabilized)
+        #         f.total_tasks_invalidated_stabilized = sum(agg.total_tasks_invalidated for agg in children_agg_stabilized)
+        #         f.total_tasks_invalidated_review_stabilized = sum(agg.total_tasks_invalidated_review for agg in children_agg_stabilized)
+        #         f.total_tasks_invalidated_unreview_stabilized = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_stabilized)
+        #         f.total_tasks_waiting_validation_stabilized = sum(agg.total_tasks_waiting_validation for agg in children_agg_stabilized)
+        #         ag_f.last_activity_stabilized = f.last_activity_stabilized
+        #         ag_f.total_tasks_completed_stabilized = f.total_tasks_completed_stabilized
+        #         ag_f.total_tasks_stabilized = f.total_tasks_stabilized
+        #         ag_f.total_tasks_validated_stabilized = f.total_tasks_validated_stabilized
+        #         ag_f.total_tasks_invalidated_stabilized = f.total_tasks_invalidated_stabilized
+        #         ag_f.total_tasks_invalidated_review_stabilized = f.total_tasks_invalidated_review_stabilized
+        #         ag_f.total_tasks_invalidated_unreview_stabilized = f.total_tasks_invalidated_unreview_stabilized
+        #         ag_f.total_tasks_waiting_validation_stabilized = f.total_tasks_waiting_validation_stabilized
 
-                f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
-                f.total_tasks_completed = sum(agg.total_tasks_completed for agg in children_agg)
-                f.total_tasks = sum(agg.total_tasks for agg in children_agg)
-                f.total_tasks_validated = sum(agg.total_tasks_validated for agg in children_agg)
-                f.total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in children_agg)
-                f.total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in children_agg)
-                f.total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in children_agg)
-                f.total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in children_agg)
-                ag_f.last_activity = f.last_activity
-                ag_f.total_tasks_completed = f.total_tasks_completed
-                ag_f.total_tasks = f.total_tasks
-                ag_f.total_tasks_validated = f.total_tasks_validated
-                ag_f.total_tasks_invalidated = f.total_tasks_invalidated
-                ag_f.total_tasks_invalidated_review = f.total_tasks_invalidated_review
-                ag_f.total_tasks_invalidated_unreview = f.total_tasks_invalidated_unreview
-                ag_f.total_tasks_waiting_validation = f.total_tasks_waiting_validation
+        #         f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
+        #         f.total_tasks_completed = sum(agg.total_tasks_completed for agg in children_agg)
+        #         f.total_tasks = sum(agg.total_tasks for agg in children_agg)
+        #         f.total_tasks_validated = sum(agg.total_tasks_validated for agg in children_agg)
+        #         f.total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in children_agg)
+        #         f.total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in children_agg)
+        #         f.total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in children_agg)
+        #         f.total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in children_agg)
+        #         ag_f.last_activity = f.last_activity
+        #         ag_f.total_tasks_completed = f.total_tasks_completed
+        #         ag_f.total_tasks = f.total_tasks
+        #         ag_f.total_tasks_validated = f.total_tasks_validated
+        #         ag_f.total_tasks_invalidated = f.total_tasks_invalidated
+        #         ag_f.total_tasks_invalidated_review = f.total_tasks_invalidated_review
+        #         ag_f.total_tasks_invalidated_unreview = f.total_tasks_invalidated_unreview
+        #         ag_f.total_tasks_waiting_validation = f.total_tasks_waiting_validation
 
-                f.last_task_done_current_project = aggreg_last_task_done_current_project.task if aggreg_last_task_done_current_project else None
-                f.last_task_done_stabilized = aggreg_last_task_done_stabilized.task if aggreg_last_task_done_stabilized else None
-                f.last_task_done = aggreg_last_task_done.task if aggreg_last_task_done else None
-                ag_f.last_task_done_current_project = f.last_task_done_current_project
-                ag_f.last_task_done_stabilized = f.last_task_done_stabilized
-                ag_f.last_task_done = f.last_task_done
+        #         f.last_task_done_current_project = aggreg_last_task_done_current_project.task if aggreg_last_task_done_current_project else None
+        #         f.last_task_done_stabilized = aggreg_last_task_done_stabilized.task if aggreg_last_task_done_stabilized else None
+        #         f.last_task_done = aggreg_last_task_done.task if aggreg_last_task_done else None
+        #         ag_f.last_task_done_current_project = f.last_task_done_current_project
+        #         ag_f.last_task_done_stabilized = f.last_task_done_stabilized
+        #         ag_f.last_task_done = f.last_task_done
 
-                adl_headquarters_villages_infos = []
-                for k, v in {'current_project': adl_headquarters_villages_uniques_current_project, 'stabilized': adl_headquarters_villages_uniques_stabilized}.items():
-                    for adl_h_id in v:
-                        if k == 'stabilized' and adl_h_id in adl_headquarters_villages_uniques_current_project:
-                            continue
+        #         adl_headquarters_villages_infos = []
+        #         for k, v in {'current_project': adl_headquarters_villages_uniques_current_project, 'stabilized': adl_headquarters_villages_uniques_stabilized}.items():
+        #             for adl_h_id in v:
+        #                 if k == 'stabilized' and adl_h_id in adl_headquarters_villages_uniques_current_project:
+        #                     continue
 
-                        _children_aggs = [agg for agg in aggregs if str(agg.administrative_level_id) == adl_h_id]
+        #                 _children_aggs = [agg for agg in aggregs if str(agg.administrative_level_id) == adl_h_id]
                         
-                        # Filtrer les éléments qui ont un last_activity valide (non-None)
-                        _valid_aggregs = [agg for agg in _children_aggs if agg.last_activity is not None]
+        #                 # Filtrer les éléments qui ont un last_activity valide (non-None)
+        #                 _valid_aggregs = [agg for agg in _children_aggs if agg.last_activity is not None]
 
-                        # Calculer la dernière activité si possible
-                        _aggreg_last_activity = max(_valid_aggregs, key=lambda x: x.last_activity, default=None) if _valid_aggregs else None
-                        _aggreg_last_task_done = max([ag for ag in _valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if _valid_aggregs else None
+        #                 # Calculer la dernière activité si possible
+        #                 _aggreg_last_activity = max(_valid_aggregs, key=lambda x: x.last_activity, default=None) if _valid_aggregs else None
+        #                 _aggreg_last_task_done = max([ag for ag in _valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if _valid_aggregs else None
                         
-                        # Assigner la dernière activité et les totaux des tâches
-                        _last_activity = _aggreg_last_activity.last_activity if _aggreg_last_activity else None
-                        _total_tasks_completed = sum(agg.total_tasks_completed for agg in _children_aggs)
-                        _total_tasks = sum(agg.total_tasks for agg in _children_aggs)
-                        _total_tasks_validated = sum(agg.total_tasks_validated for agg in _children_aggs)
-                        _total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in _children_aggs)
-                        _total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in _children_aggs)
-                        _total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in _children_aggs)
-                        _total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in _children_aggs)
-                        _last_task_done = {
-                            'id': _aggreg_last_task_done.task.id,
-                            'name': _aggreg_last_task_done.task.name,
-                            'phase_name': _aggreg_last_task_done.task.phase.name,
-                            'activity_name': _aggreg_last_task_done.task.activity.name,
-                            'order': _aggreg_last_task_done.task.order,
-                            'task_order': _aggreg_last_task_done.task.task_order,
-                        } if _aggreg_last_task_done and _aggreg_last_task_done.task else None
-                        _type = k
+        #                 # Assigner la dernière activité et les totaux des tâches
+        #                 _last_activity = _aggreg_last_activity.last_activity if _aggreg_last_activity else None
+        #                 _total_tasks_completed = sum(agg.total_tasks_completed for agg in _children_aggs)
+        #                 _total_tasks = sum(agg.total_tasks for agg in _children_aggs)
+        #                 _total_tasks_validated = sum(agg.total_tasks_validated for agg in _children_aggs)
+        #                 _total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in _children_aggs)
+        #                 _total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in _children_aggs)
+        #                 _total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in _children_aggs)
+        #                 _total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in _children_aggs)
+        #                 _last_task_done = {
+        #                     'id': _aggreg_last_task_done.task.id,
+        #                     'name': _aggreg_last_task_done.task.name,
+        #                     'phase_name': _aggreg_last_task_done.task.phase.name,
+        #                     'activity_name': _aggreg_last_task_done.task.activity.name,
+        #                     'order': _aggreg_last_task_done.task.order,
+        #                     'task_order': _aggreg_last_task_done.task.task_order,
+        #                 } if _aggreg_last_task_done and _aggreg_last_task_done.task else None
+        #                 _type = k
                         
-                        adl_headquarters_villages_infos.append({
-                            'village_name': adls_with_names.get(adl_h_id),
-                            'last_activity': _last_activity.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if _last_activity else None,
-                            'total_tasks_completed': _total_tasks_completed,
-                            'total_tasks': _total_tasks,
-                            'percent': float("%.2f" % (((_total_tasks_completed/_total_tasks)*100) if _total_tasks else 0)),
-                            'total_tasks_validated': _total_tasks_validated,
-                            'total_tasks_invalidated': _total_tasks_invalidated,
-                            'total_tasks_invalidated_review': _total_tasks_invalidated_review,
-                            'total_tasks_invalidated_unreview': _total_tasks_invalidated_unreview,
-                            'total_tasks_waiting_validation': _total_tasks_waiting_validation,
-                            'last_task_done': _last_task_done,
-                            'type': _type,
-                            'in_the_both': adl_h_id in adl_headquarters_villages_uniques_current_project and adl_h_id in adl_headquarters_villages_uniques_stabilized
-                        })
+        #                 adl_headquarters_villages_infos.append({
+        #                     'village_name': adls_with_names.get(adl_h_id),
+        #                     'last_activity': _last_activity.strftime('%Y-%m-%dT%H:%M:%S.%fZ') if _last_activity else None,
+        #                     'total_tasks_completed': _total_tasks_completed,
+        #                     'total_tasks': _total_tasks,
+        #                     'percent': float("%.2f" % (((_total_tasks_completed/_total_tasks)*100) if _total_tasks else 0)),
+        #                     'total_tasks_validated': _total_tasks_validated,
+        #                     'total_tasks_invalidated': _total_tasks_invalidated,
+        #                     'total_tasks_invalidated_review': _total_tasks_invalidated_review,
+        #                     'total_tasks_invalidated_unreview': _total_tasks_invalidated_unreview,
+        #                     'total_tasks_waiting_validation': _total_tasks_waiting_validation,
+        #                     'last_task_done': _last_task_done,
+        #                     'type': _type,
+        #                     'in_the_both': adl_h_id in adl_headquarters_villages_uniques_current_project and adl_h_id in adl_headquarters_villages_uniques_stabilized
+        #                 })
 
-                ag_f.administrative_level_headquarters_villages_infos = adl_headquarters_villages_infos
-                ag_f.new_update_exists = False
-                ag_f.save()
+        #         ag_f.administrative_level_headquarters_villages_infos = adl_headquarters_villages_infos
+        #         ag_f.new_update_exists = False
+        #         # ag_f.save()
+        #         if ag_f_action == "create":
+        #             ag_f_bucket_create.append(ag_f)
+        #         else:
+        #             ag_f_bucket_update.append(ag_f)
                 
-                _facilitators.append(f)
+        #         _facilitators.append(f)
 
+        #     if ag_f_bucket_create:
+        #         bulk_objects_create_or_update(AggregatedStatusFacilitator, ag_f_bucket_create, type_bulk="create")
+        #     if ag_f_bucket_update:
+        #         bulk_objects_create_or_update(
+        #             AggregatedStatusFacilitator, 
+        #             ag_f_bucket_update, type_bulk="update", 
+        #             fields=[
+        #                 'villages_number_current_project', 'cvds_number_current_project', 'villages_number_stabilized', 'cvds_number_stabilized',
+        #                 'villages_number', 'cvds_number', 'last_activity_current_project', 'total_tasks_completed_current_project',
+        #                 'total_tasks_current_project', 'total_tasks_validated_current_project', 'total_tasks_invalidated_current_project',
+        #                 'total_tasks_invalidated_review_current_project', 'total_tasks_invalidated_unreview_current_project',
+        #                 'total_tasks_waiting_validation_current_project', 'last_activity_stabilized', 'total_tasks_completed_stabilized',
+        #                 'total_tasks_stabilized', 'total_tasks_validated_stabilized', 'total_tasks_invalidated_stabilized',
+        #                 'total_tasks_invalidated_review_stabilized', 'total_tasks_invalidated_unreview_stabilized',
+        #                 'total_tasks_waiting_validation_stabilized', 'last_activity', 'total_tasks_completed', 'total_tasks', 'total_tasks_validated',
+        #                 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 
+        #                 'total_tasks_waiting_validation', 'last_task_done_current_project', 'last_task_done_stabilized', 'last_task_done', 
+        #                 'administrative_level_headquarters_villages_infos', 'new_update_exists'
+        #             ]
+        #         )
+            
 
-
-        return _facilitators
+        return update_facilitators_stats(
+            facilitators, 
+            liste_villages,
+            self.request.session.get('project_id'), 
+            self.request.session.get('cycle_id'),
+            self.request.session.get('project_couch_id'),
+            project_mis
+        )
 
     def get_queryset(self):
         return self.get_results()
