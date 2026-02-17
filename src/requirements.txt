@@ -1,3 +1,5 @@
+setuptools>=65.5.0
+wheel>=0.38.0
 asgiref==3.5.1
 attrs==21.4.0
 beautifulsoup4==4.11.1
