@@ -2,7 +2,7 @@ from administrativelevels.models import AdministrativeLevel
 from functools import wraps
 from django.http import HttpResponseServerError
 import signal
-
+from no_sql_client import NoSQLClient
 
 
 def get_administrative_region_name(administrative_id, use_cvd=True):
@@ -56,3 +56,17 @@ def timeout(timeout_sec=600):
                 return HttpResponseServerError("504 Gateway Timeout", status=504)
         return wrapped_view
     return decorator
+
+
+
+def check_for_valid_facilitator(nsc: NoSQLClient, facilitator: str):
+    db = nsc.get_db(facilitator).get_query_result({
+        "type": "facilitator"
+    })
+    for document in db:
+        try:
+            if not document['develop_mode'] and not document["training_mode"]:
+                return True
+        except:
+            return False
+    return False
