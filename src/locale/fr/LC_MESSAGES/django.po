@@ -2233,3 +2233,96 @@ msgstr "Mise à jour de Tâche"
 #: .\dashboard
 msgid "This action will also delete objects linked to this object"
 msgstr "Cette action supprimera également les objets liés à cet objet."
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Completed"
+msgstr "Tâches achevées"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks validated"
+msgstr "Tâches validées"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Waiting Validation"
+msgstr "Tâches en attente de validation"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Invalidated"
+msgstr "Tâches invalidées"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Invalidated Review"
+msgstr "Tâches invalidées revues"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Invalidated Unreview"
+msgstr "Tâches invalidées non revues"
+
+#: .\dashboard\process_manager\views.py
+msgid "Percentage Completed"
+msgstr "Pourcentage d'achèvement"
+
+#: .\dashboard\process_manager\views.py
+msgid "Percentage of completed tasks validated"
+msgstr "Pourcentage des taches achevées validées"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Total"
+msgstr "Total des tâches"
+
+#: .\dashboard\process_manager\views.py
+msgid "Total Users"
+msgstr "Nombre total d'utilisateurs"
+
+#: .\dashboard\process_manager\views.py
+msgid "Specialists/Others"
+msgstr "Spécialistes/Autres"
+
+#: .\dashboard\process_manager\views.py
+msgid "CDD Specialists"
+msgstr "Spécialistes DCC"
+
+#: .\dashboard\process_manager\views.py
+msgid "Supervisors"
+msgstr "Superviseurs"
+
+#: .\dashboard\process_manager\views.py
+msgid "Last Updated"
+msgstr "Dernière mise à jour"
+
+#: .\dashboard\process_manager\views.py
+msgid "All users"
+msgstr "Tous les utilisateurs"
+
+#: .\dashboard\process_manager\views.py
+msgid "Dashboard users"
+msgstr "Utilisateurs du tableau de bord"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:36
+msgid "Edit"
+msgstr "Editer"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:36
+msgid "Loading statistics"
+msgstr "Chargement des statistiques"
+
+#: .\dashboard\templates\facilitators\facilitator_list.html:36
+msgid "Loading user diagnostics"
+msgstr "Chargement du diagnostic des utilisateurs"
+
+#: .\dashboard
+msgid "Tasks Completed (Awaiting validation)"
+msgstr "Tâches Achevées (En attente de validation)"
+
+#: .\dashboard
+msgid "Tasks reviewed by the facilitators are awaiting validation"
+msgstr "Tâches revues par les animateurs sont en attente de validation"
+
+#: .\dashboard
+msgid "Hello dear area supervisor. This information concerns you."
+msgstr "Bonjour cher superviseur de zone. Cette information vous concerne."
+
+#: .\dashboard
+#, python-format
+msgid "Hello dear area supervisor %(name)s. This information concerns you."
+msgstr "Bonjour cher superviseur de zone %(name)s. Cette information vous concerne."
