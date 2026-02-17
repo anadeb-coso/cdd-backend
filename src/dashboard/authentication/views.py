@@ -12,8 +12,14 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.http import Http404
 
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from authentication.models import Facilitator
 from process_manager.models import Project
+from no_sql_client import NoSQLClient
+from dashboard.facilitators.functions import update_facilitators_stats
+from cdd.call_objects_from_other_db import mis_objects_call
+from subprojects.models import Project as MisProject
 
 
 def handler400(request, exception):
@@ -69,6 +75,188 @@ class UsersListView(PageMixin, LoginRequiredMixin, generic.ListView):
         },
     ]
 
+    def get_context_data(self, **kwargs):
+        context = super(UsersListView, self).get_context_data(**kwargs)
+        context['breadcrumb'] = False
+
+        if not (
+            self.request.user.groups.filter(name__in=["Evaluator", "Admin", "CDDSpecialist", "NationalCoordinator", "KnowledgeManager"]).exists()
+            or 
+            bool(self.request.user.is_superuser)
+        ):
+            context['users'] = User.objects.filter(projects__id=self.request.session.get('project_id'))
+        
+        context['total_users_dashboard'] = User.objects.filter(
+            is_active=True,
+            projects__in=[self.request.session.get('project_id')]
+        ).count()
+        context['global_total_users_dashboard'] = User.objects.filter(
+            is_active=True
+        ).count()
+
+        return context
+
+
+class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
+    template_name = 'authentication/components/stats.html'
+    context_object_name = 'object'
+
+    def get_queryset(self):
+        nsc = NoSQLClient()
+        eadls = nsc.get_db('eadls')
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
+
+        # Infos Generales
+
+        community_facilitators = FacilitatorRepository().find_by_criteria(
+            criteria=FacilitatorCriteria(
+                facilitator_type='community_facilitator',
+                develop_mode=False,
+                training_mode=False,
+                active=True,
+                projects__id=[self.request.session.get('project_id')]
+            )
+        )
+        community_facilitators_count = community_facilitators.count()
+        technical_facilitators = FacilitatorRepository().find_by_criteria(
+            criteria=FacilitatorCriteria(
+                facilitator_type='technical_facilitator',
+                develop_mode=False,
+                training_mode=False,
+                active=True,
+                projects__id=[self.request.session.get('project_id')]
+            )
+        )
+        technical_facilitators_count = technical_facilitators.count()
+        supervisors = User.objects.filter(
+            groups__name__in=['Supervisor'],
+            is_active=True,
+            projects__in=[self.request.session.get('project_id')]
+        )
+        supervisors_count = supervisors.count()
+        CDDSpecialists = User.objects.filter(
+            groups__name__in=['CDDSpecialist'],
+            is_active=True,
+            projects__in=[self.request.session.get('project_id')]
+        )
+        CDDSpecialists_count = CDDSpecialists.count()
+        others_users = User.objects.filter(
+            projects__in=[self.request.session.get('project_id')],
+            is_active=True,
+        ).exclude(
+            groups__name__in=['Supervisor', 'CDDSpecialist']
+        )
+        others_users_count = others_users.count()
+        
+        total_users = community_facilitators_count + technical_facilitators_count + supervisors_count + CDDSpecialists_count + others_users_count
+        
+
+        global_community_facilitators = FacilitatorRepository().find_by_criteria(
+            criteria=FacilitatorCriteria(
+                facilitator_type='community_facilitator',
+                develop_mode=False,
+                training_mode=False,
+                active=True
+            )
+        )
+        global_community_facilitators_count = global_community_facilitators.count()
+        global_technical_facilitators = FacilitatorRepository().find_by_criteria(
+            criteria=FacilitatorCriteria(
+                facilitator_type='technical_facilitator',
+                develop_mode=False,
+                training_mode=False,
+                active=True
+            )
+        )
+        global_technical_facilitators_count = global_technical_facilitators.count()
+        global_supervisors = User.objects.filter(
+            groups__name__in=['Supervisor'],
+            is_active=True
+        )
+        global_supervisors_count = global_supervisors.count()
+        global_CDDSpecialists = User.objects.filter(
+            groups__name__in=['CDDSpecialist'],
+            is_active=True
+        )
+        global_CDDSpecialists_count = global_CDDSpecialists.count()
+        global_others_users = User.objects.filter(
+            is_active=True,
+        ).exclude(
+            groups__name__in=['Supervisor', 'CDDSpecialist']
+        )
+        global_others_users_count = global_others_users.count()
+        
+        global_total_users = global_community_facilitators_count + global_technical_facilitators_count + global_supervisors_count + global_CDDSpecialists_count + global_others_users_count
+        
+
+        facilitators = update_facilitators_stats(
+            community_facilitators, 
+            [],
+            self.request.session.get('project_id'), 
+            self.request.session.get('cycle_id'),
+            self.request.session.get('project_couch_id'),
+            project_mis
+        )
+        global_facilitators = update_facilitators_stats(
+            global_community_facilitators, 
+            [],
+            self.request.session.get('project_id'), 
+            self.request.session.get('cycle_id'),
+            self.request.session.get('project_couch_id'),
+            project_mis
+        )
+        facilitators_stabilized_all_docs = [
+            doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
+                if (
+                    type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
+                    doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
+                )
+        ]
+
+        adls_emaails = [
+            obj.email for obj in technical_facilitators
+        ]
+        technical_facilitators_stabilized = [
+            doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
+        ]
+
+        global_adls_emaails = [
+            obj.email for obj in global_technical_facilitators
+        ]
+        global_technical_facilitators_stabilized = [
+            doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in global_adls_emaails
+        ]
+        
+        # End Infos Generales
+
+        return {
+            "community_facilitators": community_facilitators,
+            "community_facilitators_count": community_facilitators_count,
+            "technical_facilitators": technical_facilitators,
+            "technical_facilitators_count": technical_facilitators_count,
+            "supervisors": supervisors,
+            "supervisors_count": supervisors_count,
+            "CDDSpecialists": CDDSpecialists,
+            "CDDSpecialists_count": CDDSpecialists_count,
+            "others_users": others_users,
+            "others_users_count": others_users_count,
+            "total_users": total_users,
+            "global_community_facilitators": global_community_facilitators,
+            "global_community_facilitators_count": global_community_facilitators_count,
+            "global_technical_facilitators": global_technical_facilitators,
+            "global_technical_facilitators_count": global_technical_facilitators_count,
+            "global_supervisors": global_supervisors,
+            "global_supervisors_count": global_supervisors_count,
+            "global_CDDSpecialists": global_CDDSpecialists,
+            "global_CDDSpecialists_count": global_CDDSpecialists_count,
+            "global_others_users": global_others_users,
+            "global_others_users_count": global_others_users_count,
+            "global_total_users": global_total_users,
+            "facilitators": facilitators,
+            "technical_facilitators_stabilized": technical_facilitators_stabilized,
+            "global_facilitators": global_facilitators,
+            "global_technical_facilitators_stabilized": global_technical_facilitators_stabilized
+        }
     
 
 

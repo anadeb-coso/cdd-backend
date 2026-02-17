@@ -14,5 +14,7 @@ urlpatterns = [
     path('users/', views.UsersListView.as_view(), name='users'),
     path('user-create/', views.CreateUpdateUserFormView.as_view(), name='user_create'),
     path('user/<slug:id>/update/', views.CreateUpdateUserFormView.as_view(), name='user_update'),
-    path('user/<slug:id>/delete/', views.DeleteUserFormView.as_view(), name='user_delete')
+    path('user/<slug:id>/delete/', views.DeleteUserFormView.as_view(), name='user_delete'),
+    
+    path('get-users-diagnostics-view', views.UsersDiagnosticsView.as_view(), name='get_users_diagnostics_view'),
 ]
