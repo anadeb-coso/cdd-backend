@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from django.utils import timezone
 import zlib
+import re
+import unicodedata
 
 def exists_id(liste, id):
     for o in liste:
@@ -84,3 +86,24 @@ def get_validation_code(seed):
 def get_code(seed):
         import zlib
         return str(zlib.adler32(str(seed).encode('utf-8')))[:6]
+
+
+
+def normalize_text(text):
+    if not text:
+        return ""
+
+    # enlever accents
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+
+    # minuscule
+    text = text.lower()
+
+    # enlever ponctuation
+    text = re.sub(r'[^\w\s]', '', text)
+
+    # enlever doubles espaces
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
