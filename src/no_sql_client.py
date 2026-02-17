@@ -143,3 +143,15 @@ class NoSQLClient:
         if roles:
             members['roles'] = roles
         security_doc.save()
+
+    def list_all_databases(self, filter_str=None):
+        """
+        Lists all databases. If filter_str is provided, only databases containing the given string are returned.
+
+        :param filter_str: (Optional) A string to filter the database names.
+        :return: List of database names.
+        """
+        all_dbs = self.client.all_dbs()
+        if filter_str:
+            return [db for db in all_dbs if filter_str in db]
+        return all_dbs

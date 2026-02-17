@@ -134,6 +134,7 @@ dmypy.json
 src/cdd/.env.production
 
 src/cdd/.env.develop
+src/cdd/.env.example
 
 *.env
 
