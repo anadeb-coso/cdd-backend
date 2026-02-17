@@ -9,6 +9,7 @@ from django.conf import settings
 from django.shortcuts import resolve_url
 from django.http import HttpResponseRedirect
 from django.contrib import messages
+import itertools
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
@@ -467,6 +468,19 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             self.request.session['tree_structure_projects_names'] = [p.name for p in tree_structure_projects]
 
             self.request.session['tree_structure_projects_mis_ids'] = [mis_objects_call.get_object(ProjectMis, name=p.name).id for p in tree_structure_projects]
+
+            if self.request.user.groups.filter(name__in=["Supervisor"]).exists() and hasattr(self.request.user, 'email'):
+                nsc = NoSQLClient()
+                eadls = nsc.get_db('eadls')
+                facilitator_grm = eadls.get_query_result({
+                    "type": "adl",
+                    "representative.email": self.request.user.email
+                })[:][0]
+                administratives_stabilized = facilitator_grm['administrative_regions']
+                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
+                self.request.session['cantons_stabilized_ids'] = list(set(
+                    (administratives_stabilized if administratives_stabilized else []) + list(itertools.chain(*[str(ad['id']) for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
+                ))
 
             next_page = self.request.GET.get('next')
             if next_page:
