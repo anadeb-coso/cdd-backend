@@ -25,6 +25,19 @@
         </div>
 
         <!-- Sidebar Menu -->
+        
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:diagnostics:diagnostics' %}"
+                       class="nav-link {% if active_level1 == 'diagnostics' %}active{% endif %}">
+                        <i class="nav-icon fa fa-comment-alt"></i>
+                        <p>{% translate "Diagnostics" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -47,18 +60,6 @@
                 </li>
             </ul>
         </nav>
-        
-        {% comment %} <nav class="mt-2">
-            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
-                <li class="nav-item">
-                    <a href="{% url 'dashboard:diagnostics:diagnostics' %}"
-                       class="nav-link {% if active_level1 == 'diagnostics' %}active{% endif %}">
-                        <i class="nav-icon fa fa-comment-alt"></i>
-                        <p>{% translate "Diagnostics" %}</p>
-                    </a>
-                </li>
-            </ul>
-        </nav> {% endcomment %}
 
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
             <li class="nav-item">
@@ -104,7 +105,7 @@
             </ul>
         </nav> {% endcomment %}
 
-        {% comment %} <nav class="mt-2">
+        <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:funnel:funnels' %}"
@@ -114,7 +115,7 @@
                     </a>
                 </li>
             </ul>
-        </nav> {% endcomment %}
+        </nav>
 
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">

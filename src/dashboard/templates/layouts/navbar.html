@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n custom_tags %}
 
 <!-- Navbar -->
 <nav class="main-header navbar navbar-expand navbar-white navbar-light">
@@ -35,6 +35,10 @@
 {#                {% translate 'Help / FAQ' %}#}
 {#            </a>#}
 {#        </li>#}
+
+        {% if user|has_group:"Supervisor" and INVALIDATION_NOTIFICATIONS %}
+            {% include 'layouts/notifications_dropdown.html' %}
+        {% endif %}
         {% if PROJECT_NAME %}
             {% include 'layouts/project_dropdown.html' %}
         {% endif %}

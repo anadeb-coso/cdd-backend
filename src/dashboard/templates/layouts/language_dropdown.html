@@ -11,7 +11,7 @@
     <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
         {% for language in languages %}
             {% if lang.code != language.code %}
-                <a class="dropdown-item language" data-language_code="{{ language.code }}">
+                <a class="dropdown-item language" data-language_code="{{ language.code }}" href='#'>
                     {% trans language.name_local|capfirst %}
                 </a>
             {% endif %}

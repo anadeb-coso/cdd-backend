@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n custom_tags %}
 
 <!-- jQuery -->
 <script src="{% static 'AdminLTE/plugins/jquery/jquery.min.js' %}"></script>
@@ -67,4 +67,31 @@
             element.val(element_val)
         }
     }
+</script>
+
+<script src="{% static 'js/notifications.js' %}"></script>
+{{ INVALIDATION_NOTIFICATIONS|json_script:"invalidations-data" }}
+<script type="text/javascript">
+    let spans = "";
+    const INVALIDATION_NOTIFICATIONS = JSON.parse(
+    document.getElementById("invalidations-data").textContent
+    );
+    Object.entries(INVALIDATION_NOTIFICATIONS).forEach(([project, vals]) => {
+    Object.entries(vals).forEach(([cycle, v]) => {
+        if (cycle !== "project_id") {
+
+        if (v.total_tasks_waiting_validation) {
+            spans += `<span>${v.total_tasks_waiting_validation} - {% translate 'Tasks Completed (Awaiting validation)' %} [${project}] [${cycle}]</span><hr />`;
+        }
+
+        if (v.total_tasks_invalidated_review) {
+            spans += `<span>${v.total_tasks_invalidated_review} - {% translate 'Tasks reviewed by the facilitators are awaiting validation' %} [${project}] [${cycle}]</span><hr />`;
+        }
+
+        }
+    });
+    });
+    {% if user|has_group:"Supervisor" %}
+        pushNotify(spans, "error");
+    {% endif %}
 </script>

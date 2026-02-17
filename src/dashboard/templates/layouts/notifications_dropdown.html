@@ -1,0 +1,41 @@
+{% load i18n custom_tags %}
+
+{% if user|has_group:"Supervisor" and INVALIDATION_NOTIFICATIONS %}
+<li class="nav-item dropdown">
+    <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="fa fa-bell"></i>
+        <div style="display: inline-block !important;">
+            <span style="font-size: 15px;" class="text-danger text-bold">{{ TOTAL_TASKS_WAITING_VALIDATION }}</span>
+            <span style="font-size: 11px;" class="text-danger text-bold">{{ TOTAL_TASKS_INVALIDATED_REVIEW }}</span>
+        </div>
+    </a>
+    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        <p class="dropdown-item">
+            {% comment %} {% blocktranslate with name=user.first_name %}
+            Hello dear area supervisor {{name}}. This information concerns you.
+            {% endblocktranslate %} {% endcomment %}
+            {% translate "Hello dear area supervisor. This information concerns you." %}
+        </p>
+        {% for project, vals in INVALIDATION_NOTIFICATIONS.items %}
+            {% for cycle, v in vals.items %}
+                {% if cycle != 'project_id' %}
+                    <a class="dropdown-item" href="#">
+                        <div class="border-bottom pointer-event">
+                            {% if v|get:'total_tasks_waiting_validation' %}
+                            <p>
+                                <span class="text-danger text-bold">{{ v|get:'total_tasks_waiting_validation' }}</span> <span class="text-secondary" style="font-size: 11px;">{% translate 'Tasks Completed (Awaiting validation)' %} [{{ project }}] [{{ cycle }}]</span>
+                            </p>
+                            {% endif %}
+                            {% if v|get:'total_tasks_invalidated_review' %}
+                            <p>
+                                <span class="text-danger text-bold">{{ v|get:'total_tasks_invalidated_review' }}</span> <span class="text-secondary" style="font-size: 11px;">{% translate 'Tasks reviewed by the facilitators are awaiting validation' %} [{{ project }}] [{{ cycle }}]</span>
+                            </p>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+</li>
+{% endif %}
