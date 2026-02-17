@@ -14,7 +14,6 @@ from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
-from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from process_manager.models import Project
 from dashboard.statistics.utils import comparer_chaines, normaliser_chaine

@@ -22,5 +22,9 @@ def normaliser_chaine(chaine):
     
     return chaine
 
-def comparer_chaines(str1, str2):
-    return normaliser_chaine(str1) == normaliser_chaine(str2)
+def comparer_chaines(str1, *str2):
+    normalized_str1 = normaliser_chaine(str1)
+    for s in str2:
+        if normalized_str1 == normaliser_chaine(s):
+            return True
+    return False

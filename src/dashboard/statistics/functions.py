@@ -14,6 +14,7 @@ from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
 from process_manager.models import Project
 from .utils import safe_get, comparer_chaines
+from cdd.functions import normalize_text
 
 
 def get_datas_dict(reponses_datas, key, level: int = 1, default={}):
@@ -754,20 +755,38 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
         already_count_facilitator = False
         facilitator_db = nsc.get_db(f.no_sql_db_name)
 
-        # query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
-        # query_result_docs = facilitator_db.get_query_result({
-        #     "type": {"$in": ["task", "facilitator"]},
-        #     "$or": [
-        #         {
-        #             'project_id': project.couch_id,
-        #             'cycle_id': cycle_id
-        #         },
-        #         {
-        #             'project_id': project.couch_id
-        #         }
-        #     ]
-            
-        # }, limit=1000000)[:]
+        tasks_names = [
+            "Etablissement du profil du village", 
+            "Introduction et présentation de l'AC par l'AADB lors de la première réunion cantonale", 
+            "Présentation et clarification de votre mission", 
+
+            "Brève introduction de la réunion et de l'ANADEB", 
+            "Brève introduction de la réunion et du PURS (Programme et Coordination générale)", #PURS
+
+            "Ouverture de la deuxième réunion et vérification du quorum des participants",
+            "Animer la session de formation sur le Module 1 : rôles et responsabilités des membres des organes de CVD", 
+            "Présenter les activités de la journée", 
+            "Elaboration du plan d'action villageois (PAV)",
+            "Mise en place et/ou restructuration du comité cantonal de développement (CCD)  et du comité cantonal de gestion des plaintes (CCGP)",
+
+            "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet",
+            "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affectation des ressources par sous - projet", #FA-COSO
+            "Appui au CCD dans l'analyse des PAV des villages, l'arbitrage des priorités pour la rédaction du PDC.", #PURS
+
+            "Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage",
+            "Appui à l'organisation et à la facilitation de rencontre communautaire de de présentation du PDC.", #PURS
+
+            "Appuie au bureau du CVD  dans la rédaction du document du sous projet et la demande de financement",
+            "Réunion d'information de la communauté sur le sous projet: activités, coût estimatif et prochainbes étapes",
+            "Soumission de la demande de financement du sous-projet à l’ANADEB pour approbation par le CORA",
+            "Séance communautaire d'information sur les grandes lignes  du sous projet, sa durée d'exécution et les mesures de sauvegardes à observer",
+            "Appuie au CVD dans la production des rapports périodiques et l'organisation des réunions d'échanges sur l'état d'avancement des travaux",
+            "Classement et archivage de tous les documents relatifs à la mise en œuvre du sous projet",
+            "Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet",
+            "Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage"
+        ]
+        tasks_ids = [t.id for t in project.task_set.filter(name_normalized__in=[normalize_text(name) for name in tasks_names])]
+        
         query_result_docs = facilitator_db.get_query_result({
             "$or": [
                 {
@@ -776,7 +795,14 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                 {
                     "type": "task",
                     'project_id': project.couch_id,
-                    'cycle_id': cycle_id
+                    'cycle_id': cycle_id,
+                    'sql_id': {"$in": tasks_ids}
+                },
+                {
+                    "type": "task",
+                    'project_id': project.couch_id,
+                    'cycle_id': cycle_id,
+                    'name': {"$in": tasks_names}
                 }
             ]
         }, limit=1000000)[:]
@@ -796,23 +822,10 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
             for cvd in cvds:
                 administrative_level_cvd_village = cvd.get('village')
                 if administrative_level_cvd_village:
-                    # administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(administrative_level_cvd_village['id']))
                     administrativelevel_obj = all_project_adl.get(str(administrative_level_cvd_village['id'])) #project_mis.administrative_levels.filter(id=int(administrative_level_cvd_village['id'])).first()
                     
                     if administrativelevel_obj and administrativelevel_obj.get('cvd'):
-                        # _ok = True
-                        # if liste_villages:
-                        #     _ok = False
-                        #     for village in liste_villages:
-                        #         if str(administrative_level_cvd_village['id']) == str(village["administrative_id"]):
-                        #             _ok = True
-                        #             break
-                        # if _ok:
-                        # if (facilitator_dbs_name and (
-                        #     not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
-                        # )) or (
-                        #     not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and [v for v in liste_villages for v_c in administrativelevel_obj.cvd.get_villages() if str(v["administrative_id"]) == str(v_c.id)])
-                        # ):
+                        
                         if (facilitator_dbs_name and (
                             not params.get("ids_administrativelevel") or (params.get("ids_administrativelevel") and any(v for v in liste_villages if v["id"] in administrativelevel_obj['cvd']['villages_ids']))
                         )) or (
@@ -828,9 +841,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Commune", "Commune", "Commune", "Commune", "ind_3")][count] = administrativelevel_obj['parent']['parent']['name']
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Canton", "Canton", "Canton", "Canton", "ind_4")][count] = administrativelevel_obj['parent']['name']
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "CVD", "CVD", "CVD", "CVD", "ind_5")][count] = administrativelevel_obj['cvd']['name']
-                        # villages = ""
-                        # for o in administrativelevel_obj.cvd.get_villages():
-                        #     villages += f'{o.name} ; '
+                        
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Villages", "Villages", "Villages", "Villages", "ind_6")][count] = ";".join([o['name'] for o in administrativelevel_obj['cvd']['villages']])
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Unité géographique", "Unité géographique", "Unité géographique", "Unité géographique", "ind_7")][count] = administrativelevel_obj['geographical_unit']['attributed_number_in_canton']
                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "LOCALITE", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "Nom de l'AC", "ind_8")][count] = f.name
@@ -1404,7 +1415,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "TOTAL PARTICIPANTS", "T", "ind_24_0")][count] = totalPlus35 + totalMoins35
                                         
 
-                                    elif _.get('sql_id') in [22] or comparer_chaines(_.get('name'), "Brève introduction de la réunion et de l'ANADEB"): #Brève introduction de la réunion et de l'ANADEB
+                                    elif _.get('sql_id') in [22] or comparer_chaines(_.get('name'), "Brève introduction de la réunion et de l'ANADEB", "Brève introduction de la réunion et du PURS (Programme et Coordination générale)"): #Brève introduction de la réunion et de l'ANADEB
                                         
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
@@ -2086,7 +2097,12 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = safe_get(form_response, 0).get("nombreEthniques", None)
 
 
-                                    elif _.get('sql_id') in [47] or comparer_chaines(_.get('name'), "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet"): #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
+                                    elif _.get('sql_id') in [47] or comparer_chaines(
+                                        _.get('name'), 
+                                        "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet",
+                                        "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affectation des ressources par sous - projet",
+                                        "Appui au CCD dans l'analyse des PAV des villages, l'arbitrage des priorités pour la rédaction du PDC."
+                                    ): #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
                                         
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
@@ -2200,7 +2216,11 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = safe_get(form_response, 0).get("nombreEthniques", None)
 
 
-                                    elif _.get('sql_id') in [48] or comparer_chaines(_.get('name'), "Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage"): #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
+                                    elif _.get('sql_id') in [48] or comparer_chaines(
+                                        _.get('name'), 
+                                        "Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage",
+                                        "Appui à l'organisation et à la facilitation de rencontre communautaire de de présentation du PDC."
+                                    ): #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
                                         
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
@@ -3956,7 +3976,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "1–Visites Prealables", "2- Visite préalable au niveau village", "TOTAL PARTICIPANTS", "T", "ind_24_0")][count] = totalPlus35 + totalMoins35
                             
 
-                        elif _.get('sql_id') in [22] or comparer_chaines(_.get('name'), "Brève introduction de la réunion et de l'ANADEB"): #Brève introduction de la réunion et de l'ANADEB
+                        elif _.get('sql_id') in [22] or comparer_chaines(_.get('name'), "Brève introduction de la réunion et de l'ANADEB", "Brève introduction de la réunion et du PURS (Programme et Coordination générale)"): #Brève introduction de la réunion et de l'ANADEB
                             
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "2–Mobilisation Communautaire", "3- 1ère réunion de village", "Date de la séance", "Date de la séance", "ind_25")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
@@ -4638,7 +4658,12 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "8- Réunion cantonale J1", "Ethnies minoritaires", "Ethnies minoritaires", "ind_78")][count] = safe_get(form_response, 0).get("nombreEthniques", None)
 
 
-                        elif _.get('sql_id') in [47] or comparer_chaines(_.get('name'), "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet"): #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
+                        elif _.get('sql_id') in [47] or comparer_chaines(
+                            _.get('name'), 
+                            "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet",
+                            "Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affectation des ressources par sous - projet",
+                            "Appui au CCD dans l'analyse des PAV des villages, l'arbitrage des priorités pour la rédaction du PDC."
+                        ): #Appui au CCD dans  l'analyse des PAV des villages, l'arbitrage, la sélection des sous - projets à financer et l'affection des ressources par sous - projet
                             
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Date de la séance", "Date de la séance", "ind_79")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
@@ -4752,7 +4777,11 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "9- Réunion cantonale J2", "Ethnies minoritaires", "Ethnies minoritaires", "ind_87")][count] = safe_get(form_response, 0).get("nombreEthniques", None)
 
 
-                        elif _.get('sql_id') in [48] or comparer_chaines(_.get('name'), "Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage"): #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
+                        elif _.get('sql_id') in [48] or comparer_chaines(
+                            _.get('name'), 
+                            "Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage",
+                            "Appui à l'organisation et à la facilitation de rencontre communautaire de de présentation du PDC."
+                        ): #Appui à l'organisation et à la facilitation de rencontre  communautaire de restitution des résultats de la reunion cantonale d'arbitrage
                             
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "PARTICIPATIONS", "3–Planification", "10- 5ème réunion de village", "Date de la séance", "Date de la séance", "ind_88")][count] = safe_get(form_response, 0).get("dateDeLaReunion", None)
 
