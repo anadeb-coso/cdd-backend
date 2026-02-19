@@ -21,6 +21,13 @@ register = template.Library()
 def get(dictionary, key):
     return dictionary.get(key, None)
 
+@register.filter
+def get_set_item(set_data: set, key):
+    try:
+        return set_data[int(key)]
+    except Exception as exc:
+        return None
+
 @register.simple_tag
 def get_code_email(email):
     code = "-"
