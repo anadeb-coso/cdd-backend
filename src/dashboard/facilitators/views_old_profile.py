@@ -35,7 +35,12 @@ class FacilitatorMixin(LoginRequiredMixin):
         try:
             if not self.request.user.is_authenticated:
                 return redirect_user_to_login(request)
-            if not self.request.session.get('project_id') or not self.request.session.get('cycle_id'):
+            if (
+                not self.request.session.get('project_id') or 
+                not self.request.session.get('cycle_id') or 
+                not self.request.session.get('tree_structure_projects_ids') or 
+                (request.user.groups.filter(name__in=["Supervisor"]).exists() and not self.request.session.get('cantons_stabilized_ids'))
+            ):
                 return redirect_to_an_url(request, 'dashboard:process_manager:list')
                 
             self.facilitator_db_name = kwargs['id']
