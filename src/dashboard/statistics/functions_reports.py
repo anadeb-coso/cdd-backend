@@ -348,10 +348,16 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
         "Priorite sous-composante 1.3 3": {},
         "Priorite sous-composante 1.3 4": {},
         "Priorite sous-composante 1.3 5": {},
+        "task_priority_completed": {},
+        "task_priority_validated": {},
         "PAV": {},
         "PAV correct": {},
+        "task_pav_completed": {},
+        "task_pav_validated": {},
         "PAC": {},
         "PAC correct": {},
+        "task_pac_completed": {},
+        "task_pac_validated": {},
         "AC": {},
         "Phone": {}
     }
@@ -525,6 +531,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                     for i in range(1, 6):
                                         datas_dict_havent_priorities_pav[f"Priorite sous-composante 1.3 {i}"][count] = ""
 
+                                datas_dict_havent_priorities_pav["task_priority_completed"][count] = 1 if _doc.get('completed') else 0
+                                datas_dict_havent_priorities_pav["task_priority_validated"][count] = 1 if _doc.get('validated') else 0
+
                             elif _doc['sql_id'] in [45, 130, 94]:
                                 if _doc['attachments'][0]['attachment'] and _doc['attachments'][0]['attachment'].get('uri'):
                                     datas_dict_havent_priorities_pav["PAV"][count] = _doc['attachments'][0]['attachment']['uri'].split('?')[0]
@@ -533,6 +542,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                 if not datas_dict_havent_priorities_pav["PAV"].get(count):
                                     datas_dict_havent_priorities_pav["PAV"][count] = ""
                                     datas_dict_havent_priorities_pav["PAV correct"][count] = ""
+
+                                datas_dict_havent_priorities_pav["task_pav_completed"][count] = 1 if _doc.get('completed') else 0
+                                datas_dict_havent_priorities_pav["task_pav_validated"][count] = 1 if _doc.get('validated') else 0
                                     
                             elif _doc['sql_id'] in [47, 132, 96]:
                                 try:
@@ -545,7 +557,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                 if not datas_dict_havent_priorities_pav["PAC"].get(count):
                                     datas_dict_havent_priorities_pav["PAC"][count] = ""
                                     datas_dict_havent_priorities_pav["PAC correct"][count] = ""
-                                    
+
+                                datas_dict_havent_priorities_pav["task_pac_completed"][count] = 1 if _doc.get('completed') else 0
+                                datas_dict_havent_priorities_pav["task_pac_validated"][count] = 1 if _doc.get('validated') else 0
                     except Exception as exc:
                         print(exc, _doc['administrative_level_id'])
                     
@@ -663,6 +677,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                         if not classementSousComposante13:
                             for i in range(1, 6):
                                 datas_dict_havent_priorities_pav[f"Priorite sous-composante 1.3 {i}"][count] = ""
+
+                        datas_dict_havent_priorities_pav["task_priority_completed"][count] = 1 if _doc.get('completed') else 0
+                        datas_dict_havent_priorities_pav["task_priority_validated"][count] = 1 if _doc.get('validated') else 0
                         
                     elif _doc['sql_id'] in [45, 130, 94]:
                         if _doc['attachments'][0]['attachment'] and _doc['attachments'][0]['attachment'].get('uri'):
@@ -672,6 +689,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                         if not datas_dict_havent_priorities_pav["PAV"].get(count):
                             datas_dict_havent_priorities_pav["PAV"][count] = ""
                             datas_dict_havent_priorities_pav["PAV correct"][count] = ""
+
+                        datas_dict_havent_priorities_pav["task_pav_completed"][count] = 1 if _doc.get('completed') else 0
+                        datas_dict_havent_priorities_pav["task_pav_validated"][count] = 1 if _doc.get('validated') else 0
 
                     elif _doc['sql_id'] in [47, 132, 96]:
                         try:
@@ -684,6 +704,9 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                         if not datas_dict_havent_priorities_pav["PAC"].get(count):
                             datas_dict_havent_priorities_pav["PAC"][count] = ""
                             datas_dict_havent_priorities_pav["PAC correct"][count] = ""
+
+                        datas_dict_havent_priorities_pav["task_pac_completed"][count] = 1 if _doc.get('completed') else 0
+                        datas_dict_havent_priorities_pav["task_pac_validated"][count] = 1 if _doc.get('validated') else 0
 
     # print()
     # print("Done!")
