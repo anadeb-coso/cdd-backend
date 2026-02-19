@@ -1,0 +1,154 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .expand-icon-for-village-detail {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    .villages-status-card {
+        width: 80% !important;
+        margin: 0 auto !important;
+    }
+</style>
+
+<div style="width: 100% !important;" class="align-content-center justify-content-center rowDetailCantonAggregatedStatus">
+    <div class="card villages-status-card">
+        <div class="card-body table-responsive">
+            <table id="villages-status-table" class="table-bordered">
+                <thead>
+                <tr>
+                    <th width="30%">{% translate 'Name' %}</th>
+                    <th>{% translate 'Tasks Total' %}</th>
+                    <th>{% translate 'Tasks Completed' %}</th>
+                    <th>{% translate 'Tasks validated' %}</th>
+                    <th>{% translate 'Tasks Waiting Validation' %}</th>
+                    <th>{% translate 'Tasks Invalidated' %}</th>
+                    <th>{% translate 'Tasks Invalidated Review' %}</th>
+                    <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                    <th width="9%">{% translate 'DB' %}</th>
+                    <th width="5%" class="no-sort"></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for village_aggregated_status in villages_aggregated_status %}
+                    <tr id="{{ village_aggregated_status.project_id }}-{{ village_aggregated_status.cycle_id }}-{{ village_aggregated_status.administrative_level_id }}">
+                        <td align="left">{{ villages_ids_names|get:village_aggregated_status.administrative_level_id }}</td>
+                        <td>{{ village_aggregated_status.total_tasks }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_completed %} color: green {% endif %}" >{{ village_aggregated_status.total_tasks_completed }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_validated %} color: green {% endif %}" >{{ village_aggregated_status.total_tasks_validated }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_waiting_validation %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_waiting_validation }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_invalidated %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_invalidated_review %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_review }}</td>
+                        <td style="{% if village_aggregated_status.otal_tasks_invalidated_unrevie %} color: purple {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_unreview }}</td>
+                        <td>
+                            {% with assigns_adl_to_facilitators|get:village_aggregated_status.administrative_level_id as facilitator %}
+                                {% if facilitator.name %}
+                                    {% comment %} {{ facilitator.name }} <br /> {% endcomment %}
+                                    [<a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
+                                    href="{% url 'dashboard:facilitators:old_detail' facilitator.no_sql_db_name %}"
+                                    target="_blank" title="{% translate 'See profile' %}"><span> {% translate "See" %} </span></a>]
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class=" pointer-event ">
+                            <i class=" expand-icon-for-village-detail fas fa-chevron-circle-right text-info"></i>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            "numeric-comma-pre": function (a) {
+                var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                return isNaN(x) ? 0 : x;
+            },
+            "numeric-comma-asc": function (a, b) {
+                return a - b;
+            },
+            "numeric-comma-desc": function (a, b) {
+                return b - a;
+            }
+        });
+
+        if ($.fn.DataTable.isDataTable('#villages-status-table')) {
+            $('#villages-status-table').DataTable().destroy();
+            $('#villages-status-table').empty(); 
+        }
+
+        let villages_status_table = $('#villages-status-table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            columnDefs: [
+                { 
+                    type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7] 
+                }
+            ],
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
+        });
+        $('#search').on('keyup', function () {
+            villages_status_table.search($(this).val()).draw();
+        });
+
+
+        {% comment %} villages_status_table.on('click', '.expand-icon-for-village-detail', function (e) {
+            let target = e.target;
+            let tr = target.closest('tr');
+            let row = table.row(tr);
+            
+            if(document.getElementsByClassName('rowDetailVillageAggregatedStatus')[0]) {
+                document.getElementsByClassName('rowDetailVillageAggregatedStatus')[0].parentElement.remove();
+            }
+            if(document.getElementsByClassName('fa-chevron-circle-down')[0]) {
+                document.getElementsByClassName('fa-chevron-circle-down')[0].classList = 'expand-icon-for-village-detail fas fa-chevron-circle-right text-primary';
+            }
+            if (row.child.isShown()) {
+                target.classList = 'expand-icon-for-village-detail fas fa-chevron-circle-right text-primary';
+                row.child.hide();
+            } else {
+                let split_p_c_c = tr.id.split('-');
+
+                let project_id = split_p_c_c[0];
+                let cycle_id = split_p_c_c[1];
+                let canton_id = split_p_c_c[2];
+
+                target.classList = ' expand-icon-for-village-detail fas fa-chevron-circle-down text-primary';
+                row.child('<i class="fas fa-2x fa-sync-alt fa-spin"></i>').show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:diagnostics:get_diagnostics_facilitator_view' %}",
+                    data: {
+                        index: 0,
+                        offset:10, 
+                        project_id: project_id,
+                        cycle_id: cycle_id,
+                        canton_id: canton_id
+                    }, 
+                    success: function (response) {
+                    row.child(response).show();
+                }, error: function (data) {
+                    row.child('<span>Error loading data</span>').show();
+                }});
+            }
+        }); {% endcomment %}
+
+        
+    });
+
+
+</script>
+

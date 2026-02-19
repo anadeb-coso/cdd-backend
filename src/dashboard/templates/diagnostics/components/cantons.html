@@ -1,0 +1,149 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .expand-icon {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    #table td {
+        font-weight: bold;
+    }
+</style>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table id="table" class="table-bordered">
+            <thead>
+            <tr>
+                <th width="30%">{% translate 'Name' %}</th>
+                <th>{% translate 'Tasks Total' %}</th>
+                <th>{% translate 'Tasks Completed' %}</th>
+                <th>{% translate 'Tasks validated' %}</th>
+                <th>{% translate 'Tasks Waiting Validation' %}</th>
+                <th>{% translate 'Tasks Invalidated' %}</th>
+                <th>{% translate 'Tasks Invalidated Review' %}</th>
+                <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                <th width="5%" class="no-sort"></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for project, vals in object.items %}
+                {% for cycle, v in vals.items %}
+                    {% if cycle != 'project_id' %}
+                        {% for canton, v_c in v.items %}
+                            {% if canton != 'cycle_id' %}
+                                <tr id="{{ vals|get:'project_id' }}-{{ v|get:'cycle_id' }}-{{ canton|get_set_item:0 }}">
+                                    <td align="left">{{ canton|get_set_item:1 }} [{{ project }}] [{{ cycle }}]</td>
+                                    <td>{{ v_c|get:'total_tasks' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_waiting_validation' %} color: green {% endif%}">{{ v_c|get:'total_tasks_completed' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_validated' %} color: green {% endif%}">{{ v_c|get:'total_tasks_validated' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_waiting_validation' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_waiting_validation' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_invalidated' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_invalidated_review' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated_review' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_invalidated_unreview' %} color: purple {% endif%}" >{{ v_c|get:'total_tasks_invalidated_unreview' }}</td>
+                                    <td class=" pointer-event ">
+                                        <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            "numeric-comma-pre": function (a) {
+                var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                return isNaN(x) ? 0 : x;
+            },
+            "numeric-comma-asc": function (a, b) {
+                return a - b;
+            },
+            "numeric-comma-desc": function (a, b) {
+                return b - a;
+            }
+        });
+
+        if ($.fn.DataTable.isDataTable('#table')) {
+            $('#table').DataTable().destroy();
+            $('#table').empty(); 
+        }
+
+        let table = $('#table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            columnDefs: [
+                { 
+                    type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7] 
+                }
+            ],
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: []
+        });
+        $('#search').on('keyup', function () {
+            table.search($(this).val()).draw();
+        });
+
+        table.on('click', '.expand-icon', function (e) {
+            let target = e.target;
+            let tr = target.closest('tr');
+            let row = table.row(tr);
+            
+            if(document.getElementsByClassName('rowDetailCantonAggregatedStatus')[0]) {
+                document.getElementsByClassName('rowDetailCantonAggregatedStatus')[0].parentElement.remove();
+            }
+            if(document.getElementsByClassName('fa-chevron-circle-down')[0]) {
+                document.getElementsByClassName('fa-chevron-circle-down')[0].classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+            }
+            if (row.child.isShown()) {
+                target.classList = 'expand-icon fas fa-chevron-circle-right text-primary';
+                row.child.hide();
+            } else {
+                let split_p_c_c = tr.id.split('-');
+
+                let project_id = split_p_c_c[0];
+                let cycle_id = split_p_c_c[1];
+                let canton_id = split_p_c_c[2];
+
+                target.classList = ' expand-icon fas fa-chevron-circle-down text-primary';
+                row.child('<i class="fas fa-2x fa-sync-alt fa-spin"></i>').show();
+                $.ajax({
+                    type: "GET",
+                    url: "{% url 'dashboard:diagnostics:get_diagnostics_villages_view' %}",
+                    data: {
+                        index: 0,
+                        offset:10, 
+                        project_id: project_id,
+                        cycle_id: cycle_id,
+                        canton_id: canton_id
+                    }, 
+                    success: function (response) {
+                    row.child(response).show();
+                }, error: function (data) {
+                    row.child('<span>Error loading data</span>').show();
+                }});
+            }
+        });
+
+
+        
+    });
+
+
+</script>
+

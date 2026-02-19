@@ -1,0 +1,220 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n custom_tags %}
+{% block extracss %}
+    {{ block.super }}
+    <link href="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.css' %}" rel="stylesheet">
+    <style>
+        #map {
+            height: 1253px;
+        }
+
+    </style>
+
+
+    <style>
+        #table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0;
+            border-radius: 10px 0 0 0 !important;
+
+            & thead th {
+                border: 1px solid #f2f2f2 !important;
+
+                font-weight: bolder !important;;
+                height: 36px;
+                padding: 0 25px 0 10px;
+
+                &:not([class^="bg-"]) {
+                    background-color: #f2f2f2 !important;
+                }
+
+                &:after, &:before {
+                    top: 30%;
+                }
+
+                &:last-of-type {
+
+                    border-radius: 0 10px 0 0 !important;
+                }
+
+                &:not(&:last-child) {
+                    border-right-color: #c1c1c1 !important;
+                }
+
+                &:last-child {
+                    border-right-color: transparent !important;
+                }
+
+                &:first-child {
+                    border-left-color: transparent !important;
+                }
+            }
+
+
+            & thead th:first-of-type {
+
+                border-radius: 10px 0 0 0 !important;
+            }
+
+            & tbody td {
+                border-bottom-width: 1px !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+
+            & tbody tr:last-of-type {
+                border-radius: 0 10px 0 0 !important;
+            }
+
+            & tbody tr:not(.even):not(.odd):last-of-type, & tbody tr:not(.even):not(.odd):last-of-type td[colspan="8"] {
+                border-radius: 0 0 10px 10px !important;
+            }
+
+            & tbody td:first-of-type {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:last-of-type td {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:not(:first-of-type) {
+                border-left: 0;
+
+            }
+
+            & tbody td:not(:last-of-type) {
+                padding: 0 25px 0 10px;
+                border-right: 0;
+            }
+
+            & tbody tr {
+                border-bottom: 1px solid #e2e1e1 !important;
+                border-right: 1px solid #e2e1e1 !important;
+                border-left: 1px solid #e2e1e1 !important;
+
+                &:last-of-type td:first-of-type {
+                    border-radius: 0 0 0 10px !important;
+
+                }
+
+                &:last-of-type td:last-of-type {
+                    border-radius: 0 0 10px 0 !important;
+
+                }
+            }
+
+        }
+
+        .search-bar {
+            height: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+            margin-top: 1px;
+        }
+
+        .dt-buttons, #table_length {
+            display: inline-flex;
+            max-width: 50%;
+            flex: 0 0 50%;
+            width: 50%;
+        }
+
+        .dt-buttons button {
+            color: #ffffff !important;
+            background-color: #24c38b;
+            border-color: #24c38b;
+            box-shadow: none;
+            border-style: none;
+            margin-right: 5px;
+            padding: 5px;
+            border-radius: 7px !important;
+        }
+
+        #table_length label {
+            margin-left: auto;
+        }
+
+        .no-sort:before, .no-sort:after {
+            display: none !important;
+        }
+    </style>
+
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <div class="clearfix">
+                <div class="float-left">
+                    <h6 class="text-danger">{% translate 'Last Updated' %} {{ last_update|date:"d/m/Y" }}</h6>
+                </div>
+                <div class="float-right">
+                    <span href="#" class="font-weight-bold"
+                        style="background-color: #ffac67; color: white; padding: 7px; border-radius: 5px;">
+
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+
+            <div id="diagnostics-cantons">
+                <p>{% translate "Loading statistics" %}...</p>
+            </div>
+
+        </div>
+
+    </div>
+    <style>
+.marker {
+display: block;
+border: none;
+border-radius: 50%;
+cursor: pointer;
+padding: 0;
+}
+</style>
+
+
+{% endblock %}
+{% block javascript %}
+    {{ block.super }}
+
+    <!-- DataTables export files -->
+    {% include 'layouts/datatable-js.html' %}
+        
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            
+            let diagnostics_cantons = $('#diagnostics-cantons');
+            $.ajax({
+                type: "GET",
+                url: `{% url 'dashboard:diagnostics:get_diagnostics_cantons_view' %}`,
+                data: {
+                },
+                success: function (response) {
+                    diagnostics_cantons.html('');
+                    diagnostics_cantons.html(response);
+                },
+                error: function (data) {
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+
+                        
+        });
+    </script>
+
+
+
+
+{% endblock %}

@@ -6,7 +6,10 @@
             <div class="card h-75 bg-gradient-gray">
                 <div class="card-body" >
                     <p>{% translate "Tasks Total" %}</p>
-                    <p class="text-bold" style="font-size: 1.7em;">{{ object.nbr_tasks|separate_with_space }}</p>
+                    <p class="text-bold" style="font-size: 1.7em;">
+                        {{ object.nbr_tasks|separate_with_space }}
+                        <span style="font-size: 11px; margin-left: 12px; font-weight: bold;">[<a href="{% url 'dashboard:diagnostics:tasks_adl_diagnostics' %}">{% translate "See details" %}</a>]</span>
+                    </p>
                 </div>
             </div>
         </div>
