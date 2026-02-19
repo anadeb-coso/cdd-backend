@@ -2326,3 +2326,11 @@ msgstr "Bonjour cher superviseur de zone. Cette information vous concerne."
 #, python-format
 msgid "Hello dear area supervisor %(name)s. This information concerns you."
 msgstr "Bonjour cher superviseur de zone %(name)s. Cette information vous concerne."
+
+#: .\dashboard
+msgid "See"
+msgstr "Voir"
+
+#: .\dashboard
+msgid "See details"
+msgstr "Voir détails"
