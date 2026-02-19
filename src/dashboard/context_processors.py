@@ -12,34 +12,39 @@ def settings_vars(request):
     invalidation_notifications = {}
     total_tasks_waiting_validation = 0
     total_tasks_invalidated_review = 0
-    if 'cantons_stabilized_ids' in request.session and request.user.groups.filter(name__in=["Supervisor"]).exists():
-        for project in Project.objects.filter(users__in=[request.user.id]):
+    if 'cantons_stabilized_ids' in request.session and request.session['cantons_stabilized_ids'] and request.user.groups.filter(name__in=["Supervisor"]).exists():
+        projects = Project.objects.filter(users__in=[request.user.id]).prefetch_related("cycle_set")
+        
+        aggregated_data = (
+            AggregatedStatus.objects
+            .filter(
+                project_id__in=[p.id for p in projects],
+                cycle_id__in=[c.id for p in projects for c in p.cycle_set.all()],
+                facilitator=None,
+                task=None,
+                administrative_level_id__in=[int(_id) for _id in request.session['cantons_stabilized_ids']]
+            ).distinct()
+            .values("project_id", "cycle_id")
+            .annotate(
+                total_tasks_waiting_validation=Sum("total_tasks_waiting_validation"),
+                total_tasks_invalidated_review=Sum("total_tasks_invalidated_review"),
+            )
+        )
+        aggregated_map = {
+            (item["project_id"], item["cycle_id"]): item
+            for item in aggregated_data
+        }
+        
+        for project in projects:
             
-            project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
-            project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
             invalidation_notifications[project.name] = {'project_id': project.name}
 
             for cycle in project.cycle_set.all():
 
                 invalidation_notifications[project.name][cycle.name] = {'cycle_id': cycle.name}
-                cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
-                cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
                 
-                aggregated_status_project = AggregatedStatus.objects.filter(
-                    project_id=project.id, facilitator=None, task=None,
-                    administrative_level_id__in=list(mis_objects_call.filter_objects(
-                        AdministrativeLevel, 
-                        id__in=request.session['cantons_stabilized_ids'], 
-                        administrative_levels_projects__in=[project_mis_id], 
-                        administrative_levels_cycles__in=[cycle_mis_id]).values_list('id', flat=True)
-                    )
-                ).aggregate(
-                    total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
-                    total_tasks_invalidated_review=Sum('total_tasks_invalidated_review')
-                )
-                
-                invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation'] = aggregated_status_project['total_tasks_waiting_validation'] or 0
-                invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review'] = aggregated_status_project['total_tasks_invalidated_review'] or 0
+                invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_waiting_validation') or 0
+                invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review') or 0
                 
                 total_tasks_waiting_validation += invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation']
                 total_tasks_invalidated_review += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review']
