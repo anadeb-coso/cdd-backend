@@ -476,10 +476,11 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
                     "type": "adl",
                     "representative.email": self.request.user.email
                 })[:][0]
-                administratives_stabilized = facilitator_grm['administrative_regions']
+                # administratives_stabilized = facilitator_grm['administrative_regions']
                 administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
                 self.request.session['cantons_stabilized_ids'] = list(set(
-                    (administratives_stabilized if administratives_stabilized else []) + list(itertools.chain(*[str(ad['id']) for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
+                    # (administratives_stabilized if administratives_stabilized else []) + 
+                    list(itertools.chain(*[[str(ad['id'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
                 ))
 
             next_page = self.request.GET.get('next')
