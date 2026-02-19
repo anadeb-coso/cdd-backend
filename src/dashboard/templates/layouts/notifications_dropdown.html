@@ -36,6 +36,11 @@
                 {% endif %}
             {% endfor %}
         {% endfor %}
+
+        <p class="dropdown-item">
+            <a class="dropdown-item" href="{% url 'dashboard:diagnostics:tasks_adl_diagnostics' %}">{% translate "See details" %}</a>
+        </p>
+
     </div>
 </li>
 {% endif %}
