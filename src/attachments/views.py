@@ -1,29 +1,39 @@
 import os
-from django.conf import settings
 import time
 
-from drf_spectacular.utils import extend_schema, inline_serializer
+from django.conf import settings
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework import generics, parsers
 from rest_framework.response import Response
 from storages.backends.s3boto3 import S3Boto3Storage
 
 from attachments.serializers import TaskFileSerializer
-from rest_framework import serializers
 
 
 class UploadIssueAttachmentAPIView(generics.GenericAPIView):
     serializer_class = TaskFileSerializer
     parser_classes = (parsers.FormParser, parsers.MultiPartParser)
 
-    @extend_schema(
-        responses={201: inline_serializer(
-            'AttachmentUpdateStatusSerializer',
-            fields={
-                'message': serializers.CharField(),
-                'fileUrl': serializers.CharField(),
-            }
-        )},
-        description=f"Allowed file size less than or equal to {settings.MAX_UPLOAD_SIZE / (1024 * 1024) } MB"
+    @swagger_auto_schema(
+        operation_description=f"Allowed file size less than or equal to {settings.MAX_UPLOAD_SIZE / (1024 * 1024)} MB",
+        responses={
+            201: openapi.Response(
+                description="Attachment successfully updated",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "message": openapi.Schema(
+                            type=openapi.TYPE_STRING
+                        ),
+                        "fileUrl": openapi.Schema(
+                            type=openapi.TYPE_STRING
+                        ),
+                    },
+                    required=["message", "fileUrl"],
+                ),
+            )
+        },
     )
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -34,7 +44,7 @@ class UploadIssueAttachmentAPIView(generics.GenericAPIView):
         file_directory_within_bucket = 'proof_of_work/'
         file_path_within_bucket = os.path.join(
             file_directory_within_bucket,
-            file_name #data['file'].name
+            file_name  # data['file'].name
         )
 
         media_storage = S3Boto3Storage()

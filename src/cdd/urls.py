@@ -15,19 +15,17 @@ Including another URLconf
 """
 from django.conf import settings
 from django.conf.urls import include
+from django.conf.urls.i18n import i18n_patterns
 from django.contrib import admin
 from django.urls import path
-from django.conf.urls.i18n import i18n_patterns
 
-from . import views
 from cdd.my_librairies.download_file import download_file_view, download_from_url
+from . import views
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
 handler404 = 'dashboard.authentication.views.handler404'
 handler500 = 'dashboard.authentication.views.handler500'
-
-
 
 urlpatterns = [
     path('set-language/', views.set_language, name='set_language'),
@@ -39,7 +37,7 @@ urlpatterns = [
     path('services/', include('cdd.my_librairies.services.urls')),
     path('process_manager/', include('process_manager.urls')),
     path('super/', include('cdd.urls_super')),
-    
+
     path('api/', include('cdd.urls_api')),
     path('download-file-view/<str:path>/<str:content_type>/', download_file_view, name='download_file_view'),
     path('download-from-url/', download_from_url, name='download_from_url'),
@@ -51,9 +49,9 @@ urlpatterns += i18n_patterns(
 
     path('', include('usermanager.urls')),
 
-    path('delete-object/<int:object_id>/<str:type>/<str:attr>/', views.DeleteObjectFormView.as_view(), name='object_deletion_form'),
+    path('delete-object/<int:object_id>/<str:type>/<str:attr>/', views.DeleteObjectFormView.as_view(),
+         name='object_deletion_form'),
 )
-
 
 # urlpatterns = [
 #     path('admin/', admin.site.urls),
@@ -66,16 +64,29 @@ urlpatterns += i18n_patterns(
 
 
 if settings.DEBUG:
-    from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+    from drf_yasg.views import get_schema_view
+    from drf_yasg import openapi
     from django.conf import settings
     from django.conf.urls.static import static
+    from rest_framework import permissions
+
+    schema_view = get_schema_view(
+        openapi.Info(
+            title="GRM API Documentation",
+            default_version="v1",
+            description="Test Documentation",
+        ),
+        public=True,
+        permission_classes=(permissions.AllowAny,),
+    )
 
     urlpatterns += [
-        # YOUR PATTERNS
-        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-        # Optional UI:
-        path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path(
+            "swagger/",
+            schema_view.with_ui("swagger", cache_timeout=0),
+            name="schema-swagger-ui",
+        ),
     ]
 
-    urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

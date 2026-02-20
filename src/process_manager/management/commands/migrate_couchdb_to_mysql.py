@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils.dateparse import parse_datetime
@@ -27,6 +28,8 @@ from process_manager.models import (
     TaskSubmission, TaskSubmissionHistory,
     TaskUserInvolvement, GeolocationCapture
 )
+
+User = get_user_model()
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -47,6 +50,9 @@ class Command(BaseCommand):
             'geolocations_processed': 0,
             'geolocations_created': 0,
             'geolocations_failed': 0,
+            'users_created': 0,
+            'users_skipped': 0,
+            'users_failed': 0,
         }
         self.sample_shown = False
         self.show_sample = False
@@ -67,6 +73,64 @@ class Command(BaseCommand):
             action='store_true',
             help='Show a sample task document structure on first error'
         )
+
+    def migrate_facilitator_users(self, facilitators, dry_run: bool):
+        """
+        Create a Django User for each Facilitator that doesn't have one.
+        Uses facilitator.username and facilitator.password (from the old model).
+        """
+        for facilitator in facilitators:
+            try:
+                # Skip if User already linked
+                if facilitator.user_id:
+                    self.stats['users_skipped'] += 1
+                    self.stdout.write(
+                        f'  ⏭️  Skipping {facilitator.username} — User already exists'
+                    )
+                    continue
+
+                if dry_run:
+                    self.stdout.write(
+                        f'  [DRY RUN] Would create User for: {facilitator.username}'
+                    )
+                    continue
+
+                with transaction.atomic():
+                    # Create User — password is already hashed in facilitator.password
+                    user, user_created = User.objects.get_or_create(
+                        username=facilitator.username,
+                        defaults={
+                            'first_name': facilitator.name,
+                            'email': facilitator.email or '',
+                            'is_active': facilitator.active,
+                        }
+                    )
+
+                    if user_created:
+                        # Set the hashed password directly (no re-hashing)
+                        user.password = facilitator.password
+                        user.save(update_fields=['password'])
+
+                    # Link User to Facilitator
+                    facilitator.user = user
+                    facilitator.save(update_fields=['user'])
+
+                    self.stats['users_created'] += 1
+                    self.stdout.write(
+                        f'  ✅ Created User for: {facilitator.username}'
+                    )
+
+            except Exception as e:
+                self.stats['users_failed'] += 1
+                logger.error(
+                    f'Failed to create User for facilitator {facilitator.id} '
+                    f'({facilitator.username}): {e}'
+                )
+                self.stdout.write(
+                    self.style.ERROR(
+                        f'  ❌ Failed: {facilitator.username} — {e}'
+                    )
+                )
 
     def handle(self, *args, **options):
         facilitator_id = options.get('facilitator_id')
@@ -89,6 +153,10 @@ class Command(BaseCommand):
                 facilitators = Facilitator.objects.all()
 
             self.stdout.write(f'Processing {facilitators.count()} facilitator(s)...\n')
+
+            # Create Users for each Facilitator (required for TokenAuthentication)
+            self.stdout.write(f'\n👤 Creating User accounts for facilitators...')
+            self.migrate_facilitator_users(facilitators, dry_run)
 
             # Migrate TaskSubmissions from facilitator databases
             for facilitator in facilitators:
@@ -534,6 +602,11 @@ class Command(BaseCommand):
         self.stdout.write('\n' + '=' * 60)
         self.stdout.write(self.style.SUCCESS('MIGRATION SUMMARY'))
         self.stdout.write('=' * 60)
+
+        self.stdout.write(f'\n👤 User Accounts:')
+        self.stdout.write(f'  • Created: {self.stats["users_created"]}')
+        self.stdout.write(f'  • Skipped (already existed): {self.stats["users_skipped"]}')
+        self.stdout.write(f'  • Failed: {self.stats["users_failed"]}')
 
         self.stdout.write(f'\n📋 Task Submissions:')
         self.stdout.write(f'  • Processed: {self.stats["task_submissions_processed"]}')

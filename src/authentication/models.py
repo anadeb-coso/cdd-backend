@@ -16,15 +16,29 @@ from django.contrib.auth.models import User, AbstractUser, Permission, Group
 from authentication import FACILITATORS_TYPES
 from cdd.models_base import BaseModel
 
+
 class Facilitator(BaseModel):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='facilitator',
+        null=True,         # null during migration; remove at the end of PHASE 3
+        blank=True,
+    )
+
+    # CouchDB fields — keep during migration, remove in PHASE 3
     no_sql_user = models.CharField(max_length=150, unique=True)
     no_sql_pass = models.CharField(max_length=128)
     no_sql_db_name = models.CharField(max_length=150, unique=True)
     no_sql_dbs_names = models.JSONField(null=True, blank=True)
+
+    # username is kept for historical reference during migration
     username = models.CharField(max_length=150, unique=True, verbose_name=_('username'))
+
+    # The Facilitator password is no longer used for authentication — remove it in PHASE 3
     password = models.CharField(max_length=128, verbose_name=_('password'))
     code = models.CharField(max_length=100, unique=True, verbose_name=_('code'))
-    active = models.BooleanField(default=False, verbose_name=_('active'))
+    active = models.BooleanField(default=False, verbose_name=_('active'))  # Remove it in PHASE 3
     develop_mode = models.BooleanField(default=False, verbose_name=_('develop mode'))
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     administrative_levels = models.JSONField(null=True, blank=True)
@@ -54,8 +68,8 @@ class Facilitator(BaseModel):
     
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
-    name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))
-    email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))
+    name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))  # Remove it in PHASE 3
+    email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))  # Remove it in PHASE 3
     phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))
     sex = models.CharField(max_length=5, null=True, blank=True, verbose_name=_('sex'))
     
@@ -129,75 +143,41 @@ class Facilitator(BaseModel):
         return self
 
     def save(self, *args, **kwargs):
-        replicate_design = True
-        if "replicate_design" in kwargs:
-            replicate_design = kwargs.pop("replicate_design")
+        # replicate_design = True
+        # if "replicate_design" in kwargs:
+        #     replicate_design = kwargs.pop("replicate_design")
         if "user" in kwargs:
             user = kwargs.pop("user")
             self.users_history(user)
 
         if not self.id:
 
-            self.set_no_sql_user()
-
-            no_sql_pass_length = 13
-            self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
-
-            self.no_sql_db_name = f'facilitator_{self.no_sql_user}'
+            # self.set_no_sql_user()
+            #
+            # no_sql_pass_length = 13
+            # self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
+            #
+            # self.no_sql_db_name = f'facilitator_{self.no_sql_user}'
 
             if not self.code:
                 self.code = self.get_code(self.no_sql_user)
 
-            if not self.password:
-                self.password = f'ChangeItNow{self.code}'
-
-            nsc = NoSQLClient()
-            nsc.create_user(self.no_sql_user, self.no_sql_pass)
-            facilitator_db = nsc.create_db(self.no_sql_db_name)
-            if replicate_design:
-                nsc.replicate_design_db(facilitator_db)
-            nsc.add_member_to_database(facilitator_db, self.no_sql_user)
-
-        if self.password and self.password != self.__current_password:
-            self.password = make_password(self.password, salt=None, hasher='default')
+        #     if not self.password:
+        #         self.password = f'ChangeItNow{self.code}'
+        #
+        #     nsc = NoSQLClient()
+        #     nsc.create_user(self.no_sql_user, self.no_sql_pass)
+        #     facilitator_db = nsc.create_db(self.no_sql_db_name)
+        #     if replicate_design:
+        #         nsc.replicate_design_db(facilitator_db)
+        #     nsc.add_member_to_database(facilitator_db, self.no_sql_user)
+        #
+        # if self.password and self.password != self.__current_password:
+        #     self.password = make_password(self.password, salt=None, hasher='default')
 
         super().save(*args, **kwargs)
         
         return self
-
-    # def users_history(self, user):
-    #     """
-    #     Save users stories
-    #     user_json = {
-    #         "type": "facilitator", # or user
-    #         "date": self.updated_date,
-    #         "data": self
-    #     }
-    #     """
-        
-    #     # user_json = user.__dict__ if user else {'is_superuser': True}
-    #     # self_json = self.__dict__
-
-    #     # if user_json.get('is_superuser'):
-    #     #     user_json['type'] = "user"
-    #     # else:
-    #     #     user_json['type'] = "facilitator"
-    #     # user_json['date'] = self.updated_date
-    #     # user_json['data'] = self_json
-
-
-    #     # users_involved = self.users_involved if self.users_involved else []
-
-    #     # if self.created_date == self.updated_date:
-    #     #     self.create_by_user = user_json
-            
-    #     # self.update_by_user = user_json
-        
-    #     # users_involved.append(user_json)
-
-    #     # self.users_involved = users_involved
-
-    #     super().save()
 
 
     def hash_password(self, *args, **kwargs):
@@ -216,57 +196,57 @@ class Facilitator(BaseModel):
 
         return super().save(*args, **kwargs)
 
-    def create_with_no_sql_db(self, *args, **kwargs):
+    # def create_with_no_sql_db(self, *args, **kwargs):
+    #
+    #     if not self.id:
+    #         self.set_no_sql_user()
+    #
+    #         no_sql_pass_length = 13
+    #         self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
+    #
+    #         if not self.code:
+    #             self.code = self.get_code(self.no_sql_user)
+    #
+    #         nsc = NoSQLClient()
+    #         nsc.create_user(self.no_sql_user, self.no_sql_pass)
+    #         facilitator_db = nsc.get_db(self.no_sql_db_name)
+    #         nsc.add_member_to_database(facilitator_db, self.no_sql_user)
+    #
+    #     if self.password and self.password != self.__current_password:
+    #         self.password = make_password(self.password, salt=None, hasher='default')
+    #
+    #     return super().save(*args, **kwargs)
 
-        if not self.id:
-            self.set_no_sql_user()
+    # def create_with_manually_assign_database(self, *args, **kwargs):
+    #
+    #     if not self.id:
+    #         self.set_no_sql_user()
+    #
+    #         if not self.code:
+    #             self.code = self.get_code(self.no_sql_user)
+    #
+    #         if not self.password:
+    #             self.password = f'ChangeItNow{self.code}'
+    #         self.password = make_password(self.password, salt=None, hasher='default')
+    #
+    #         nsc = NoSQLClient()
+    #         nsc.create_user(self.no_sql_user, self.no_sql_pass)
+    #         facilitator_db = nsc.get_db(self.no_sql_db_name)
+    #         nsc.add_member_to_database(facilitator_db, self.no_sql_user)
+    #
+    #     if self.password and self.password != self.__current_password:
+    #         self.password = make_password(self.password, salt=None, hasher='default')
+    #
+    #     return super().save(*args, **kwargs)
 
-            no_sql_pass_length = 13
-            self.no_sql_pass = secrets.token_urlsafe(no_sql_pass_length)
-
-            if not self.code:
-                self.code = self.get_code(self.no_sql_user)
-
-            nsc = NoSQLClient()
-            nsc.create_user(self.no_sql_user, self.no_sql_pass)
-            facilitator_db = nsc.get_db(self.no_sql_db_name)
-            nsc.add_member_to_database(facilitator_db, self.no_sql_user)
-
-        if self.password and self.password != self.__current_password:
-            self.password = make_password(self.password, salt=None, hasher='default')
-
-        return super().save(*args, **kwargs)
-
-    def create_with_manually_assign_database(self, *args, **kwargs):
-
-        if not self.id:
-            self.set_no_sql_user()
-
-            if not self.code:
-                self.code = self.get_code(self.no_sql_user)
-
-            if not self.password:
-                self.password = f'ChangeItNow{self.code}'
-            self.password = make_password(self.password, salt=None, hasher='default')
-
-            nsc = NoSQLClient()
-            nsc.create_user(self.no_sql_user, self.no_sql_pass)
-            facilitator_db = nsc.get_db(self.no_sql_db_name)
-            nsc.add_member_to_database(facilitator_db, self.no_sql_user)
-
-        if self.password and self.password != self.__current_password:
-            self.password = make_password(self.password, salt=None, hasher='default')
-
-        return super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        no_sql_db = None
-        if "no_sql_db" in kwargs:
-            no_sql_db = kwargs.pop("no_sql_db")
-        NoSQLClient().delete_user(self.no_sql_user, no_sql_db)
-        # print(f'self.no_sql_user {self.no_sql_user}')
-        # print(f'no_sql_db {no_sql_db}')
-        super().delete(*args, **kwargs)
+    # def delete(self, *args, **kwargs):
+    #     no_sql_db = None
+    #     if "no_sql_db" in kwargs:
+    #         no_sql_db = kwargs.pop("no_sql_db")
+    #     NoSQLClient().delete_user(self.no_sql_user, no_sql_db)
+    #     # print(f'self.no_sql_user {self.no_sql_user}')
+    #     # print(f'no_sql_db {no_sql_db}')
+    #     super().delete(*args, **kwargs)
 
     @staticmethod
     def get_code(seed):

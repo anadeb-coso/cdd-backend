@@ -66,11 +66,10 @@ CREATED_APPS = [
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
-    'drf_spectacular',
+    'drf_yasg',
     'rest_framework',
     'django_celery_results',
     'corsheaders',
-    'rest_framework_simplejwt',
     'rest_framework.authtoken',
 ]
 
@@ -211,29 +210,17 @@ NO_SQL_PASS = env('NO_SQL_PASS')
 NO_SQL_URL = env('NO_SQL_URL')
 
 
-#REST API & TOKEN
-# REST_FRAMEWORK = {
-#     # https://github.com/tfranzel/drf-spectacular
-#     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-# }
+# Django REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
-REST_AUTH_REGISTER_SERIALIZERS = {
-    'REGISTER_SERIALIZER': 'accounts.serializers.CustomRegisterSerializer',
-}
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=3650),  # 10 ans (365 jours × 10)
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=3650),  # 10 ans aussi si besoin
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': False,
-    'UPDATE_LAST_LOGIN': False,
-}
+
+# drf-yasg
+SWAGGER_SETTINGS = {'SECURITY_DEFINITIONS': {'Token': {'type': 'apiKey', 'name': 'Authorization', 'in': 'header'}}}
 
 
 # S3
