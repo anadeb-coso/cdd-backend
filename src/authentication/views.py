@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
@@ -6,7 +5,6 @@ from django.middleware.csrf import get_token
 from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import parsers, renderers
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -18,51 +16,9 @@ from authentication.constants import (
     LOGIN_ERROR_MESSAGE,
     LOGIN_SUCCESS_MESSAGE, FACILITATOR_GROUP, SUPERUSER_GROUP
 )
-from authentication.serializers import CredentialSerializer, UserAuthSerializer, LoginSerializer
+from authentication.serializers import LoginSerializer
 
 User = get_user_model()
-
-
-# class AuthenticateAPIView(APIView):
-#     throttle_classes = ()
-#     permission_classes = ()
-#     parser_classes = (parsers.FormParser, parsers.MultiPartParser, parsers.JSONParser,)
-#     renderer_classes = (renderers.JSONRenderer,)
-#     serializer_class = UserAuthSerializer
-#
-#     def get_serializer_context(self):
-#         return {
-#             'request': self.request,
-#             'format': self.format_kwarg,
-#             'view': self
-#         }
-#
-#     def get_serializer(self, *args, **kwargs):
-#         kwargs['context'] = self.get_serializer_context()
-#         return self.serializer_class(*args, **kwargs)
-#
-#     def post(self, request, *args, **kwargs):
-#         serializer = self.serializer_class(data=request.data, context={'request': request})
-#         serializer.is_valid(raise_exception=True)
-#         credentials = {
-#             'no_sql_user': serializer.validated_data['no_sql_user'],
-#             'no_sql_pass': serializer.validated_data['no_sql_pass'],
-#             'no_sql_db_name': serializer.validated_data['no_sql_db_name'],
-#             'no_sql_dbs_names': serializer.validated_data['no_sql_dbs_names'],
-#             'username': settings.NO_SQL_USER,
-#             'password': settings.NO_SQL_PASS,
-#             'name': serializer.validated_data['name'],
-#             'first_name': serializer.validated_data['first_name'],
-#             'last_name': serializer.validated_data['last_name'],
-#             'email': serializer.validated_data['email'],
-#             'is_superuser': serializer.validated_data['is_superuser'],
-#             'groups': serializer.validated_data['groups'],
-#             # 'access': serializer.validated_data['access'],
-#             # 'refresh': serializer.validated_data['refresh']
-#         }
-#         credential_serializer = CredentialSerializer(data=credentials)
-#         credential_serializer.is_valid(raise_exception=True)
-#         return Response(credential_serializer.data, status=status.HTTP_200_OK)
 
 
 class AuthenticateAPIView(APIView):

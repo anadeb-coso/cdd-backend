@@ -1,16 +1,16 @@
-from django.contrib.auth.hashers import check_password
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from authentication.models import Facilitator
-from process_manager.models import Project, Cycle
+from process_manager.models import Project, Cycle, Task
 
 
 class CycleSerializer(serializers.ModelSerializer):
-	class Meta:
-		"""docstring for Meta"""
-		model = Cycle
-		fields = '__all__'
+    class Meta:
+        """docstring for Meta"""
+        model = Cycle
+        fields = '__all__'
+
 
 class SaveFormDatasSerializer(serializers.Serializer):
     tasks = serializers.JSONField()
@@ -49,3 +49,40 @@ class ProjectSerializer(serializers.ModelSerializer):
         data['cycles'] = CycleSerializer(instance.get_cycles(), many=True).data
 
         return data
+
+
+class TaskAssignmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Task model to return assigned task details.
+    Includes related phase and activity names for better frontend display.
+    """
+    phase_name = serializers.CharField(source='phase.name', read_only=True)
+    activity_name = serializers.CharField(source='activity.name', read_only=True)
+
+    class Meta:
+        model = Task
+        fields = ['id', 'name', 'description', 'order', 'task_order', 'phase_name', 'activity_name']
+
+
+class CycleAssignmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Cycle model to return project cycle details.
+    """
+
+    class Meta:
+        model = Cycle
+        fields = ['id', 'name', 'description', 'order']
+
+
+class ProjectAssignmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Project model.
+    Nests the related cycles and tasks that belong to this project.
+    """
+    # Uses the reverse relationships (cycle_set and task_set) to fetch nested data
+    cycles = CycleAssignmentSerializer(source='cycle_set', many=True, read_only=True)
+    tasks = TaskAssignmentSerializer(source='task_set', many=True, read_only=True)
+
+    class Meta:
+        model = Project
+        fields = ['id', 'name', 'description', 'cycles', 'tasks']
