@@ -86,3 +86,28 @@ class ProjectAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['id', 'name', 'description', 'cycles', 'tasks']
+
+
+class ProjectTreeSerializer(serializers.ModelSerializer):
+    """
+    Recursive serializer to represent the project hierarchy.
+    """
+    children = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = [
+            'id',
+            'couch_id',
+            'name',
+            'description',
+            'parent',
+            'created_date',
+            'updated_date',
+            'children'
+        ]
+
+    def get_children(self, obj):
+        # We access the related_name='children' defined in the ForeignKey of the Project model
+        children = obj.children.all()
+        return ProjectTreeSerializer(children, many=True).data

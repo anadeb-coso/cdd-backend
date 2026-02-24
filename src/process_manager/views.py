@@ -1,12 +1,15 @@
-from django.core.exceptions import ObjectDoesNotExist
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from process_manager.models import Project
+from process_manager.permissions import IsProjectAssigned
 from process_manager.serializers import ProjectAssignmentSerializer
+from process_manager.serializers import ProjectTreeSerializer
 
 
 class AssignmentsAPIView(APIView):
@@ -92,3 +95,33 @@ class AssignmentsAPIView(APIView):
         return Response({
             "assigned_projects": serializer.data
         }, status=status.HTTP_200_OK)
+
+
+class ProjectTreeAPIView(RetrieveAPIView):
+    """
+    API View to retrieve a project and all its descendants in a tree structure.
+    Access is restricted to users assigned to the project.
+    """
+    queryset = Project.objects.all()
+    serializer_class = ProjectTreeSerializer
+    # Combine IsAuthenticated (login check) and IsProjectAssigned (ownership check)
+    permission_classes = [IsAuthenticated, IsProjectAssigned]
+
+    @swagger_auto_schema(
+        operation_id="get_project_tree",
+        operation_description="Returns the recursive tree of subprojects. Only accessible if the project is assigned to the user.",
+        tags=['Projects'],
+        responses={
+            200: ProjectTreeSerializer(),
+            403: "Forbidden - You are not assigned to this project.",
+            404: "Not Found - Project does not exist."
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        """
+        Optimization: prefetch children to reduce database hits during recursion.
+        """
+        return Project.objects.prefetch_related('children')

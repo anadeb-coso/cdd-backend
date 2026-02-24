@@ -16,4 +16,5 @@ urlpatterns = [
         views.AssignmentsAPIView.as_view(),
         name='assignments'
     ),
+    path('projects/<int:pk>/tree/', views.ProjectTreeAPIView.as_view(), name='project-tree'),
 ]

@@ -1,15 +1,12 @@
 import pytest
-from django.urls import reverse
 from django.test import override_settings
-from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+from rest_framework.test import APITestCase
 
+from authentication.factories import FacilitatorFactory, UserFactory
 from process_manager.models import Project, Cycle, Phase, Activity, Task
-from authentication.factories import FacilitatorFactory
-
-User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -64,7 +61,7 @@ class AssignmentsAPIViewTest(APITestCase):
 
     def test_get_assignments_regular_user(self):
         """Ensure users without a Facilitator profile get a 200 OK with their own assignments."""
-        other_user = User.objects.create_user(username='admin', password='password')
+        other_user = UserFactory()
         other_token = Token.objects.create(user=other_user)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + other_token.key)
