@@ -7,6 +7,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -172,6 +173,53 @@ class AuthenticateAPIView(APIView):
                 "message": LOGIN_SUCCESS_MESSAGE,
             },
             status=status.HTTP_200_OK,
+        )
+
+
+class LogoutAPIView(APIView):
+    """
+    API View to handle user logout by invalidating (deleting) the current authentication token.
+    """
+    # Ensure that only authenticated users can access this endpoint
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_id="logout_user",
+        operation_description="Invalidates the current authentication token. "
+                              "The token is deleted from the database and can no longer be used.",
+        tags=['Authentication'],
+        security=[{'Token': []}],
+        request_body=None,  # Explicitly state that the body should be empty
+        responses={
+            200: openapi.Response(
+                description="Successful logout.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            example="Successfully logged out."
+                        )
+                    }
+                )
+            ),
+            401: openapi.Response(
+                description="Unauthorized - Authentication credentials were not provided or are invalid."
+            ),
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        """
+        Handles the POST request to log out the user.
+        """
+        # request.auth contains the Token object used to authenticate the request.
+        # Calling delete() removes it from the database.
+        if request.auth:
+            request.auth.delete()
+
+        return Response(
+            {"detail": "Successfully logged out."},
+            status=status.HTTP_200_OK
         )
 
 
