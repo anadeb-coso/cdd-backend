@@ -14,9 +14,9 @@ User = get_user_model()
 
 @pytest.mark.django_db
 @override_settings(LANGUAGE_CODE='en-us')
-class FacilitatorAssignmentsAPIViewTest(APITestCase):
+class AssignmentsAPIViewTest(APITestCase):
     """
-    Integration tests for FacilitatorAssignmentsAPIView.
+    Integration tests for AssignmentsAPIView.
     Ensures that assignments are correctly retrieved and serialized for the logged-in user.
     """
 
@@ -39,7 +39,8 @@ class FacilitatorAssignmentsAPIViewTest(APITestCase):
             name='Task 1', project=self.project, phase=self.phase, activity=self.activity, order=1
         )
 
-        self.url = reverse('api:process_manager:facilitator-assignments')
+        # Updated URL name to match the new urls.py definition
+        self.url = reverse('api:process_manager:assignments')
 
     def test_get_assignments_success(self):
         """Verify successful data retrieval for authenticated facilitator."""
@@ -61,13 +62,17 @@ class FacilitatorAssignmentsAPIViewTest(APITestCase):
         response = self.client.get(self.url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_assignments_no_profile(self):
-        """Ensure users without a Facilitator profile get a 403 error."""
+    def test_get_assignments_regular_user(self):
+        """Ensure users without a Facilitator profile get a 200 OK with their own assignments."""
         other_user = User.objects.create_user(username='admin', password='password')
         other_token = Token.objects.create(user=other_user)
 
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + other_token.key)
         response = self.client.get(self.url)
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "error" in response.data
+        # Since the view now handles regular users, it should return a 200 OK
+        assert response.status_code == status.HTTP_200_OK
+        assert 'assigned_projects' in response.data
+
+        # The user has not been added to any projects, so the list should be empty
+        assert len(response.data['assigned_projects']) == 0

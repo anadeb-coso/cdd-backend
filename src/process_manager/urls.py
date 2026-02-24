@@ -12,8 +12,8 @@ urlpatterns = [
     path('get-facilitator-no-sql-dbs-names', views_rest.FacilitatorNOSQLDBListView.as_view(),
          name='facilitator_no-sql_dbs-names'),
     path(
-        'facilitators/me/assignments/',
-        views.FacilitatorAssignmentsAPIView.as_view(),
-        name='facilitator-assignments'
+        'assignments/',
+        views.AssignmentsAPIView.as_view(),
+        name='assignments'
     ),
 ]
