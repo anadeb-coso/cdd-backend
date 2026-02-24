@@ -9,17 +9,18 @@ from rest_framework.views import APIView
 from process_manager.serializers import ProjectAssignmentSerializer
 
 
-class FacilitatorAssignmentsAPIView(APIView):
+class AssignmentsAPIView(APIView):
     """
     API View to retrieve all assignments (Projects, Cycles, Tasks)
-    for the currently authenticated facilitator.
+    for the currently authenticated user (Admin or Facilitator).
     """
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
-        operation_id="get_facilitator_assignments",
+        operation_id="get_assignments",
         operation_description="Fetches the list of projects, cycles, and tasks assigned to the authenticated "
-                              "facilitator for the current session.",
+                              "user for the current session.",
+        tags=['Assignments'],
         security=[{'Token': []}],
         responses={
             200: openapi.Response(
@@ -29,17 +30,36 @@ class FacilitatorAssignmentsAPIView(APIView):
                     properties={
                         'assigned_projects': openapi.Schema(
                             type=openapi.TYPE_ARRAY,
-                            description="List of projects assigned to the facilitator",
+                            description="List of projects assigned to the user",
                             items=openapi.Schema(
                                 type=openapi.TYPE_OBJECT,
                                 properties={
                                     'id': openapi.Schema(type=openapi.TYPE_INTEGER),
                                     'name': openapi.Schema(type=openapi.TYPE_STRING),
                                     'description': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'cycles': openapi.Schema(type=openapi.TYPE_ARRAY,
-                                                             items=openapi.Schema(type=openapi.TYPE_OBJECT)),
-                                    'tasks': openapi.Schema(type=openapi.TYPE_ARRAY,
-                                                            items=openapi.Schema(type=openapi.TYPE_OBJECT)),
+                                    'cycles': openapi.Schema(
+                                        type=openapi.TYPE_ARRAY,
+                                        items=openapi.Schema(
+                                            type=openapi.TYPE_OBJECT,
+                                            properties={
+                                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                'name': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                            }
+                                        )
+                                    ),
+                                    'tasks': openapi.Schema(
+                                        type=openapi.TYPE_ARRAY,
+                                        items=openapi.Schema(
+                                            type=openapi.TYPE_OBJECT,
+                                            properties={
+                                                'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                                'name': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'phase_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                                'activity_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                            }
+                                        )
+                                    ),
                                 }
                             )
                         )
@@ -48,22 +68,19 @@ class FacilitatorAssignmentsAPIView(APIView):
             ),
             401: openapi.Response(
                 description="Unauthorized - Authentication credentials were not provided or are invalid."),
-            403: openapi.Response(description="Forbidden - The authenticated user does not have a Facilitator profile.")
         }
     )
     def get(self, request, *args, **kwargs):
-        try:
-            # Extract the facilitator profile linked to the authenticated user via the OneToOneField
-            facilitator = request.user.facilitator
-        except ObjectDoesNotExist:
-            return Response(
-                {"error": "The authenticated user is not associated with any facilitator profile."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        user = request.user
 
-        # Fetch projects assigned to this facilitator via the ManyToMany relationship
+        # Validates if the user has a facilitator profile linked
+        if hasattr(user, 'facilitator'):
+            # Extract the facilitator profile linked to the authenticated user via the OneToOneField
+            user = request.user.facilitator
+
+        # Fetch projects assigned to this user via the ManyToMany relationship
         # prefetch_related is crucial here to prevent N+1 query performance issues
-        assigned_projects = facilitator.projects.prefetch_related(
+        assigned_projects = user.projects.prefetch_related(
             'cycle_set',
             'task_set__phase',
             'task_set__activity'
