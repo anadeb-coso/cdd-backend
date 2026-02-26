@@ -1,5 +1,11 @@
+from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
+
+from authentication.models import Facilitator
+from process_manager.models import Project
+
+User = get_user_model()
 
 
 class CredentialSerializer(serializers.Serializer):
@@ -31,3 +37,43 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(
         write_only=True, style={'input_type': 'password'}, help_text=_("Password for authentication")
     )
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
+
+class ProjectLiteSerializer(serializers.ModelSerializer):
+    """Simple serializer for listing assigned projects in the profile."""
+
+    class Meta:
+        model = Project
+        fields = ['id', 'name', 'couch_id']
+
+
+class FacilitatorProfileSerializer(serializers.ModelSerializer):
+    assigned_projects = ProjectLiteSerializer(source='projects', many=True, read_only=True)
+
+    class Meta:
+        model = Facilitator
+        fields = [
+            'id', 'phone', 'sex', 'facilitator_type', 'assigned_projects',
+            'code', 'develop_mode', 'training_mode',
+        ]
+
+
+class FullProfileSerializer(serializers.Serializer):
+    """
+    Combines User and Facilitator data into a single response.
+    """
+    # 'source=*' tells DRF to pass the entire User object to this internal serializer.
+    user = UserProfileSerializer(source='*')
+    facilitator = serializers.SerializerMethodField()
+
+    def get_facilitator(self, obj):
+        if hasattr(obj, 'facilitator'):
+            return FacilitatorProfileSerializer(obj.facilitator).data
+        return None
+
