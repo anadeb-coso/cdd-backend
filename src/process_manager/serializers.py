@@ -2,7 +2,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from authentication.models import Facilitator
-from process_manager.models import Project, Cycle, Task
+from process_manager.models import Task, Project, Phase, Activity, Cycle, TaskSubmission
 
 
 class CycleSerializer(serializers.ModelSerializer):
@@ -111,3 +111,101 @@ class ProjectTreeSerializer(serializers.ModelSerializer):
         # We access the related_name='children' defined in the ForeignKey of the Project model
         children = obj.children.all()
         return ProjectTreeSerializer(children, many=True).data
+
+
+class ProjectLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = ['id', 'name']
+
+
+class PhaseLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Phase
+        fields = ['id', 'name']
+
+
+class ActivityLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Activity
+        fields = ['id', 'name']
+
+
+class CycleLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cycle
+        fields = ['id', 'name']
+
+
+class TaskDetailSerializer(serializers.ModelSerializer):
+    project = ProjectLiteSerializer(read_only=True)
+    phase = PhaseLiteSerializer(read_only=True)
+    activity = ActivityLiteSerializer(read_only=True)
+    cycles = CycleLiteSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Task
+        fields = [
+            'id', 'couch_id', 'name', 'description', 'order',
+            'form', 'attachments', 'capacity_attachments',
+            'project', 'phase', 'activity', 'cycles'
+        ]
+
+
+class SubmissionSerializer(serializers.ModelSerializer):
+    users_involved = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TaskSubmission
+        fields = ['id', 'completed', 'form_response', 'validated', 'users_involved']
+
+    def get_users_involved(self, obj):
+        """
+        Retrieves unique facilitators from the related TaskSubmissionHistory records.
+        """
+        # Get all facilitators associated with history entries for this submission
+        histories = obj.history.select_related('facilitator__user').all()
+
+        # Extract unique facilitators using a dictionary to avoid duplicates
+        involved = {}
+        for h in histories:
+            fac = h.facilitator
+            if fac and fac.id not in involved:
+                involved[fac.id] = {
+                    "facilitator_id": fac.id,
+                    "name": fac.get_name()
+                }
+
+        return list(involved.values())
+
+
+class TaskWithSubmissionSerializer(serializers.Serializer):
+    # 'source=*' tells DRF to pass the entire Task object to this internal serializer.
+    task = TaskDetailSerializer(source='*')
+    submission = serializers.SerializerMethodField()
+
+    def get_submission(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request.user, 'facilitator'):
+            return None
+
+        facilitator = request.user.facilitator
+        preloaded = self.context.get('preloaded_submissions')
+
+        submission = None
+
+        # 1. Try searching the pre-loaded list (Optimization)
+        if preloaded is not None:
+            submission = next((s for s in preloaded if s.task_id == obj.id), None)
+
+        # 2. Fallback: If it's not on the list, search in the DB (Security for Testing)
+        if not submission:
+            submission = TaskSubmission.objects.filter(
+                task=obj,
+                history__facilitator=facilitator
+            ).distinct().first()
+
+        if submission:
+            # Important: Pass the context to the next serializer
+            return SubmissionSerializer(submission, context=self.context).data
+        return None

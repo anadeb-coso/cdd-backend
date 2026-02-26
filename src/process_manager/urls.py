@@ -17,4 +17,5 @@ urlpatterns = [
         name='assignments'
     ),
     path('projects/<int:pk>/tree/', views.ProjectTreeAPIView.as_view(), name='project-tree'),
+    path('tasks/<int:pk>/', views.TaskDetailAPIView.as_view(), name='task-detail'),
 ]

@@ -11,9 +11,17 @@ class IsProjectAssigned(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
 
+        # Logic for determining the project according to the type of object
+        if hasattr(obj, 'facilitators'):  # If the object is a Project
+            project = obj
+        elif hasattr(obj, 'project'):  # If the object is Task, TaskSubmission, etc.
+            project = obj.project
+        else:
+            return False
+
         # Check if user has a facilitator profile
         if hasattr(user, 'facilitator'):
-            return obj.facilitators.filter(id=user.facilitator.id).exists()
+            return project.facilitators.filter(id=user.facilitator.id).exists()
 
         # Fallback to regular user assignment
-        return obj.users.filter(id=user.id).exists()
+        return project.users.filter(id=user.id).exists()
