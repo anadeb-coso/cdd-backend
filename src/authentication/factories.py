@@ -32,3 +32,6 @@ class FacilitatorFactory(DjangoModelFactory):
         model = Facilitator
 
     user = factory.SubFactory(UserFactory)
+    username = factory.Sequence(lambda n: f"user{n}")
+    no_sql_user = factory.Sequence(lambda n: f"user_nosql_{n}")
+    no_sql_db_name = factory.Sequence(lambda n: f"db_nosql_{n}")

@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -6,10 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from process_manager.models import Project
+from process_manager.models import Project, Task, TaskSubmission, TaskSubmissionHistory
 from process_manager.permissions import IsProjectAssigned
-from process_manager.serializers import ProjectAssignmentSerializer
-from process_manager.serializers import ProjectTreeSerializer
+from process_manager.serializers import ProjectAssignmentSerializer, ProjectTreeSerializer, TaskWithSubmissionSerializer
 
 
 class AssignmentsAPIView(APIView):
@@ -125,3 +125,40 @@ class ProjectTreeAPIView(RetrieveAPIView):
         Optimization: prefetch children to reduce database hits during recursion.
         """
         return Project.objects.prefetch_related('children')
+
+
+class TaskDetailAPIView(RetrieveAPIView):
+    """
+    Retrieves the task definition and the specific submission for the current facilitator.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskWithSubmissionSerializer
+    permission_classes = [IsAuthenticated, IsProjectAssigned]
+
+    @swagger_auto_schema(
+        operation_id="get_task_detail",
+        operation_description="Returns task metadata and the facilitator's submission progress based on history.",
+        tags=['Tasks']
+    )
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        return Task.objects.select_related(
+            'project', 'phase', 'activity'
+        ).prefetch_related('cycles')
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Pre-load the deliveries filtered by the current facilitator to avoid extra queries in the serializer
+        facilitator = getattr(self.request.user, 'facilitator', None)
+        if facilitator:
+            # Optimizes the loading of history and its facilitators within the prefetch
+            context['preloaded_submissions'] = list(TaskSubmission.objects.filter(
+                history__facilitator=facilitator
+            ).distinct().prefetch_related(
+                Prefetch('history', queryset=TaskSubmissionHistory.objects.select_related('facilitator'))
+            ))
+        return context
