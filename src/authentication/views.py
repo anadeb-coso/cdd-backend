@@ -18,6 +18,7 @@ from authentication.constants import (
     LOGIN_SUCCESS_MESSAGE, FACILITATOR_GROUP, SUPERUSER_GROUP
 )
 from authentication.serializers import LoginSerializer
+from .serializers import FullProfileSerializer
 
 User = get_user_model()
 
@@ -226,3 +227,25 @@ class LogoutAPIView(APIView):
 def get_csrf_token(request):
     print(request)
     return JsonResponse({'csrfToken': get_token(request)})
+
+
+class ProfileAPIView(APIView):
+    """
+    Get the authenticated user's profile information,
+    including facilitator data if available.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_id="get_user_profile",
+        operation_description="Returns information about the logged-in user and their facilitator profile.",
+        tags=['Authentication'],
+        responses={200: FullProfileSerializer()}
+    )
+    def get(self, request, *args, **kwargs):
+        # Pass the user instance to the serializer
+        user = User.objects.select_related('facilitator').prefetch_related(
+            'facilitator__projects'
+        ).get(id=request.user.id)
+        serializer = FullProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
