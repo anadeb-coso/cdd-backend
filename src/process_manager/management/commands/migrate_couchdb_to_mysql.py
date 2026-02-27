@@ -302,6 +302,14 @@ class Command(BaseCommand):
         except Task.DoesNotExist:
             raise ValueError(f'Task with SQL ID {task_sql_id} not found')
 
+        # Synchronize support_attachments from CouchDB to Task model
+        # If the CouchDB document says it supports attachments, we update the SQL master task
+        couch_support_attachments = task_doc.get('support_attachments', False)
+        if couch_support_attachments is True and task.support_attachments is False:
+            task.support_attachments = True
+            task.save(update_fields=['support_attachments'])
+            logger.info(f'Updated Task {task.id} support_attachments to True based on CouchDB doc')
+
         try:
             project = Project.objects.get(couch_id=project_couch_id)
         except Project.DoesNotExist:

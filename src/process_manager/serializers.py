@@ -154,6 +154,7 @@ class TaskDetailSerializer(serializers.ModelSerializer):
             'form',
             'attachments',
             'capacity_attachments',
+            'support_attachments',
             'project',
             'phase',
             'activity',
@@ -198,24 +199,16 @@ class TaskWithSubmissionSerializer(serializers.Serializer):
         if not request or not hasattr(request.user, 'facilitator'):
             return None
 
-        facilitator = request.user.facilitator
         preloaded = self.context.get('preloaded_submissions')
 
-        submission = None
+        # If the key is absent, administrative_level_id was not provided — return null
+        if preloaded is None:
+            return None
 
-        # 1. Try searching the pre-loaded list (Optimization)
-        if preloaded is not None:
-            submission = next((s for s in preloaded if s.task_id == obj.id), None)
-
-        # 2. Fallback: If it's not on the list, search in the DB (Security for Testing)
-        if not submission:
-            submission = TaskSubmission.objects.filter(
-                task=obj,
-                history__facilitator=facilitator
-            ).distinct().first()
+        # Search within the preloaded list (already filtered by facilitator + administrative_level_id)
+        submission = next((s for s in preloaded if s.task_id == obj.id), None)
 
         if submission:
-            # Important: Pass the context to the next serializer
             return SubmissionSerializer(submission, context=self.context).data
         return None
 
