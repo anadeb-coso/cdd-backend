@@ -9,8 +9,11 @@ urlpatterns = [
     path('save-geolocation-form-datas/', views_rest.SaveGeolocationFormDatas.as_view(),
          name='save_geolocation_form_datas'),
     path('get-facilitator-projects', views_rest.FacilitatorProjectListView.as_view(), name='facilitator_project'),
-    path('get-facilitator-no-sql-dbs-names', views_rest.FacilitatorNOSQLDBListView.as_view(),
-         name='facilitator_no-sql_dbs-names'),
+    path(
+        'get-facilitator-no-sql-dbs-names',
+        views_rest.FacilitatorNOSQLDBListView.as_view(),
+        name='facilitator_no-sql_dbs-names'
+    ),
     path(
         'assignments/',
         views.AssignmentsAPIView.as_view(),
@@ -18,4 +21,9 @@ urlpatterns = [
     ),
     path('projects/<int:pk>/tree/', views.ProjectTreeAPIView.as_view(), name='project-tree'),
     path('tasks/<int:pk>/', views.TaskDetailAPIView.as_view(), name='task-detail'),
+    path(
+        'tasks/<int:pk>/submissions/<int:administrative_level_id>/toggle-completion/',
+        views.TaskCompletionToggleAPIView.as_view(),
+        name='task-toggle-completion'
+    ),
 ]

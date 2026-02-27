@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
+from django.utils import timezone
 
 from administrativelevels.models import AdministrativeLevel
 from authentication.models import Facilitator
@@ -485,6 +486,12 @@ class TaskSubmission(BaseModel):
 
     def __str__(self):
         return f"{self.task.name} - {self.facilitator.name} - ADL:{self.administrative_level_id}"
+
+    def toggle_completed(self, completed: bool):
+        self.completed = completed
+        self.completed_date = timezone.now() if completed else None
+        self.save(update_fields=['completed', 'completed_date'])
+        return 'complete' if completed else 'reopen'
 
 
 class TaskSubmissionHistory(BaseModel):

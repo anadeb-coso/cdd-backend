@@ -98,7 +98,7 @@ class ProjectTreeSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             'id',
-            'couch_id',
+            'couch_id',  # TODO: remove post-PHASE 3 (migration reference only)
             'name',
             'description',
             'parent',
@@ -146,9 +146,18 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            'id', 'couch_id', 'name', 'description', 'order',
-            'form', 'attachments', 'capacity_attachments',
-            'project', 'phase', 'activity', 'cycles'
+            'id',
+            'couch_id',   # TODO: remove post-PHASE 3 (migration reference only)
+            'name',
+            'description',
+            'order',
+            'form',
+            'attachments',
+            'capacity_attachments',
+            'project',
+            'phase',
+            'activity',
+            'cycles'
         ]
 
 
@@ -209,3 +218,6 @@ class TaskWithSubmissionSerializer(serializers.Serializer):
             # Important: Pass the context to the next serializer
             return SubmissionSerializer(submission, context=self.context).data
         return None
+
+class TaskCompletionToggleSerializer(serializers.Serializer):
+    completed = serializers.BooleanField()

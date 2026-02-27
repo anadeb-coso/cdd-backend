@@ -1,4 +1,6 @@
+from django.db import transaction
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -9,7 +11,12 @@ from rest_framework.views import APIView
 
 from process_manager.models import Project, Task, TaskSubmission, TaskSubmissionHistory
 from process_manager.permissions import IsProjectAssigned
-from process_manager.serializers import ProjectAssignmentSerializer, ProjectTreeSerializer, TaskWithSubmissionSerializer
+from process_manager.serializers import (
+    ProjectAssignmentSerializer,
+    ProjectTreeSerializer,
+    SubmissionSerializer,
+    TaskWithSubmissionSerializer, TaskCompletionToggleSerializer
+)
 
 
 class AssignmentsAPIView(APIView):
@@ -157,8 +164,111 @@ class TaskDetailAPIView(RetrieveAPIView):
         if facilitator:
             # Optimizes the loading of history and its facilitators within the prefetch
             context['preloaded_submissions'] = list(TaskSubmission.objects.filter(
-                history__facilitator=facilitator
-            ).distinct().prefetch_related(
+                facilitator=facilitator
+            ).prefetch_related(
                 Prefetch('history', queryset=TaskSubmissionHistory.objects.select_related('facilitator'))
             ))
         return context
+
+
+class TaskCompletionToggleAPIView(APIView):
+    """
+    Toggles the completion status of a TaskSubmission identified by
+    task ID and administrative level ID.
+
+    The submission is scoped to the authenticated facilitator, so a
+    facilitator can only toggle their own submissions.
+    """
+    permission_classes = [IsAuthenticated, IsProjectAssigned]
+
+    @swagger_auto_schema(
+        operation_id="toggle_task_completion",
+        operation_description=(
+            "Toggles the `completed` status of a task submission for the authenticated "
+            "facilitator at the given administrative level.\n\n"
+            "- Setting `completed=true` sets `completed_date` to now.\n"
+            "- Setting `completed=false` clears `completed_date`.\n\n"
+            "An audit entry is created in `TaskSubmissionHistory` on every call."
+        ),
+        manual_parameters=[
+            openapi.Parameter(
+                name='pk',
+                in_=openapi.IN_PATH,
+                description="ID of the Task.",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            ),
+            openapi.Parameter(
+                name='administrative_level_id',
+                in_=openapi.IN_PATH,
+                description="ID of the administrative level that identifies the submission.",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            ),
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['completed'],
+            properties={
+                'completed': openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN,
+                    description="New completion status."
+                ),
+            },
+        ),
+        responses={
+            200: SubmissionSerializer,
+            400: openapi.Response(description="Invalid payload — 'completed' missing or not boolean."),
+            401: openapi.Response(description="Unauthenticated — no token provided."),
+            403: openapi.Response(description="No Facilitator profile, or not assigned to this project."),
+            404: openapi.Response(description="Task not found, or no submission exists for this facilitator + administrative level."),
+        },
+        tags=['Tasks']
+    )
+    def patch(self, request, pk, administrative_level_id):
+        # 1. Check if the authenticated user has a Facilitator profile
+        if not hasattr(request.user, 'facilitator'):
+            return Response(
+                {"detail": "Authenticated user does not have an associated Facilitator profile."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        facilitator = request.user.facilitator
+
+        # 2. Validate task existence and project-level permissions
+        task = get_object_or_404(Task, pk=pk)
+        self.check_object_permissions(request, task)
+
+        # 3. Retrieve the submission scoped to this facilitator + administrative level
+        submission = TaskSubmission.objects.filter(
+            task=task,
+            facilitator=facilitator,
+            administrative_level_id=administrative_level_id
+        ).first()
+
+        if not submission:
+            return Response(
+                {"detail": "No submission found for this task, facilitator, and administrative level."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 4. Validate input
+        input_serializer = TaskCompletionToggleSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        completed_status = input_serializer.validated_data['completed']
+
+        # 5. Atomic update + audit trail
+        with transaction.atomic():
+            intervention = submission.toggle_completed(completed_status)
+
+            TaskSubmissionHistory.objects.create(
+                submission=submission,
+                facilitator=facilitator,
+                intervention_type=intervention,
+                form_response_snapshot=submission.form_response or {},
+                form_fields_snapshot=task.form or {},
+                fields_updated=['completed', 'completed_date']
+            )
+
+        output_serializer = SubmissionSerializer(submission, context={'request': request})
+        return Response(output_serializer.data, status=status.HTTP_200_OK)

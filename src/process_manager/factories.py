@@ -66,6 +66,7 @@ class TaskSubmissionFactory(DjangoModelFactory):
         model = TaskSubmission
 
     task = factory.SubFactory(TaskFactory)
+    facilitator = factory.SubFactory(FacilitatorFactory)
     project = factory.SelfAttribute('task.project')
     cycle = factory.LazyAttribute(lambda o: o.task.cycles.first())
     administrative_level_id = factory.Sequence(lambda n: 1000 + n)
@@ -78,7 +79,7 @@ class TaskSubmissionHistoryFactory(DjangoModelFactory):
         model = TaskSubmissionHistory
 
     submission = factory.SubFactory(TaskSubmissionFactory)
-    facilitator = factory.SubFactory(FacilitatorFactory)
+    facilitator = factory.SelfAttribute('submission.facilitator')
     form_response_snapshot = factory.Dict({"q1": "Initial answer"})
     form_fields_snapshot = factory.Dict({"fields": []})
     fields_updated = factory.List(["q1"])
