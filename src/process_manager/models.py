@@ -167,6 +167,7 @@ class Task(BaseModel):
     form = models.JSONField(null=True, blank=True)
     attachments = models.JSONField(null=True, blank=True)
     capacity_attachments = models.JSONField(null=True, blank=True)
+    support_attachments = models.BooleanField(default=False)
     couch_id = models.CharField(max_length=255, blank=True)
 
     objects = CustomQuerySet.as_manager()
