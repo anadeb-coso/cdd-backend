@@ -136,7 +136,11 @@ class ProjectTreeAPIView(RetrieveAPIView):
 
 class TaskDetailAPIView(RetrieveAPIView):
     """
-    Retrieves the task definition and the specific submission for the current facilitator.
+    Retrieves the task definition and the specific submission for the
+    authenticated facilitator.
+
+    If `administrative_level_id` is provided as a query parameter, the response
+    includes the submission for that location. Otherwise, `submission` is null.
     """
     queryset = Task.objects.all()
     serializer_class = TaskWithSubmissionSerializer
@@ -144,13 +148,34 @@ class TaskDetailAPIView(RetrieveAPIView):
 
     @swagger_auto_schema(
         operation_id="get_task_detail",
-        operation_description="Returns task metadata and the facilitator's submission progress based on history.",
+        operation_description=(
+            "Returns task metadata and, optionally, the facilitator's submission "
+            "for a specific administrative level.\n\n"
+            "If `administrative_level_id` is omitted, the `submission` field is `null`."
+        ),
+        manual_parameters=[
+            openapi.Parameter(
+                name='administrative_level_id',
+                in_=openapi.IN_QUERY,
+                description=(
+                    "ID of the administrative level. "
+                    "When provided, the response includes the matching submission."
+                ),
+                type=openapi.TYPE_INTEGER,
+                required=False,
+            ),
+        ],
+        responses={
+            200: TaskWithSubmissionSerializer(),
+            401: openapi.Response(description="Unauthenticated."),
+            403: openapi.Response(description="Not assigned to this project."),
+            404: openapi.Response(description="Task not found."),
+        },
         tags=['Tasks']
     )
     def get(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, context={'request': request})
-        return Response(serializer.data)
+        # Decorated for swagger — delegate to retrieve() without touching the context
+        return self.retrieve(request, *args, **kwargs)
 
     def get_queryset(self):
         return Task.objects.select_related(
@@ -159,15 +184,28 @@ class TaskDetailAPIView(RetrieveAPIView):
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        # Pre-load the deliveries filtered by the current facilitator to avoid extra queries in the serializer
+
         facilitator = getattr(self.request.user, 'facilitator', None)
-        if facilitator:
-            # Optimizes the loading of history and its facilitators within the prefetch
-            context['preloaded_submissions'] = list(TaskSubmission.objects.filter(
-                facilitator=facilitator
+        if not facilitator:
+            return context
+
+        administrative_level_id = self.request.query_params.get('administrative_level_id')
+
+        if not administrative_level_id:
+            # No location provided — submission will be null, no DB query needed
+            return context
+
+        context['preloaded_submissions'] = list(
+            TaskSubmission.objects.filter(
+                facilitator=facilitator,
+                administrative_level_id=administrative_level_id,
             ).prefetch_related(
-                Prefetch('history', queryset=TaskSubmissionHistory.objects.select_related('facilitator'))
-            ))
+                Prefetch(
+                    'history',
+                    queryset=TaskSubmissionHistory.objects.select_related('facilitator')
+                )
+            )
+        )
         return context
 
 
