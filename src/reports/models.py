@@ -10,6 +10,8 @@ class VillageCommittee(BaseModel):
     cvd_name = models.CharField(max_length=100)
     village_headquarters_id = models.IntegerField()
     village_headquarters_name = models.CharField(max_length=100)
+    villages_ids = models.JSONField(default=list)
+    villages_names = models.JSONField(default=list)
     canton = models.CharField(max_length=100)
     commune = models.CharField(max_length=100)
     prefecture = models.CharField(max_length=100)
@@ -19,6 +21,9 @@ class VillageCommittee(BaseModel):
     number_of_members = models.IntegerField(default=0)
     members_included_women = models.BooleanField(default=False)
     method_used_to_select_members = models.CharField(max_length=50, blank=True, null=True)
+    cvd_existence = models.BooleanField(default=None, blank=True, null=True)
+    is_full_staff = models.BooleanField(default=None, blank=True, null=True)
+    meeting_date = models.CharField(max_length=30, blank=True, null=True)
 
     def __str__(self):
         return self.name

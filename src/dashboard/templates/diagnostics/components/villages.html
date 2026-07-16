@@ -1,5 +1,7 @@
 {% load static i18n custom_tags %}
 
+<link rel="stylesheet" href="{% static 'css/detail.css' %}"/>
+    
 <style>
     .expand-icon-for-village-detail {
         font-size: 1.5rem;
@@ -23,10 +25,10 @@
                     <th>{% translate 'Tasks validated' %}</th>
                     <th>{% translate 'Tasks Waiting Validation' %}</th>
                     <th>{% translate 'Tasks Invalidated' %}</th>
-                    <th>{% translate 'Tasks Invalidated Review' %}</th>
-                    <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                    <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                    <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                     <th width="9%">{% translate 'DB' %}</th>
-                    <th width="5%" class="no-sort"></th>
+                    {% comment %} <th width="5%" class="no-sort"></th> {% endcomment %}
                 </tr>
                 </thead>
                 <tbody>
@@ -41,18 +43,28 @@
                         <td style="{% if village_aggregated_status.total_tasks_invalidated_review %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_review }}</td>
                         <td style="{% if village_aggregated_status.otal_tasks_invalidated_unrevie %} color: purple {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_unreview }}</td>
                         <td>
-                            {% with assigns_adl_to_facilitators|get:village_aggregated_status.administrative_level_id as facilitator %}
-                                {% if facilitator.name %}
-                                    {% comment %} {{ facilitator.name }} <br /> {% endcomment %}
-                                    [<a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
-                                    href="{% url 'dashboard:facilitators:old_detail' facilitator.no_sql_db_name %}"
-                                    target="_blank" title="{% translate 'See profile' %}"><span> {% translate "See" %} </span></a>]
-                                {% endif %}
-                            {% endwith %}
+                            {% if PROJECT_NAME == project_name %}
+                                {% with assigns_adl_to_facilitators|get:village_aggregated_status.administrative_level_id as facilitator %}
+                                    {% if facilitator.name %}
+                                        {% comment %} {{ facilitator.name }} <br /> {% endcomment %}
+                                        <a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
+                                        href="{% url 'dashboard:facilitators:old_detail' facilitator.no_sql_db_name %}?administrative_level_id={{village_aggregated_status.administrative_level_id}}&tasks_status=Completed_awaiting_validation,Invalidated_updated_after_invalidation"
+                                        target="_blank" title="{% translate 'See profile' %}"><span> {% translate "See" %} </span></a>
+                                    {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <a href="#" 
+                                    data-container="body" data-toggle="popover" 
+                                    data-placement="top" data-trigger="hover" 
+                                    data-content='{% translate "Requires a change of project" %} [{{ PROJECT_NAME }} {% translate "to" %} {{ project_name }}]'>
+                                    <i class="fas fa-info"></i>
+                                </a>
+
+                            {% endif %}
                         </td>
-                        <td class=" pointer-event ">
+                        {% comment %} <td class=" pointer-event ">
                             <i class=" expand-icon-for-village-detail fas fa-chevron-circle-right text-info"></i>
-                        </td>
+                        </td> {% endcomment %}
                     </tr>
                 {% endfor %}
                 </tbody>
@@ -145,6 +157,12 @@
                 }});
             }
         }); {% endcomment %}
+
+
+        villages_status_table.on('draw', function () {
+            $( document ).find('[data-toggle="popover"]').popover('dispose').popover();
+            $('[data-toggle="popover"]').popover();
+        });
 
         
     });

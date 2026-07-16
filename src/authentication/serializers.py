@@ -109,7 +109,11 @@ class UserAuthSerializer(serializers.Serializer):
             attrs['email'] = user.email
             attrs['name'] = user.name
             attrs['no_sql_dbs_names'] = user.no_sql_dbs_names
-            attrs['groups'] = ['Facilitator']
+            attrs['groups'] = ['Facilitator'] + (
+                ["CommunityFacilitator"] if user.facilitator_type == "community_facilitator" else (
+                    ["TechnicalFacilitator"] if user.facilitator_type == "technical_facilitator" else []
+                )
+            )
         else:
             attrs['first_name'] = user.first_name
             attrs['last_name'] = user.last_name

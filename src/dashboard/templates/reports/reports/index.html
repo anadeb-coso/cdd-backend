@@ -1,0 +1,78 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 static i18n custom_tags %}
+{% block extracss %}
+    {{ block.super }}
+    
+
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            
+            
+            <div class="card transparent">
+                
+                <div class="row">
+
+                    <div class="col-6">
+                        <a href="{% url 'dashboard:reports:reports:committees' %}">
+                            <div class="card border border-primary text-center">
+                                <div class="card-body" >
+                                    <p class="text-bold" style="font-size: 25px;">{% translate "Village Committees" %}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-6">
+                        <a href="#">
+                            <div class="card border border-primary text-center">
+                                <div class="card-body" >
+                                    <p class="text-bold" style="font-size: 25px;">{% translate "Cantonal Committees" %}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-6">
+                        <a href="#">
+                            <div class="card border border-primary text-center">
+                                <div class="card-body" >
+                                    <p class="text-bold" style="font-size: 25px;">{% translate "Village profile" %}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="col-6">
+                        <a href="#">
+                            <div class="card border border-primary text-center">
+                                <div class="card-body" >
+                                    <p class="text-bold" style="font-size: 25px;">{% translate "Priorities" %}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    
+                </div>
+
+            </div>
+
+
+
+
+        </div>
+    </div>
+
+
+{% endblock %}
+{% block javascript %}
+    {{ block.super }}
+
+
+
+{% endblock %}
+{% block select2 %}
+
+{% endblock select2 %}

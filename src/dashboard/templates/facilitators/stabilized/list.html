@@ -142,9 +142,11 @@
         <div class="col-12">
 
             <div class="float-left mb-3 m-0 main-title">
-                {% comment %} {{ title | safe }} {% endcomment %}
+                <a class="nav-link" href="#">
+                    {{ FACILITATORS_TYPES_PLURAL|get:type_of_facilitator_list }} ({% translate "Stabilized" %}{% if type_facilitator == 'inactive' %} {% translate "Inactive" %}{% endif %})
+                </a>
                 
-                <div class="dropdown">
+                {% comment %} <div class="dropdown">
                     <a class="nav-link" data-toggle="dropdown" href="#">
                         <i class="fa fa-angle-down"></i>
                         {{ FACILITATORS_TYPES_PLURAL|get:type_of_facilitator_list }} ({% translate "Stabilized" %}{% if type_facilitator == 'inactive' %} {% translate "Inactive" %}{% endif %})
@@ -158,7 +160,7 @@
                             {% endif %}
                         {% endfor %}
                     </div>
-                </div>
+                </div> {% endcomment %}
 
             </div>
             {% if user.is_superuser or user|has_group:"Admin" %}

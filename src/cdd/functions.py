@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from datetime import datetime, timedelta
 from django.utils import timezone
 import zlib
@@ -107,3 +108,13 @@ def normalize_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
 
     return text
+
+def list_with_and(elements):
+    if not elements:
+        return ""
+    if len(elements) == 1:
+        return elements[0]
+    if len(elements) == 2:
+        return f" {_('and')} ".join(elements)
+
+    return ", ".join(elements[:-1]) + f" {_('and')} " + elements[-1]

@@ -66,7 +66,7 @@
                     <div class="col-2">
                         <div class="card h-75 bg-pink">
                             <div class="card-body" >
-                                <p>{% translate "Tasks Invalidated Review" %}</p>
+                                <p>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</p>
                                 <p class="text-bold" style="font-size: 1.7em;">{{ nbr_tasks_invalidated_review|separate_with_space }}</p>
                             </div>
                         </div>
@@ -75,7 +75,7 @@
                     <div class="col-2">
                         <div class="card h-75 bg-gradient-danger">
                             <div class="card-body" >
-                                <p>{% translate "Tasks Invalidated Unreview" %}</p>
+                                <p>{% translate "Tasks Invalidated Unreviewed by the facilitator" %}</p>
                                 <p class="text-bold" style="font-size: 1.7em;">{{ nbr_tasks_invalidated_unreview|separate_with_space }}</p>
                             </div>
                         </div>
@@ -218,8 +218,8 @@
                                                     <th>{% translate 'Tasks validated' %}</th>
                                                     <th>{% translate 'Tasks Waiting Validation' %}</th>
                                                     <th>{% translate 'Tasks Invalidated' %}</th>
-                                                    <th>{% translate 'Tasks Invalidated Review' %}</th>
-                                                    <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                                                    <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                                                    <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                                                     <th>{% translate 'Percentage Completed' %}</th>
                                                     <th>{% translate 'Percentage of completed tasks validated' %}</th>
                                                 </tr>
@@ -294,6 +294,7 @@ padding: 0;
 {% block javascript %}
     {{ block.super }}
     <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
+    <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script>
     
         var statistics_spin = $('#statistics-spin');
@@ -431,10 +432,6 @@ padding: 0;
 
     </script>
 
-
-{% endblock %}
-{% block select2 %}
-    <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script type="text/javascript">
         var statistics_spin = $('#statistics-spin');
         let table = document.getElementById("table");
@@ -528,8 +525,8 @@ padding: 0;
                                     <th>{% translate 'Tasks validated' %}</th>
                                     <th>{% translate 'Tasks Waiting Validation' %}</th>
                                     <th>{% translate 'Tasks Invalidated' %}</th>
-                                    <th>{% translate 'Tasks Invalidated Review' %}</th>
-                                    <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                                    <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                                    <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                                     <th>{% translate 'Percentage Completed' %}</th>
                                     <th>{% translate 'Percentage of completed tasks validated' %}</th>
                                 </tr>
@@ -545,10 +542,8 @@ padding: 0;
                                         <td>`+data.nbr_tasks_invalidated+`</td>
                                         <td>`+data.nbr_tasks_invalidated_review+`</td>
                                         <td>`+data.nbr_tasks_invalidated_unreview+`</td>
-                                        <td>`+data.nbr_tasks_invalidated_review+`</td>
-                                        <td>`+data.nbr_tasks_invalidated_unreview+`</td>
-                                        {% comment %} <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
-                                        <td>`+(data.percentage_tasks_completed_validated).toFixed(2)+`%</td> {% endcomment %}
+                                        <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
+                                        <td>`+(data.percentage_tasks_completed_validated).toFixed(2)+`%</td>
                                     </tr>
                                 </tbody>
                                 <br />
@@ -567,8 +562,8 @@ padding: 0;
                                     <th>{% translate 'Tasks validated' %}</th>
                                     <th>{% translate 'Tasks Waiting Validation' %}</th>
                                     <th>{% translate 'Tasks Invalidated' %}</th>
-                                    <th>{% translate 'Tasks Invalidated Review' %}</th>
-                                    <th>{% translate 'Tasks Invalidated Unreview' %}</th>
+                                    <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                                    <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                                     <th>{% translate 'Percentage Completed' %}</th>
                                     <th>{% translate 'Percentage of completed tasks validated' %}</th>
                                 </tr>
@@ -659,7 +654,13 @@ padding: 0;
 
         display_table('all', 'all');
 
-        
+    </script>
+
+
+{% endblock %}
+{% block select2 %}
+    <script type="text/javascript">
+                
         $("#id_phase").select2({
             placeholder: "{% translate 'Phase' %}",
             allowClear: true,

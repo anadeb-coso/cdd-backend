@@ -92,3 +92,14 @@ HEADERS_FIRST_ORDER = [
 ]
 
 DATAFRAME_CDD_DATAS_BY_ORDER = ['canton_name', 'administrative_level_name']
+
+TASKS_STATUS = [
+    'Not_started', 
+    'In_progress', 
+    'Invalidated_reset_in_progress', 
+    'Completed_awaiting_validation',  
+    'Invalidated_updated_after_invalidation',
+    'Invalidated_not_returned_after_invalidation', 
+    'Invalidated', 
+    'Validated', 
+]

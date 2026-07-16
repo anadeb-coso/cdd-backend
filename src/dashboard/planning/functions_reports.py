@@ -23,6 +23,7 @@ from cdd.functions import get_dates_between
 from authentication.functions import get_group_high as auth_get_group_high
 from authentication import PROFESSIONAL_GROUPS, FACILITATORS_TYPES_WITH_GROUP_NAME
 from no_sql_client import NoSQLClient
+from planning.vars import WORK_ENVIRONMENT
 
 
 
@@ -46,6 +47,7 @@ def planning_csv(request):
     task_status = request.GET.get('task_status', 'All')
     task_type = request.GET.get('task_type', 'All')
     username_facilitator_user = list(filter(None, request.GET.getlist('username_facilitator_user[]')))
+    work_environment = list(filter(None, request.GET.getlist('work_environment[]')))
 
     user_groups = list(filter(None, request.GET.getlist('user_groups[]')))
 
@@ -65,6 +67,7 @@ def planning_csv(request):
         "Composante": {},
         "Activité": {},
         "Description": {},
+        "Environnement de travail": {},
         "Statut": {},
         "Rapport": {},
 
@@ -85,12 +88,14 @@ def planning_csv(request):
         "Autre activité faite": {},
         "Composante (Autre activité)": {},
         "Villages (Autre activité)": {},
+        "Environnement de travail (Autre activité)": {},
     }
     plan_datas = {
         "Nom": {},
         "Composante": {},
         "Activité": {},
         "Description": {},
+        "Environnement de travail": {},
         "Date & Heure début": {},
         "Date & Heure fin": {},
         "Villages": {},
@@ -279,6 +284,9 @@ def planning_csv(request):
             _query |= Q(administrative_level_ids__contains=[item])
         # activities = activities.filter(_query)
         query &= _query
+    
+    if work_environment and 'All' not in work_environment and '' not in work_environment:
+        query &= Q(work_environment__in=work_environment)
 
     user_facilitator_query = Q()
     user_facilitator_query |= Q(user__in=users)
@@ -299,6 +307,7 @@ def planning_csv(request):
         datas_dict_planning['Précédentes']['Composante'][i] = activity.component
         datas_dict_planning['Précédentes']['Activité'][i] = f"{activity.name} ({activity.vacation_type})" if activity.vacation_type else activity.name
         datas_dict_planning['Précédentes']['Description'][i] = activity.description
+        datas_dict_planning['Précédentes']['Environnement de travail'][i] = dict(WORK_ENVIRONMENT).get(activity.work_environment) if activity.work_environment else None
         datas_dict_planning['Précédentes']['Date & Heure début'][i] = activity.planned_datetime_start.strftime('%Y-%m-%d %H:%M:%S')
         datas_dict_planning['Précédentes']['Date & Heure fin'][i] = activity.planned_datetime_end.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -317,6 +326,7 @@ def planning_csv(request):
             datas_dict_planning['Précédentes']['Autre activité faite'][i] = activity.another_detail.get('name')
             datas_dict_planning['Précédentes']['Composante (Autre activité)'][i] = activity.another_detail.get('component')
             datas_dict_planning['Précédentes']['Villages (Autre activité)'][i] = " ; ".join([v.get('name') for v in activity.another_detail.get('administrative_levels')]) if activity.another_detail.get('administrative_levels') else ""
+            datas_dict_planning['Précédentes']['Environnement de travail (Autre activité)'][i] = dict(WORK_ENVIRONMENT).get(activity.another_detail.get('work_environment')) if activity.another_detail.get('work_environment') else None
 
         if activity.undo and activity.undo_comment:
             datas_dict_planning['Précédentes']['Commentaires'][i] = activity.undo_comment
@@ -363,6 +373,7 @@ def planning_csv(request):
         datas_dict_planning['Planification']['Composante'][i] = activity.component
         datas_dict_planning['Planification']['Activité'][i] = f"{activity.name} ({activity.vacation_type})" if activity.vacation_type else activity.name
         datas_dict_planning['Planification']['Description'][i] = activity.description
+        datas_dict_planning['Planification']['Environnement de travail'][i] = dict(WORK_ENVIRONMENT).get(activity.work_environment) if activity.work_environment else None
         datas_dict_planning['Planification']['Date & Heure début'][i] = activity.planned_datetime_start.strftime('%Y-%m-%d %H:%M:%S')
         datas_dict_planning['Planification']['Date & Heure fin'][i] = activity.planned_datetime_end.strftime('%Y-%m-%d %H:%M:%S')
         datas_dict_planning['Planification']['Villages'][i] = " ; ".join([v.get('name') for v in activity.administrative_levels]) if activity.administrative_levels else ""

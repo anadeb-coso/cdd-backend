@@ -239,36 +239,37 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
                 )
-                regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
-                regions[region.name]['nbr_tasks'] = sums['total_tasks'] or 0
-                regions[region.name]['nbr_tasks_validated'] = sums['total_tasks_validated'] or 0
-                regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
-                regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
-                regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
-                regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                if regions and region.name in regions:
+                    regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
+                    regions[region.name]['nbr_tasks'] = sums['total_tasks'] or 0
+                    regions[region.name]['nbr_tasks_validated'] = sums['total_tasks_validated'] or 0
+                    regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
+                    regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
 
-                regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
-                regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
-            
-                regions[region.name]['nbr_villages'] = len(villages_ids)
-                regions[region.name]['nbr_cvds'] = cvds.count()
+                    regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
+                    regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
                 
-                assign_facilitators = assigns.filter(
-                    administrative_level_id__in=villages_ids,
-                    activated=True
-                )
-                criteria = FacilitatorCriteria(
-                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False,
-                    training_mode=False,
-                )
-                _facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-                
-                nbr_facilitators += _facilitators.count()
-                nbr_villages += len(villages_ids)
-                nbr_cvds += cvds.count()
-                nbr_tasks += regions[region.name]['nbr_tasks']
-                nbr_tasks_completed += regions[region.name]['nbr_tasks_completed']
+                    regions[region.name]['nbr_villages'] = len(villages_ids)
+                    regions[region.name]['nbr_cvds'] = cvds.count()
+                    
+                    assign_facilitators = assigns.filter(
+                        administrative_level_id__in=villages_ids,
+                        activated=True
+                    )
+                    criteria = FacilitatorCriteria(
+                        id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                        develop_mode=False,
+                        training_mode=False,
+                    )
+                    _facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+                    
+                    nbr_facilitators += _facilitators.count()
+                    nbr_villages += len(villages_ids)
+                    nbr_cvds += cvds.count()
+                    nbr_tasks += regions[region.name]['nbr_tasks']
+                    nbr_tasks_completed += regions[region.name]['nbr_tasks_completed']
             
 
         elif _type in ["phase", "activity", "task", "all"]:

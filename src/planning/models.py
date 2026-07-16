@@ -12,7 +12,7 @@ from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
 from cdd.models_base import BaseModel
 from process_manager.models import Phase, Activity as ProcessActivity, Project
-from planning.vars import TIMES, DAYS
+from planning.vars import TIMES, DAYS, WORK_ENVIRONMENT
 
 
 
@@ -23,6 +23,7 @@ class Activity(BaseModel):
     activity = models.ForeignKey(ProcessActivity, null=True, blank=True, on_delete=models.SET_NULL, related_name="planning_activities")
     name = models.CharField(max_length=255, verbose_name=_('Activity'))
     description = models.TextField(verbose_name=_('Description'))
+    work_environment = models.CharField(max_length=100, choices=WORK_ENVIRONMENT, null=True, default=None, verbose_name=_("Work Environment"))
     component = models.TextField(null=True, blank=True, verbose_name=_('Component'))
     vacation_type = models.CharField(max_length=100, verbose_name=_('Vacation type'), null=True, blank=True)
     administrative_level_ids = models.JSONField(null=True, blank=True, verbose_name=_("Locality ID"))

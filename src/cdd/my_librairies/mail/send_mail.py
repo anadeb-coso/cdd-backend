@@ -1,4 +1,5 @@
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import get_template
 from process_manager.models import EmailAddressesWhichSendEmails
@@ -19,6 +20,11 @@ def send_email(
     """
 #     to = ['adaboub20100@gmail.com']
 #     cc = []
+
+    if settings.DEBUG:
+        to = [settings.RECIPIENT_EMAIL_DEFAULT]
+        cc = [settings.RECIPIENT_EMAIL_DEFAULT]
+    
     if not cc:
         e = EmailAddressesWhichSendEmails.objects.filter(name="task_invalidated_coso", project__name=project_name).first()
         if e:
@@ -34,7 +40,7 @@ def send_email(
         msg.attach_alternative(html_content, "text/html")
         msg.content_subtype = 'html'
         result = msg.send()
-        print('ici success')
+
         return "success"
     except Exception as e:
         return "error"

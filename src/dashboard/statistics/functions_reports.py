@@ -133,7 +133,12 @@ def priorities_situation(facilitator_dbs_name, params={"type":"All", "ids_admini
         villages_havent_three_priorities = []
         villages_uncompleted = []
         
-        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        try:
+            facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {facilitator.name}: {e}")
+            continue
+
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
 
         facilitator_doc = None
@@ -405,7 +410,11 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
         villages_havent_priorities = []
         villages_uncompleted = []
         # print(facilitator.name)
-        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        try:
+            facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {facilitator.name}: {e}")
+            continue
         fc_tasks = facilitator_database.all_docs(include_docs=True)['rows']
         
         facilitator_doc = None
@@ -532,7 +541,7 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                         datas_dict_havent_priorities_pav[f"Priorite sous-composante 1.3 {i}"][count] = ""
 
                                 datas_dict_havent_priorities_pav["task_priority_completed"][count] = 1 if _doc.get('completed') else 0
-                                datas_dict_havent_priorities_pav["task_priority_validated"][count] = 1 if _doc.get('validated') else 0
+                                datas_dict_havent_priorities_pav["task_priority_validated"][count] = (1 if _doc.get('validated') else 0) if _doc.get('validated') in (True, False) else None
 
                             elif _doc['sql_id'] in [45, 130, 94]:
                                 if _doc['attachments'][0]['attachment'] and _doc['attachments'][0]['attachment'].get('uri'):
@@ -544,7 +553,7 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                     datas_dict_havent_priorities_pav["PAV correct"][count] = ""
 
                                 datas_dict_havent_priorities_pav["task_pav_completed"][count] = 1 if _doc.get('completed') else 0
-                                datas_dict_havent_priorities_pav["task_pav_validated"][count] = 1 if _doc.get('validated') else 0
+                                datas_dict_havent_priorities_pav["task_pav_validated"][count] = (1 if _doc.get('validated') else 0) if _doc.get('validated') in (True, False) else None
                                     
                             elif _doc['sql_id'] in [47, 132, 96]:
                                 try:
@@ -679,8 +688,8 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                                 datas_dict_havent_priorities_pav[f"Priorite sous-composante 1.3 {i}"][count] = ""
 
                         datas_dict_havent_priorities_pav["task_priority_completed"][count] = 1 if _doc.get('completed') else 0
-                        datas_dict_havent_priorities_pav["task_priority_validated"][count] = 1 if _doc.get('validated') else 0
-                        
+                        datas_dict_havent_priorities_pav["task_priority_validated"][count] = (1 if _doc.get('validated') else 0) if _doc.get('validated') in (True, False) else None
+
                     elif _doc['sql_id'] in [45, 130, 94]:
                         if _doc['attachments'][0]['attachment'] and _doc['attachments'][0]['attachment'].get('uri'):
                             datas_dict_havent_priorities_pav["PAV"][count] = _doc['attachments'][0]['attachment']['uri'].split('?')[0]
@@ -691,7 +700,7 @@ def priorities_pav_pac_situation(facilitator_dbs_name, params={"type":"All", "id
                             datas_dict_havent_priorities_pav["PAV correct"][count] = ""
 
                         datas_dict_havent_priorities_pav["task_pav_completed"][count] = 1 if _doc.get('completed') else 0
-                        datas_dict_havent_priorities_pav["task_pav_validated"][count] = 1 if _doc.get('validated') else 0
+                        datas_dict_havent_priorities_pav["task_pav_validated"][count] = (1 if _doc.get('validated') else 0) if _doc.get('validated') in (True, False) else None
 
                     elif _doc['sql_id'] in [47, 132, 96]:
                         try:

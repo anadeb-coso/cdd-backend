@@ -77,6 +77,10 @@ THIRD_PARTY_APPS = [
 
 INSTALLED_APPS += CREATED_APPS + THIRD_PARTY_APPS
 
+# AUTHENTICATION_BACKENDS = [
+#     'usermanager.authentication.MultiModelBackend',
+# ]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -220,6 +224,7 @@ NO_SQL_URL = env('NO_SQL_URL')
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
@@ -235,6 +240,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
 }
+
+TOKEN_ALLOWED_TO_ACCESS_API = [token.strip() for token in str(env('TOKEN_ALLOWED_TO_ACCESS_API', default='')).split(',') if token.strip()]
 
 
 # S3
@@ -293,6 +300,7 @@ EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+RECIPIENT_EMAIL_DEFAULT = env('RECIPIENT_EMAIL_DEFAULT')
 
 # Twilio
 # https://www.twilio.com/docs
@@ -325,3 +333,5 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 
 # Timeout global des vues (en secondes)
 VIEW_DEFAULT_TIMEOUT = 600  # Utilisé dans un décorateur personnalisé
+
+GRM_SECRET_KEY_GENRATE = env('GRM_SECRET_KEY_GENRATE')

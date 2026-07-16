@@ -1,6 +1,7 @@
 from datetime import datetime
 from operator import itemgetter
 import re
+import itertools
 
 from django.template.defaultfilters import date as _date
 from django.contrib.auth.hashers import make_password
@@ -20,6 +21,8 @@ from subprojects.models import Cycle as CycleMis, Project as ProjectMis
 from cdd.my_librairies.mail.send_mail import send_email
 from dashboard.statistics.utils import comparer_chaines, normaliser_chaine
 from cdd.my_librairies.functions import get_datas_dict
+from subprojects.models import Project as MisProject, Cycle as MisCycle
+from administrativelevels.models import AdministrativeLevel, CVD
 
 
 def structure_the_words(word):
@@ -1396,7 +1399,7 @@ def check_cvd_and_tasks_number(develop_mode=False, training_mode=False, no_sql_d
             if doc.get('type') == 'facilitator':
                 facilitator_doc = doc
                 for ad in doc.get('administrative_levels'):
-                    if ad.get('is_headquarters_village'):
+                    if ad.get('is_headquarters_village') and ad.get('project_id') == project.couch_id and ad.get('cycle_id') == cycle.couch_id:
                         nbr_cvd += 1
                 break
 
@@ -1747,6 +1750,7 @@ def default_project_to_assign(name="COSO", develop_mode=False, training_mode=Fal
 # -
 def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=False, trainning_mode=False, active=True, no_sql_db=None, no_sql_dbs=None):
     project = Project.objects.filter(name=project_name).first()
+    projects = project.build_the_tree_structure()
     _facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, projects__in=[project.id])
     if no_sql_db or no_sql_dbs:
         if not no_sql_dbs:
@@ -1758,54 +1762,74 @@ def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=F
     else:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, active=active, projects__in=[project.id]).order_by("name")
     
-    emails = [f.email for f in facilitators if f.email]
+    # emails = [f.email for f in facilitators if f.email]
 
     nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
-    docs_eadls = eadls.all_docs(include_docs=True)['rows']
+    # eadls = nsc.get_db('eadls')
+    # docs_eadls = eadls.all_docs(include_docs=True)['rows']
     """
     "3805",
     "3804"
     """
-    for _doc in docs_eadls:
-        no_sql_dbs_names = []
-        doc = _doc.get('doc')
-        if doc.get('type') == "adl" and doc.get('representative') and doc.get('administrative_regions_objects') and doc['representative'].get('email') in emails:
-            print(doc['representative'].get('name'), doc['representative'].get('email'))
-
-            villages = []
-            for c in doc['administrative_regions_objects']:
-                villages += c['villages']
+    # for _doc in docs_eadls:
+    #     no_sql_dbs_names = []
+    #     doc = _doc.get('doc')
+    #     if doc.get('type') == "adl" and doc.get('representative') and doc.get('administrative_regions_objects') and doc['representative'].get('email') in emails:
+    #         print(doc['representative'].get('name'), doc['representative'].get('email'))
+    #         facilitator = facilitators.filter(email=doc['representative'].get('email')).first()
             
-            # AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
-            #     administrative_level_id=int(doc.get('administrative_id')), project_id=project_id, activated=True
-            # )
+    #         # villages = []
+    #         # for c in doc['administrative_regions_objects']:
+    #         #     villages += c['villages']
+            
+    #         villages_ids = list(itertools.chain(*[[int(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']]))
 
-            if villages:
-                for f in _facilitators:
-                    if f.email != doc['representative'].get('email'):
-                        print(f.name)
-                        db = nsc.get_db(f.no_sql_db_name)
-                        docs = db.get_query_result({"type": "facilitator"})[0]
-                        if len(docs) > 0:
-                            for adl in docs[0]['administrative_levels']:
-                                if  len([v for v in villages if str(v.get('id')) == adl.get('id')]) > 0:
-                                    no_sql_dbs_names.append(f.no_sql_db_name)
-                                    break
-                
-            print(no_sql_dbs_names)
-            facilitator = facilitators.filter(email=doc['representative'].get('email')).first()
-            if facilitator:
+    for facilitator in facilitators:
+        if facilitator.stabilization_administrative_ids or facilitator.additional_administrative_ids:
+            print(facilitator.name, facilitator.email)
+
+            villages_ids = list(set((facilitator.stabilization_administrative_ids or []) + (facilitator.additional_administrative_ids or [])))
+
+            facilitators_ids = list(
+                mis_objects_call
+                .filter_objects(
+                    AssignAdministrativeLevelToFacilitator,
+                    administrative_level_id__in=villages_ids, project_id__in=[_p.id for _p in mis_objects_call.filter_objects(ProjectMis, name__in=[p.name for p in projects])], activated=True
+                )
+                .exclude(facilitator_id=facilitator.id)
+                .values_list('facilitator_id', flat=True)
+            )
+            if facilitators_ids:
+                no_sql_dbs_names = list(_facilitators.filter(id__in=facilitators_ids).values_list('no_sql_db_name', flat=True))
+            # if villages:
+            #     for f in _facilitators:
+            #         if f.email != doc['representative'].get('email'):
+            #             print(f.name)
+            #             db = nsc.get_db(f.no_sql_db_name)
+            #             docs = db.get_query_result({"type": "facilitator"})[0]
+            #             if len(docs) > 0:
+            #                 for adl in docs[0]['administrative_levels']:
+            #                     if  len([v for v in villages if str(v.get('id')) == adl.get('id')]) > 0:
+            #                         no_sql_dbs_names.append(f.no_sql_db_name)
+            #                         break
+            
+
+            if facilitator and facilitator.no_sql_dbs_names != no_sql_dbs_names:
+                    
+                print(f"Old {facilitator.no_sql_dbs_names} ; New : {no_sql_dbs_names}")
+
                 facilitator.no_sql_dbs_names = no_sql_dbs_names
                 facilitator = facilitator.save_and_return_object()
 
                 db = nsc.get_db(facilitator.no_sql_db_name)
                 docs = db.get_query_result({"type": "facilitator"})[0]
                 if len(docs) > 0:
-                    doc = docs[0].copy()
-                    doc["no_sql_dbs_names"] = no_sql_dbs_names
-                    nsc.update_cloudant_document(db,  doc["_id"], doc)
-
+                    __doc = docs[0].copy()
+                    __doc["no_sql_dbs_names"] = no_sql_dbs_names
+                    nsc.update_cloudant_document(db,  __doc["_id"], __doc)
+            else:
+                print("No updated")
+            print()
 
 
 # def search_facilitators_db_with_villages_stabilized_using_assign_model(name="COSO", develop_mode=False, trainning_mode=False, no_sql_db=False):
@@ -3541,3 +3565,47 @@ def update_geolocation_docs(projects_names=["COSO", "FA-COSO"]):
 
 
     return adls_no_found, count
+
+
+
+def get_facilitator_db_which_have_cvd_id(project_id, cycle_id, cvd_ids, develop_mode=False, training_mode=False):
+    project = Project.objects.get(id=project_id)
+    cycle = Cycle.objects.get(id=cycle_id)
+    project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
+    project_mis_id = project_mis.first().id if project_mis.exists() else None
+    cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
+    cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
+    
+    nsc = NoSQLClient()
+    count_facilitator = 0
+    print("Start")
+
+    facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
+
+    administrativelevels_dict = {str(ad.id): str(ad.cvd.id) for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])}
+    
+    for f in facilitators.order_by('id'):
+        count_facilitator += 1
+        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        docs = facilitator_db.all_docs(include_docs=True)['rows']
+
+        facilitator_doc = None
+        for _doc in docs:
+            doc = _doc.get('doc')
+            if doc.get('type') == 'facilitator' and not doc.get('develop_mode') and not doc.get('training_mode'):
+                facilitator_doc = doc
+                break
+
+        docs = sorted([doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task' and doc.get('doc').get('sql_id')], key=lambda obj: obj["doc"]["completed"])
+        
+        if facilitator_doc:
+            doc = facilitator_doc
+            for _task in docs:
+                _task = _task.get('doc')
+                _administrative_level_id = administrativelevels_dict.get(str(_task.get('administrative_level_id')))
+
+                if _administrative_level_id and _administrative_level_id in cvd_ids:
+                    print("Find cvd id", _administrative_level_id, "village id", _task.get('administrative_level_id'),  "in facilitator db", f.no_sql_db_name)
+                    break
+    print()
+    print("End", count_facilitator)

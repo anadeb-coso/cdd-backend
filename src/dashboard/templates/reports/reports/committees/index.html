@@ -1,0 +1,448 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n bootstrap4 custom_tags %}
+
+{% block extracss %}
+    {{ block.super }}
+    <style>
+        #table {
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 0;
+            border-radius: 10px 0 0 0 !important;
+
+            & thead th {
+                border: 1px solid #f2f2f2 !important;
+
+                font-weight: bolder !important;;
+                height: 36px;
+                padding: 0 25px 0 10px;
+
+                &:not([class^="bg-"]) {
+                    background-color: #f2f2f2 !important;
+                }
+
+                &:after, &:before {
+                    top: 30%;
+                }
+
+                &:last-of-type {
+
+                    border-radius: 0 10px 0 0 !important;
+                }
+
+                &:not(&:last-child) {
+                    border-right-color: #c1c1c1 !important;
+                }
+
+                &:last-child {
+                    border-right-color: transparent !important;
+                }
+
+                &:first-child {
+                    border-left-color: transparent !important;
+                }
+            }
+
+
+            & thead th:first-of-type {
+
+                border-radius: 10px 0 0 0 !important;
+            }
+
+            & tbody td {
+                border-bottom-width: 1px !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+
+            & tbody tr:last-of-type {
+                border-radius: 0 10px 0 0 !important;
+            }
+
+            & tbody tr:not(.even):not(.odd):last-of-type, & tbody tr:not(.even):not(.odd):last-of-type td[colspan="8"] {
+                border-radius: 0 0 10px 10px !important;
+            }
+
+            & tbody td:first-of-type {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:last-of-type td {
+                border-left: 1px solid #e2e1e1 !important;
+            }
+
+            & tbody td:not(:first-of-type) {
+                border-left: 0;
+
+            }
+
+            & tbody td:not(:last-of-type) {
+                padding: 0 25px 0 10px;
+                border-right: 0;
+            }
+
+            & tbody tr {
+                border-bottom: 1px solid #e2e1e1 !important;
+                border-right: 1px solid #e2e1e1 !important;
+                border-left: 1px solid #e2e1e1 !important;
+
+                &:last-of-type td:first-of-type {
+                    border-radius: 0 0 0 10px !important;
+
+                }
+
+                &:last-of-type td:last-of-type {
+                    border-radius: 0 0 10px 0 !important;
+
+                }
+            }
+
+        }
+
+        .search-bar {
+            height: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 0;
+            margin-top: 1px;
+        }
+
+        .dt-buttons, #table_length {
+            display: inline-flex;
+            max-width: 50%;
+            flex: 0 0 50%;
+            width: 50%;
+        }
+
+        .dt-buttons button {
+            color: #ffffff !important;
+            background-color: #24c38b;
+            border-color: #24c38b;
+            box-shadow: none;
+            border-style: none;
+            margin-right: 5px;
+            padding: 5px;
+            border-radius: 7px !important;
+        }
+
+        #table_length label {
+            margin-left: auto;
+        }
+
+        .no-sort:before, .no-sort:after {
+            display: none !important;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+
+            <div class="float-left mb-3 m-0 main-title">
+                <a class="nav-link" href="#">
+                    {% translate "Village Committees" %}
+                </a>
+            </div>
+
+            <div class="clearfix"></div>
+            <div class="card">
+                <div class="p-2 row">
+                    {% comment %} <div class="col-12 col-lg input-group search-bar mb-2 mb-lg-0">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+                    </div> {% endcomment %}
+                    <div class="col-2 col-lg input-group search-bar mb-2 mb-lg-0">
+                        {% bootstrap_field type_committees_form.committees show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0 committees-filter">
+                        {% bootstrap_field form.region show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0 committees-filter">
+                        {% bootstrap_field form.prefecture show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0 committees-filter">
+                        {% bootstrap_field form.commune show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0 committees-filter">
+                        {% bootstrap_field form.canton show_label=False %}
+                    </div>
+                    <div class="col-2 col-lg mb-2 mb-lg-0 committees-filter">
+                        {% bootstrap_field form.village show_label=False %}
+                    </div>
+                    <div class="col-lg-1 col-6 mb-2 mb-lg-0">
+                        <a class="btn fs12 text-bold-family text-primary pull-right pr-0 p-lg-0"
+                           id="clear_all_filters">
+                            {% translate "Clear all filters" %}
+                        </a>
+                    </div>
+                    
+                    <div class="col-lg-12 col-12 mb-2 mb-lg-0">
+
+                        
+
+                        <a href="#" id="btn-search"
+                            class="btn btn-primary btn-xs pull-right" title="{% translate 'Search' %}">
+                            <i class="fa fa-search"></i> &nbsp; {% translate 'Search' %}
+                        </a>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <div id="committees-list"></div>
+
+                    <p>{% translate "Last table update" %} : {{ last_update|date:"d/m/Y à H:i" }} </p>
+                </div>
+                <div class="overlay" id="spin">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+
+
+<!-- Modal  modal-dialog -->
+<div class="modal fade" id="modal-committee-details" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "Committee details" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body" id="committee_details"></div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal -->
+
+
+{% endblock %}
+
+
+
+{% block javascript %}
+    {{ block.super }}
+    
+    <script src="{% static 'js/multiple_bootstrap_tables.js' %}"></script>
+    <script src="{% static 'js/cascade_requests.js' %}"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            let ids = ["id_region", "id_prefecture", "id_commune", "id_canton", "id_village"];
+            let ids_reverse = ids.reverse();
+            var type_field = "";
+            let spin = $('#spin');
+            let committees = $('#committees-list');
+            let administrative_level = $('#id_administrative_level');
+            let id_region = $('#id_region');
+            let id_prefecture = $('#id_prefecture');
+            let id_commune = $('#id_commune');
+            let id_canton = $('#id_canton');
+            let id_village = $('#id_village');
+            let id_committees = $('#id_committees');
+            let null_list = ['', ' ', undefined, null, []];
+
+
+            function loadCommittees(type_field = "") {
+                
+                if ($("#id_" + type_field).val() || type_field == "all" || !null_list.includes(id_committees.val())) {
+                    {% comment %}
+                        let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
+                        ajax_request_cascade_administrative_level(cascade_url, "id_region");
+                        ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
+                        ajax_request_cascade_administrative_level(cascade_url, "id_commune");
+                        ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
+
+                    $(".committees-filter select").attr('disabled', true);
+                    
+                    spin.show();
+                    committees.html('');
+                    $.ajax({
+                        type: "GET",
+                        url: "{% url 'dashboard:reports:reports:committees_list' %}",
+                        data: {
+                            id_region: id_region.val(),
+                            id_prefecture: id_prefecture.val(),
+                            id_commune: id_commune.val(),
+                            id_canton: id_canton.val(),
+                            id_village: id_village.val(),
+                            type_field: type_field,
+                            committees: id_committees.val()
+                        },
+                        success: function (response) {
+                            spin.hide();
+
+                            committees.html(response);
+                        },
+                        error: function (data) {
+                            spin.hide();
+                            alert(error_server_message + "Error " + data.status);
+                        }
+                    })
+                    .done(function () {
+                            $(".committees-filter select").attr('disabled', false);
+                        }
+                    );
+
+                }
+
+            }
+
+            function load_administrative_level(type_field = ""){
+                $.ajax({
+                    type: 'GET',
+                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                    data: {
+                        parent_id: $("#id_" + type_field).val()
+                    },
+                    success: function (data) {
+                        if (type_field == "region") {
+                            set_datas_administrative_level(id_prefecture, data.prefectures);
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        } else if (type_field == "prefecture") {
+                            set_datas_administrative_level(id_commune, data.communes);
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        } else if (type_field == "commune") {
+                            set_datas_administrative_level(id_canton, data.cantons);
+                            set_datas_administrative_level(id_village, data.villages);
+                        } else if (type_field == "canton") {
+                            set_datas_administrative_level(id_village, data.villages);
+                        }
+                        
+                    },
+                    error: function (data) {
+                        alert(error_server_message + "Error " + data.status);
+                        $(".committees-filter select").attr('disabled', false);
+                    }
+                }).done(function () {
+                        $(".committees-filter select").attr('disabled', false);
+                    }
+                );
+            }
+
+            loadCommittees("all");
+            load_administrative_level("all");
+
+            let id_elt;
+            for(let i=0; i<ids_reverse.length;i++){
+                //id_elt = $(`#${ids_reverse[i]}`);
+                
+                $(`.committees-filter #${ids_reverse[i]}`).on('change', function () {
+                    
+                        if($(this).attr('id') && $(this).val()){
+                            type_field = $(this).attr('id').split('_')[1];
+                            load_administrative_level(type_field);
+                        }
+                    
+                    {% comment %} if ($(this).attr('id') && $(this).val()) {
+                        type_field = $(this).attr('id').split('_')[1];
+                        load_administrative_level(type_field);
+                    } {% endcomment %}
+                    {% comment %} loadCommittees(type_field); {% endcomment %}
+                    
+
+                });
+
+            }
+
+            $("#clear_all_filters").on("click", function () {
+                type_field = "";
+                $('.committees-filter input').val('');
+                $('.committees-filter select').val(null).trigger('change.select2');
+                loadCommittees("all");
+            });
+
+            $('#btn-search').on('click', function () {
+                id_elt = $(`#id_${type_field}`);
+
+                if(!null_list.includes(type_field)){
+                    if(null_list.includes(id_elt.val())){
+                        type_field = "";
+                    }
+                }
+
+                if(null_list.includes(type_field)){
+                    for(let i=0; i<ids_reverse.length;i++){
+                        id_elt = $(`#${ids_reverse[i]}`);
+                        if(id_elt.attr('id') && id_elt.val()){
+                            type_field = id_elt.attr('id').split('_')[1];
+                            loadCommittees(type_field);
+                            break;
+                        }
+                    }
+                }else{
+                    loadCommittees(type_field);
+                }
+
+                if(!null_list.includes(id_committees.val())){
+                    loadCommittees(type_field);
+                }
+                
+            });
+        });
+    </script>
+
+
+
+{% endblock %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $("#id_committees").select2({
+            placeholder: "{% translate 'Committee' %}",
+            allowClear: true
+        });
+        $("#id_region").select2({
+            placeholder: "{% translate 'Region' %}",
+            allowClear: true
+        });
+        $("#id_prefecture").select2({
+            placeholder: "{% translate 'Prefecture' %}",
+            allowClear: true,
+        });
+        $("#id_commune").select2({
+            placeholder: "{% translate 'Commune' %}",
+            allowClear: true,
+        });
+        $("#id_canton").select2({
+            placeholder: "{% translate 'Canton' %}",
+            allowClear: true,
+        });
+        $("#id_village").select2({
+            placeholder: "{% translate 'Village' %}",
+            allowClear: true,
+        });
+
+        $('b[role="presentation"]').hide();
+        $('.select2-selection__arrow').append(
+            '<i class="fas fa-chevron-circle-down text-primary" style="margin-top:12px;"></i>');
+
+    </script>
+{% endblock select2 %}

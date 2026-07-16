@@ -43,6 +43,7 @@ from cdd.my_librairies.mail.send_mail import send_email
 from dashboard.templatetags.custom_tags import get_group_high
 from authentication.functions import get_group_high as auth_get_group_high
 from authentication import PROFESSIONAL_GROUPS, FACILITATORS_TYPES_WITH_GROUP_NAME
+from planning.vars import WORK_ENVIRONMENT
 
 
 class PlanMixin:
@@ -97,6 +98,9 @@ class PlanningListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['breadcrumb'] = False
         context['PHASES_COLORS'] = PHASES_COLORS
         context['PHASES_WITH_THEIR_NUMBERS'] = PHASES_WITH_THEIR_NUMBERS
+        context['WORK_ENVIRONMENT_LIST'] = [{'name': 'All', 'label': gettext_lazy('All')} if self.request.user.groups.filter(name="SecuritySpecialist").exists() else {'name': 'All', 'label': gettext_lazy('All'), 'attr': 'selected'}] + [
+            {'name': k, 'label': v, 'attr': 'selected'} if k == 'Field' and self.request.user.groups.filter(name="SecuritySpecialist").exists() else {'name': k, 'label': v} for k, v in WORK_ENVIRONMENT
+        ]
 
         context['is_training'] = bool(self.request.GET.get('training', '0') != '0')
         context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
@@ -203,6 +207,7 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         task_status = self.request.GET.get('task_status', 'All')
         task_type = self.request.GET.get('task_type', 'All')
         username_facilitator_user = list(filter(None, self.request.GET.getlist('username_facilitator_user[]')))
+        work_environment = list(filter(None, self.request.GET.getlist('work_environment[]')))
 
         user_groups = list(filter(None, self.request.GET.getlist('user_groups[]')))
 
@@ -373,6 +378,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
                 _query |= Q(administrative_level_ids__contains=[item])
             # activities = activities.filter(_query)
             query &= _query
+        
+        if work_environment and 'All' not in work_environment and '' not in work_environment:
+            query &= Q(work_environment__in=work_environment)
         
         activities = Activity.objects.filter(query)
 
@@ -612,6 +620,8 @@ class TaskPlanDetailView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, J
             context['activity_status_color']
         ]
         context['COMPONENTS'] = COMPONENTS
+        context['WORK_ENVIRONMENT'] = WORK_ENVIRONMENT
+        context['WORK_ENVIRONMENT_DICT'] = dict(WORK_ENVIRONMENT)
 
         return context
 
@@ -773,6 +783,8 @@ class SaveValidationView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin
                                 gettext_lazy("Evaluator"): f"{activity_validate.user.last_name} {activity_validate.user.first_name}" if activity_validate.user else (activity_validate.facilitator.name if activity_validate.facilitator else None),
                                 gettext_lazy("Date of decision"): f'{activity_validate.updated_date.strftime("%A")} {gettext_lazy("the")} {activity_validate.updated_date.strftime("%d %B %Y")}',
                                 gettext_lazy("Location"): ", ".join([v["name"] for v in activity.administrative_levels]) if activity.administrative_levels else "",
+                                gettext_lazy("Comment"): comment,
+                                gettext_lazy("Work Environment"): dict(WORK_ENVIRONMENT).get(activity.work_environment) if activity.work_environment else "",
                             },
                             "user": {
                                 gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),
@@ -916,6 +928,7 @@ class AddTaskPlanView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin, JSON
         context['times_split'] = [{ 'name': TIMES_H[i], 'id': i } for i in range(len(TIMES_H))]
         context['TYPES_VACATION'] = TYPES_VACATION
         context['COMPONENTS'] = COMPONENTS
+        context['WORK_ENVIRONMENT'] = WORK_ENVIRONMENT
         
 
         return context
@@ -953,6 +966,8 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         
         is_vacation = self.request.POST.get('is_vacation') in ('true', True)
         vacation_type = self.request.POST.get('vacation_type')
+        work_environment = self.request.POST.get('work_environment')
+        work_environment_is_another_activity = self.request.POST.get('work_environment_is_another_activity')
         absence_date_start = self.request.POST.get('absence_date_start')
         absence_date_end = self.request.POST.get('absence_date_end')
         return_date = self.request.POST.get('return_date')
@@ -989,6 +1004,7 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     "name": free_task_title if is_free_task else (process_activity.name if process_activity else None),
                     "activty_sql_id": process_activity.id if process_activity else None,
                     "component": component,
+                    "work_environment": work_environment_is_another_activity if work_environment_is_another_activity else None,
 
                     "administrative_level_ids": administrative_level_ids,
                     "administrative_levels": administrative_levels,
@@ -1027,6 +1043,7 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                                     gettext_lazy("Planned on"): activity_plan_date,
                                     gettext_lazy("Updated on"): f'{activity.updated_date.strftime("%A")} {gettext_lazy("the")} {activity.updated_date.strftime("%d %B %Y")}',
                                     gettext_lazy("Location"): ", ".join([v["name"] for v in activity.administrative_levels]) if activity.administrative_levels else "",
+                                    gettext_lazy("Work Environment"): dict(WORK_ENVIRONMENT).get(activity.work_environment) if activity.work_environment else "",
                                 },
                                 "user": {
                                     gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),
@@ -1077,6 +1094,7 @@ class SaveActivityView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 activity.component = component
                 activity.administrative_level_ids = administrative_level_ids
                 activity.administrative_levels = administrative_levels
+                activity.work_environment = work_environment if work_environment else None
                 activity.planned_date = datetime.strptime(plan_date if plan_date else activity_date_start, '%Y-%m-%d').date()
                 activity.planned_datetime_start = parse_datetime(f"{activity_date_start}T{start_time if start_time else '00:00'}:00.000000Z").replace(tzinfo=pytz.UTC) if (is_period_dates and activity_date_start) else datetime.strptime(f"{plan_date} {start_time}", '%Y-%m-%d %H:%M')
                 activity.planned_datetime_end = parse_datetime(f"{activity_date_end}T{end_time if end_time else '23:45'}:00.000000Z").replace(tzinfo=pytz.UTC) if (is_period_dates and activity_date_end) else datetime.strptime(f"{plan_date} {end_time}", '%Y-%m-%d %H:%M')

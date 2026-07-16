@@ -21,7 +21,7 @@ class FilterTaskForm(forms.Form):
     phase = forms.ChoiceField()
     activity = forms.ChoiceField()
     task = forms.ChoiceField()
-    is_validated = forms.ChoiceField()
+    is_validated = forms.MultipleChoiceField()
 
     def __init__(self, *args, **kwargs):
         initial = kwargs.get('initial')
@@ -29,6 +29,8 @@ class FilterTaskForm(forms.Form):
         project_id = initial.get('project_id')
         cycle_id = initial.get('cycle_id')
         cvds = initial.get('cvds')
+        administrative_level_id = initial.get('administrative_level_id')
+        tasks_status = initial.get('tasks_status')
         super().__init__(*args, **kwargs)
 
         # nsc = NoSQLClient()
@@ -89,6 +91,8 @@ class FilterTaskForm(forms.Form):
         # self.fields['administrative_level'].widget.choices = get_choices(
         #     query_result_administrativelevels, "id", "name")
         self.fields['administrative_level'].widget.choices = get_choices(cvds, "village_id", "name")
+        if administrative_level_id:
+            self.fields['administrative_level'].initial = administrative_level_id
         # self.fields['phase'].widget.choices = get_choices(query_result_phases, "name", "name")
         # self.fields['activity'].widget.choices = get_choices(query_result_activities, "name", "name")
         # self.fields['task'].widget.choices = get_choices(query_result_tasks, "name", "name")
@@ -110,6 +114,7 @@ class FilterTaskForm(forms.Form):
             ('Invalidated',  _('Invalidated')), 
             ('Validated',  _('Validated'))
         ]
+        self.fields['is_validated'].initial = tasks_status
     
     def check_name(self, liste, obj):
         for elt in liste:

@@ -53,7 +53,7 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
         context['list_fields'] = ["phase", "activity", "task", "region", "prefecture", "commune", "canton", "village"]
         
         
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).last().updated_date
+        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
         
 
         return context
@@ -270,6 +270,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=project_mis_id)
         assigns_adl_ids = list(assigns.values_list('administrative_level_id', flat=True))
         aggregated_status_project = AggregatedStatus.objects.filter(project_id=project_id, cycle_id=self.request.session.get('cycle_id'), facilitator=None)
+        aggregated_status_project_adl_ids = list(aggregated_status_project.values_list('administrative_level_id', flat=True))
         aggregated_status_taks = None
         if _type == "all" or type_p_a_t in ["phase", "activity", "task"]:
             tasks = []
@@ -303,7 +304,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
 
                 villages_ids = list(set([
                     v.id for v in mis_objects_call.filter_objects(
-                        AdministrativeLevel,type='Village', id__in=[int(v['administrative_id']) for v in liste_villages], administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]) \
+                        AdministrativeLevel,type='Village', id__in=[int(v['administrative_id']) for v in liste_villages if int(v['administrative_id']) in aggregated_status_project_adl_ids], administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]) \
                     if v.id in assigns_adl_ids
                 ]))
                 
@@ -323,38 +324,39 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
                 )
-                regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
-                regions[region.name]['nbr_tasks'] = sums['total_tasks'] or 0
-                regions[region.name]['nbr_tasks_validated'] = sums['total_tasks_validated'] or 0
-                regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
-                regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
-                regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
-                regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                if regions and region.name in regions:
+                    regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
+                    regions[region.name]['nbr_tasks'] = sums['total_tasks'] or 0
+                    regions[region.name]['nbr_tasks_validated'] = sums['total_tasks_validated'] or 0
+                    regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
+                    regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
 
-                regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
-                regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
-            
-                regions[region.name]['nbr_villages'] = len(villages_ids)
-                regions[region.name]['nbr_cvds'] = cvds.count()
+                    regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
+                    regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
                 
-                assign_facilitators = assigns.filter(
-                    administrative_level_id__in=villages_ids,
-                    project_id=project_mis_id,
-                    activated=True
-                )
-                criteria = FacilitatorCriteria(
-                    id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
-                    develop_mode=False,
-                    training_mode=False,
-                    projects__id=[self.request.session.get('project_id')]
-                )
-                _facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
-                
-                nbr_facilitators += _facilitators.count()
-                nbr_villages += len(villages_ids)
-                nbr_cvds += cvds.count()
-                nbr_tasks += regions[region.name]['nbr_tasks']
-                nbr_tasks_completed += regions[region.name]['nbr_tasks_completed']
+                    regions[region.name]['nbr_villages'] = len(villages_ids)
+                    regions[region.name]['nbr_cvds'] = cvds.count()
+                    
+                    assign_facilitators = assigns.filter(
+                        administrative_level_id__in=villages_ids,
+                        project_id=project_mis_id,
+                        activated=True
+                    )
+                    criteria = FacilitatorCriteria(
+                        id__in=list(set([int(f.facilitator_id) for f in assign_facilitators])),
+                        develop_mode=False,
+                        training_mode=False,
+                        projects__id=[self.request.session.get('project_id')]
+                    )
+                    _facilitators = FacilitatorRepository().find_by_criteria(criteria=criteria)
+                    
+                    nbr_facilitators += _facilitators.count()
+                    nbr_villages += len(villages_ids)
+                    nbr_cvds += cvds.count()
+                    nbr_tasks += regions[region.name]['nbr_tasks']
+                    nbr_tasks_completed += regions[region.name]['nbr_tasks_completed']
             
 
         elif _type in ["phase", "activity", "task", "all"]:
@@ -362,7 +364,10 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             for k, v in regions.items():
                 villages_ids = list(set([
                     v.id for v in mis_objects_call.filter_objects(
-                        AdministrativeLevel,type='Village', parent__parent__parent__parent__name=k, administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]) \
+                        AdministrativeLevel,type='Village', 
+                        id__in=aggregated_status_project_adl_ids,
+                        parent__parent__parent__parent__name=k, administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]
+                    ) \
                     if v.id in assigns_adl_ids
                 ]))
                 cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)

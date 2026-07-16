@@ -1,5 +1,6 @@
 import itertools
 from django.db import transaction
+from django.utils import timezone
 
 from no_sql_client import NoSQLClient
 from administrativelevels import models as administrativelevels_models
@@ -10,7 +11,7 @@ from process_manager.models import Project, AggregatedStatusFacilitator, Aggrega
 from subprojects.models import Project as ProjectMis
 
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500
 def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[], batch_size=BATCH_SIZE):
     for i in range(0, len(objects), batch_size):
         batch = objects[i:i + batch_size]
@@ -206,10 +207,11 @@ def get_db_task(no_sql_dbs_names_with_village_ids: dict, task__id: str):
 
 
 def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_cycle_id, cdd_project_couch_id, project_mis):
+    now = timezone.now()
     _facilitators = []
     agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=cdd_project_id, cycle_id=cdd_cycle_id)
     dict_agg_s_fs = {str(ag.facilitator.id): ag for ag in agg_s_fs}
-    havent_update = len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3
+    havent_update = (len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3) if len(agg_s_fs) >= 3 else True
     if havent_update:
         for f in facilitators:
             _f = dict_agg_s_fs.get(str(f.id))
@@ -437,6 +439,7 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
 
             ag_f.administrative_level_headquarters_villages_infos = adl_headquarters_villages_infos
             ag_f.new_update_exists = False
+            ag_f.updated_date = now
             # ag_f.save()
             if ag_f_action == "create":
                 ag_f_bucket_create.append(ag_f)
@@ -462,7 +465,7 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                     'total_tasks_waiting_validation_stabilized', 'last_activity', 'total_tasks_completed', 'total_tasks', 'total_tasks_validated',
                     'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 
                     'total_tasks_waiting_validation', 'last_task_done_current_project', 'last_task_done_stabilized', 'last_task_done', 
-                    'administrative_level_headquarters_villages_infos', 'new_update_exists'
+                    'administrative_level_headquarters_villages_infos', 'new_update_exists', 'updated_date'
                 ]
             )
 

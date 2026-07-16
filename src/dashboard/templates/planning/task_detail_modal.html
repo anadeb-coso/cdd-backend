@@ -206,6 +206,16 @@
                                 </div>
                                 {% endif %}
 
+                                {% if task.type != "vacation" and task.work_environment %}
+                                <div class="form-group row">
+                                    <label class="col-sm-3 col-form-label">{% translate "Work Environment" %}</label>
+                                    <div class="col-sm-9">
+                                        <input type="text" readonly value="{{ WORK_ENVIRONMENT_DICT|get:task.work_environment }}" class="form-control" />
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
+                                {% endif %}
+
                                 {% if task.type != "vacation" and task.component %}
                                 <div class="form-group row">
                                     <label class="col-sm-3 col-form-label">{% translate "Component" %}</label>
@@ -377,7 +387,19 @@
                                         <div class="clearfix"></div>
                                     </div>
 
-                                    
+                                    <div class="form-group row" id="id_work_environment_content">
+                                        <label class="col-sm-3 col-form-label">{% translate "Work Environment" %} <i class="fas fa-hand-point-right"></i></label>
+                                        <div class="col-sm-4">
+                                            <select class="form-control custom-select" name="work_environment" id="id_work_environment_selected">
+                                                {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                {% for k, v in WORK_ENVIRONMENT %}
+                                                    <option value="{{ k }}" {% if k == task.work_environment %}selected{% endif %} >{{ v }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="clearfix"></div>
+                                    </div>
+
                                     <div class="form-group row" id="id_component_content">
                                         <label class="col-sm-3 col-form-label">{% translate "Component" %} <i class="fas fa-hand-point-right"></i></label>
                                         <div class="col-sm-4">
@@ -549,6 +571,16 @@
                                                 </div>
                                                 <div class="clearfix"></div>
                                             </div>
+                                            
+                                            {% if task.type != "vacation" and task_plan.another_detail.work_environment %}
+                                            <div class="form-group row">
+                                                <label class="col-sm-3 col-form-label">{% translate "Work Environment" %}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" readonly value="{{ task_plan.another_detail.work_environment }}" class="form-control" />
+                                                </div>
+                                                <div class="clearfix"></div>
+                                            </div>
+                                            {% endif %}
                                             
                                             {% if task.type != "vacation" and task_plan.another_detail.component %}
                                             <div class="form-group row">
@@ -819,6 +851,7 @@
         let id_total_people_present_under_35 = $("#id_total_people_present_under_35");
         let id_total_people_present = $("#id_total_people_present");
         let id_component_selected = $("#id_component_selected");
+        let id_work_environment_selected = $("#id_work_environment_selected");
         
         let id_task_is_completed_content = $("#id_task_is_completed_content");
         let id_task_is_not_completed_content = $("#id_task_is_not_completed_content");
@@ -838,6 +871,7 @@
         let id_total_people_present_under_35_content = $("#id_total_people_present_under_35_content");
         let id_total_people_present_content = $("#id_total_people_present_content");
         let id_component_selected_content = $("#id_component_selected_content");
+        let id_work_environment_selected_content = $("#id_work_environment_selected_content");
 
         let id_save_completed_activity = $("#id_save_completed_activity");
         id_save_completed_activity.prop('disabled', true);
@@ -1050,6 +1084,7 @@
         id_phase_selected_content.hide();
         id_activity_selected_content.hide();
         id_component_selected_content.hide();
+        id_work_environment_selected_content.hide();
         id_report_activity_content.hide();
         id_total_men_present_over_35_content.hide();
         id_total_women_present_over_35_content.hide();
@@ -1139,6 +1174,7 @@
                 id_phase_selected_content.hide();
                 id_activity_selected_content.hide();
                 id_component_selected_content.hide();
+                id_work_environment_selected_content.hide();
                 id_report_activity_content.hide();
                 id_total_men_present_over_35_content.hide();
                 id_total_women_present_over_35_content.hide();
@@ -1158,6 +1194,7 @@
                 id_phase_selected.val(null).trigger('change.select2');
                 id_activity_selected.val(null).trigger('change.select2');
                 id_component_selected.val(null).trigger('change.select2');
+                id_work_environment_selected.val(null).trigger('change.select2');
                 id_report_activity.val(null);
                 id_total_men_present_over_35.val(null);
                 id_total_women_present_over_35.val(null);
@@ -1193,6 +1230,7 @@
                 id_phase_selected_content.hide();
                 id_activity_selected_content.hide();
                 id_component_selected_content.hide();
+                id_work_environment_selected_content.hide();
                 id_report_activity_content.hide();
                 id_total_men_present_over_35_content.hide();
                 id_total_women_present_over_35_content.hide();
@@ -1208,6 +1246,7 @@
                 id_phase_selected.val(null).trigger('change.select2');
                 id_activity_selected.val(null).trigger('change.select2');
                 id_component_selected.val(null).trigger('change.select2');
+                id_work_environment_selected.val(null).trigger('change.select2');
                 id_report_activity.val(null);
                 id_total_men_present_over_35.val(null);
                 id_total_women_present_over_35.val(null);
@@ -1240,8 +1279,8 @@
                 (!id_task_is_completed.is(':checked') && !id_task_is_not_completed.is(':checked')) || 
                 (id_task_is_completed.is(':checked') && (['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val()))) || 
                 (id_task_is_not_completed.is(':checked') && ['', null].includes(id_comment_undo_activity.val())) || 
-                (id_is_another_activity.is(':checked') && !id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val()))) || 
-                (id_is_another_activity.is(':checked') && id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val())))
+                (id_is_another_activity.is(':checked') && !id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_work_environment_selected.val()) || ['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val()))) || 
+                (id_is_another_activity.is(':checked') && id_is_free_activity_done.is(':checked') && (['', null].includes(id_component_selected.val()) || ['', null].includes(id_work_environment_selected.val()) || ['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_report_activity.val()) || ['', null].includes(id_total_men_present_over_35.val()) || ['', null].includes(id_total_women_present_over_35.val()) || ['', null].includes(id_total_men_present_under_35.val()) || ['', null].includes(id_total_women_present_under_35.val())))
             ){
                 id_save_completed_activity.prop('disabled', true);
             }else{
@@ -1343,6 +1382,7 @@
                     phase_id: id_phase_selected.val(),
                     process_activity_id: id_activity_selected.val(),
                     component: id_component_selected.val(),
+                    work_environment: id_work_environment_selected.val(),
                     comment: id_report_activity.val(),
                     total_men_present_over_35: id_total_men_present_over_35.val(),
                     total_women_present_over_35: id_total_women_present_over_35.val(),
@@ -1437,6 +1477,11 @@
         });
         $("#id_component_selected").select2({
             placeholder: "{% translate 'Component' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_work_environment_selected").select2({
+            placeholder: "{% translate 'Work Environment' %}",
             allowClear: true,
             width: '100%'
         });

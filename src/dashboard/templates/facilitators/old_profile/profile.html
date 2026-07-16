@@ -156,6 +156,11 @@ input {
             </div>
         </div>
     </div>
+    
+    {% if tasks_status %}
+        {{ tasks_status|json_script:"tasks-data-status" }}
+    {% endif %}
+
 {% endblock content %}
 
 
@@ -177,19 +182,43 @@ input {
         let task = $('#id_task');
         let is_validated = $('#id_is_validated');
 
+        let administrative_level_id;
+        let tasks_status;
+
         function loadTasks() {
             spin.show();
+
+            administrative_level_id = administrative_level.val();
+            tasks_status = is_validated.val();
+            //Default
+            
+            if([undefined, null, "", " "].includes(administrative_level_id)){
+                {% if administrative_level_id %}
+                    administrative_level_id = parseInt("{{ administrative_level_id }}");
+                {% endif %}
+            }
+
+            if([undefined, null, "", " ", []].includes(tasks_status)){
+                {% if tasks_status %}
+                    tasks_status = JSON.parse(
+                        document.getElementById('tasks-data-status').textContent
+                    );
+                {% endif %}
+            }
+            
+            //End default
+
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:facilitators:old_task_list'  facilitator.no_sql_db_name %}",
                 data: {
                     index: index,
                     offset: offset,
-                    administrative_level: administrative_level.val(),
+                    administrative_level: administrative_level_id,
                     phase: phase.val(),
                     activity: activity.val(),
                     task: task.val(),
-                    is_validated: is_validated.val()
+                    is_validated: tasks_status
                 },
                 success: function (response) {
                     tasks.html(response);

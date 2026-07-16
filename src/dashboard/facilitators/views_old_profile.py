@@ -11,13 +11,14 @@ from authentication.models import Facilitator
 from dashboard.facilitators.forms import FilterTaskForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin
 from no_sql_client import NoSQLClient
-from .functions import get_cvds, single_task_by_cvd, get_search_for_stabilized_facilitator_dbs
+from .functions import get_cvds, single_task_by_cvd, get_search_for_stabilized_facilitator_dbs, get_headquarters_village_id
 from cdd.functions import datetime_complet_str
 from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject
 from administrativelevels.models import AdministrativeLevel
+from cdd.constants import TASKS_STATUS
 
 
 class FacilitatorMixin(LoginRequiredMixin):
@@ -117,6 +118,14 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         nsc = NoSQLClient()
+        
+        administrative_level_id = self.request.GET.get('administrative_level_id')
+        context['administrative_level_id'] = get_headquarters_village_id(self.cvds, administrative_level_id)
+        
+        tasks_status = self.request.GET.get('tasks_status', None)
+        if tasks_status:
+            tasks_status = [elt.strip() for elt in tasks_status.split(",") if elt and elt.strip() in TASKS_STATUS]
+        context['tasks_status'] = tasks_status
 
         context['facilitator'] = self.obj
         context['form'] = FilterTaskForm(
@@ -124,19 +133,29 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
                 'facilitator_db_name': self.facilitator_db_name, 
                 'project_id': self.request.session.get('project_id'),
                 'cycle_id': self.request.session.get('cycle_id'),
-                'cvds': self.cvds
+                'cvds': self.cvds,
+                'administrative_level_id': context['administrative_level_id'],
+                'tasks_status': context['tasks_status']
             }
         )
         context['breadcrumb'] = False
         context['colors'] = ['warning', 'mediumslateblue', 'gray', 'mediumpurple', 'plum', 'primary', 'danger']
 
-        facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
-        facilitator_docs = [doc for doc in facilitator_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == self.request.session.get('project_couch_id')]
+        # facilitator_docs = self.facilitator_db.all_docs(include_docs=True)['rows']
+        query = {"type": "task", 'cycle_id': self.request.session.get('cycle_couch_id'), 'project_id': self.request.session.get('project_couch_id')}
+        if context['administrative_level_id']:
+            query["administrative_level_id"] = context['administrative_level_id']
+        facilitator_docs = self.facilitator_db.get_query_result(
+            query, 
+            limit=1000000
+        )[:]
+        # facilitator_docs = [doc for doc in facilitator_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('doc').get('project_id') == self.request.session.get('project_couch_id')]
+        facilitator_docs = [doc for doc in facilitator_docs if doc and doc.get('cycle_id') == self.request.session.get('cycle_couch_id') and doc.get('project_id') == self.request.session.get('project_couch_id')]
 
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks = 0
         for doc in facilitator_docs:
-            doc = doc.get('doc')
+            # doc = doc.get('doc')
             if doc.get('type') == "task" and doc.get('last_updated') and last_activity_date < datetime_complet_str(doc.get('last_updated')):
                 last_activity_date = datetime_complet_str(doc.get('last_updated'))
             total_tasks += 1
@@ -144,7 +163,7 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             _db = nsc.get_db(k_db_name)
             facilitator_docs = _db.get_query_result(
-                {"type": "task", 'cycle_id': self.request.session.get('cycle_couch_id'), 'project_id': self.request.session.get('project_couch_id'), "administrative_level_id": {"$in": v['ids']}}, 
+                {"type": "task", 'cycle_id': self.request.session.get('cycle_couch_id'), 'project_id': self.request.session.get('project_couch_id'), "administrative_level_id": {"$in": [context['administrative_level_id']] if context['administrative_level_id'] else v['ids']}}, 
                 limit=1000000
             )[:]
             for doc in facilitator_docs:
@@ -175,7 +194,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         phase_name = self.request.GET.get('phase')
         activity_name = self.request.GET.get('activity')
         task_name = self.request.GET.get('task')
-        is_validated = self.request.GET.get('is_validated', None)
+        is_validated = self.request.GET.getlist('is_validated[]', [])
 
         selector = {
             "type": "task",
@@ -193,7 +212,7 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
             selector["activity_name"] = activity_name
         if task_name:
             selector["name"] = task_name
-        if is_validated not in (None, ''):
+        if is_validated not in (None, '', []):
             """
             {
               task.completed != true ? (
@@ -207,65 +226,90 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
               )
             }
             """
-            
-            if is_validated == "Not_started":
-                selector["completed"] = False
-                selector["form_response"] = []
-            elif is_validated == "In_progress":
-                selector["completed"] = False
-                selector["$or"] = [
-                    {"form_response": { "$elemMatch": {} }},
-                    {
-                        "$and": [
-                            {"form_response": {"$exists": True}},
-                            {"form_response": {"$ne": []}}
+            selector["$or"] = []
+            if "Not_started" in is_validated:
+                selector["$or"].append({
+                        "completed": False,
+                        "form_response": []
+                    }
+                )
+            if "In_progress" in is_validated:
+                selector["$or"].append({
+                        "completed": False,
+                        "$or": [
+                            {"form_response": { "$elemMatch": {} }},
+                            {
+                                "$and": [
+                                    {"form_response": {"$exists": True}},
+                                    {"form_response": {"$ne": []}}
+                                ]
+                            }
                         ]
                     }
-                ]
-            elif is_validated == "Invalidated_reset_in_progress":
-                selector["completed"] = False
-                selector["validated"] = False
-                selector["$or"] = [
-                    {"form_response": { "$elemMatch": {} }},
-                    {
-                        "$and": [
-                            {"form_response": {"$exists": True}},
-                            {"form_response": {"$ne": []}}
+                )
+            if "Invalidated_reset_in_progress" in is_validated:
+                selector["$or"].append({
+                        "completed": False,
+                        "validated": False,
+                        "$or": [
+                            {"form_response": { "$elemMatch": {} }},
+                            {
+                                "$and": [
+                                    {"form_response": {"$exists": True}},
+                                    {"form_response": {"$ne": []}}
+                                ]
+                            }
                         ]
                     }
-                ]
-            elif is_validated == "Completed_awaiting_validation":
-                selector["completed"] = True
-                selector["validated"] = { "$exists": False }
-            elif is_validated == "Invalidated_updated_after_invalidation":
-                selector["completed"] = True
-                selector["updated_after_invalidation"] = True
-                selector["validated"] = False
-            elif is_validated == "Invalidated_not_returned_after_invalidation":
-                selector["completed"] = True
-                selector["$or"] = [
-                    {
-                        "updated_after_invalidation": {
-                            "$in": [
-                                False,
-                                None,
-                                ""
-                            ]
-                        }
-                    },
-                    {
-                        "updated_after_invalidation": {
-                            "$exists": False
-                        }
+                )
+                
+            if "Completed_awaiting_validation" in is_validated:
+                selector["$or"].append({
+                        "completed": True,
+                        "validated": { "$exists": False }
                     }
-                ]
-                selector["validated"] = False
-            elif is_validated == "Invalidated":
-                selector["completed"] = True
-                selector["validated"] = False
-            elif is_validated == "Validated":
-                selector["completed"] = True
-                selector["validated"] = True
+                )
+            if "Invalidated_updated_after_invalidation" in is_validated:
+                selector["$or"].append({
+                        "completed": True,
+                        "updated_after_invalidation": True,
+                        "validated": False
+                    }
+                )
+            if "Invalidated_not_returned_after_invalidation" in is_validated:
+                selector["$or"].append({
+                        "completed": True,
+                        "$or": [
+                            {
+                                "updated_after_invalidation": {
+                                    "$in": [
+                                        False,
+                                        None,
+                                        ""
+                                    ]
+                                }
+                            },
+                            {
+                                "updated_after_invalidation": {
+                                    "$exists": False
+                                }
+                            }
+                        ],
+                        "validated": False
+                    }
+                )
+            if "Invalidated" in is_validated:
+                selector["$or"].append({
+                        "completed": True,
+                        "validated": False
+                    }
+                )
+            if "Validated" in is_validated:
+                selector["$or"].append({
+                        "completed": True,
+                        "validated": True
+                    }
+                )
 
             # if is_validated == "Validated":
             #     selector["validated"] = True

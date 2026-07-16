@@ -92,7 +92,13 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
         for f in fs.order_by("name", "username"):
             dict_administrative_levels_with_infos = {}
             already_count_facilitator = False
-            facilitator_db = nsc.get_db(f.no_sql_db_name)
+
+            try:
+                facilitator_db = nsc.get_db(f.no_sql_db_name)
+            except Exception as e:
+                print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+                continue
+
             query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
             f_doc = None
             cvds = []
@@ -232,7 +238,11 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
         for f in fs.order_by("name", "username"):
             dict_administrative_levels_with_infos = {}
             already_count_facilitator = False
-            facilitator_db = nsc.get_db(f.no_sql_db_name)
+            try:
+                facilitator_db = nsc.get_db(f.no_sql_db_name)
+            except Exception as e:
+                print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+                continue
             query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
             
             f_doc = None
@@ -529,7 +539,11 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
     for f in fs.order_by("name", "username"):
         dict_administrative_levels_with_infos = {}
         already_count_facilitator = False
-        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        try:
+            facilitator_db = nsc.get_db(f.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+            continue
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
         
         f_doc = None
@@ -845,7 +859,11 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
     for f in fs.order_by("name", "username"):
         dict_administrative_levels_with_infos = {}
         already_count_facilitator = False
-        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        try:
+            facilitator_db = nsc.get_db(f.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+            continue
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
         
         f_doc = None
@@ -1101,7 +1119,11 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
     for f in fs.order_by("name", "username"):
         dict_administrative_levels_with_infos = {}
         already_count_facilitator = False
-        facilitator_db = nsc.get_db(f.no_sql_db_name)
+        try:
+            facilitator_db = nsc.get_db(f.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+            continue
         query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
         f_doc = None
         cvds = []

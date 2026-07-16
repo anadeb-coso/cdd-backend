@@ -753,7 +753,12 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
     for f in fs.order_by("name", "username"):
         dict_administrative_levels_with_infos = {}
         already_count_facilitator = False
-        facilitator_db = nsc.get_db(f.no_sql_db_name)
+
+        try:
+            facilitator_db = nsc.get_db(f.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
+            continue
 
         tasks_names = [
             "Etablissement du profil du village", 
@@ -6021,7 +6026,13 @@ def save_csv_datas_in_db(project_couch_id, cycle_couch_id, datas_file: dict) -> 
                     if _cvd.geographical_unit.canton.id == ad_canton.id:
                         cvd = _cvd
 
-                facilitator_db = nsc.get_db(get_value(datas_file["ind_178"][count]))
+                
+                try:
+                    facilitator_db = nsc.get_db(get_value(datas_file["ind_178"][count]))
+                except Exception as e:
+                    print(f"Error occurred while fetching database for facilitator: {e}")
+                    continue
+
                 if cvd:
                     headquarters_village = cvd.headquarters_village
                     # 20 Etablissement du profil du village

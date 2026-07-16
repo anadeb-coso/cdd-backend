@@ -104,7 +104,12 @@ def all_cdd_datas(facilitator_dbs_name, params={"type":"All", "ids_administrativ
     all_datas = {}
     
     for facilitator in fs:
-        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+
+        try:
+            facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
+        except Exception as e:
+            print(f"Error occurred while fetching database for facilitator {facilitator.name}: {e}")
+            continue
         
         fc_tasks = facilitator_database.get_query_result(
             selector

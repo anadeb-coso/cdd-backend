@@ -485,15 +485,19 @@ msgstr "Coordonnateur National"
 
 #: .\dashboard\report\pages\facilitators.py
 msgid "Reports"
-msgstr "Etats"
+msgstr "Rapports"
 
 #: .\dashboard\report\pages\facilitators.py
 msgid "reports"
-msgstr "états"
+msgstr "rapport"
 
 #: .\dashboard\report\pages\facilitators.py
 msgid "Report of"
-msgstr "Etat de"
+msgstr "Rapport de"
+
+#: .\dashboard\report\pages\facilitators.py
+msgid "State of"
+msgstr "État de"
 
 #: .\dashboard\report\pages\facilitators.py
 msgid "to"
@@ -549,11 +553,19 @@ msgstr "Période"
 
 #: .\dashboard\templates\report\pdf\facilitators_satus.html
 msgid "Report of Facilitators"
-msgstr "Etat des Animateurs communautaires"
+msgstr "Rapport des Animateurs communautaires"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "State of Facilitators"
+msgstr "État des Animateurs communautaires"
 
 #: .\dashboard\templates\report\pdf\facilitators_satus.html
 msgid "Report of one Facilitator"
-msgstr "Etat d'un Animateur communautaire"
+msgstr "Rapport d'un Animateur communautaire"
+
+#: .\dashboard\templates\report\pdf\facilitators_satus.html
+msgid "State of one Facilitator"
+msgstr "État d'un Animateur communautaire"
 
 #: .\dashboard\templates\report\pdf\facilitators_satus.html
 msgid "Details of the Facilitator's report"
@@ -2255,6 +2267,14 @@ msgid "Tasks Invalidated Review"
 msgstr "Tâches invalidées revues"
 
 #: .\dashboard\process_manager\views.py
+msgid "Invalidated tasks reviewed by the facilitator (Pending validation)"
+msgstr "Tâches invalidées revues par l'AC (En attente de validation)"
+
+#: .\dashboard\process_manager\views.py
+msgid "Tasks Invalidated Unreviewed by the facilitator"
+msgstr "Tâches invalidées non revues par l'AC"
+
+#: .\dashboard\process_manager\views.py
 msgid "Tasks Invalidated Unreview"
 msgstr "Tâches invalidées non revues"
 
@@ -2334,3 +2354,179 @@ msgstr "Voir"
 #: .\dashboard
 msgid "See details"
 msgstr "Voir détails"
+
+#: .\dashboard
+msgid "Requires a change of project"
+msgstr "Nécessite un changement de projet"
+
+#: .\dashboard
+msgid "Update your service areas"
+msgstr "Mise à jour de vos zones d'intervention"
+
+#: .\dashboard
+msgid "Below you will find information relating to your areas of intervention."
+msgstr "Vous trouverez ci-dessous les informations relatives à vos zones d'intervention."
+
+#: .\dashboard
+msgid "Areas of ​​intervention"
+msgstr "Zones d'intervention"
+
+#: .\dashboard
+msgid "Default zones"
+msgstr "Zones par défaut"
+
+#: .\dashboard
+msgid "Additional locations"
+msgstr "Localités supplémentaires"
+
+#: .\dashboard
+msgid "and"
+msgstr "et"
+
+#: .\dashboard
+msgid "Percentage of decisions"
+msgstr "Pourcentage de décisions"
+
+#: .\dashboard
+msgid "states"
+msgstr "états"
+
+#: .\dashboard
+msgid "state"
+msgstr "état"
+
+#: .\dashboard
+msgid "States"
+msgstr "États"
+
+#: .\dashboard
+msgid "State"
+msgstr "État"
+
+#: .\dashboard
+msgid "Village profile"
+msgstr "Profil du village"
+
+#: .\dashboard
+msgid "Committees"
+msgstr "Comités"
+
+#: .\dashboard
+msgid "Committee"
+msgstr "Comité"
+
+#: .\dashboard
+msgid "New"
+msgstr "Nouveau"
+
+#: .\dashboard
+msgid "Renewed"
+msgstr "Renouvelé"
+
+#: .\dashboard
+msgid "Trained"
+msgstr "Formé"
+
+#: .\dashboard
+msgid "Included women?"
+msgstr "Les femmes incluses ?"
+
+#: .\dashboard
+msgid "Voting method"
+msgstr "Méthode de vote"
+
+#: .\dashboard
+msgid "Implementation date"
+msgstr "Date de mise en place"
+
+#: .\dashboard
+msgid "NBR. Members"
+msgstr "NBR. Membre"
+
+#: .\dashboard
+msgid "Existing"
+msgstr "Existait"
+
+#: .\dashboard
+msgid "Committee members"
+msgstr "Membres du comité"
+
+#: .\dashboard
+msgid "Village Committees"
+msgstr "Comités Villageois"
+
+#: .\dashboard
+msgid "Cantonal Committees"
+msgstr "Comités Cantonal"
+
+#: .\dashboard
+msgid "See Presidents"
+msgstr "Voir les Présidents"
+
+#: .\dashboard
+msgid "See Secretaries"
+msgstr "Voir les Secrétaires"
+
+#: .\dashboard
+msgid "See Treasurer"
+msgstr "Voir les Trésorier"
+
+#: .\dashboard
+msgid "See village chiefs"
+msgstr "Voir les chefs de village"
+
+#: .\dashboard
+msgid "Youth representatives"
+msgstr "Représentants des jeunes"
+
+#: .\dashboard
+msgid "See Women Leaders"
+msgstr "Voir les femmes Leaders"
+
+#: .\dashboard
+msgid "List of presidents"
+msgstr "Liste des présidents"
+
+#: .\dashboard
+msgid "List of Secretaries-General"
+msgstr "Liste des Secrétaires Généraux"
+
+#: .\dashboard
+msgid "List of Treasurers General"
+msgstr "Liste des trésoriers Généraux"
+
+#: .\dashboard
+msgid "List of Village Chiefs"
+msgstr "Liste des Chefs de village"
+
+#: .\dashboard
+msgid "List of Women Leaders"
+msgstr "Liste des Leaders des femmes"
+
+#: .\dashboard
+msgid "List of Youth Representatives"
+msgstr "Liste des Représentants des Jeunes"
+
+#: .\dashboard
+msgid "Office"
+msgstr "Bureau"
+
+#: .\dashboard
+msgid "Field"
+msgstr "Terrain"
+
+#: .\dashboard
+msgid "Hotel/Workshop"
+msgstr "Hôtel/Atelier"
+
+#: .\dashboard
+msgid "Remote"
+msgstr "Distance"
+
+#: .\dashboard
+msgid "Overseas assignment"
+msgstr "Mission hors du pays"
+
+#: .\dashboard
+msgid "Work Environment"
+msgstr "Environnement de travail"

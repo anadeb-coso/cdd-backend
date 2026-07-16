@@ -1,7 +1,12 @@
 from django.core.management.base import BaseCommand
 import os
+from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from dashboard.tasks import sync_celery_tasks_re, sync_aggregated_status_on_adl
 from process_manager.models import Project, Cycle, AggregatedStatusFacilitator
+from cdd.call_objects_from_other_db import mis_objects_call
+from subprojects.models import Project as MisProject
+from dashboard.facilitators.functions import update_facilitators_stats
 
 class Command(BaseCommand):
     help = 'Update the AggregatedStatus objects for the funnel'
@@ -78,6 +83,26 @@ class Command(BaseCommand):
             if execute_sync_celery_tasks_re_function or execute_sync_aggregated_status_on_adl_function:
                 AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
             
+                #Sync facilitators stats
+                print("Sync facilitators stats")
+                _project = Project.objects.get(id=project_id)
+                facilitators = update_facilitators_stats(
+                    FacilitatorRepository().find_by_criteria(
+                        criteria=FacilitatorCriteria(
+                            facilitator_type='community_facilitator',
+                            develop_mode=False,
+                            training_mode=False,
+                            active=True,
+                            projects__id=[project_id]
+                        )
+                    ), 
+                    [],
+                    project_id, 
+                    cycle_id,
+                    _project.couch_id,
+                    mis_objects_call.get_object(MisProject, name=_project.name)
+                )
+                print("End Sync facilitators stats", len(facilitators))
 
         self.stdout.write(self.style.SUCCESS('Successfully executed update_funnel command!'))
 

@@ -6,6 +6,7 @@ import pytz
 from django.db.models import Sum
 from django.utils.dateparse import parse_datetime
 from django.db import transaction
+from django.utils import timezone
 
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
@@ -16,7 +17,7 @@ from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject, Cycle as MisCycle
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500
 def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[], batch_size=BATCH_SIZE):
     for i in range(0, len(objects), batch_size):
         batch = objects[i:i + batch_size]
@@ -213,7 +214,8 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
     project_mis_id = project_mis.first().id if project_mis.exists() else None
     cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
     cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
-    
+    now = timezone.now()
+
     if execute_adl_village:
         tasks_bucket_create = []
         tasks_bucket_update = []
@@ -256,7 +258,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                 adl_a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                 adl_a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
                 adl_a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
-
+                adl_a.updated_date = now
                 
                 if task_action == "create":
                     tasks_bucket_create.append(adl_a)
@@ -266,7 +268,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
         if tasks_bucket_create:
             bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
         if tasks_bucket_update:
-            bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity'])
+            bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
         
         print("End sync_aggregated_status_on_adl for Village")
 
@@ -323,6 +325,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                     a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                     a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
                     a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
+                    a.updated_date = now
 
                         # a.save()
                     if task_action == "create":
@@ -333,7 +336,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             if tasks_bucket_create:
                 bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
             if tasks_bucket_update:
-                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity'])
+                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
             
             print("End sync_aggregated_status_on_adl for", type_adl, "for tasks")
 
@@ -381,6 +384,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                     adl_a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                     adl_a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
                     adl_a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
+                    adl_a.updated_date = now
 
                     if task_action == "create":
                         tasks_bucket_create.append(adl_a)
@@ -390,7 +394,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             if tasks_bucket_create:
                 bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
             if tasks_bucket_update:
-                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity'])
+                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
             
             print("End sync_aggregated_status_on_adl for", type_adl, "for adl")
 
@@ -433,6 +437,7 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     project_mis_id = project_mis.first().id if project_mis.exists() else None
     cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
     cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
+    now = timezone.now()
     
     nsc = NoSQLClient()
     count_facilitator = 0
@@ -512,19 +517,19 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                             a.total_tasks_invalidated = 1
 
                             updated_after_invalidation = _task.get("updated_after_invalidation")
-                            if not updated_after_invalidation:
-                                action_by = _task.get("action_by", {})
-                                if type(action_by) is list:
-                                    if action_by:
-                                        action_by = action_by[0] or {}
-                                    else:
-                                        action_by = {}
-                                action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
-                                if action_by_action_date and _task.get("last_updated"):
-                                    action_by_action_date = datetime_complet_str(action_by_action_date)
-                                    action_last_updated = datetime_complet_str(_task.get("last_updated"))
-                                    if action_last_updated and action_by_action_date < action_last_updated:
-                                        updated_after_invalidation = True
+                            # if not updated_after_invalidation:
+                            #     action_by = _task.get("action_by", {})
+                            #     if type(action_by) is list:
+                            #         if action_by:
+                            #             action_by = action_by[0] or {}
+                            #         else:
+                            #             action_by = {}
+                            #     action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
+                            #     if action_by_action_date and _task.get("last_updated"):
+                            #         action_by_action_date = datetime_complet_str(action_by_action_date)
+                            #         action_last_updated = datetime_complet_str(_task.get("last_updated"))
+                            #         if action_last_updated and action_by_action_date < action_last_updated:
+                            #             updated_after_invalidation = True
                             if updated_after_invalidation:
                                 a.total_tasks_invalidated_review = 1
                                 a.total_tasks_invalidated_unreview = 0
@@ -541,6 +546,8 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         if a_last_activity is not None:
                             a_last_activity = a_last_activity.replace(tzinfo=pytz.UTC)
                         a.last_activity = a_last_activity
+                        a.updated_date = now
+
                         # a.save()
                         if task_action == "create":
                             tasks_bucket_create.append(a)
@@ -590,19 +597,19 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         a.total_tasks_invalidated = 1
 
                         updated_after_invalidation = _task.get("updated_after_invalidation")
-                        if not updated_after_invalidation:
-                            action_by = _task.get("action_by", {})
-                            if type(action_by) is list:
-                                if action_by:
-                                    action_by = action_by[0] or {}
-                                else:
-                                    action_by = {}
-                            action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
-                            if action_by_action_date and _task.get("last_updated"):
-                                action_by_action_date = datetime_complet_str(action_by_action_date)
-                                action_last_updated = datetime_complet_str(_task.get("last_updated"))
-                                if action_last_updated and action_by_action_date < action_last_updated:
-                                    updated_after_invalidation = True
+                        # if not updated_after_invalidation:
+                        #     action_by = _task.get("action_by", {})
+                        #     if type(action_by) is list:
+                        #         if action_by:
+                        #             action_by = action_by[0] or {}
+                        #         else:
+                        #             action_by = {}
+                        #     action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
+                        #     if action_by_action_date and _task.get("last_updated"):
+                        #         action_by_action_date = datetime_complet_str(action_by_action_date)
+                        #         action_last_updated = datetime_complet_str(_task.get("last_updated"))
+                        #         if action_last_updated and action_by_action_date < action_last_updated:
+                        #             updated_after_invalidation = True
                         if updated_after_invalidation:
                             a.total_tasks_invalidated_review = 1
                             a.total_tasks_invalidated_unreview = 0
@@ -619,7 +626,8 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                     if a_last_activity is not None:
                         a_last_activity = a_last_activity.replace(tzinfo=pytz.UTC)
                     a.last_activity = a_last_activity
-            
+                    a.updated_date = now
+
                     # a.save()
                     if task_action == "create":
                         tasks_bucket_create.append(a)
@@ -633,7 +641,7 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     if tasks_bucket_create:
         bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
     if tasks_bucket_update:
-        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity'])
+        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
 
 
 

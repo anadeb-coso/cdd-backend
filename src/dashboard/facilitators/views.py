@@ -82,6 +82,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['type_facilitator'] = self.request.GET.get('type_facilitator')
         context['type_of_facilitator_list'] = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
 
+        context['active_level2'] = context['type_of_facilitator_list']
 
         is_training = bool(self.request.GET.get('is_training', "False") == "True")
         is_develop = bool(self.request.GET.get('is_develop', "False") == "True")
@@ -96,7 +97,7 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
         context['project_names'] = f"{', '.join([p.name for p in Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()])}"
 
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).last().updated_date
+        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
         self.title = f"{self.title} {context['last_update'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')}" if context['last_update'] else self.title
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):

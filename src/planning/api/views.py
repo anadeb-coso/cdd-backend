@@ -16,6 +16,7 @@ from planning.models import *
 from authentication.api.auth.login import CheckUserSerializer
 from cdd.my_librairies.mail.send_mail import send_email
 from cdd.functions import get_dates_between
+from planning.vars import WORK_ENVIRONMENT
 
 
 
@@ -69,6 +70,7 @@ class RestSaveActivity(APIView):
                                 gettext_lazy("Planned on"): activity_plan_date,
                                 gettext_lazy("Updated on"): f'{activity.updated_date.strftime("%l")} {gettext_lazy("the")} {activity.updated_date.strftime("%d %F %Y")}',
                                 gettext_lazy("Location"): ", ".join([v["name"] for v in activity.administrative_levels]) if activity.administrative_levels else "",
+                                gettext_lazy("Work Environment"): dict(WORK_ENVIRONMENT).get(activity.work_environment) if activity.work_environment else "",
                             },
                             "user": {
                                 gettext_lazy("Planner"): f"{activity.user.last_name} {activity.user.first_name}" if activity.user else (activity.facilitator.name if activity.facilitator else None),

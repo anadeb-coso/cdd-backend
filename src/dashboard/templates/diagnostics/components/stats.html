@@ -56,7 +56,7 @@
         <div class="col-2">
             <div class="card h-75 bg-pink">
                 <div class="card-body" >
-                    <p>{% translate "Tasks Invalidated Review" %}</p>
+                    <p>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</p>
                     <p class="text-bold" style="font-size: 1.7em;">{{ object.nbr_tasks_invalidated_review|separate_with_space }}</p>
                 </div>
             </div>
@@ -65,7 +65,7 @@
         <div class="col-2">
             <div class="card h-75 bg-gradient-danger">
                 <div class="card-body" >
-                    <p>{% translate "Tasks Invalidated Unreview" %}</p>
+                    <p>{% translate "Tasks Invalidated Unreview by the facilitator" %}</p>
                     <p class="text-bold" style="font-size: 1.7em;">{{ object.nbr_tasks_invalidated_unreview|separate_with_space }}</p>
                 </div>
             </div>
@@ -199,7 +199,7 @@
             const table_stats = {};
             for(var i=0; i<users_ids_modals_tables.length; i++){
                 user_id_modal_table = users_ids_modals_tables[i];
-                console.log(user_id_modal_table)
+                
                 if ($.fn.DataTable.isDataTable(`#${user_id_modal_table}`)) {
                     $(`#${user_id_modal_table}`).DataTable().destroy();
                     $(`#${user_id_modal_table}`).empty(); 
@@ -212,11 +212,19 @@
                     language: {
                         url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                     },
+                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
                     columnDefs: [
                         { 
                             type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10, 11] : []
                         }
                     ],
+                    {% else %}
+                    columnDefs: [
+                        { 
+                            type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10] : []
+                        }
+                    ],
+                    {% endif %}
                     {% comment %} dom: "ltipr",
                         columnDefs: [
                             {

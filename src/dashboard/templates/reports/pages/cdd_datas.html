@@ -95,8 +95,8 @@
                 `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
                 `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type + 
                 `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}") + 
-                `&include_form_fields=` + ($('#id_include_form_fields').checked ? 1 : 0) + `&include_history=` + ($('#id_include_history').checked ? 1 : 0) + 
-                `&include_all_id_and_adl=` + ($('#id_include_all_id_and_adl').checked ? 1 : 0) + 
+                `&include_form_fields=` + ($('#id_include_form_fields').prop('checked') ? 1 : 0) + `&include_history=` + ($('#id_include_history').prop('checked') ? 1 : 0) + 
+                `&include_all_id_and_adl=` + ($('#id_include_all_id_and_adl').prop('checked') ? 1 : 0) + 
                 `&id_phase=` + $('#id_phase').val() + `&id_activity=` + $('#id_activity').val() + `&id_task=` + $('#id_task').val();
 
                 if(!['', ' ', null, undefined, []].includes(val_facilitator)){

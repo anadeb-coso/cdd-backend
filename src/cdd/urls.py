@@ -18,6 +18,7 @@ from django.conf.urls import include
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls.i18n import i18n_patterns
+from django.http import HttpResponse
 
 from . import views
 from cdd.my_librairies.download_file import download_file_view, download_from_url
@@ -27,9 +28,12 @@ handler403 = 'dashboard.authentication.views.handler403'
 handler404 = 'dashboard.authentication.views.handler404'
 handler500 = 'dashboard.authentication.views.handler500'
 
+def health(request):
+    return HttpResponse("ok")
 
 
 urlpatterns = [
+    path("health/", health),
     path('set-language/', views.set_language, name='set_language'),
     path('profile/', views.profile, name='profile'),
     # path('user-login/', views.redirect_user_to_login, name='redirect_user_to_login'),

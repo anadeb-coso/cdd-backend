@@ -1,0 +1,693 @@
+{% load static i18n custom_tags %}
+
+<style>
+    .expand-icon {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+</style>
+
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-presidents"
+                    data-toggle="modal" data-target="#modal-presidents-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'See Presidents' %}
+                </a>
+            </div>
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-secretariegenerals"
+                    data-toggle="modal" data-target="#modal-secretariegenerals-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'See Secretaries' %}
+                </a>
+            </div>
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-tresoriergenerals"
+                    data-toggle="modal" data-target="#modal-tresoriergenerals-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'See Treasurer' %}
+                </a>
+            </div>
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-chefdevillages"
+                    data-toggle="modal" data-target="#modal-chefdevillages-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'See village chiefs' %}
+                </a>
+            </div>
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-femmeleaders"
+                    data-toggle="modal" data-target="#modal-femmeleaders-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'Youth representatives' %}
+                </a>
+            </div>
+            <div class="col-2 col-lg mb-2 mb-lg-0">
+                <a href="#" id="btn-all-representantsjeunes"
+                    data-toggle="modal" data-target="#modal-representantsjeunes-list"
+                    class="btn btn-primary btn-xs" title="{% translate 'Search' %}">
+                    {% translate 'See Women Leaders' %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+
+    <div class="card-body table-responsive">
+        <table id="table" class="table-bordered" style="width: 100% !important;">
+            <thead>
+           <tr>
+                <th>{% translate 'Region' %}</th>
+                <th>{% translate 'Prefecture' %}</th>
+                <th>{% translate 'Commune' %}</th>
+                <th>{% translate 'Canton' %}</th>
+                <th>{% translate 'CVD' %}</th>
+                <th >{% translate 'Implementation date' %}</th>
+                <th >{% translate 'Statut' %}
+
+                    <select id="filtreVille" class="form-control form-control-sm" >
+                    <option value="">{% translate "All" %}</option>
+                </select>
+
+                </th>
+                <th>{% translate 'NBR. Members' %}</th>
+                <th>{% translate 'Included women?' %}</th>
+                <th>{% translate 'Voting method' %}</th>
+                {% if committees_is_list %}<th>{% translate 'Committee' %}</th>{% endif %}
+                <th>{% translate "Action" %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for committee in committees_data.committees %}
+                <tr>
+
+                    <td>{{ committee.object.region }}</td>
+                    <td>{{ committee.object.prefecture }}</td>
+                    <td>{{ committee.object.commune }}</td>
+                    <td>{{ committee.object.canton }}</td>
+                    <td>{{ committee.object.cvd_name }}</td>
+                    <td>{% if committee.object.meeting_date %}{{ committee.object.meeting_date }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if committee.object.cvd_existence %}
+                            {% if committee.object.is_full_staff %}
+                                {% translate "Trained" %} ({% translate "Existing" %})
+                            {% else %}
+                                {% translate "Renewed" %}
+                            {% endif %}
+                        {% else %}
+                            {% translate "New" %}
+                        {% endif %}
+                    </td>
+                    <td>{{ committee.object.number_of_members }}</td>
+                    <td>{% if committee.object.members_included_women %}{% translate "Yes" %}{% else %}{% translate "No" %}{% endif %}</td>
+                    <td>{{ committee.object.method_used_to_select_members }}</td>
+                    {% if committees_is_list %}<td align="right">{{ committee.object.description }}</td>{% endif %}
+                    <td>
+                        <button class="btn btn-primary btn-committee-details" style="cursor: pointer;" 
+                            id="committee-details-{{ committee.object.id }}"
+                            class="" title="{% translate 'See' %}">
+                            {% translate 'See' %}
+                            {{ committee.object|json_script:committee.id }}
+                        </button>
+                    </td>
+
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<!-- Modal  modal-dialog Presidents -->
+<div class="modal fade" id="modal-presidents-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of presidents" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-presidents-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                            {% if committees_is_list %}<th>{% translate 'Committee' %}</th>{% endif %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for president in committees_data.members.presidents %}
+                            <tr>
+
+                                <td align="left">{{ president.locality }}</td>
+                                <td align="left">{{ president.member.name }}</td>
+                                <td>{{ president.member.genre }}</td>
+                                <td>{% if president.member.contact %}{{ president.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ president.method_used_to_select_members }}</td>
+                                {% if committees_is_list %}<td align="right">{{ president.description }}</td>{% endif %}
+
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal Presidents -->
+
+
+<!-- Modal  modal-dialog secretariegenerals -->
+<div class="modal fade" id="modal-secretariegenerals-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of Secretaries-General" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-secretariegenerals-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for secretariegeneral in committees_data.members.secretariegenerals %}
+                            <tr>
+
+                                <td align="left">{{ secretariegeneral.locality }}</td>
+                                <td align="left">{{ secretariegeneral.member.name }}</td>
+                                <td>{{ secretariegeneral.member.genre }}</td>
+                                <td>{% if secretariegeneral.member.contact %}{{ secretariegeneral.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ secretariegeneral.method_used_to_select_members }}</td>
+                                
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal secretariegenerals -->
+
+
+<!-- Modal  modal-dialog tresoriergenerals -->
+<div class="modal fade" id="modal-tresoriergenerals-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of Treasurers General" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-tresoriergenerals-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for tresoriergeneral in committees_data.members.tresoriergenerals %}
+                            <tr>
+
+                                <td align="left">{{ tresoriergeneral.locality }}</td>
+                                <td align="left">{{ tresoriergeneral.member.name }}</td>
+                                <td>{{ tresoriergeneral.member.genre }}</td>
+                                <td>{% if tresoriergeneral.member.contact %}{{ tresoriergeneral.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ tresoriergeneral.method_used_to_select_members }}</td>
+                                
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal tresoriergenerals -->
+
+
+<!-- Modal  modal-dialog chefdevillages -->
+<div class="modal fade" id="modal-chefdevillages-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of Village Chiefs" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-chefdevillages-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for chefdevillage in committees_data.members.chefdevillages %}
+                            <tr>
+
+                                <td align="left">{{ chefdevillage.locality }}</td>
+                                <td align="left">{{ chefdevillage.member.name }}</td>
+                                <td>{{ chefdevillage.member.genre }}</td>
+                                <td>{% if chefdevillage.member.contact %}{{ chefdevillage.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ chefdevillage.method_used_to_select_members }}</td>
+                                
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal chefdevillages -->
+
+
+<!-- Modal  modal-dialog femmeleaders -->
+<div class="modal fade" id="modal-femmeleaders-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of Women Leaders" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-femmeleaders-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for femmeleader in committees_data.members.femmeleaders %}
+                            <tr>
+
+                                <td align="left">{{ femmeleader.locality }}</td>
+                                <td align="left">{{ femmeleader.member.name }}</td>
+                                <td>{{ femmeleader.member.genre }}</td>
+                                <td>{% if femmeleader.member.contact %}{{ femmeleader.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ femmeleader.method_used_to_select_members }}</td>
+                                
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal femmeleaders -->
+
+
+<!-- Modal  modal-dialog representantsjeunes -->
+<div class="modal fade" id="modal-representantsjeunes-list" tabindex="-1" role="dialog"
+    aria-labelledby="UploadTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% translate "List of Youth Representatives" %}
+            </h5>
+
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table id="table-representantsjeunes-list" class="table-bordered" style="width: 100% !important;">
+                        <thead>
+                    <tr>
+                            <th>{% translate 'Locality' %}</th>
+                            <th>{% translate 'Name' %}</th>
+                            <th>{% translate 'Gender' %}</th>
+                            <th>{% translate 'Contact' %}</th>
+                            <th>{% translate 'Voting method' %}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for representantjeune in committees_data.members.representantsjeunes %}
+                            <tr>
+
+                                <td align="left">{{ representantjeune.locality }}</td>
+                                <td align="left">{{ representantjeune.member.name }}</td>
+                                <td>{{ representantjeune.member.genre }}</td>
+                                <td>{% if representantjeune.member.contact %}{{ representantjeune.member.contact }}{% else %}-{% endif %}</td>
+                                <td>{{ representantjeune.method_used_to_select_members }}</td>
+                                
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        
+        </div>
+    </div>
+</div>
+<!-- End Modal representantsjeunes -->
+
+
+
+<!-- DataTables export files -->
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.html5.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.print.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/datatables-buttons/js/buttons.colVis.min.js' %}"></script>
+
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/jszip/3.10.1/jszip.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/pdfmake.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/cloudflare/ajax/libs/pdfmake/0.1.53/vfs_fonts.js' %}"></script>
+
+
+
+
+<script type="text/javascript">
+
+
+
+
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+
+        jQuery.extend(jQuery.fn.dataTableExt.oSort, {
+            "numeric-comma-pre": function (a) {
+                var x = parseFloat(a.replace(/\s+/g, '').replace(',', '.')); // Remove spaces and replace comma with dot
+                return isNaN(x) ? 0 : x;
+            },
+            "numeric-comma-asc": function (a, b) {
+                return a - b;
+            },
+            "numeric-comma-desc": function (a, b) {
+                return b - a;
+            }
+        });
+
+        if ($.fn.DataTable.isDataTable('#table')) {
+            $('#table').DataTable().destroy();
+            $('#table').empty(); 
+        }
+
+        let table = $('#table').DataTable({
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            columnDefs: [
+                { 
+                    type: 'numeric-comma', targets: [5, 7] 
+                }
+            ],
+            columnDefs: [
+                { orderable: false, targets: 6 }
+            ],
+            {% comment %} dom: "ltipr",
+                columnDefs: [
+                    {
+                        targets: 1,
+                        orderable: false,
+                        searchable: false,
+                    },
+
+                    {
+                        targets: 'no-sort', orderable: false
+                    },
+                ], {% endcomment %}
+            dom: 'Blfrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
+            pageLength: 10,
+            order: [6, 'asc'],
+            "initComplete": function(settings, json) {
+                remplirSelect();
+            }
+        });
+        {% comment %} $('#search').on('keyup', function () {
+            table.search($(this).val()).draw();
+        }); {% endcomment %}
+
+
+
+        function remplirSelect() {
+            var $select = $("#filtreVille");
+            var villes = new Set();
+
+            // Parcourir **toutes les lignes, peu importe la pagination**
+            table.rows({ search: 'applied' }).every(function() {
+                var ville = this.data()[6]; // colonne index 6
+                if (ville) villes.add(ville.trim());
+            });
+
+            // Ajouter les options
+            Array.from(villes).sort().forEach(function(ville) {
+                $select.append($("<option></option>").val(ville).text(ville));
+            });
+        }
+
+        // Filtrage
+        $("#filtreVille").on("change", function() {
+            var val = $(this).val();
+            if (val === "") {
+                table.column(6).search("").draw();
+            } else {
+                table.column(6).search("^" + val + "$", true, false).draw();
+            }
+        });
+
+        function camelToSentence(text) {
+            const labels = {
+                president: "Président",
+                secretarie: "Secrétaire",
+                general: "Général",
+                tresorier: "Trésorier",
+                general: "Général",
+                adjoint: "Adjoint"
+            };
+
+            return text
+                .replace(/([A-Z]{2,})([A-Z][a-z])/g, '$1 $2')
+                .replace(/([a-z])([A-Z])/g, '$1 $2')
+                .replace(/([A-Za-z])([0-9])/g, '$1 $2')
+                .replace(/([0-9])([A-Za-z])/g, '$1 $2')
+                .split(' ')
+                .map(w => labels[w.toLowerCase()] || w)
+                .join(' ');
+        }
+        dictinnary = {
+            "vice-president": "Vice-président", 
+            "vicepresident": "Vice-président", 
+            "president": "Président", 
+
+            "secretariegeneral": "Secrétaire Général", 
+            "secretairegeneral": "Secrétaire Général", 
+            "secretarie": "Secrétaire",
+            "secretaire": "Secrétaire",
+
+            "tresoriergeneraladjoint": "Trésorier Général Adjoint",
+            "tresoriergeneral": "Trésorier Général",
+            "tresorier": "Trésorier",
+
+            "1erconseiller": "1er Conseiller",
+            "2emeconseiller": "2e Conseiller",
+            "2emconseiller": "2e Conseiller",
+            "2econseiller": "2e Conseiller",
+
+            "1errapporteur": "1er Rapporteur",
+            "2emerapporteur": "2e Rapporteur",
+            "2emrapporteur": "2e Rapporteur",
+            "2erapporteur": "2e Rapporteur",
+            "rapporteur": "Rapporteur",
+
+            "member_1": "Membre 1",
+            "member_2": "Membre 2",
+            "member_3": "Membre 3",
+            "member_4": "Membre 4",
+            "member_5": "Membre 5",
+            "member_6": "Membre 6",
+        }
+        function get_role(role){
+            if([null, undefined, ""].includes(role)){
+                return null;
+            }
+            let role_found;
+            for (const [role_name, role_description] of Object.entries(dictinnary)) {
+                if(role.toLowerCase().includes(role_name)){
+                    return role_description;
+                }
+            }
+
+            return camelToSentence(role);
+        }
+
+
+        // Committee details
+        $(".btn-committee-details").on("click", function() {
+            let committee_ids = $(this).attr('id').split("-");
+            let committee_id = committee_ids[committee_ids.length - 1];
+            
+            let committee_data = JSON.parse(
+                document.getElementById(`committee-id-${committee_id}`).textContent
+            );
+
+            let committee_details = `
+                <p><b>{% translate "Committee" %}:</b> ${committee_data.description}</p>
+                <p><b>{% translate "Date" %}:</b> ${committee_data.meeting_date ? committee_data.meeting_date : '-'}</p>
+                <p><b>{% translate "Status" %}:</b> ${
+                    committee_data.cvd_existence ? (
+                        committee_data.is_full_staff ?
+                                '{% translate "Trained" %} ({% translate "Existing" %})'
+                            :
+                                '{% translate "Renewed" %}'
+                        ) : '{% translate "New" %}'}
+                </p>
+                <p><b>{% translate "NBR. Members" %}:</b> ${committee_data.number_of_members}</p>
+                <p><b>{% translate "Included women?" %}:</b> ${committee_data.members_included_women ? '{% translate "Yes" %}' : '{% translate "No" %}'}</p>
+                <p><b>{% translate "Voting method" %}:</b> ${committee_data.method_used_to_select_members}</p>
+                <p><b>{% translate "Locality" %}/{% translate "CVD" %} :</b> ${committee_data.region}, ${committee_data.prefecture}, ${committee_data.commune}, ${committee_data.canton}, ${committee_data.cvd_name}</p>
+                
+                    
+                
+
+            `;
+            let committee_details_members = `
+                <hr />
+                <h5 class="modal-title">
+                    {% translate "Committee members" %}
+                </h5>
+                <ul class="list-group">
+            `;
+            console.log(committee_data.members)
+            if(committee_data.members_included_women != 0 && committee_data.members){
+                for (const [role, member] of Object.entries(committee_data.members)) {
+                    if(![null, undefined, ""].includes(member.name)){
+                        committee_details_members += `<li class="list-group-item" style="font-size: 13px;"><b>${get_role(role)}:</b> ${member.name}, ${member.genre}${member.contact ? ' - '+member.contact : ''}</li>`;
+                    }
+                }
+                    
+                committee_details_members += `</ul>`;
+
+                committee_details += committee_details_members
+            }
+
+            $('#modal-committee-details #committee_details').html(committee_details);
+
+            $('#modal-committee-details').modal('show');
+        });
+        // End Committee details
+
+
+        multiple_bootstrap_tables(
+            [
+                'table-presidents-list', 'table-secretariegenerals-list', 'table-tresoriergenerals-list', 'table-chefdevillages-list', 
+                'table-femmeleaders-list', 'table-representantsjeunes-list'
+            ], 
+            'Blfrtip'
+        );
+
+    });
+
+
+</script>
+

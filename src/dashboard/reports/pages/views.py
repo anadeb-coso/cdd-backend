@@ -13,8 +13,8 @@ class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
     
     template_name = 'reports/pages/facilitators.html'
     context_object_name = 'reports'
-    title = gettext_lazy('reports')
-    active_level1 = 'reports'
+    title = gettext_lazy('States')
+    active_level1 = 'states'
     form_class = FilterFacilitatorFormMultiChoices
     breadcrumb = [
         {
@@ -74,8 +74,8 @@ class FacilitatorsEvolutionView(PageMixin, LoginRequiredMixin, TemplateView):
     
     template_name = 'reports/pages/facilitators_evolution.html'
     context_object_name = 'reports'
-    title = gettext_lazy('reports')
-    active_level1 = 'reports'
+    title = gettext_lazy('States')
+    active_level1 = 'states'
     
     breadcrumb = [
         {
@@ -90,7 +90,7 @@ class PrioritiesView(PageMixin, LoginRequiredMixin, TemplateView):
     template_name = 'reports/pages/priorities.html'
     context_object_name = 'reports'
     title = gettext_lazy('Priorities')
-    active_level1 = 'reports'
+    active_level1 = 'states'
     
     breadcrumb = [
         {
@@ -105,7 +105,7 @@ class CddDatasView(PageMixin, LoginRequiredMixin, TemplateView):
     template_name = 'reports/pages/cdd_datas.html'
     context_object_name = 'reports'
     title = gettext_lazy('CDD Datas')
-    active_level1 = 'reports'
+    active_level1 = 'states'
     
     breadcrumb = [
         {

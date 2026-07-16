@@ -29,6 +29,8 @@ class Facilitator(BaseModel):
     training_mode = models.BooleanField(default=False, verbose_name=_('test mode'))
     administrative_levels = models.JSONField(null=True, blank=True)
     administrative_levels_ids = models.JSONField(null=True, blank=True)
+    stabilization_administrative_ids = models.JSONField(null=True, blank=True)
+    additional_administrative_ids = models.JSONField(null=True, blank=True)
     
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
@@ -330,6 +332,13 @@ class Facilitator(BaseModel):
         return Facilitator.objects.filter(
             no_sql_dbs_names__contains=self.no_sql_db_name
         )
+    
+    def get_headquarters_village(self):
+        if self.administrative_levels:
+            return list(set([
+                adl['name'] for adl in self.administrative_levels if adl.get('is_headquarters_village')
+            ]))
+        return []
         
         
     # def get_all_infos(self):

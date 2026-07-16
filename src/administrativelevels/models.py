@@ -114,9 +114,18 @@ class CVD(BaseModel):
     description = models.TextField(null=True, blank=True)
 
     percent_cdd = None
+    percent_cdd_validated = None
     last_activity_cdd = None
     is_facilitator_on_this_cvd = False
     last_facilitator = {}
+    total_tasks_completed = 0
+    total_tasks_pending = 0
+    total_tasks = 0
+    total_tasks_validated = 0
+    total_tasks_invalidated = 0
+    total_tasks_invalidated_review = 0
+    total_tasks_invalidated_unreview = 0
+    total_tasks_waiting_validation = 0
 
     # def __init__(self, *args, **kwargs):
     #     super().__init__(*args, **kwargs)

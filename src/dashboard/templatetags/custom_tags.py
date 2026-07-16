@@ -572,7 +572,12 @@ def check_if_activity_is_enable_to_validate(activity, user):
 
     if activity.user:
         user_planner_groups = set(activity.user.groups.values_list('id', flat=True))
-    else:
+    elif activity.facilitator:
+        if activity.facilitator.facilitator_type == "community_facilitator":
+            user_planner_groups = set(Group.objects.filter(name="CommunityFacilitator").values_list('id', flat=True))
+        elif activity.facilitator.facilitator_type == "technical_facilitator":
+            user_planner_groups = set(Group.objects.filter(name="TechnicalFacilitator").values_list('id', flat=True))
+    if not user_planner_groups and user_auth_groups:
         user_planner_groups = set(Group.objects.filter(name="Facilitator").values_list('id', flat=True))
 
     return ValidationGroupsProcess.objects.filter(

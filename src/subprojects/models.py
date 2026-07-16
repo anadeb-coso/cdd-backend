@@ -1,11 +1,14 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from administrativelevels.models import AdministrativeLevel
+from administrativelevels.models import AdministrativeLevel, CVD
 
 from cdd.models_base import BaseModel
 
 
-
+class Subproject(BaseModel):
+    location_subproject_realized = models.ForeignKey(AdministrativeLevel, null=True, blank=True, on_delete=models.CASCADE, related_name='location_subproject_realized', verbose_name=_("Subproject location"))
+    cvd = models.ForeignKey(CVD, null=True, blank=True, on_delete=models.CASCADE, verbose_name=_("CVD"))
+    projects = models.ManyToManyField('Project', default=[], blank=True, verbose_name=_("Projects"))
 
 class VulnerableGroup(BaseModel):
     name = models.CharField(max_length=255)

@@ -7,4 +7,6 @@ urlpatterns = [
 
     path('pdf/', include('dashboard.reports.pdf.urls')),
     path('excel_csv/', include('dashboard.reports.excel_csv.urls')),
+
+    path('', include('dashboard.reports.reports.urls')),
 ]

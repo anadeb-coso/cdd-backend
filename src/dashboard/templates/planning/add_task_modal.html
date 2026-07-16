@@ -315,6 +315,19 @@
                                             </div>
                                             <div class="clearfix"></div>
                                         </div>
+                                        
+                                        <div class="form-group row" id="id_work_environment_content">
+                                            <label class="col-sm-3 col-form-label">{% translate "Work Environment" %} <i class="fas fa-hand-point-right"></i></label>
+                                            <div class="col-sm-9">
+                                                <select class="form-control custom-select" name="work_environment" id="id_work_environment_selected">
+                                                    {% if not task %}<option value="" selected>------------</option>{% endif %}
+                                                    {% for k, v in WORK_ENVIRONMENT %}
+                                                        <option value="{{ k }}" {% if task and k == task.work_environment %}selected{% endif %}>{{ v }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="clearfix"></div>
+                                        </div>
 
                                         
                                         <div class="form-group row" id="id_component_content">
@@ -392,6 +405,7 @@
         let id_absence_date_start = $("#id_absence_date_start");
         let id_absence_date_end = $("#id_absence_date_end");
         let id_vacation_type_precision = $("#id_vacation_type_precision");
+        let id_work_environment_selected = $("#id_work_environment_selected");
         let id_component_selected = $("#id_component_selected");
         let id_planned_datetime_start = $("#id_planned_datetime_start");
         let id_planned_datetime_end = $("#id_planned_datetime_end");
@@ -404,6 +418,7 @@
         let id_phase_selected_content = $("#id_phase_selected_content");
         let id_activity_selected_content = $("#id_activity_selected_content");
         let id_description_activity_content = $("#id_description_activity_content");
+        let id_work_environment_content = $("#id_work_environment_content");
         let id_plan_date_content = $("#id_plan_date_content");
         let id_is_vacation_content = $("#id_is_vacation_content");
         let id_vacation_type_precision_content = $("#id_vacation_type_precision_content");
@@ -649,6 +664,7 @@
                 )) || 
                 (!id_is_vacation.is(':checked') && (
                     ['', null].includes(id_component_selected.val()) || 
+                    ['', null].includes(id_work_environment_selected.val()) || 
                     (!id_is_period_dates.is(':checked') && (['', null].includes(id_plan_date.val()) || ['', null].includes(id_start_time_selected.val()) || ['', null].includes(id_end_time_selected.val()))) || 
                     (!id_is_free_activity.is(':checked') && (['', null].includes(id_phase_selected.val()) || ['', null].includes(id_activity_selected.val()) || ['', null].includes(id_description_activity.val()))) || 
                     (id_is_free_activity.is(':checked') && (['', null].includes(id_free_activity_title.val()) || ['', null].includes(id_description_activity.val()))) || 
@@ -704,6 +720,7 @@
                     start_time: id_start_time_selected.val(),
                     end_time: id_end_time_selected.val(),
                     component: id_component_selected.val(),
+                    work_environment: id_work_environment_selected.val(),
                     activity_date_start: id_planned_datetime_start.val(),
                     activity_date_end: id_planned_datetime_end.val(),
                     is_period_dates: id_is_period_dates.is(':checked'),
@@ -812,6 +829,11 @@
         });
         $("#id_component_selected").select2({
             placeholder: "{% translate 'Component' %}",
+            allowClear: true,
+            width: '100%'
+        });
+        $("#id_work_environment_selected").select2({
+            placeholder: "{% translate 'Work Environment' %}",
             allowClear: true,
             width: '100%'
         });

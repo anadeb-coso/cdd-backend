@@ -161,7 +161,7 @@
 
 
 
-{% include "diagnostics/components/modals_users_list.html" %}
+{% include "authentication/components/modals_users_list.html" %}
 {% include "authentication/components/modals_for_global_users_list.html" %}
 
 
@@ -189,11 +189,11 @@
                 "table-global-facilitators-community", "table-global-technical-facilitators", "table-global-supervisors", 
                 "table-global-CDDSpecialists", "table-global-others-users"
             ]
-            let user_id_modal_table;
+            
             const table_stats = {};
             for(var i=0; i<users_ids_modals_tables.length; i++){
-                user_id_modal_table = users_ids_modals_tables[i];
-                console.log(user_id_modal_table)
+                let user_id_modal_table = users_ids_modals_tables[i];
+                
                 if ($.fn.DataTable.isDataTable(`#${user_id_modal_table}`)) {
                     $(`#${user_id_modal_table}`).DataTable().destroy();
                     $(`#${user_id_modal_table}`).empty(); 
@@ -206,11 +206,19 @@
                     language: {
                         url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                     },
+                    {% comment %} {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
                     columnDefs: [
                         { 
                             type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10, 11] : []
                         }
                     ],
+                    {% else %}
+                    columnDefs: [
+                        { 
+                            type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10] : []
+                        }
+                    ],
+                    {% endif %} {% endcomment %}
                     {% comment %} dom: "ltipr",
                         columnDefs: [
                             {

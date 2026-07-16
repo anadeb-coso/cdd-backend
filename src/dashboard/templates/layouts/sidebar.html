@@ -38,7 +38,7 @@
             </ul>
         </nav>
         
-        <nav class="mt-2">
+        {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:facilitators:list' %}?type_of_facilitator_list=community_facilitator"
@@ -48,13 +48,69 @@
                     </a>
                 </li>
             </ul>
+        </nav> {% endcomment %}
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column"
+                data-widget="treeview"
+                role="menu"
+                data-accordion="false">
+
+                <li class="nav-item has-treeview {% if active_level1 == 'facilitators' %}menu-open{% endif %}">
+                    
+                    <a href="#" class="nav-link {% if active_level1 == 'facilitators' %}active{% endif %}">
+                        <i class="nav-icon fa fa-user-friends"></i>
+                        <p>
+                            {% translate "FC & FT & Supersivors" %}
+                            <i class="right fas fa-angle-left"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:facilitators:list' %}?type_of_facilitator_list=community_facilitator"
+                            class="nav-link {% if active_level2 == 'community_facilitator' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'community_facilitator' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Community Facilitators" %}</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:facilitators:stabilized_list' %}?type_of_facilitator_list=technical_facilitator"
+                            class="nav-link {% if active_level2 == 'technical_facilitator' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'technical_facilitator' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Technical Facilitators" %}</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:authentication:supervisors' %}"
+                            class="nav-link {% if active_level2 == 'supervisors' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'supervisors' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Supervisors" %}</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+            </ul>
         </nav>
+
+
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:reports:reports:index' %}"
+                       class="nav-link {% if active_level1 == 'reports' %}active{% endif %}">
+                        <i class="nav-icon fas fa-clipboard-list"></i>
+                        <p>{% translate "Reports" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:administrative_levels:list' %}"
                        class="nav-link {% if active_level1 == 'administrative_levels' %}active{% endif %}">
-                        <i class="nav-icon fa fa-user-friends"></i>
+                        <i class="nav-icon fa fa-location-arrow"></i>
                         <p>{% translate "Administrative levels" %}</p>
                     </a>
                 </li>
@@ -85,9 +141,9 @@
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
                     <a href="{% url 'dashboard:reports:pages:facilitators_status' %}"
-                       class="nav-link {% if active_level1 == 'reports' %}active{% endif %}">
+                       class="nav-link {% if active_level1 == 'states' %}active{% endif %}">
                         <i class="nav-icon fa fa-file-pdf-o"></i>
-                        <p>{% translate "Reports" %}</p>
+                        <p>{% translate "States" %}</p>
                     </a>
                 </li>
             </ul>
@@ -134,7 +190,7 @@
                 <li class="nav-item">
                     <a href="{% url 'dashboard:news:list' %}"
                        class="nav-link {% if active_level1 == 'news' %}active{% endif %}">
-                        <i class="nav-icon fa fa-user-friends"></i>
+                        <i class="nav-icon fa fa-newspaper"></i>
                         <p>{% translate "News" %}</p>
                     </a>
                 </li>
@@ -159,7 +215,7 @@
                 <li class="nav-item">
                     <a href="{% url 'dashboard:process_manager:tasks:task_list' %}"
                        class="nav-link {% if active_level1 == 'process_manager_tasks' %}active{% endif %}">
-                        <i class="nav-icon fa fa-download"></i>
+                        <i class="nav-icon far fa-circle"></i>
                         <p>{% translate "Investment cycle" %}</p>
                     </a>
                 </li>

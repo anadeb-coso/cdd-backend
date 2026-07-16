@@ -190,6 +190,7 @@
                                     <th >{% translate 'Username' %}</th>
                                     <th >{% translate 'Email' %}</th>
                                     <th >{% translate 'Group' %}</th>
+                                    <th >{% translate 'Project' %}</th>
                                     {% if user.is_superuser or user|has_group:"Admin" %}<th >
                                         {% translate 'Action' %}</th>
                                     {% endif %}
@@ -202,6 +203,7 @@
                                         <td>{{ user_obj.username }}</td>
                                         <td>{{ user_obj.email }}</td>
                                         <td>{{ user_obj|get_group_high }}</td>
+                                        <td>{% for project in user_obj.projects.all %}{{ project }}{% if not forloop.last %}, {% else %}{% endif %}{% endfor %}</td>
                                         {% if user.is_superuser or user|has_group:"Admin" %}
                                         <td>
                                             <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 

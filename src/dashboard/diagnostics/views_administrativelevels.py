@@ -50,7 +50,7 @@ class DashboardDiagnosticsADLView(PageMixin, LoginRequiredMixin, FormView):
         # context['country_iso_code'] = settings.DIAGNOSTIC_MAP_ISO_CODE
         
         
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).last().updated_date
+        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
         
 
         return context
@@ -149,16 +149,17 @@ class DiagnosticsCantonsView(LoginRequiredMixin, ListView):
                 invalidation_notifications[project.name][cycle.name] = {'cycle_id': cycle.id}
                 
                 for canton in cantons:
-
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)] = {}
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_completed'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_completed') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_validated'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_validated') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_waiting_validation') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_invalidated_review') or 0
-                    invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_unreview'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated_unreview') or 0
-                
+                    total_tasks = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks') or 0
+                    if total_tasks:
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)] = {}
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_completed'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_completed') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks'] = total_tasks
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_validated'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_validated') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_waiting_validation') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_invalidated_review') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_unreview'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated_unreview') or 0
+                    
 
         return invalidation_notifications
     
@@ -197,7 +198,7 @@ class CantonDetailForListView(LoginRequiredMixin, AJAXRequestMixin, ListView):
         criteria = FacilitatorCriteria(
             develop_mode=False,
             training_mode=False,
-            active=True,
+            # active=True,
             projects__id=[int(context['project_id'])],
             facilitator_type='community_facilitator'
         )
@@ -206,13 +207,14 @@ class CantonDetailForListView(LoginRequiredMixin, AJAXRequestMixin, ListView):
 
         return {
             "villages_aggregated_status": aggregated_status,
-            "villages_ids_names": {v.id: v.name for v in villages},
+            "villages_ids_names": {v.id: v.name if v.name == v.cvd.name else f"{v.name} [{v.cvd.name}]" for v in villages},
             "assigns_adl_to_facilitators": {
-                    ass.administrative_level_id: facilitators.get(ass.facilitator_id, None) for ass in mis_objects_call.filter_objects(
-                        AssignAdministrativeLevelToFacilitator, 
-                        project_id=project_mis.id,
-                        administrative_level_id__in=villages_ids,
-                        activated=True
-                    ).distinct()
-                }
+                ass.administrative_level_id: facilitators.get(ass.facilitator_id, None) for ass in mis_objects_call.filter_objects(
+                    AssignAdministrativeLevelToFacilitator, 
+                    project_id=project_mis.id,
+                    administrative_level_id__in=villages_ids,
+                    activated=True
+                ).distinct()
+            },
+            "project_name": project_mis.name
         }

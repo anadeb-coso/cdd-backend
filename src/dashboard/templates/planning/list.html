@@ -251,7 +251,7 @@
                         </div>
                     {% endif %}
                 
-                    <div class="col-{% if user|has_group:"Supervisor" %}5{% else %}6{% endif %}  mb-2 mb-lg-0">
+                    <div class="col-{% if user|has_group:"Supervisor" %}4{% else %}5{% endif %}  mb-2 mb-lg-0">
                         <div class="form-group" id="group_user_groups">
                             <select class="form-control" id="id_user_group" name="user_group" style="width: 100%;" multiple title="{% translate 'Group' %}">
                                 <option value="All">{% translate 'All' %}</option>
@@ -263,12 +263,23 @@
                     </div>
                     
                 
-                    <div class="col-{% if user|has_group:"Supervisor" %}3{% else %}4{% endif %}  mb-2 mb-lg-0">
+                    <div class="col-{% if user|has_group:"Supervisor" %}2{% else %}3{% endif %}  mb-2 mb-lg-0">
                         <div class="form-group" id="group_facilitators">
                             <select class="form-control" id="id_username_facilitator_user" name="facilitato" style="width: 100%;" multiple title="{% translate 'User' %}">
                                 <option value="All">{% translate 'All' %}</option>
                                 {% for facilitator_user in facilitators_users %}
                                     <option value="{{ facilitator_user.username }}">{{ facilitator_user.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                
+                    <div class="col-2  mb-2 mb-lg-0">
+                        <div class="form-group" id="work_environment_filter">
+                            <select class="form-control" id="id_work_environment_filter" name="work_environment_filter" style="width: 100%;" multiple title="{% translate 'User' %}">
+                                {% for w_e in WORK_ENVIRONMENT_LIST %}
+                                    <option value="{{ w_e.name }}" {% if w_e.attr %}{{ w_e.attr }}{% endif%}>{{ w_e.label }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -353,6 +364,7 @@
 
         let id_user_group = $('#id_user_group');
         let id_username_facilitator_user = $('#id_username_facilitator_user');
+        let id_work_environment_filter = $('#id_work_environment_filter');
         let id_task_status = $('#id_task_status');
         let id_task_type = $('#id_task_type');
         let show_my_calendar = $('#show_my_calendar');
@@ -410,7 +422,7 @@
                 task_type: id_task_type.val(),
                 user_groups: id_user_group.val(),
                 username_facilitator_user: id_username_facilitator_user.val(),
-                
+                work_environment: id_work_environment_filter.val(),
                 current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
                 current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
             };
@@ -476,7 +488,7 @@
                     task_type: id_task_type.val(),
                     user_groups: id_user_group.val(),
                     username_facilitator_user: id_username_facilitator_user.val(),
-                    
+                    work_environment: id_work_environment_filter.val(),
                     current_week: ![undefined, null].includes(currentWeek) ? currentWeek : null,
                     current_monday_date: currentMondayDate ? formatDate(currentMondayDate) : null,
                 };
@@ -691,6 +703,11 @@
         $("#id_username_facilitator_user").select2({
             placeholder: "{% translate 'Users' %}",
             title: "{% translate 'Users' %}",
+            allowClear: true,
+        });
+        $("#id_work_environment_filter").select2({
+            placeholder: "{% translate 'Work Environment' %}",
+            title: "{% translate 'Work Environment' %}",
             allowClear: true,
         });
         $("#id_canton").select2({

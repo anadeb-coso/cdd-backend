@@ -57,7 +57,8 @@ class FacilitatorStabilizedListView(PageMixin, LoginRequiredMixin, generic.ListV
         # context['is_develop'] = bool(self.request.GET.get('develop', '0') != '0')
         context['type_facilitator'] = self.request.GET.get('type_facilitator')
         context['type_of_facilitator_list'] = self.request.GET.get('type_of_facilitator_list', 'community_facilitator')
-
+        context['active_level2'] = context['type_of_facilitator_list']
+        
         return context
 
 
@@ -113,26 +114,35 @@ class FacilitatorStabilizedListTableView(LoginRequiredMixin, generic.ListView):
             #             and doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email') in adls_emaails
             #         )
             # ]
-            facilitators_stabilized_all_docs = [
-                doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
-                    if (
-                        type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
-                        doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
-                    )
-            ] if docs == None else docs
-
-            adls_emaails = [
-                obj.email for obj in Facilitator.objects.filter(
-                    facilitator_type=type_of_facilitator_list,
-                    develop_mode=False, training_mode=False, 
-                    active=(False if type_facilitator=='inactive' else True), 
-                    projects__in=[self.request.session.get('project_id')]
-                )
-            ]
             
-            return [
-                doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
-            ]
+            adls_emaails = list(Facilitator.objects.filter(
+                facilitator_type=type_of_facilitator_list,
+                develop_mode=False, training_mode=False, 
+                active=(False if type_facilitator=='inactive' else True), 
+                projects__in=[self.request.session.get('project_id')]
+            ).values_list('email', flat=True))
+            
+            if docs:
+                return [
+                    doc for doc in docs if doc.get('representative').get('email') in adls_emaails
+                ]
+            else:
+                return eadls.get_query_result({
+                    "representative.email": {"$in": adls_emaails},
+                    "type": 'adl'
+                })
+            
+            # facilitators_stabilized_all_docs = [
+            #     doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
+            #         if (
+            #             type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
+            #             doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
+            #         )
+            # ] if docs == None else docs
+
+            # return [
+            #     doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
+            # ]
         
         
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:

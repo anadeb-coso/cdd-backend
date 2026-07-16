@@ -189,47 +189,67 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
         global_total_users = global_community_facilitators_count + global_technical_facilitators_count + global_supervisors_count + global_CDDSpecialists_count + global_others_users_count
         
 
-        facilitators = update_facilitators_stats(
-            community_facilitators, 
-            [],
-            self.request.session.get('project_id'), 
-            self.request.session.get('cycle_id'),
-            self.request.session.get('project_couch_id'),
-            project_mis
-        )
-        global_facilitators = update_facilitators_stats(
-            global_community_facilitators, 
-            [],
-            self.request.session.get('project_id'), 
-            self.request.session.get('cycle_id'),
-            self.request.session.get('project_couch_id'),
-            project_mis
-        )
-        facilitators_stabilized_all_docs = [
-            doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
+        # facilitators = update_facilitators_stats(
+        #     community_facilitators, 
+        #     [],
+        #     self.request.session.get('project_id'), 
+        #     self.request.session.get('cycle_id'),
+        #     self.request.session.get('project_couch_id'),
+        #     project_mis
+        # )
+        facilitators = community_facilitators
+        # global_facilitators = update_facilitators_stats(
+        #     global_community_facilitators, 
+        #     [],
+        #     self.request.session.get('project_id'), 
+        #     self.request.session.get('cycle_id'),
+        #     self.request.session.get('project_couch_id'),
+        #     project_mis
+        # )
+        global_facilitators = global_community_facilitators
+
+        facilitators_stabilized_all_docs = dict([
+            (doc.get('doc').get('representative').get('email'), doc.get('doc')) for doc in eadls.all_docs(include_docs=True)['rows'] \
                 if (
                     type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
                     doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
                 )
-        ]
+        ])
 
+        # # - CF
+        # adls_emaails_community_facilitators = [
+        #     obj.email for obj in community_facilitators
+        # ]
+        # facilitators_stabilized_dict = dict([
+        #     (k, doc) for k, doc in facilitators_stabilized_all_docs.items() if k in adls_emaails_community_facilitators
+        # ])
+
+        # global_adls_emaails_community_facilitators = [
+        #     obj.email for obj in global_community_facilitators
+        # ]
+        # global_facilitators_stabilized_dict = dict([
+        #     (k, doc) for k, doc in facilitators_stabilized_all_docs.items() if k in global_adls_emaails_community_facilitators
+        # ])
+
+        # # # - TF
         adls_emaails = [
             obj.email for obj in technical_facilitators
         ]
         technical_facilitators_stabilized = [
-            doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
+            doc for k, doc in facilitators_stabilized_all_docs.items() if k in adls_emaails
         ]
 
         global_adls_emaails = [
             obj.email for obj in global_technical_facilitators
         ]
         global_technical_facilitators_stabilized = [
-            doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in global_adls_emaails
+            doc for k, doc in facilitators_stabilized_all_docs.items() if k in global_adls_emaails
         ]
         
         # End Infos Generales
 
         return {
+            "facilitators_stabilized_all_docs": facilitators_stabilized_all_docs,
             "community_facilitators": community_facilitators,
             "community_facilitators_count": community_facilitators_count,
             "technical_facilitators": technical_facilitators,

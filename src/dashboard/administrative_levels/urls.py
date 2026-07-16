@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.administrative_levels import views, views_adl, views_doc
+from dashboard.administrative_levels import views, views_adl, views_doc, views_export
 
 app_name = 'administrative_levels'
 urlpatterns = [
@@ -26,4 +26,6 @@ urlpatterns = [
     path('attachments-filter', views_adl.FillAttachmentSelectFilters.as_view(), name='attachment_filter'),
     
     path('documents/', views_doc.AttachmentListView.as_view(), name='documents'),
+
+    path('export-situations/', views_export.export_administrativelels_situation_to_excel, name='export_administrativelels_situation_to_excel'),
 ]
