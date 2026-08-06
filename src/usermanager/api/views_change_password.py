@@ -23,8 +23,7 @@ from usermanager.functions import user_manager_email_notification, generate_rand
 from usermanager.models import ValidationCode
 from cdd.call_objects_from_other_db import mis_objects_call, grm_objects_call, cdd_objects_call
 from usermanager.functions import encoder_email, get_user_by_email
-from no_sql_client import NoSQLClient
-from usermanager import ADL, MAJOR
+import grm_client
 from authentication.models import Facilitator
 
 
@@ -165,40 +164,14 @@ class RestChangePassword(APIView):
                             cdd_facilitator.simple_save()
 
                         if grm_user:
-                            sql = """
-                            UPDATE authentication_user
-                            SET password = %s
-                            WHERE email = %s
-                            """
-                            with connections['grm'].cursor() as cursor:
-                                cursor.execute(sql, [password_new_hashed, email])
-
-                            nsc = NoSQLClient()
-                            eadl_db = nsc.get_db("eadls")
-                            selector = {
-                                "$and": [
-                                    {
-                                        "representative.email": email
-                                    },
-                                    {
-                                        "representative.is_active": {"$eq": True}
-                                    },
-                                    {
-                                        "type": {
-                                            "$in": [ADL, MAJOR]
-                                        }
-                                    }
-                                ]
-                            }
-                            docs = eadl_db.get_query_result(selector)
+                            # Synchronise le mot de passe côté GRM (compte auth.User + Adl.representative)
+                            # via l'API inter-services (remplace l'ancienne double écriture directe dans
+                            # MySQL legacy `grm` et CouchDB `eadls`). Best-effort : ne doit jamais faire
+                            # échouer le changement de mot de passe local CDD si GRM est injoignable.
                             try:
-                                doc = eadl_db[docs[0][0]['_id']]
-                            except Exception:
-                                doc = None
-                            
-                            if doc:
-                                doc['representative']['password'] = password_new_hashed
-                                doc.save()
+                                grm_client.set_grm_user_password(email, password_new)
+                            except:
+                                pass
 
                         msg = _('The password has been successfully changed.')
                         ok = True
