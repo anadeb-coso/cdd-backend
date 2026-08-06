@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.facilitators import views, views_stabilized, views_old_profile
+from dashboard.facilitators import views, views_stabilized, views_old_profile, views_export
 
 app_name = 'facilitators'
 urlpatterns = [
@@ -20,4 +20,6 @@ urlpatterns = [
     path('facilitators-stabilized-list/', views_stabilized.FacilitatorStabilizedListTableView.as_view(), name='facilitators_stabilized_list'),
     
     path('task-comments/<slug:id>/<str:task__id>/', views.TaskCommentListView.as_view(), name='task_comments'),
+
+    path('export-situations/', views_export.export_fc_situation_to_excel, name='export_fc_to_excel'),
 ]
