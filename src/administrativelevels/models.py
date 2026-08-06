@@ -124,7 +124,11 @@ class CVD(BaseModel):
     total_tasks_validated = 0
     total_tasks_invalidated = 0
     total_tasks_invalidated_review = 0
+    total_tasks_invalidated_review_completed = 0
+    total_tasks_invalidated_review_in_pending = 0
     total_tasks_invalidated_unreview = 0
+    total_tasks_invalidated_unreview_completed = 0
+    total_tasks_invalidated_unreview_in_pending = 0
     total_tasks_waiting_validation = 0
 
     # def __init__(self, *args, **kwargs):

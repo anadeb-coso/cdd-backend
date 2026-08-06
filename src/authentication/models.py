@@ -5,6 +5,7 @@ from datetime import datetime
 from django.contrib.auth.hashers import make_password
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
 
 from no_sql_client import NoSQLClient
 # from dashboard.facilitators.functions import get_cvds
@@ -52,19 +53,31 @@ class Facilitator(BaseModel):
     total_tasks_validated_current_project = None
     total_tasks_invalidated_current_project = None
     total_tasks_invalidated_review_current_project = None
+    total_tasks_invalidated_review_completed_current_project = None
+    total_tasks_invalidated_review_in_pending_current_project = None
     total_tasks_invalidated_unreview_current_project = None
+    total_tasks_invalidated_unreview_completed_current_project = None
+    total_tasks_invalidated_unreview_in_pending_current_project = None
     total_tasks_waiting_validation_current_project = None
 
     total_tasks_validated_stabilized = None
     total_tasks_invalidated_stabilized = None
     total_tasks_invalidated_review_stabilized = None
+    total_tasks_invalidated_review_completed_stabilized = None
+    total_tasks_invalidated_review_in_pending_stabilized = None
     total_tasks_invalidated_unreview_stabilized = None
+    total_tasks_invalidated_unreview_completed_stabilized = None
+    total_tasks_invalidated_unreview_in_pending_stabilized = None
     total_tasks_waiting_validation_stabilized = None
     
     total_tasks_validated = None
     total_tasks_invalidated = None
     total_tasks_invalidated_review = None
+    total_tasks_invalidated_review_completed = None
+    total_tasks_invalidated_review_in_pending = None
     total_tasks_invalidated_unreview = None
+    total_tasks_invalidated_unreview_completed = None
+    total_tasks_invalidated_unreview_in_pending = None
     total_tasks_waiting_validation = None
     
     cvds_number_current_project = None
@@ -330,7 +343,7 @@ class Facilitator(BaseModel):
     
     def get_facilitators_with_no_sql_db_name(self):
         return Facilitator.objects.filter(
-            no_sql_dbs_names__contains=self.no_sql_db_name
+            no_sql_dbs_names__contains=[self.no_sql_db_name]
         )
     
     def get_headquarters_village(self):

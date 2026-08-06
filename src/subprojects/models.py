@@ -10,6 +10,26 @@ class Subproject(BaseModel):
     cvd = models.ForeignKey(CVD, null=True, blank=True, on_delete=models.CASCADE, verbose_name=_("CVD"))
     projects = models.ManyToManyField('Project', default=[], blank=True, verbose_name=_("Projects"))
 
+    infrastructure_deleted = models.BooleanField(null=True, blank=True, verbose_name=_("Infrastructure will no longer be built?"))
+
+    def get_villages(self):
+        if self.location_subproject_realized:
+            return self.location_subproject_realized.cvd.administrativelevel_set.get_queryset()
+        if self.cvd:
+            return self.cvd.administrativelevel_set.get_queryset()
+
+        return []
+
+    def get_villages_ids(self):
+        villages = self.get_villages()
+
+        if villages:
+            return list(villages.values_list('id', flat=True))
+
+        return []
+
+    
+
 class VulnerableGroup(BaseModel):
     name = models.CharField(max_length=255)
     description = models.TextField()

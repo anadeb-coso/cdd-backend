@@ -13,6 +13,9 @@ class CallObjects:
     def filter_objects(self, Type: type, *args: Any, **kwargs: Any):
         return Type.objects.using(self.using).filter(*args, **kwargs)
 
+    def exclude_objects(self, Type: type, *args: Any, **kwargs: Any):
+        return Type.objects.using(self.using).exclude(*args, **kwargs)
+
     def get_object(self, Type: type, *args: Any, **kwargs: Any):
         return Type.objects.using(self.using).get(*args, **kwargs)
 

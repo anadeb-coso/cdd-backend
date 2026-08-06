@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save, post_delete
+from django.db.models import Q
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
@@ -474,7 +475,30 @@ class Task(BaseModel):
 
 
 
-class AggregatedStatus(BaseModel):
+class SoftAggregatedStatusConsiderationManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(
+            Q(task__isnull=False, its_adl_has_sub_project=False, task_needs_subproject=False) | # For tasks hasn't subproject, we get only planification tasks or before its
+
+            # For tasks has subproject or don't know, we get all tasks of CDD cycle
+            Q(task__isnull=False, its_adl_has_sub_project__isnull=True) | 
+            Q(task__isnull=False, its_adl_has_sub_project=True) |
+
+            # For aggregation status don't related to task, we get without condition
+            Q(task__isnull=True)
+        )
+
+class SoftAggregatedStatusConsiderationMixin(models.Model):
+
+    objects = SoftAggregatedStatusConsiderationManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True
+        base_manager_name = 'objects'
+
+
+class AggregatedStatus(BaseModel, SoftAggregatedStatusConsiderationMixin):
     """
         - if task is null, facilitator is null and administrative_level_id is present, then AggregatedStatus represents the status of the location in a specific project and cycle.
         - if task is null, administrative_level_id is null and facilitator is present, then AggregatedStatus represents the facilitator's progress status.
@@ -492,10 +516,17 @@ class AggregatedStatus(BaseModel):
     total_tasks_validated = models.IntegerField(default=0)
     total_tasks_invalidated = models.IntegerField(default=0)
     total_tasks_invalidated_review = models.IntegerField(default=0)
+    total_tasks_invalidated_review_completed = models.IntegerField(default=0)
+    total_tasks_invalidated_review_in_pending = models.IntegerField(default=0)
     total_tasks_invalidated_unreview = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_completed = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_in_pending = models.IntegerField(default=0)
     total_tasks_waiting_validation = models.IntegerField(default=0)
+
+    task_needs_subproject = models.BooleanField(default=False)
+    its_adl_has_sub_project = models.BooleanField(null=True, blank=True)
     
-    objects = CustomQuerySet.as_manager()
+    # objects = CustomQuerySet.as_manager()
 
 
     def administrative_level(self):
@@ -525,19 +556,31 @@ class AggregatedStatusFacilitator(BaseModel):
     total_tasks_validated_current_project = models.IntegerField(default=0)
     total_tasks_invalidated_current_project = models.IntegerField(default=0)
     total_tasks_invalidated_review_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_review_completed_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_review_in_pending_current_project = models.IntegerField(default=0)
     total_tasks_invalidated_unreview_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_completed_current_project = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_in_pending_current_project = models.IntegerField(default=0)
     total_tasks_waiting_validation_current_project = models.IntegerField(default=0)
 
     total_tasks_validated_stabilized = models.IntegerField(default=0)
     total_tasks_invalidated_stabilized = models.IntegerField(default=0)
     total_tasks_invalidated_review_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_review_completed_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_review_in_pending_stabilized = models.IntegerField(default=0)
     total_tasks_invalidated_unreview_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_completed_stabilized = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_in_pending_stabilized = models.IntegerField(default=0)
     total_tasks_waiting_validation_stabilized = models.IntegerField(default=0)
     
     total_tasks_validated = models.IntegerField(default=0)
     total_tasks_invalidated = models.IntegerField(default=0)
     total_tasks_invalidated_review = models.IntegerField(default=0)
+    total_tasks_invalidated_review_completed = models.IntegerField(default=0)
+    total_tasks_invalidated_review_in_pending = models.IntegerField(default=0)
     total_tasks_invalidated_unreview = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_completed = models.IntegerField(default=0)
+    total_tasks_invalidated_unreview_in_pending = models.IntegerField(default=0)
     total_tasks_waiting_validation = models.IntegerField(default=0)
     
     cvds_number_current_project = models.IntegerField(default=0)
