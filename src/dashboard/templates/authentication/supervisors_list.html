@@ -23,6 +23,7 @@
                 <th>{% translate 'Invalidated' %}</th>
                 <th>{% translate 'Completed (Awaiting validation)' %}</th>
                 <th>{% translate 'Invalidated tasks reviewed by the facilitator (Pending validation)' %}</th>
+                <th>{% translate 'Invalidated tasks reviewed by the facilitator (No Completed)' %}</th>
                 <th>{% translate "Percentage of completed tasks validated" %}</th>
                 <th>{% translate "Percentage of decisions" %}</th>
                 <th width="5%" class="no-sort"></th>
@@ -49,7 +50,8 @@
                     <td style="{% if supervisor|get:'total_tasks_validated' %} color: green {% endif%}">{{ supervisor|get:"total_tasks_validated" }}</td>
                     <td>{{ supervisor|get:"total_tasks_invalidated" }}</td>
                     <td style="{% if supervisor|get:'total_tasks_waiting_validation' %} color: red {% endif%}">{{ supervisor|get:"total_tasks_waiting_validation" }}</td>
-                    <td style="{% if supervisor|get:'total_tasks_invalidated_review' %} color: red {% endif%}">{{ supervisor|get:"total_tasks_invalidated_review" }}</td>
+                    <td style="{% if supervisor|get:'total_tasks_invalidated_review_completed' %} color: red {% endif%}">{{ supervisor|get:"total_tasks_invalidated_review_completed" }}</td>
+                    <td style="{% if supervisor|get:'total_tasks_invalidated_review_in_pending' %} color: red {% endif%}">{{ supervisor|get:"total_tasks_invalidated_review_in_pending" }}</td>
                     <td>{{ supervisor|get:"validation_percent" }} %</td>
                     <td>{{ supervisor|get:"decision_percent" }} %</td>
                     
@@ -114,7 +116,7 @@
             },
             columnDefs: [
                 { 
-                    type: 'numeric-comma', targets: [2, 3, 4, 5,6, 7, 8, 9] 
+                    type: 'numeric-comma', targets: [2, 3, 4, 5,6, 7, 8, 9, 10] 
                 }
             ],
             {% comment %} dom: "ltipr",
@@ -202,8 +204,12 @@
                                     ${v.total_tasks_waiting_validation ?? 0}
                                 </td>
 
-                                <td style="${v.total_tasks_invalidated_review ? 'color:red' : ''}">
-                                    ${v.total_tasks_invalidated_review ?? 0}
+                                <td style="${v.total_tasks_invalidated_review_completed ? 'color:red' : ''}">
+                                    ${v.total_tasks_invalidated_review_completed ?? 0}
+                                </td>
+
+                                <td style="${v.total_tasks_invalidated_review_in_pending ? 'color:red' : ''}">
+                                    ${v.total_tasks_invalidated_review_in_pending ?? 0}
                                 </td>
 
                                 <td>
@@ -236,6 +242,7 @@
                                         <th>{% translate 'Invalidated' %}</th>
                                         <th>{% translate 'Completed (Awaiting validation)' %}</th>
                                         <th>{% translate 'Invalidated tasks reviewed by the facilitator (Pending validation)' %}</th>
+                                        <th>{% translate 'Invalidated tasks reviewed by the facilitator (No Completed)' %}</th>
                                         <th>{% translate "Percentage of completed tasks validated" %}</th>
                                         <th>{% translate "Percentage of decisions" %}</th>
                                     </tr>
@@ -260,7 +267,7 @@
                     },
                     columnDefs: [
                         { 
-                            type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7, 8] 
+                            type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7, 8, 9] 
                         }
                     ],
                     dom: 'Brtip',

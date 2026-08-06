@@ -8,7 +8,7 @@
         cursor: pointer;
     }
     .villages-status-card {
-        width: 80% !important;
+        width: 90% !important;
         margin: 0 auto !important;
     }
 </style>
@@ -26,6 +26,7 @@
                     <th>{% translate 'Tasks Waiting Validation' %}</th>
                     <th>{% translate 'Tasks Invalidated' %}</th>
                     <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                    <th>{% translate "Invalidated tasks reviewed by the facilitator (No Completed)" %}</th>
                     <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                     <th width="9%">{% translate 'DB' %}</th>
                     {% comment %} <th width="5%" class="no-sort"></th> {% endcomment %}
@@ -40,7 +41,8 @@
                         <td style="{% if village_aggregated_status.total_tasks_validated %} color: green {% endif %}" >{{ village_aggregated_status.total_tasks_validated }}</td>
                         <td style="{% if village_aggregated_status.total_tasks_waiting_validation %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_waiting_validation }}</td>
                         <td style="{% if village_aggregated_status.total_tasks_invalidated %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated }}</td>
-                        <td style="{% if village_aggregated_status.total_tasks_invalidated_review %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_review }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_invalidated_review_completed %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_review_completed }}</td>
+                        <td style="{% if village_aggregated_status.total_tasks_invalidated_review_in_pending %} color: red {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_review_in_pending }}</td>
                         <td style="{% if village_aggregated_status.otal_tasks_invalidated_unrevie %} color: purple {% endif %}" >{{ village_aggregated_status.total_tasks_invalidated_unreview }}</td>
                         <td>
                             {% if PROJECT_NAME == project_name %}
@@ -103,11 +105,11 @@
             },
             columnDefs: [
                 { 
-                    type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7] 
+                    type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7, 8] 
                 }
             ],
-            dom: 'Blrtip',
-            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            dom: 'Blfrtip',
+            buttons: ['copy', 'excel', 'pdf'],
             lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
             pageLength: 10,
             order: []

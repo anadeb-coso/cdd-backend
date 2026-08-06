@@ -6,7 +6,7 @@
         <i class="fa fa-bell"></i>
         <div style="display: inline-block !important;">
             <span style="font-size: 15px;" class="text-danger text-bold">{{ TOTAL_TASKS_WAITING_VALIDATION }}</span>
-            <span style="font-size: 11px;" class="text-danger text-bold">{{ TOTAL_TASKS_INVALIDATED_REVIEW }}</span>
+            <span style="font-size: 11px;" class="text-danger text-bold">{{ TOTAL_TASKS_INVALIDATED_REVIEW_COMPLETED }}</span>
         </div>
     </a>
     <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
@@ -26,9 +26,9 @@
                                 <span class="text-danger text-bold">{{ v|get:'total_tasks_waiting_validation' }}</span> <span class="text-secondary" style="font-size: 11px;">{% translate 'Tasks Completed (Awaiting validation)' %} [{{ project }}] [{{ cycle }}]</span>
                             </p>
                             {% endif %}
-                            {% if v|get:'total_tasks_invalidated_review' %}
+                            {% if v|get:'total_tasks_invalidated_review_completed' %}
                             <p>
-                                <span class="text-danger text-bold">{{ v|get:'total_tasks_invalidated_review' }}</span> <span class="text-secondary" style="font-size: 11px;">{% translate 'Tasks reviewed by the facilitators are awaiting validation' %} [{{ project }}] [{{ cycle }}]</span>
+                                <span class="text-danger text-bold">{{ v|get:'total_tasks_invalidated_review_completed' }}</span> <span class="text-secondary" style="font-size: 11px;">{% translate 'Tasks reviewed by the facilitators are awaiting validation' %} [{{ project }}] [{{ cycle }}]</span>
                             </p>
                             {% endif %}
                         </div>

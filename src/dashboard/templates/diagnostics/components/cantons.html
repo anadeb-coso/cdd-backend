@@ -22,6 +22,7 @@
                 <th>{% translate 'Tasks Waiting Validation' %}</th>
                 <th>{% translate 'Tasks Invalidated' %}</th>
                 <th>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</th>
+                <th>{% translate "Invalidated tasks reviewed by the facilitator (No Completed)" %}</th>
                 <th>{% translate "Tasks Invalidated Unreview by the facilitator" %}</th>
                 <th width="5%" class="no-sort"></th>
             </tr>
@@ -39,7 +40,8 @@
                                     <td style="{% if v_c|get:'total_tasks_validated' %} color: green {% endif%}">{{ v_c|get:'total_tasks_validated' }}</td>
                                     <td style="{% if v_c|get:'total_tasks_waiting_validation' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_waiting_validation' }}</td>
                                     <td style="{% if v_c|get:'total_tasks_invalidated' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated' }}</td>
-                                    <td style="{% if v_c|get:'total_tasks_invalidated_review' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated_review' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_invalidated_review_completed' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated_review_completed' }}</td>
+                                    <td style="{% if v_c|get:'total_tasks_invalidated_review_in_pending' %} color: red {% endif%}" >{{ v_c|get:'total_tasks_invalidated_review_in_pending' }}</td>
                                     <td style="{% if v_c|get:'total_tasks_invalidated_unreview' %} color: purple {% endif%}" >{{ v_c|get:'total_tasks_invalidated_unreview' }}</td>
                                     <td class=" pointer-event ">
                                         <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
@@ -89,7 +91,7 @@
                     type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7] 
                 }
             ],
-            dom: 'Blrtip',
+            dom: 'Blfrtip',
             buttons: ['copy', 'excel', 'pdf', 'colvis'],
             lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
             pageLength: 10,

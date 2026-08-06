@@ -119,7 +119,8 @@
                                         <th width="7%" align="center" >%</th>
                                         <th width="5%" align="center" >V</th>
                                         <th width="5%" align="center" >I</th>
-                                        <th width="5%" align="center" >IR</th>
+                                        <th width="5%" align="center" >IRC</th>
+                                        <th width="5%" align="center" >IRP</th>
                                         <th width="5%" align="center" >IUR</th>
                                         <th width="5%" align="center" >WV</th>
                                     </tr>
@@ -139,7 +140,8 @@
                                                 <td align="center">{{ village_d|get:"percent"|floatformat:"2"  }}%</td>
                                                 <td align="center">{{ village_d|get:"total_tasks_validated" }}</td>
                                                 <td align="center">{{ village_d|get:"total_tasks_invalidated" }}</td>
-                                                <td align="center">{{ village_d|get:"total_tasks_invalidated_review" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_invalidated_review_completed" }}</td>
+                                                <td align="center">{{ village_d|get:"total_tasks_invalidated_review_in_pending" }}</td>
                                                 <td align="center">{{ village_d|get:"total_tasks_invalidated_unreview" }}</td>
                                                 <td align="center">{{ village_d|get:"total_tasks_waiting_validation" }}</td>
                                             </tr>
@@ -152,7 +154,8 @@
                                             <td align="center"><b>{{ v_f.percent|floatformat:"2" }}%</b></td>
                                             <td align="center"><b>{{ v_f.total_tasks_validated }}</b></td>
                                             <td align="center"><b>{{ v_f.total_tasks_invalidated }}</b></td>
-                                            <td align="center"><b>{{ v_f.total_tasks_invalidated_review }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_invalidated_review_completed }}</b></td>
+                                            <td align="center"><b>{{ v_f.total_tasks_invalidated_review_in_pending }}</b></td>
                                             <td align="center"><b>{{ v_f.total_tasks_invalidated_unreview }}</b></td>
                                             <td align="center"><b>{{ v_f.total_tasks_waiting_validation }}</b></td>
                                         </tr>
@@ -173,7 +176,8 @@
                                 <b>T :</b> {% translate "Total" %}, 
                                 <b>V :</b> {% translate "Validated" %}, 
                                 <b>I :</b> {% translate "Invalidated" %}, 
-                                <b>IR :</b> {% translate "Review after invalidation" %}, 
+                                <b>IRC :</b> {% translate "Review after invalidation (Completed)" %}, 
+                                <b>IRP :</b> {% translate "Review after invalidation (No Completed)" %}, 
                                 <b>IUR :</b> {% translate "Invalidated Unreview" %}, 
                                 <b>WV :</b> {% translate "Waiting Validation" %}, 
                                 <b>% :</b> {% translate 'Percentage' %}.

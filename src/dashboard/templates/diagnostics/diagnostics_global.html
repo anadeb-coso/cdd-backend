@@ -67,7 +67,7 @@
                         <div class="card h-75 bg-pink">
                             <div class="card-body" >
                                 <p>{% translate "Invalidated tasks reviewed by the facilitator (Pending validation)" %}</p>
-                                <p class="text-bold" style="font-size: 1.7em;">{{ nbr_tasks_invalidated_review|separate_with_space }}</p>
+                                <p class="text-bold" style="font-size: 1.7em;">{{ nbr_tasks_invalidated_review_completed|separate_with_space }}</p>
                             </div>
                         </div>
                     </div>
@@ -540,7 +540,7 @@ padding: 0;
                                         <td>`+data.nbr_tasks_validated+`</td>
                                         <td>`+data.nbr_tasks_waiting_validation+`</td>
                                         <td>`+data.nbr_tasks_invalidated+`</td>
-                                        <td>`+data.nbr_tasks_invalidated_review+`</td>
+                                        <td>`+data.nbr_tasks_invalidated_review_completed+`</td>
                                         <td>`+data.nbr_tasks_invalidated_unreview+`</td>
                                         <td>`+(data.percentage_tasks_completed).toFixed(2)+`%</td>
                                         <td>`+(data.percentage_tasks_completed_validated).toFixed(2)+`%</td>
@@ -585,7 +585,7 @@ padding: 0;
                                         <td>`+value.nbr_tasks_validated+`</td>
                                         <td>`+value.nbr_tasks_waiting_validation+`</td>
                                         <td>`+value.nbr_tasks_invalidated+`</td>
-                                        <td>`+value.nbr_tasks_invalidated_review+`</td>
+                                        <td>`+value.nbr_tasks_invalidated_review_completed+`</td>
                                         <td>`+value.nbr_tasks_invalidated_unreview+`</td>
                                         <td>`+(value.percentage_tasks_completed).toFixed(2)+`%</td>
                                         <td>`+(value.percentage_tasks_completed_validated).toFixed(2)+`%</td>
