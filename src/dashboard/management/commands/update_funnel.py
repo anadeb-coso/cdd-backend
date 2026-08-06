@@ -3,9 +3,9 @@ import os
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from dashboard.tasks import sync_celery_tasks_re, sync_aggregated_status_on_adl
-from process_manager.models import Project, Cycle, AggregatedStatusFacilitator
+from process_manager.models import Project, Cycle, AggregatedStatusFacilitator, AggregatedStatus
 from cdd.call_objects_from_other_db import mis_objects_call
-from subprojects.models import Project as MisProject
+from subprojects.models import Project as MisProject, Subproject
 from dashboard.facilitators.functions import update_facilitators_stats
 
 class Command(BaseCommand):
@@ -59,8 +59,10 @@ class Command(BaseCommand):
         if not confirm:
             self.stdout.write(self.style.ERROR('\nProcess cancelled by the user.'))
             return
-        
+
         execute_sync_celery_tasks_re_function = self.manage_prompt(bool, "\nDid you want to execute sync_celery_tasks_re function [0=False, 1=True] (default is True)", default='1')
+        if execute_sync_celery_tasks_re_function:
+            did_need_to_delete_aggregated_status = self.manage_prompt(bool, "\nDid you want to delete all AggregatedStatus and AggregatedStatusFacilitator objects before executing the sync_celery_tasks_re function [0=False, 1=True] (default is False)", default='0')
         execute_sync_aggregated_status_on_adl_function = self.manage_prompt(bool, "\nDid you want to execute sync_aggregated_status_on_adl function [0=False, 1=True] (default is True)", default='1')
         if execute_sync_aggregated_status_on_adl_function:
             execute_adl_village = self.manage_prompt(bool, "\nDid you want to execute adl village [0=False, 1=True] (default is True)", default='1')
@@ -70,39 +72,52 @@ class Command(BaseCommand):
         for project_id, cycle_id, develop_mode, training_mode, no_sql_dbs in projects_queue_list:
             self.stdout.write(self.style.WARNING("\n\n====================================================\n"))
             self.stdout.write(self.style.WARNING(f'\tStarting synchronization for Project ID: {project_id}, Cycle ID: {cycle_id}...'))
+
+            _project = Project.objects.get(id=project_id)
+
+            villages_ids_for_project = list(set(sum([sp.get_villages_ids() for sp in mis_objects_call.filter_objects(
+                Subproject, projects__name__in=[_project.name]
+            ).exclude(infrastructure_deleted=True)], [])))
             
             if execute_sync_celery_tasks_re_function:
+
+                if did_need_to_delete_aggregated_status:
+                    print(f"Deleting all AggregatedStatus and AggregatedStatusFacilitator objects for Project ID: {project_id}, Cycle ID: {cycle_id}...")
+                    AggregatedStatus.all_objects.filter(project_id=project_id, cycle_id=cycle_id).delete()
+                    AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).delete()
+                    print(f"All AggregatedStatus and AggregatedStatusFacilitator objects deleted successfully for Project ID: {project_id}, Cycle ID: {cycle_id}")
+
                 if no_sql_dbs:
                     for no_sql_db in no_sql_dbs:
-                        sync_celery_tasks_re(project_id, cycle_id, develop_mode, training_mode, no_sql_db)
+                        sync_celery_tasks_re(project_id, cycle_id, develop_mode, training_mode, no_sql_db, villages_ids_for_project)
                 else:
-                    sync_celery_tasks_re(project_id, cycle_id, develop_mode, training_mode)
+                    sync_celery_tasks_re(project_id, cycle_id, develop_mode, training_mode, villages_ids_have_subproject=villages_ids_for_project)
             if execute_sync_aggregated_status_on_adl_function:
-                sync_aggregated_status_on_adl(project_id, cycle_id, execute_adl_village, execute_adl_bigger_than_village)
+                sync_aggregated_status_on_adl(project_id, cycle_id, execute_adl_village, execute_adl_bigger_than_village, villages_ids_for_project)
             
-            if execute_sync_celery_tasks_re_function or execute_sync_aggregated_status_on_adl_function:
-                AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
+            #if execute_sync_celery_tasks_re_function or execute_sync_aggregated_status_on_adl_function:
+            AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
+        
+            #Sync facilitators stats
+            print("Sync facilitators stats")
             
-                #Sync facilitators stats
-                print("Sync facilitators stats")
-                _project = Project.objects.get(id=project_id)
-                facilitators = update_facilitators_stats(
-                    FacilitatorRepository().find_by_criteria(
-                        criteria=FacilitatorCriteria(
-                            facilitator_type='community_facilitator',
-                            develop_mode=False,
-                            training_mode=False,
-                            active=True,
-                            projects__id=[project_id]
-                        )
-                    ), 
-                    [],
-                    project_id, 
-                    cycle_id,
-                    _project.couch_id,
-                    mis_objects_call.get_object(MisProject, name=_project.name)
-                )
-                print("End Sync facilitators stats", len(facilitators))
+            facilitators = update_facilitators_stats(
+                FacilitatorRepository().find_by_criteria(
+                    criteria=FacilitatorCriteria(
+                        facilitator_type='community_facilitator',
+                        develop_mode=False,
+                        training_mode=False,
+                        # active=True,
+                        projects__id=[project_id]
+                    )
+                ), 
+                [],
+                project_id, 
+                cycle_id,
+                _project.couch_id,
+                mis_objects_call.get_object(MisProject, name=_project.name)
+            )
+            print("End Sync facilitators stats", len(facilitators))
 
         self.stdout.write(self.style.SUCCESS('Successfully executed update_funnel command!'))
 

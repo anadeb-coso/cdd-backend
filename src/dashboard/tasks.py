@@ -16,6 +16,7 @@ from administrativelevels.models import AdministrativeLevel, CVD
 from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject, Cycle as MisCycle
+from cdd.constants import PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION
 
 BATCH_SIZE = 500
 def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[], batch_size=BATCH_SIZE):
@@ -30,155 +31,155 @@ def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[],
                     fields
                 )
 
-def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, ad: AdministrativeLevel, _task: dict, project_id: int, cycle_id):
-    if ad.parent:
-        parent = ad.parent
-        _ok = True
-        try:
-            a = AggregatedStatus.objects.get(administrative_level_id=parent.id, task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id)
-            if count_facilitator == 1 and count_facilitator_cvd == 1:
-                a.total_tasks_completed = 0
-                a.total_tasks = 0
-        except AggregatedStatus.DoesNotExist as exc:
-            a = AggregatedStatus()
-            a.administrative_level_id = parent.id
-            a.project_id = project_id
-            a.cycle_id = cycle_id
-            a.task_id = int(_task["sql_id"])
-        except Exception as exc:
-            # print(exc)
-            _ok = False
-        if _ok:
-            a.total_tasks_completed = ((a.total_tasks_completed+1) if _task['completed'] else a.total_tasks_completed)
-            a.total_tasks += 1
-            a.save()
+# def recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, ad: AdministrativeLevel, _task: dict, project_id: int, cycle_id):
+#     if ad.parent:
+#         parent = ad.parent
+#         _ok = True
+#         try:
+#             a = AggregatedStatus.objects.get(administrative_level_id=parent.id, task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id)
+#             if count_facilitator == 1 and count_facilitator_cvd == 1:
+#                 a.total_tasks_completed = 0
+#                 a.total_tasks = 0
+#         except AggregatedStatus.DoesNotExist as exc:
+#             a = AggregatedStatus()
+#             a.administrative_level_id = parent.id
+#             a.project_id = project_id
+#             a.cycle_id = cycle_id
+#             a.task_id = int(_task["sql_id"])
+#         except Exception as exc:
+#             # print(exc)
+#             _ok = False
+#         if _ok:
+#             a.total_tasks_completed = ((a.total_tasks_completed+1) if _task['completed'] else a.total_tasks_completed)
+#             a.total_tasks += 1
+#             a.save()
         
-        return recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, parent, _task, project_id, cycle_id) #call recursive function
+#         return recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, parent, _task, project_id, cycle_id) #call recursive function
     
-    return None
+#     return None
 
 
-@app.task
-def sync_celery_tasks(project_id, cycle_id, develop_mode=False, training_mode=False):
-    project = Project.objects.get(id=project_id)
-    cycle = Cycle.objects.get(id=cycle_id)
-    nsc = NoSQLClient()
-    count_facilitator = 0
-    print("Start")
-    for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
-        print()
-        # print()
-        # print()
-        print(count_facilitator, f.no_sql_db_name, f.username)
-        count_facilitator += 1
-        nbr_tasks_completed = 0
-        nbr_tasks = 0
-        last_activity_date = "0000-00-00 00:00:00"
-        facilitator_db = nsc.get_db(f.no_sql_db_name)
-        docs = facilitator_db.all_docs(include_docs=True)['rows']
+# # @app.task
+# def sync_celery_tasks(project_id, cycle_id, develop_mode=False, training_mode=False):
+#     project = Project.objects.get(id=project_id)
+#     cycle = Cycle.objects.get(id=cycle_id)
+#     nsc = NoSQLClient()
+#     count_facilitator = 0
+#     print("Start")
+#     for f in Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id]).order_by('id'):
+#         print()
+#         # print()
+#         # print()
+#         print(count_facilitator, f.no_sql_db_name, f.username)
+#         count_facilitator += 1
+#         nbr_tasks_completed = 0
+#         nbr_tasks = 0
+#         last_activity_date = "0000-00-00 00:00:00"
+#         facilitator_db = nsc.get_db(f.no_sql_db_name)
+#         docs = facilitator_db.all_docs(include_docs=True)['rows']
 
-        facilitator_doc = None
-        for _doc in docs:
-            doc = _doc.get('doc')
-            if doc.get('type') == 'facilitator' and not doc.get('develop_mode') and not doc.get('training_mode'):
-                facilitator_doc = doc
-                break
+#         facilitator_doc = None
+#         for _doc in docs:
+#             doc = _doc.get('doc')
+#             if doc.get('type') == 'facilitator' and not doc.get('develop_mode') and not doc.get('training_mode'):
+#                 facilitator_doc = doc
+#                 break
             
-        docs = [doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
+#         docs = [doc for doc in docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id]
         
-        if facilitator_doc:
-            doc = facilitator_doc
-            cvds = get_cvds(project.couch_id, cycle.couch_id, doc)
-            count_facilitator_cvd = 0
-            for cvd in cvds:
-                count_facilitator_cvd += 1
-                _village = cvd['village']
+#         if facilitator_doc:
+#             doc = facilitator_doc
+#             cvds = get_cvds(project.couch_id, cycle.couch_id, doc)
+#             count_facilitator_cvd = 0
+#             for cvd in cvds:
+#                 count_facilitator_cvd += 1
+#                 _village = cvd['village']
                 
-                for _task in docs:
-                    _task = _task.get('doc')
-                    if _task.get('type') == 'task' and _task.get('sql_id') and str(_task.get('administrative_level_id')) == str(_village['id']):
-                        if _task['completed']:
-                            nbr_tasks_completed += 1
-                        nbr_tasks += 1
+#                 for _task in docs:
+#                     _task = _task.get('doc')
+#                     if _task.get('type') == 'task' and _task.get('sql_id') and str(_task.get('administrative_level_id')) == str(_village['id']):
+#                         if _task['completed']:
+#                             nbr_tasks_completed += 1
+#                         nbr_tasks += 1
 
-                        last_updated = datetime_complet_str(_task.get('last_updated'))
-                        if last_updated and last_activity_date < last_updated:
-                            last_activity_date = last_updated
+#                         last_updated = datetime_complet_str(_task.get('last_updated'))
+#                         if last_updated and last_activity_date < last_updated:
+#                             last_activity_date = last_updated
 
-                        #By village
-                        # print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
-                        for ad_id in cvd['villages']:
-                            a = None
-                            _ok = True
-                            try:
-                                a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id)
-                            except AggregatedStatus.DoesNotExist as exc:
-                                a = AggregatedStatus()
-                                a.administrative_level_id = int(ad_id['id'])
-                                a.project_id = project_id
-                                a.cycle_id = cycle_id
-                                a.task_id = int(_task["sql_id"])
-                            # except Exception as exc:
-                            #     print(exc)
-                            #     _ok = False
-                            if _ok:
-                                a.total_tasks_completed = 1 if _task['completed'] else 0
-                                a.total_tasks = 1
-                                a.save()
+#                         #By village
+#                         # print(_task.get('administrative_level_id'), _task.get('name'), _task.get('sql_id'))
+#                         for ad_id in cvd['villages']:
+#                             a = None
+#                             _ok = True
+#                             try:
+#                                 a = AggregatedStatus.objects.get(administrative_level_id=int(ad_id['id']), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id)
+#                             except AggregatedStatus.DoesNotExist as exc:
+#                                 a = AggregatedStatus()
+#                                 a.administrative_level_id = int(ad_id['id'])
+#                                 a.project_id = project_id
+#                                 a.cycle_id = cycle_id
+#                                 a.task_id = int(_task["sql_id"])
+#                             # except Exception as exc:
+#                             #     print(exc)
+#                             #     _ok = False
+#                             if _ok:
+#                                 a.total_tasks_completed = 1 if _task['completed'] else 0
+#                                 a.total_tasks = 1
+#                                 a.save()
                         
-                        #By Canton but counting on CVD not villages
-                        try:
-                            _village_cvd = AdministrativeLevel.objects.using('mis').get(id=int(_village['id']))
-                            if _village_cvd.type == "Village":
-                                recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, _village_cvd, _task, project_id, cycle_id)
-                        except:
-                            pass
-                        # _ok = True
-                        # canton = AdministrativeLevel.objects.get(id=int(_village['id'])).parent
-                        # try:
-                        #     a_canton = AggregatedStatus.objects.get(administrative_level_id=canton.id, task_id=int(_task["sql_id"]))
-                        #     if count_facilitator == 1:
-                        #         a_canton.total_tasks_completed = 0
-                        #         a_canton.total_tasks = 0
-                        # except AggregatedStatus.DoesNotExist as exc:
-                        #     a_canton = AggregatedStatus()
-                        #     a_canton.administrative_level_id = canton.id
-                        #     a_canton.task_id = int(_task["sql_id"])
-                        # except Exception as exc:
-                        #     print(exc)
-                        #     _ok = False
-                        # if _ok:
-                        #     a_canton.total_tasks_completed = a_canton.total_tasks_completed+1 if _task['completed'] else a_canton.total_tasks_completed
-                        #     a_canton.total_tasks =  a_canton.total_tasks + 1
-                        #     a_canton.save()
+#                         #By Canton but counting on CVD not villages
+#                         try:
+#                             _village_cvd = AdministrativeLevel.objects.using('mis').get(id=int(_village['id']))
+#                             if _village_cvd.type == "Village":
+#                                 recursive_to_save_administrativelevel_tasks_completed(count_facilitator, count_facilitator_cvd, _village_cvd, _task, project_id, cycle_id)
+#                         except:
+#                             pass
+#                         # _ok = True
+#                         # canton = AdministrativeLevel.objects.get(id=int(_village['id'])).parent
+#                         # try:
+#                         #     a_canton = AggregatedStatus.objects.get(administrative_level_id=canton.id, task_id=int(_task["sql_id"]))
+#                         #     if count_facilitator == 1:
+#                         #         a_canton.total_tasks_completed = 0
+#                         #         a_canton.total_tasks = 0
+#                         # except AggregatedStatus.DoesNotExist as exc:
+#                         #     a_canton = AggregatedStatus()
+#                         #     a_canton.administrative_level_id = canton.id
+#                         #     a_canton.task_id = int(_task["sql_id"])
+#                         # except Exception as exc:
+#                         #     print(exc)
+#                         #     _ok = False
+#                         # if _ok:
+#                         #     a_canton.total_tasks_completed = a_canton.total_tasks_completed+1 if _task['completed'] else a_canton.total_tasks_completed
+#                         #     a_canton.total_tasks =  a_canton.total_tasks + 1
+#                         #     a_canton.save()
                         
-            # print(count_facilitator_cvd)
+#             # print(count_facilitator_cvd)
 
-            f.name = facilitator_doc.get('name')
-            f.email = facilitator_doc.get('email')
-            f.phone = facilitator_doc.get('phone')
-            f.sex = facilitator_doc.get('sex')
-            f.total_tasks_completed = nbr_tasks_completed
-            f.total_tasks = nbr_tasks
+#             f.name = facilitator_doc.get('name')
+#             f.email = facilitator_doc.get('email')
+#             f.phone = facilitator_doc.get('phone')
+#             f.sex = facilitator_doc.get('sex')
+#             f.total_tasks_completed = nbr_tasks_completed
+#             f.total_tasks = nbr_tasks
 
-            if last_activity_date == "0000-00-00 00:00:00":
-                last_activity_date = None
-            else:
-                last_activity_date = parse_datetime(last_activity_date) #datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
-                if last_activity_date is not None:
-                    last_activity_date = last_activity_date.replace(tzinfo=pytz.UTC)
-                # _date = last_activity_date.split()[0]
-                # _hours = last_activity_date.split()[1]
-                # last_activity_date = datetime(
-                #     int(_date.split("-")[0]), int(_date.split("-")[1]), int(_date.split("-")[2]), 
-                #     int(_hours.split(":")[0]), int(_hours.split(":")[1]), int(_hours.split(":")[2]),
-                #     tzinfo=pytz.UTC
-                # )
-            f.last_activity = last_activity_date
+#             if last_activity_date == "0000-00-00 00:00:00":
+#                 last_activity_date = None
+#             else:
+#                 last_activity_date = parse_datetime(last_activity_date) #datetime.strptime(last_activity_date, '%Y-%m-%d %H:%M:%S')
+#                 if last_activity_date is not None:
+#                     last_activity_date = last_activity_date.replace(tzinfo=pytz.UTC)
+#                 # _date = last_activity_date.split()[0]
+#                 # _hours = last_activity_date.split()[1]
+#                 # last_activity_date = datetime(
+#                 #     int(_date.split("-")[0]), int(_date.split("-")[1]), int(_date.split("-")[2]), 
+#                 #     int(_hours.split(":")[0]), int(_hours.split(":")[1]), int(_hours.split(":")[2]),
+#                 #     tzinfo=pytz.UTC
+#                 # )
+#             f.last_activity = last_activity_date
 
-            f.save()
+#             f.save()
         
-    print("End")
+#     print("End")
 
 
 @app.task
@@ -207,7 +208,7 @@ def test_one():
 #     sender.add_periodic_task(10.0, test.s(4, 8), name='add every 10')
 
 
-def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_village=True, execute_adl_bigger_than_village=False):
+def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_village=True, execute_adl_bigger_than_village=False, villages_ids_have_subproject=[]):
     project = Project.objects.get(id=project_id)
     cycle = Cycle.objects.get(id=cycle_id)
     project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
@@ -249,7 +250,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                     total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                    total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                    total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                    total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                    total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                 )
                 adl_a.total_tasks_completed = sums['total_tasks_completed'] or 0
                 adl_a.total_tasks = sums['total_tasks'] or 0
@@ -257,7 +262,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                 adl_a.total_tasks_waiting_validation = sums['total_tasks_waiting_validation'] or 0
                 adl_a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                 adl_a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
+                adl_a.total_tasks_invalidated_review_completed = sums['total_tasks_invalidated_review_completed'] or 0
+                adl_a.total_tasks_invalidated_review_in_pending = sums['total_tasks_invalidated_review_in_pending'] or 0
                 adl_a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
+                adl_a.total_tasks_invalidated_unreview_completed = sums['total_tasks_invalidated_unreview_completed'] or 0
+                adl_a.total_tasks_invalidated_unreview_in_pending = sums['total_tasks_invalidated_unreview_in_pending'] or 0
                 adl_a.updated_date = now
                 
                 if task_action == "create":
@@ -268,7 +277,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
         if tasks_bucket_create:
             bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
         if tasks_bucket_update:
-            bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
+            bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_review_completed', 'total_tasks_invalidated_review_in_pending', 'total_tasks_invalidated_unreview', 'total_tasks_invalidated_unreview_completed', 'total_tasks_invalidated_unreview_in_pending', 'last_activity', 'updated_date'])
         
         print("End sync_aggregated_status_on_adl for Village")
 
@@ -289,14 +298,14 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                 _adls_ids = _adls_ids_dict.get(str(adl.id))
                 
                 for task in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by('id'):
-                    children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
+                    children_agg = AggregatedStatus.all_objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
                     
                     aggreg_last_activity = None
                     if children_agg:
                         aggreg_last_activity = children_agg.latest('last_activity')
 
                     task_action = "update"
-                    a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                    a = AggregatedStatus.all_objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
                     if not a:
                         a = AggregatedStatus()
                         a.administrative_level_id = adl.id
@@ -304,8 +313,19 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                         a.cycle_id = cycle_id
                         a.task_id = task.id
                         a.facilitator = None
+                        if task.phase.name in PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION:
+                            a.task_needs_subproject = False
+                        else:
+                            a.task_needs_subproject = True
                         task_action = "create"
-                    
+
+                    if villages_ids_have_subproject:
+                        if adl.id in villages_ids_have_subproject:
+                            a.its_adl_has_sub_project = True
+                        else:
+                            a.its_adl_has_sub_project = False
+                    else:
+                        a.its_adl_has_sub_project = None
                     
                     a.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
 
@@ -316,7 +336,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                         total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                         total_tasks_invalidated=Sum('total_tasks_invalidated'),
                         total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                        total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                        total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                         total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                        total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                        total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                     )
                     a.total_tasks_completed = sums['total_tasks_completed'] or 0
                     a.total_tasks = sums['total_tasks'] or 0
@@ -324,7 +348,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                     a.total_tasks_waiting_validation = sums['total_tasks_waiting_validation'] or 0
                     a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                     a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
+                    a.total_tasks_invalidated_review_completed = sums['total_tasks_invalidated_review_completed'] or 0
+                    a.total_tasks_invalidated_review_in_pending = sums['total_tasks_invalidated_review_in_pending'] or 0
                     a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
+                    a.total_tasks_invalidated_unreview_completed = sums['total_tasks_invalidated_unreview_completed'] or 0
+                    a.total_tasks_invalidated_unreview_in_pending = sums['total_tasks_invalidated_unreview_in_pending'] or 0
                     a.updated_date = now
 
                         # a.save()
@@ -336,7 +364,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             if tasks_bucket_create:
                 bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
             if tasks_bucket_update:
-                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
+                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_review_completed', 'total_tasks_invalidated_review_in_pending', 'total_tasks_invalidated_unreview', 'total_tasks_invalidated_unreview_completed', 'total_tasks_invalidated_unreview_in_pending', 'last_activity', 'its_adl_has_sub_project', 'updated_date'])
             
             print("End sync_aggregated_status_on_adl for", type_adl, "for tasks")
 
@@ -375,7 +403,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                         total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                         total_tasks_invalidated=Sum('total_tasks_invalidated'),
                         total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                        total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                        total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                         total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                        total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                        total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                     )
                     adl_a.total_tasks_completed = sums['total_tasks_completed'] or 0
                     adl_a.total_tasks = sums['total_tasks'] or 0
@@ -383,7 +415,11 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                     adl_a.total_tasks_waiting_validation = sums['total_tasks_waiting_validation'] or 0
                     adl_a.total_tasks_invalidated = sums['total_tasks_invalidated'] or 0
                     adl_a.total_tasks_invalidated_review = sums['total_tasks_invalidated_review'] or 0
+                    adl_a.total_tasks_invalidated_review_completed = sums['total_tasks_invalidated_review_completed'] or 0
+                    adl_a.total_tasks_invalidated_review_in_pending = sums['total_tasks_invalidated_review_in_pending'] or 0
                     adl_a.total_tasks_invalidated_unreview = sums['total_tasks_invalidated_unreview'] or 0
+                    adl_a.total_tasks_invalidated_unreview_completed = sums['total_tasks_invalidated_unreview_completed'] or 0
+                    adl_a.total_tasks_invalidated_unreview_in_pending = sums['total_tasks_invalidated_unreview_in_pending'] or 0
                     adl_a.updated_date = now
 
                     if task_action == "create":
@@ -394,7 +430,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             if tasks_bucket_create:
                 bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
             if tasks_bucket_update:
-                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
+                bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_review_completed', 'total_tasks_invalidated_review_in_pending', 'total_tasks_invalidated_unreview', 'total_tasks_invalidated_unreview_completed', 'total_tasks_invalidated_unreview_in_pending', 'last_activity', 'updated_date'])
             
             print("End sync_aggregated_status_on_adl for", type_adl, "for adl")
 
@@ -430,7 +466,7 @@ search_facilitators_db_with_villages_stabilized("COSO")
 
 """
 
-def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=None):
+def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=None, villages_ids_have_subproject=[]):
     project = Project.objects.get(id=project_id)
     cycle = Cycle.objects.get(id=cycle_id)
     project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
@@ -498,13 +534,17 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         # ad_id['id']
                            
                         task_action = "update"
-                        a = AggregatedStatus.objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                        a = AggregatedStatus.all_objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
                         if not a:
                             a = AggregatedStatus()
                             a.administrative_level_id = int(ad_id)
                             a.project_id = project_id
                             a.cycle_id = cycle_id
                             a.task_id = int(_task["sql_id"])
+                            if _task["phase_name"] in PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION:
+                                a.task_needs_subproject = False
+                            else:
+                                a.task_needs_subproject = True
                             task_action = "create"
                                 
                         a.total_tasks_completed = 1 if _task['completed'] else 0
@@ -513,6 +553,20 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         # Validation status
                         a.total_tasks_validated = 1 if _task.get("validated") else 0
                         a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
+                        
+                        a.total_tasks_invalidated_review_completed = 0
+                        a.total_tasks_invalidated_review_in_pending = 0
+                        a.total_tasks_invalidated_unreview_completed = 0
+                        a.total_tasks_invalidated_unreview_in_pending = 0
+
+                        if villages_ids_have_subproject:
+                            if int(ad_id) in villages_ids_have_subproject:
+                                a.its_adl_has_sub_project = True
+                            else:
+                                a.its_adl_has_sub_project = False
+                        else:
+                            a.its_adl_has_sub_project = None
+                                        
                         if _task.get("validated") == False:
                             a.total_tasks_invalidated = 1
 
@@ -533,9 +587,17 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                             if updated_after_invalidation:
                                 a.total_tasks_invalidated_review = 1
                                 a.total_tasks_invalidated_unreview = 0
+                                if _task['completed']:
+                                    a.total_tasks_invalidated_review_completed = 1
+                                else:
+                                    a.total_tasks_invalidated_review_in_pending = 1
                             else:
                                 a.total_tasks_invalidated_unreview = 1
                                 a.total_tasks_invalidated_review = 0
+                                if _task['completed']:
+                                    a.total_tasks_invalidated_unreview_completed = 1
+                                else:
+                                    a.total_tasks_invalidated_unreview_in_pending = 1
 
                         else:
                             a.total_tasks_invalidated = 0
@@ -578,13 +640,17 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                 # adl_o.id
             for ad_id in _villages_ids:
                     task_action = "update"
-                    a = AggregatedStatus.objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                    a = AggregatedStatus.all_objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
                     if not a:
                         a = AggregatedStatus()
                         a.administrative_level_id = int(ad_id)
                         a.project_id = project_id
                         a.cycle_id = cycle_id
                         a.task_id = int(_task["sql_id"])
+                        if _task["phase_name"] in PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION:
+                            a.task_needs_subproject = False
+                        else:
+                            a.task_needs_subproject = True
                         task_action = "create"
                             
                     a.total_tasks_completed = 1 if _task['completed'] else 0
@@ -593,6 +659,20 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                     # Validation status
                     a.total_tasks_validated = 1 if _task.get("validated") else 0
                     a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
+
+                    a.total_tasks_invalidated_review_completed = 0
+                    a.total_tasks_invalidated_review_in_pending = 0
+                    a.total_tasks_invalidated_unreview_completed = 0
+                    a.total_tasks_invalidated_unreview_in_pending = 0
+
+                    if villages_ids_have_subproject:
+                        if int(ad_id) in villages_ids_have_subproject:
+                            a.its_adl_has_sub_project = True
+                        else:
+                            a.its_adl_has_sub_project = False
+                    else:
+                        a.its_adl_has_sub_project = None
+                    
                     if _task.get("validated") == False:
                         a.total_tasks_invalidated = 1
 
@@ -613,9 +693,17 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         if updated_after_invalidation:
                             a.total_tasks_invalidated_review = 1
                             a.total_tasks_invalidated_unreview = 0
+                            if _task['completed']:
+                                a.total_tasks_invalidated_review_completed = 1
+                            else:
+                                a.total_tasks_invalidated_review_in_pending = 1
                         else:
                             a.total_tasks_invalidated_unreview = 1
                             a.total_tasks_invalidated_review = 0
+                            if _task['completed']:
+                                a.total_tasks_invalidated_unreview_completed = 1
+                            else:
+                                a.total_tasks_invalidated_unreview_in_pending = 1
 
                     else:
                         a.total_tasks_invalidated = 0
@@ -641,7 +729,7 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     if tasks_bucket_create:
         bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
     if tasks_bucket_update:
-        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'updated_date'])
+        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'its_adl_has_sub_project', 'updated_date'])
 
 
 
