@@ -13,6 +13,7 @@ from dashboard.utils import structure_the_words as utils_structure_the_words
 from dashboard.functions import order_dict
 from authentication.models import Facilitator
 from planning.models import Activity as PlanActivity, ValidationGroupsProcess
+from grm_client import attach_administrative_regions_objects
 
 register = template.Library()
 
@@ -434,6 +435,21 @@ def administrative_regions_objects(value):
         'cantons': ", ".join(cantons),
         'cantons_numbers': len(cantons)
     }
+
+@register.filter(name='attach_administrative_regions_objects') 
+def filter_attach_administrative_regions_objects(value):
+    
+    value = attach_administrative_regions_objects(value or [])['administrative_regions_objects']
+
+    cantons = [c['name'] for c in value]
+    villages = [elt['name'] for v in value for elt in v['villages']]
+    return {
+        'villages': ", ".join(villages),
+        'villages_numbers': len(villages),
+        'cantons': ", ".join(cantons),
+        'cantons_numbers': len(cantons)
+    }
+
 
 @register.filter
 def get_facilitator_by_email(facilitator):
