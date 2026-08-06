@@ -12,6 +12,8 @@ def settings_vars(request):
     invalidation_notifications = {}
     total_tasks_waiting_validation = 0
     total_tasks_invalidated_review = 0
+    total_tasks_invalidated_review_completed = 0
+    total_tasks_invalidated_review_in_pending = 0
     if 'cantons_stabilized_ids' in request.session and request.session['cantons_stabilized_ids'] and request.user.groups.filter(name__in=["Supervisor"]).exists():
         projects = Project.objects.filter(users__in=[request.user.id]).prefetch_related("cycle_set")
         
@@ -28,6 +30,8 @@ def settings_vars(request):
             .annotate(
                 total_tasks_waiting_validation=Sum("total_tasks_waiting_validation"),
                 total_tasks_invalidated_review=Sum("total_tasks_invalidated_review"),
+                total_tasks_invalidated_review_completed=Sum("total_tasks_invalidated_review_completed"),
+                total_tasks_invalidated_review_in_pending=Sum("total_tasks_invalidated_review_in_pending"),
             )
         )
         aggregated_map = {
@@ -45,9 +49,13 @@ def settings_vars(request):
                 
                 invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_waiting_validation') or 0
                 invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review') or 0
+                invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_completed'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review_completed') or 0
+                invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_in_pending'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review_in_pending') or 0
                 
                 total_tasks_waiting_validation += invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation']
                 total_tasks_invalidated_review += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review']
+                total_tasks_invalidated_review_completed += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_completed']
+                total_tasks_invalidated_review_in_pending += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_in_pending']
 
 
     return {
@@ -81,6 +89,8 @@ def settings_vars(request):
 
         "INVALIDATION_NOTIFICATIONS": invalidation_notifications,
         "TOTAL_TASKS_WAITING_VALIDATION": total_tasks_waiting_validation,
-        "TOTAL_TASKS_INVALIDATED_REVIEW": total_tasks_invalidated_review
+        "TOTAL_TASKS_INVALIDATED_REVIEW": total_tasks_invalidated_review,
+        "TOTAL_TASKS_INVALIDATED_REVIEW_COMPLETED": total_tasks_invalidated_review_completed,
+        "TOTAL_TASKS_INVALIDATED_REVIEW_IN_PENDING": total_tasks_invalidated_review_in_pending
 
     }

@@ -177,19 +177,31 @@ class Generate(View):
                     dict_f['total_tasks_validated_current_project'] = _f.total_tasks_validated_current_project
                     dict_f['total_tasks_invalidated_current_project'] = _f.total_tasks_invalidated_current_project
                     dict_f['total_tasks_invalidated_review_current_project'] = _f.total_tasks_invalidated_review_current_project
+                    dict_f['total_tasks_invalidated_review_completed_current_project'] = _f.total_tasks_invalidated_review_completed_current_project
+                    dict_f['total_tasks_invalidated_review_in_pending_current_project'] = _f.total_tasks_invalidated_review_in_pending_current_project
                     dict_f['total_tasks_invalidated_unreview_current_project'] = _f.total_tasks_invalidated_unreview_current_project
+                    dict_f['total_tasks_invalidated_unreview_completed_current_project'] = _f.total_tasks_invalidated_unreview_completed_current_project
+                    dict_f['total_tasks_invalidated_unreview_in_pending_current_project'] = _f.total_tasks_invalidated_unreview_in_pending_current_project
                     dict_f['total_tasks_waiting_validation_current_project'] = _f.total_tasks_waiting_validation_current_project
 
                     dict_f['total_tasks_validated_stabilized'] = _f.total_tasks_validated_stabilized
                     dict_f['total_tasks_invalidated_stabilized'] = _f.total_tasks_invalidated_stabilized
                     dict_f['total_tasks_invalidated_review_stabilized'] = _f.total_tasks_invalidated_review_stabilized
+                    dict_f['total_tasks_invalidated_review_completed_stabilized'] = _f.total_tasks_invalidated_review_completed_stabilized
+                    dict_f['total_tasks_invalidated_review_in_pending_stabilized'] = _f.total_tasks_invalidated_review_in_pending_stabilized
                     dict_f['total_tasks_invalidated_unreview_stabilized'] = _f.total_tasks_invalidated_unreview_stabilized
+                    dict_f['total_tasks_invalidated_unreview_completed_stabilized'] = _f.total_tasks_invalidated_unreview_completed_stabilized
+                    dict_f['total_tasks_invalidated_unreview_in_pending_stabilized'] = _f.total_tasks_invalidated_unreview_in_pending_stabilized
                     dict_f['total_tasks_waiting_validation_stabilized'] = _f.total_tasks_waiting_validation_stabilized
                     
                     dict_f['total_tasks_validated'] = _f.total_tasks_validated
                     dict_f['total_tasks_invalidated'] = _f.total_tasks_invalidated
                     dict_f['total_tasks_invalidated_review'] = _f.total_tasks_invalidated_review
+                    dict_f['total_tasks_invalidated_review_completed'] = _f.total_tasks_invalidated_review_completed
+                    dict_f['total_tasks_invalidated_review_in_pending'] = _f.total_tasks_invalidated_review_in_pending
                     dict_f['total_tasks_invalidated_unreview'] = _f.total_tasks_invalidated_unreview
+                    dict_f['total_tasks_invalidated_unreview_completed'] = _f.total_tasks_invalidated_unreview_completed
+                    dict_f['total_tasks_invalidated_unreview_in_pending'] = _f.total_tasks_invalidated_unreview_in_pending
                     dict_f['total_tasks_waiting_validation'] = _f.total_tasks_waiting_validation
                     
                     dict_f['cvds_number_current_project'] = _f.cvds_number_current_project

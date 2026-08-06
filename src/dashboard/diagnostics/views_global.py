@@ -99,7 +99,11 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
             total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
             total_tasks_invalidated=Sum('total_tasks_invalidated'),
             total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+            total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+            total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
             total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+            total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+            total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
         )
         
         context['nbr_tasks_completed'] = aggregated_status['total_tasks_completed'] or 0
@@ -108,7 +112,11 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
         context['nbr_tasks_waiting_validation'] = aggregated_status['total_tasks_waiting_validation'] or 0
         context['nbr_tasks_invalidated'] = aggregated_status['total_tasks_invalidated'] or 0
         context['nbr_tasks_invalidated_review'] = aggregated_status['total_tasks_invalidated_review'] or 0
+        context['nbr_tasks_invalidated_review_completed'] = aggregated_status['total_tasks_invalidated_review_completed'] or 0
+        context['nbr_tasks_invalidated_review_in_pending'] = aggregated_status['total_tasks_invalidated_review_in_pending'] or 0
         context['nbr_tasks_invalidated_unreview'] = aggregated_status['total_tasks_invalidated_unreview'] or 0
+        context['nbr_tasks_invalidated_unreview_completed'] = aggregated_status['total_tasks_invalidated_unreview_completed'] or 0
+        context['nbr_tasks_invalidated_unreview_in_pending'] = aggregated_status['total_tasks_invalidated_unreview_in_pending'] or 0
         context['percentage_tasks_completed'] = float("%.2f" % (context['nbr_tasks_completed'] / context['nbr_tasks'] * 100) if context['nbr_tasks'] > 0 else 0)
         context['percentage_tasks_completed_validated'] = float("%.2f" % (context['nbr_tasks_validated'] / context['nbr_tasks_completed'] * 100) if context['nbr_tasks_completed'] > 0 else 0)
 
@@ -237,7 +245,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                    total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                    total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                    total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                    total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                 )
                 if regions and region.name in regions:
                     regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
@@ -246,7 +258,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
                     regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
                     regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review_completed'] = sums['total_tasks_invalidated_review_completed'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review_in_pending'] = sums['total_tasks_invalidated_review_in_pending'] or 0
                     regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview_completed'] = sums['total_tasks_invalidated_unreview_completed'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview_in_pending'] = sums['total_tasks_invalidated_unreview_in_pending'] or 0
 
                     regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
                     regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
@@ -290,7 +306,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                    total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                    total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                    total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                    total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                 )
                 regions[k]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
                 regions[k]['nbr_tasks'] = sums['total_tasks'] or 0
@@ -298,7 +318,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 regions[k]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
                 regions[k]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
                 regions[k]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                regions[k]['nbr_tasks_invalidated_review_completed'] = sums['total_tasks_invalidated_review_completed'] or 0
+                regions[k]['nbr_tasks_invalidated_review_in_pending'] = sums['total_tasks_invalidated_review_in_pending'] or 0
                 regions[k]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                regions[k]['nbr_tasks_invalidated_unreview_completed'] = sums['total_tasks_invalidated_unreview_completed'] or 0
+                regions[k]['nbr_tasks_invalidated_unreview_in_pending'] = sums['total_tasks_invalidated_unreview_in_pending'] or 0
 
                 regions[k]['percentage_tasks_completed'] = ((regions[k]["nbr_tasks_completed"]/regions[k]["nbr_tasks"])*100) if regions[k]["nbr_tasks"] else 0
                 regions[k]['percentage_tasks_completed_validated'] = ((regions[k]["nbr_tasks_validated"]/regions[k]["nbr_tasks_completed"])*100) if regions[k]["nbr_tasks_completed"] else 0

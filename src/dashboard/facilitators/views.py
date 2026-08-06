@@ -97,7 +97,8 @@ class FacilitatorListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
         context['project_names'] = f"{', '.join([p.name for p in Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()])}"
 
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
+        agg = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first()
+        context['last_update'] = agg.updated_date if agg else None
         self.title = f"{self.title} {context['last_update'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')}" if context['last_update'] else self.title
         
         if self.request.user.is_authenticated and self.request.user.is_superuser and self.request.GET.get('sync', False) in ('1', 1):
@@ -143,8 +144,8 @@ class FacilitatorMixin(LoginRequiredMixin):
             self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
 
-            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-            self.project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+            self.project_mis_id = project_mis.id if project_mis else 1
 
 
             
@@ -630,8 +631,8 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             docs = facilitator_db.get_query_result(selector, limit=1000000)[:]
             
             nsc = NoSQLClient()
-            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-            project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+            project_mis_id = project_mis.id if project_mis else 1
             query_result = facilitator_db.get_query_result({
                 "type": 'facilitator',
                 "$or": [
@@ -1213,8 +1214,8 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             query_result = self.facilitator_db.get_query_result({"type": "facilitator"})[:]
             self.doc = self.facilitator_db[query_result[0]['_id']]
 
-            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-            self.project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+            self.project_mis_id = project_mis.id if project_mis else 1
         except Exception:
             raise Http404
         return super().dispatch(request, *args, **kwargs)
