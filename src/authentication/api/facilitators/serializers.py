@@ -21,7 +21,7 @@ class FacilitatorUpdateAdlSerializer(serializers.Serializer):
         if grm_secret_key_generate != settings.GRM_SECRET_KEY_GENRATE:
             raise serializers.ValidationError(_("Incorrect identifiers"))
 
-        user = Facilitator.objects.filter(active=True).filter(Q(email=facilitator_email) | Q(username=facilitator_email)).first()
+        user = Facilitator.objects.filter(Q(email=facilitator_email) | Q(username=facilitator_email)).first()
         if not user:
             raise serializers.ValidationError(_("Incorrect identifiers"))
         

@@ -3,6 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.utils.translation import gettext_lazy as _
 from datetime import datetime
+from django.conf import settings
 
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 # from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
@@ -70,27 +71,27 @@ class RestUpdateFacilitatorAdl(APIView):
             if additional_administrative:
                 datas[_("Additional locations")] = list_with_and(additional_administrative)
 
-
-            _status = send_email(
-                f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {_("Update your service areas")}',
-                "mail/send/notification",
-                {
-                    'title': _("Update your service areas"),
-                    "datas": datas,
-                    "user": {
-                        _("Name"): facilitator.name,
-                        _("Phone"): facilitator.phone,
-                        _("Email"): facilitator.email
+            if facilitator.active and not settings.DEBUG:
+                _status = send_email(
+                    f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {_("Update your service areas")}',
+                    "mail/send/notification",
+                    {
+                        'title': _("Update your service areas"),
+                        "datas": datas,
+                        "user": {
+                            _("Name"): facilitator.name,
+                            _("Phone"): facilitator.phone,
+                            _("Email"): facilitator.email
+                        },
+                        "user_full_name": facilitator.name,
+                        "comment":  _("Below you will find information relating to your areas of intervention."), 
+                        "greeting":  _("Hello"),
+                        "all_sex":  _("Mr./Mrs."),
+                        'current_year': datetime.now().year,
+                        "details_btn": False
                     },
-                    "user_full_name": facilitator.name,
-                    "comment":  _("Below you will find information relating to your areas of intervention."), 
-                    "greeting":  _("Hello"),
-                    "all_sex":  _("Mr./Mrs."),
-                    'current_year': datetime.now().year,
-                    "details_btn": False
-                },
-                [facilitator.email]
-            )    
+                    [facilitator.email]
+                )    
 
         except Exception as exc:
             return Response(
