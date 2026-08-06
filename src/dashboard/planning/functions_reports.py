@@ -23,14 +23,12 @@ from cdd.functions import get_dates_between
 from authentication.functions import get_group_high as auth_get_group_high
 from authentication import PROFESSIONAL_GROUPS, FACILITATORS_TYPES_WITH_GROUP_NAME
 from no_sql_client import NoSQLClient
+import grm_client
 from planning.vars import WORK_ENVIRONMENT
 
 
 
 def planning_csv(request):
-    nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
-
     project = Project.objects.get(id=request.session.get('project_id')) if request.user.is_authenticated else None
     tree_projects = project.build_the_tree_structure() if project else []
     tree_projects_ids = [p.id for p in tree_projects]
@@ -109,10 +107,8 @@ def planning_csv(request):
     liste_my_area_villages_ids = []
     if my_area:
         try:
-            facilitator_grm = eadls.get_query_result({
-                "type": "adl",
-                "representative.email": request.user.email
-            })[:][0]
+            facilitator_grm = grm_client.get_facilitator_by_email(request.user.email)
+            grm_client.attach_administrative_regions_objects(facilitator_grm)
             liste_my_area_villages_ids = facilitator_grm['administrative_regions']
             administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
             liste_my_area_villages_ids = list(set(
@@ -124,20 +120,12 @@ def planning_csv(request):
     
     #END AREA
     def get_facilitators_emails(villages_ids):
-        facilitators_stabilized = eadls.get_view_result(
-            "_design/adl_village_filter", "by_village_id", 
-            keys=[int(v) for v in villages_ids], 
-            include_docs=True
-        )
-        if facilitators_stabilized:
-            f_s_emails = []
-            for row in facilitators_stabilized[:]:
-                elt = row['doc']
-                if elt and elt.get('representative') and elt.get('representative').get('email') not in f_s_emails:
-                    f_s_emails.append(elt.get('representative').get('email'))
         
-        return f_s_emails
-    
+        facilitators_stabilized = grm_client.get_facilitator_by_village([int(v) for v in villages_ids])
+        
+        return list(set([
+            elt['representative']['email'] for elt in facilitators_stabilized if elt and elt.get('representative', {}).get('email')
+        ]))
 
 
     if date_start_selected and date_start_selected != 'null':

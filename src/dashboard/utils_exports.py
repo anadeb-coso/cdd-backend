@@ -6,6 +6,7 @@ from datetime import datetime
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
+import grm_client
 from cdd.call_objects_from_other_db import mis_objects_call
 from administrativelevels.models import AdministrativeLevel
 from assignments.models import AssignAdministrativeLevelToFacilitator
@@ -60,7 +61,11 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
     }
     
     nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
+
+    all_villages_ids_with_facilitators = grm_client.get_villages_with_facilitators(list(set(sum([
+        list(set((facilitator.administrative_levels_ids or []) + (facilitator.stabilization_administrative_ids or []))) 
+        for facilitator in facilitators
+    ], []))))
 
     for facilitator in facilitators:
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
@@ -88,21 +93,22 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
                     #         if elt.get('value') and elt.get('value') not in _f_s:
                     #             _f_s.append(elt['value'])
 
-                    facilitators_stabilized = eadls.get_view_result(
-                        "_design/adl_village_filter", "by_village_id", 
-                        keys=[int(task.get("administrative_level_id"))], 
-                        include_docs=True
-                    )
+                    facilitators_stabilized = all_villages_ids_with_facilitators.get(str(task.get("administrative_level_id")), [])
+                    # [
+                    #     {'doc': doc}
+                    #     for doc in grm_client.get_facilitator_by_village(int(task.get("administrative_level_id")))
+                    # ]
                     _f_s = []
                     if facilitators_stabilized:
-                        for row in facilitators_stabilized[:]:
-                            elt = row['doc']
+                        for elt in facilitators_stabilized:
+                        # for row in facilitators_stabilized[:]:
+                        #     elt = row['doc']
                             if elt not in _f_s:
-                                _f_s.append(elt['value'])
-                                
+                                _f_s.append(elt)
+
                     _facilitators = Facilitator.objects.filter(
-                        Q(id__in=([facilitator.id]+[a_f.facilitator_id for a_f in assign_facilitators])) | 
-                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]), 
+                        Q(id__in=([facilitator.id]+[a_f.facilitator_id for a_f in assign_facilitators])) |
+                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]),
                         active=True
                     )
 
@@ -156,23 +162,19 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
                     #     for elt in facilitators_stabilized[:]:
                     #         if elt.get('value') and elt.get('value') not in _f_s:
                     #             _f_s.append(elt['value'])
+
+                    facilitators_stabilized = all_villages_ids_with_facilitators.get(str(task.get("administrative_level_id")), [])
                     
-                    facilitators_stabilized = eadls.get_view_result(
-                            "_design/adl_village_filter", "by_village_id", 
-                            keys=[int(task.get("administrative_level_id"))], 
-                            include_docs=True
-                        )
                     _f_s = []
                     if facilitators_stabilized:
-                        for row in facilitators_stabilized[:]:
-                            elt = row['doc']
+                        for elt in facilitators_stabilized:
                             if elt not in _f_s:
-                                _f_s.append(elt['value'])
+                                _f_s.append(elt)
 
-                                
+
                     _facilitators = Facilitator.objects.filter(
-                        Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) | 
-                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]), 
+                        Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) |
+                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]),
                         active=True
                     )
 

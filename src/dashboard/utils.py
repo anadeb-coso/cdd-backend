@@ -7,6 +7,7 @@ from django.template.defaultfilters import date as _date
 from django.contrib.auth.hashers import make_password
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
+import grm_client
 from process_manager.models import Task, Phase, Activity, Project, AggregatedStatus, Cycle
 from cloudant.document import Document
 from django.contrib.auth.models import User
@@ -1636,23 +1637,23 @@ def format_date():
                 
                 
 def test():
-    nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
-    
     liste_A = ["4597"]
-    resultats = eadls.get_view_result('administrative_regions', 'elements_in_list', keys=liste_A)
-    
+    resultats = []
+    for village_id in liste_A:
+        resultats += grm_client.get_facilitator_by_village(int(village_id))
+
     print(len(resultats[:]))
 
 
 def test1():
-    nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
-
     village_ids_to_check = [2077]
 
-    results = eadls.get_view_result("_design/adl_village_filter", "by_village_id", keys=village_ids_to_check,include_docs=True)
-    
+    results = [
+        {'doc': doc}
+        for village_id in village_ids_to_check
+        for doc in grm_client.get_facilitator_by_village(village_id)
+    ]
+
     return results
 
 

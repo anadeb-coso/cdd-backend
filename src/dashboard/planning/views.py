@@ -21,6 +21,7 @@ from authentication.models import Facilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin, ModalFormMixin
 from dashboard.facilitators.forms import FilterFacilitatorFormMultiChoices
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
@@ -181,9 +182,6 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
             return 2
     
     def get_results(self):
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-        
         project = Project.objects.get(id=self.request.session.get('project_id'))
         tree_projects = project.build_the_tree_structure()
         tree_projects_names = [p.name for p in tree_projects]
@@ -219,10 +217,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         liste_my_area_villages_ids = []
         if my_area:
             try:
-                facilitator_grm = eadls.get_query_result({
-                    "type": "adl",
-                    "representative.email": self.request.user.email
-                })[:][0]
+                facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
+                grm_client.attach_administrative_regions_objects(facilitator_grm)
                 liste_my_area_villages_ids = facilitator_grm['administrative_regions']
                 administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
                 liste_my_area_villages_ids = list(set(
@@ -235,19 +231,11 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         #END AREA
         
         def get_facilitators_emails(villages_ids):
-            facilitators_stabilized = eadls.get_view_result(
-                "_design/adl_village_filter", "by_village_id", 
-                keys=[int(v) for v in villages_ids], 
-                include_docs=True
-            )
-            if facilitators_stabilized:
-                f_s_emails = []
-                for row in facilitators_stabilized[:]:
-                    elt = row['doc']
-                    if elt and elt.get('representative') and elt.get('representative').get('email') not in f_s_emails:
-                        f_s_emails.append(elt.get('representative').get('email'))
+            facilitators_stabilized = grm_client.get_facilitator_by_village([int(v) for v in villages_ids])
             
-            return f_s_emails
+            return list(set([
+                elt['representative']['email'] for elt in facilitators_stabilized if elt and elt.get('representative', {}).get('email')
+            ]))
         
         if current_week and current_week != 'null':
             current_week = current_week

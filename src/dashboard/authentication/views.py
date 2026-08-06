@@ -16,7 +16,7 @@ from dashboard.facilitators.repository.db_facilitator_repository import Facilita
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from authentication.models import Facilitator
 from process_manager.models import Project
-from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.facilitators.functions import update_facilitators_stats
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject
@@ -102,8 +102,6 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
     context_object_name = 'object'
 
     def get_queryset(self):
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
         project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
 
         # Infos Generales
@@ -209,10 +207,10 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
         global_facilitators = global_community_facilitators
 
         facilitators_stabilized_all_docs = dict([
-            (doc.get('doc').get('representative').get('email'), doc.get('doc')) for doc in eadls.all_docs(include_docs=True)['rows'] \
+            (doc.get('representative').get('email'), doc) for doc in grm_client.get_all_facilitators() \
                 if (
-                    type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
-                    doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
+                    type(doc) is dict and doc.get('type') == 'adl' and \
+                    doc.get('representative') and doc.get('representative').get('email')
                 )
         ])
 

@@ -13,6 +13,7 @@ import itertools
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
+import grm_client
 from process_manager.models import Task, Phase, Activity, Project, Cycle
 from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
@@ -252,45 +253,62 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                         # ).first()
 
                     # if not facilitator_object or not assing_facilitator_object:
-                    facilitator_grm = None
-                    eadls = nsc.get_db('eadls')
+                    facilitator_stabilized = None
                     try:
-                        results = eadls.get_view_result(
-                            "_design/adl_village_filter", "by_village_id", 
-                            keys=[int([task.get("administrative_level_id")])], 
-                            include_docs=True
-                        )
+                        all_facilitators_worked_in_village = Facilitator.objects.filter(
+                            facilitator_type='community_facilitator',
+                            develop_mode=False, training_mode=False, 
+                            active=True, 
+                            projects__in=[self.request.session.get('project_id')]
+                        ).filter(
+                            Q(stabilization_administrative_ids__contains=[int(task.get("administrative_level_id"))]) |
+                            Q(additional_administrative_ids__contains=[int(task.get("administrative_level_id"))])
+                        ).distinct()
                         
-                        facilitator_email = facilitator.get("email")
-                        matching_docs = {}
-                        count = 0
-                        for row in results:
-                            doc = row["doc"]
-                            if doc.get("representative", {}).get("email") != facilitator_email:
-                                if count == 0:
-                                    facilitator_grm = doc
-                                matching_docs[doc['representative']['email']] = doc
-                                count += 1
-                        
+                        # results = [
+                        #     {'doc': doc}
+                        #     for doc in grm_client.get_facilitator_by_village(int(task.get("administrative_level_id")))
+                        # ]
+
+
+                        # facilitator_email = facilitator.get("email")
+                        # matching_docs = {}
+                        # count = 0
+                        # for row in results:
+                        #     doc = row["doc"]
+                        #     if doc.get("representative", {}).get("email") != facilitator_email:
+                        #         if count == 0:
+                        #             facilitator_stabilized = doc
+                        #         matching_docs[doc['representative']['email']] = doc
+                        #         count += 1
+
+                        # try:
+                        #     facilitator_stabilized = matching_docs[task['completed_history'][-1]['facilitator']['email']] #search the last facilitator who has update the task
+                        # except:
+                        #     if not facilitator_stabilized:
+                        #         facilitator_stabilized = next(
+                        #             (
+                        #                 doc for doc in grm_client.get_facilitator_by_village(int(task.get("administrative_level_id")))
+                        #                 if doc.get('representative', {}).get('email') != facilitator.get('email')
+                        #             ),
+                        #             None,
+                        #         )
+
                         try:
-                            facilitator_grm = matching_docs[task['completed_history'][-1]['facilitator']['email']] #search the last facilitator who has update the task
+                            facilitator_stabilized = all_facilitators_worked_in_village.get(email=task['completed_history'][-1]['facilitator']['email']) #search the last facilitator who has update the task
                         except:
-                            if not facilitator_grm:
-                                facilitator_grm = eadls.get_query_result({
-                                    "type": "adl",
-                                    "representative.email": {
-                                        "$not": {
-                                            "$eq": facilitator.get('email')
-                                        }
-                                    },
-                                    "administrative_regions": {"$in": [task.get("administrative_level_id")]},
-                                })[:][0]
+                            if not facilitator_stabilized:
+                                facilitator_stabilized = all_facilitators_worked_in_village.filter(stabilization_administrative_ids__contains=[int(task.get("administrative_level_id"))]).first()
+                            if not facilitator_stabilized:
+                                facilitator_stabilized = all_facilitators_worked_in_village.first()
+
                     except Exception as exc:
                         # print(exc)
                         pass
                 
-                    if facilitator_grm:
-                        facilitator_object = Facilitator.objects.filter(email=facilitator_grm['representative']['email']).first()
+                    if facilitator_stabilized:
+                        # facilitator_object = Facilitator.objects.filter(email=facilitator_stabilized['representative']['email']).first()
+                        facilitator_object = facilitator_stabilized
                 
                     msg = 'error'
                     try:
@@ -317,7 +335,12 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                                 },
                                 "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                             },
-                            list(set([facilitator_email, facilitator_object.email, request.user.email])) if facilitator_email else [facilitator_object.email, request.user.email],
+                            list(set(
+                                [list(all_facilitators_worked_in_village.values_list('email', flat=True))] + 
+                                ([facilitator_email, facilitator_object.email, request.user.email]
+                                if facilitator_email 
+                                else [facilitator_object.email, request.user.email])
+                            )),
                             project_name=task.get("project_name", self.request.session.get('project_name', 'COSO'))
                         )
                         mail_message = gettext_lazy("Mail sent successfully")
@@ -470,16 +493,12 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             self.request.session['tree_structure_projects_mis_ids'] = [mis_objects_call.get_object(ProjectMis, name=p.name).id for p in tree_structure_projects]
 
             if self.request.user.groups.filter(name__in=["Supervisor"]).exists() and hasattr(self.request.user, 'email'):
-                nsc = NoSQLClient()
-                eadls = nsc.get_db('eadls')
-                facilitator_grm = eadls.get_query_result({
-                    "type": "adl",
-                    "representative.email": self.request.user.email
-                })[:][0]
+                facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
+                grm_client.attach_administrative_regions_objects(facilitator_grm)
                 # administratives_stabilized = facilitator_grm['administrative_regions']
-                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
+                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects') if facilitator_grm else None
                 self.request.session['cantons_stabilized_ids'] = list(set(
-                    # (administratives_stabilized if administratives_stabilized else []) + 
+                    # (administratives_stabilized if administratives_stabilized else []) +
                     list(itertools.chain(*[[str(ad['id'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
                 ))
 
