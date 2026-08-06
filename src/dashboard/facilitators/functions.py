@@ -3,6 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from no_sql_client import NoSQLClient
+import grm_client
 from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.models import Facilitator
@@ -149,15 +150,12 @@ def clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(no_sql_
 
 def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
     nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
     no_sql_dbs_names_with_village_ids = {}
     cvds = []
     administratives_stabilized = []
     try:
-        facilitator_grm = eadls.get_query_result({
-            "type": "adl",
-            "representative.email": facilitator.get('email')
-        })[:][0]
+        facilitator_grm = grm_client.get_facilitator_by_email(facilitator.get('email'))
+        grm_client.attach_administrative_regions_objects(facilitator_grm)
         administratives_stabilized = facilitator_grm['administrative_regions']
         administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
         administratives_stabilized = list(set(
@@ -211,7 +209,7 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
     _facilitators = []
     agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=cdd_project_id, cycle_id=cdd_cycle_id)
     dict_agg_s_fs = {str(ag.facilitator.id): ag for ag in agg_s_fs}
-    havent_update = (len([ag for ag in agg_s_fs[:3] if not ag.new_update_exists]) == 3) if len(agg_s_fs) >= 3 else True
+    havent_update = False if (facilitators and (not agg_s_fs.exists() or (agg_s_fs.exists() and agg_s_fs.filter(new_update_exists=True).exists()))) else True
     if havent_update:
         for f in facilitators:
             _f = dict_agg_s_fs.get(str(f.id))
@@ -229,19 +227,31 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                 f.total_tasks_validated_current_project = _f.total_tasks_validated_current_project
                 f.total_tasks_invalidated_current_project = _f.total_tasks_invalidated_current_project
                 f.total_tasks_invalidated_review_current_project = _f.total_tasks_invalidated_review_current_project
+                f.total_tasks_invalidated_review_completed_current_project = _f.total_tasks_invalidated_review_completed_current_project
+                f.total_tasks_invalidated_review_in_pending_current_project = _f.total_tasks_invalidated_review_in_pending_current_project
                 f.total_tasks_invalidated_unreview_current_project = _f.total_tasks_invalidated_unreview_current_project
+                f.total_tasks_invalidated_unreview_completed_current_project = _f.total_tasks_invalidated_unreview_completed_current_project
+                f.total_tasks_invalidated_unreview_in_pending_current_project = _f.total_tasks_invalidated_unreview_in_pending_current_project
                 f.total_tasks_waiting_validation_current_project = _f.total_tasks_waiting_validation_current_project
 
                 f.total_tasks_validated_stabilized = _f.total_tasks_validated_stabilized
                 f.total_tasks_invalidated_stabilized = _f.total_tasks_invalidated_stabilized
                 f.total_tasks_invalidated_review_stabilized = _f.total_tasks_invalidated_review_stabilized
+                f.total_tasks_invalidated_review_completed_stabilized = _f.total_tasks_invalidated_review_completed_stabilized
+                f.total_tasks_invalidated_review_in_pending_stabilized = _f.total_tasks_invalidated_review_in_pending_stabilized
                 f.total_tasks_invalidated_unreview_stabilized = _f.total_tasks_invalidated_unreview_stabilized
+                f.total_tasks_invalidated_unreview_completed_stabilized = _f.total_tasks_invalidated_unreview_completed_stabilized
+                f.total_tasks_invalidated_unreview_in_pending_stabilized = _f.total_tasks_invalidated_unreview_in_pending_stabilized
                 f.total_tasks_waiting_validation_stabilized = _f.total_tasks_waiting_validation_stabilized
                 
                 f.total_tasks_validated = _f.total_tasks_validated
                 f.total_tasks_invalidated = _f.total_tasks_invalidated
                 f.total_tasks_invalidated_review = _f.total_tasks_invalidated_review
+                f.total_tasks_invalidated_review_completed = _f.total_tasks_invalidated_review_completed
+                f.total_tasks_invalidated_review_in_pending = _f.total_tasks_invalidated_review_in_pending
                 f.total_tasks_invalidated_unreview = _f.total_tasks_invalidated_unreview
+                f.total_tasks_invalidated_unreview_completed = _f.total_tasks_invalidated_unreview_completed
+                f.total_tasks_invalidated_unreview_in_pending = _f.total_tasks_invalidated_unreview_in_pending
                 f.total_tasks_waiting_validation = _f.total_tasks_waiting_validation
                 
                 f.cvds_number_current_project = _f.cvds_number_current_project
@@ -260,10 +270,8 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
         ag_f_bucket_create = []
         ag_f_bucket_update = []
 
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-        docs_eadls = eadls.all_docs(include_docs=True)['rows']
-        docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
+        docs_eadls = [grm_client.attach_administrative_regions_objects(doc) for doc in grm_client.get_all_facilitators()]
+        docs_eadls_dict = {doc.get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']])) for doc in docs_eadls if doc.get('type') == 'adl' and doc.get('representative') and doc.get('administrative_regions_objects')}
 
         adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
 
@@ -335,7 +343,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             f.total_tasks_validated_current_project = sum(agg.total_tasks_validated for agg in children_agg_current_project)
             f.total_tasks_invalidated_current_project = sum(agg.total_tasks_invalidated for agg in children_agg_current_project)
             f.total_tasks_invalidated_review_current_project = sum(agg.total_tasks_invalidated_review for agg in children_agg_current_project)
+            f.total_tasks_invalidated_review_completed_current_project = sum(agg.total_tasks_invalidated_review_completed for agg in children_agg_current_project)
+            f.total_tasks_invalidated_review_in_pending_current_project = sum(agg.total_tasks_invalidated_review_in_pending for agg in children_agg_current_project)
             f.total_tasks_invalidated_unreview_current_project = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_current_project)
+            f.total_tasks_invalidated_unreview_completed_current_project = sum(agg.total_tasks_invalidated_unreview_completed for agg in children_agg_current_project)
+            f.total_tasks_invalidated_unreview_in_pending_current_project = sum(agg.total_tasks_invalidated_unreview_in_pending for agg in children_agg_current_project)
             f.total_tasks_waiting_validation_current_project = sum(agg.total_tasks_waiting_validation for agg in children_agg_current_project)
             ag_f.last_activity_current_project = f.last_activity_current_project
             ag_f.total_tasks_completed_current_project = f.total_tasks_completed_current_project
@@ -343,7 +355,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             ag_f.total_tasks_validated_current_project = f.total_tasks_validated_current_project
             ag_f.total_tasks_invalidated_current_project = f.total_tasks_invalidated_current_project
             ag_f.total_tasks_invalidated_review_current_project = f.total_tasks_invalidated_review_current_project
+            ag_f.total_tasks_invalidated_review_completed_current_project = f.total_tasks_invalidated_review_completed_current_project
+            ag_f.total_tasks_invalidated_review_in_pending_current_project = f.total_tasks_invalidated_review_in_pending_current_project
             ag_f.total_tasks_invalidated_unreview_current_project = f.total_tasks_invalidated_unreview_current_project
+            ag_f.total_tasks_invalidated_unreview_completed_current_project = f.total_tasks_invalidated_unreview_completed_current_project
+            ag_f.total_tasks_invalidated_unreview_in_pending_current_project = f.total_tasks_invalidated_unreview_in_pending_current_project
             ag_f.total_tasks_waiting_validation_current_project = f.total_tasks_waiting_validation_current_project
             
             f.last_activity_stabilized = aggreg_last_activity_stabilized.last_activity if aggreg_last_activity_stabilized else None
@@ -352,7 +368,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             f.total_tasks_validated_stabilized = sum(agg.total_tasks_validated for agg in children_agg_stabilized)
             f.total_tasks_invalidated_stabilized = sum(agg.total_tasks_invalidated for agg in children_agg_stabilized)
             f.total_tasks_invalidated_review_stabilized = sum(agg.total_tasks_invalidated_review for agg in children_agg_stabilized)
+            f.total_tasks_invalidated_review_completed_stabilized = sum(agg.total_tasks_invalidated_review_completed for agg in children_agg_stabilized)
+            f.total_tasks_invalidated_review_in_pending_stabilized = sum(agg.total_tasks_invalidated_review_in_pending for agg in children_agg_stabilized)
             f.total_tasks_invalidated_unreview_stabilized = sum(agg.total_tasks_invalidated_unreview for agg in children_agg_stabilized)
+            f.total_tasks_invalidated_unreview_completed_stabilized = sum(agg.total_tasks_invalidated_unreview_completed for agg in children_agg_stabilized)
+            f.total_tasks_invalidated_unreview_in_pending_stabilized = sum(agg.total_tasks_invalidated_unreview_in_pending for agg in children_agg_stabilized)
             f.total_tasks_waiting_validation_stabilized = sum(agg.total_tasks_waiting_validation for agg in children_agg_stabilized)
             ag_f.last_activity_stabilized = f.last_activity_stabilized
             ag_f.total_tasks_completed_stabilized = f.total_tasks_completed_stabilized
@@ -360,7 +380,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             ag_f.total_tasks_validated_stabilized = f.total_tasks_validated_stabilized
             ag_f.total_tasks_invalidated_stabilized = f.total_tasks_invalidated_stabilized
             ag_f.total_tasks_invalidated_review_stabilized = f.total_tasks_invalidated_review_stabilized
+            ag_f.total_tasks_invalidated_review_completed_stabilized = f.total_tasks_invalidated_review_completed_stabilized
+            ag_f.total_tasks_invalidated_review_in_pending_stabilized = f.total_tasks_invalidated_review_in_pending_stabilized
             ag_f.total_tasks_invalidated_unreview_stabilized = f.total_tasks_invalidated_unreview_stabilized
+            ag_f.total_tasks_invalidated_unreview_completed_stabilized = f.total_tasks_invalidated_unreview_completed_stabilized
+            ag_f.total_tasks_invalidated_unreview_in_pending_stabilized = f.total_tasks_invalidated_unreview_in_pending_stabilized
             ag_f.total_tasks_waiting_validation_stabilized = f.total_tasks_waiting_validation_stabilized
 
             f.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
@@ -369,7 +393,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             f.total_tasks_validated = sum(agg.total_tasks_validated for agg in children_agg)
             f.total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in children_agg)
             f.total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in children_agg)
+            f.total_tasks_invalidated_review_completed = sum(agg.total_tasks_invalidated_review_completed for agg in children_agg)
+            f.total_tasks_invalidated_review_in_pending = sum(agg.total_tasks_invalidated_review_in_pending for agg in children_agg)
             f.total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in children_agg)
+            f.total_tasks_invalidated_unreview_completed = sum(agg.total_tasks_invalidated_unreview_completed for agg in children_agg)
+            f.total_tasks_invalidated_unreview_in_pending = sum(agg.total_tasks_invalidated_unreview_in_pending for agg in children_agg)
             f.total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in children_agg)
             ag_f.last_activity = f.last_activity
             ag_f.total_tasks_completed = f.total_tasks_completed
@@ -377,7 +405,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             ag_f.total_tasks_validated = f.total_tasks_validated
             ag_f.total_tasks_invalidated = f.total_tasks_invalidated
             ag_f.total_tasks_invalidated_review = f.total_tasks_invalidated_review
+            ag_f.total_tasks_invalidated_review_completed = f.total_tasks_invalidated_review_completed
+            ag_f.total_tasks_invalidated_review_in_pending = f.total_tasks_invalidated_review_in_pending
             ag_f.total_tasks_invalidated_unreview = f.total_tasks_invalidated_unreview
+            ag_f.total_tasks_invalidated_unreview_completed = f.total_tasks_invalidated_unreview_completed
+            ag_f.total_tasks_invalidated_unreview_in_pending = f.total_tasks_invalidated_unreview_in_pending
             ag_f.total_tasks_waiting_validation = f.total_tasks_waiting_validation
 
             f.last_task_done_current_project = aggreg_last_task_done_current_project.task if aggreg_last_task_done_current_project else None
@@ -409,7 +441,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                     _total_tasks_validated = sum(agg.total_tasks_validated for agg in _children_aggs)
                     _total_tasks_invalidated = sum(agg.total_tasks_invalidated for agg in _children_aggs)
                     _total_tasks_invalidated_review = sum(agg.total_tasks_invalidated_review for agg in _children_aggs)
+                    _total_tasks_invalidated_review_completed = sum(agg.total_tasks_invalidated_review_completed for agg in _children_aggs)
+                    _total_tasks_invalidated_review_in_pending = sum(agg.total_tasks_invalidated_review_in_pending for agg in _children_aggs)
                     _total_tasks_invalidated_unreview = sum(agg.total_tasks_invalidated_unreview for agg in _children_aggs)
+                    _total_tasks_invalidated_unreview_completed = sum(agg.total_tasks_invalidated_unreview_completed for agg in _children_aggs)
+                    _total_tasks_invalidated_unreview_in_pending = sum(agg.total_tasks_invalidated_unreview_in_pending for agg in _children_aggs)
                     _total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in _children_aggs)
                     _last_task_done = {
                         'id': _aggreg_last_task_done.task.id,
@@ -430,7 +466,11 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                         'total_tasks_validated': _total_tasks_validated,
                         'total_tasks_invalidated': _total_tasks_invalidated,
                         'total_tasks_invalidated_review': _total_tasks_invalidated_review,
+                        'total_tasks_invalidated_review_completed': _total_tasks_invalidated_review_completed,
+                        'total_tasks_invalidated_review_in_pending': _total_tasks_invalidated_review_in_pending,
                         'total_tasks_invalidated_unreview': _total_tasks_invalidated_unreview,
+                        'total_tasks_invalidated_unreview_completed': _total_tasks_invalidated_unreview_completed,
+                        'total_tasks_invalidated_unreview_in_pending': _total_tasks_invalidated_unreview_in_pending,
                         'total_tasks_waiting_validation': _total_tasks_waiting_validation,
                         'last_task_done': _last_task_done,
                         'type': _type,
@@ -449,7 +489,7 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             _facilitators.append(f)
 
         if ag_f_bucket_create:
-            bulk_objects_create_or_update(AggregatedStatusFacilitator, ag_f_bucket_create, type_bulk="create")
+            bulk_objects_create_or_update(AggregatedStatusFacilitator, ag_f_bucket_create, type_bulk="create", batch_size=10)
         if ag_f_bucket_update:
             bulk_objects_create_or_update(
                 AggregatedStatusFacilitator, 
@@ -458,15 +498,20 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                     'villages_number_current_project', 'cvds_number_current_project', 'villages_number_stabilized', 'cvds_number_stabilized',
                     'villages_number', 'cvds_number', 'last_activity_current_project', 'total_tasks_completed_current_project',
                     'total_tasks_current_project', 'total_tasks_validated_current_project', 'total_tasks_invalidated_current_project',
-                    'total_tasks_invalidated_review_current_project', 'total_tasks_invalidated_unreview_current_project',
+                    'total_tasks_invalidated_review_current_project', 'total_tasks_invalidated_review_completed_current_project', 'total_tasks_invalidated_review_in_pending_current_project', 
+                    'total_tasks_invalidated_unreview_current_project', 'total_tasks_invalidated_unreview_completed_current_project', 'total_tasks_invalidated_unreview_in_pending_current_project', 
                     'total_tasks_waiting_validation_current_project', 'last_activity_stabilized', 'total_tasks_completed_stabilized',
                     'total_tasks_stabilized', 'total_tasks_validated_stabilized', 'total_tasks_invalidated_stabilized',
-                    'total_tasks_invalidated_review_stabilized', 'total_tasks_invalidated_unreview_stabilized',
+                    'total_tasks_invalidated_review_stabilized', 'total_tasks_invalidated_review_completed_stabilized', 'total_tasks_invalidated_review_in_pending_stabilized', 
+                    'total_tasks_invalidated_unreview_stabilized', 'total_tasks_invalidated_unreview_completed_stabilized', 'total_tasks_invalidated_unreview_in_pending_stabilized',
                     'total_tasks_waiting_validation_stabilized', 'last_activity', 'total_tasks_completed', 'total_tasks', 'total_tasks_validated',
-                    'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 
+                    'total_tasks_invalidated', 
+                    'total_tasks_invalidated_review', 'total_tasks_invalidated_review_completed', 'total_tasks_invalidated_review_in_pending', 
+                    'total_tasks_invalidated_unreview', 'total_tasks_invalidated_unreview_completed', 'total_tasks_invalidated_unreview_in_pending', 
                     'total_tasks_waiting_validation', 'last_task_done_current_project', 'last_task_done_stabilized', 'last_task_done', 
                     'administrative_level_headquarters_villages_infos', 'new_update_exists', 'updated_date'
-                ]
+                ], 
+                batch_size=10
             )
 
     return _facilitators

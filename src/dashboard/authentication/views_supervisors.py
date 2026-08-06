@@ -7,7 +7,7 @@ from django.db.models import Sum
 
 from dashboard.facilitators.forms import FilterFacilitatorForm
 from dashboard.mixins import PageMixin
-from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from process_manager.models import AggregatedStatus, Project
 from cdd.functions import list_with_and
@@ -38,7 +38,8 @@ class SupervisrosListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['breadcrumb'] = False
 
         context['region_id'] = self.request.GET.get('region_id')
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
+        agg = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first()
+        context['last_update'] = agg.updated_date if agg else None
         
         return context
     
@@ -57,28 +58,26 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
         type_field = self.request.GET.get('type_field')
         
         _id = 0
-        
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
+
         supervisors = []
         _supervisors = {s[1]: list(s) for s in User.objects.filter(
             groups__name__in=['Supervisor'],
             is_active=True,
             projects__in=[self.request.session.get('project_id')]
         ).values_list('id', 'email', 'username')}
-        
-        def get_supervisors(docs=None):
-            adls_emails = list(_supervisors.keys())
+        adls_emails = list(_supervisors.keys())
 
-            if docs:
+        def get_supervisors(docs=None):
+
+            if docs is not None:
                 return [
                     doc for doc in docs if doc.get('representative').get('email') in adls_emails
                 ]
             else:
-                return list(eadls.get_query_result({
-                    "representative.email": {"$in": adls_emails},
-                    "type": 'adl'
-                }))
+                return [
+                    doc for doc in grm_client.get_all_facilitators()
+                    if doc.get('representative') and doc.get('representative').get('email') in adls_emails
+                ]
         
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
@@ -102,18 +101,15 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             if type(_id) is not list:
                 liste_villages = []
                 liste_villages = get_cascade_villages_by_administrative_level_id(_id)
-                
-                supervisors = eadls.get_view_result(
-                    "_design/adl_village_filter", "by_village_id", 
-                    keys=[int(v['administrative_id']) for v in liste_villages], 
-                    include_docs=True
-                )
+
+                supervisors = grm_client.get_facilitator_by_village([v['administrative_id'] for v in liste_villages])
+
                 if supervisors:
                     _f_s = []
-                    for row in supervisors[:]:
-                        elt = row['doc']
-                        if elt not in _f_s:
+                    for elt in supervisors:
+                        if elt.get('representative', {}).get('email') in adls_emails and elt not in _f_s:
                             _f_s.append(elt)
+                            
                     supervisors = get_supervisors(_f_s)
                 
             else:
@@ -124,6 +120,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
         projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
 
         for supervisor in supervisors:
+            grm_client.attach_administrative_regions_objects(supervisor)
             supervisor['user_object_cdd_id'] = _supervisors[supervisor['representative']['email']][0]
             supervisor['user_object_cdd_username'] = _supervisors[supervisor['representative']['email']][2]
 
@@ -143,6 +140,8 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             supervisor['total_tasks_invalidated'] = 0
             supervisor['total_tasks_waiting_validation'] = 0
             supervisor['total_tasks_invalidated_review'] = 0
+            supervisor['total_tasks_invalidated_review_completed'] = 0
+            supervisor['total_tasks_invalidated_review_in_pending'] = 0
             supervisor['validation_percent'] = 0
             supervisor['decision_percent'] = 0
 
@@ -162,7 +161,9 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                     total_tasks_validated=Sum('total_tasks_validated'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_waiting_validation=Sum("total_tasks_waiting_validation"),
-                    total_tasks_invalidated_review=Sum("total_tasks_invalidated_review")
+                    total_tasks_invalidated_review=Sum("total_tasks_invalidated_review"),
+                    total_tasks_invalidated_review_completed=Sum("total_tasks_invalidated_review_completed"),
+                    total_tasks_invalidated_review_in_pending=Sum("total_tasks_invalidated_review_in_pending")
                 )
             )
             aggregated_map = {
@@ -184,6 +185,8 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                     invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated') or 0
                     invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_waiting_validation') or 0
                     invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review') or 0
+                    invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_completed'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review_completed') or 0
+                    invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_in_pending'] = aggregated_map.get((project.id, cycle.id), {}).get('total_tasks_invalidated_review_in_pending') or 0
                     invalidation_notifications[project.name][cycle.name]['validation_percent'] = (
                         float("%.2f" % (((invalidation_notifications[project.name][cycle.name]['total_tasks_validated']/invalidation_notifications[project.name][cycle.name]['total_tasks_completed'])*100) if invalidation_notifications[project.name][cycle.name]['total_tasks_completed'] else 0))
                     )
@@ -199,6 +202,8 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                     supervisor['total_tasks_invalidated'] += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated']
                     supervisor['total_tasks_waiting_validation'] += invalidation_notifications[project.name][cycle.name]['total_tasks_waiting_validation']
                     supervisor['total_tasks_invalidated_review'] += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review']
+                    supervisor['total_tasks_invalidated_review_completed'] += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_completed']
+                    supervisor['total_tasks_invalidated_review_in_pending'] += invalidation_notifications[project.name][cycle.name]['total_tasks_invalidated_review_in_pending']
 
             supervisor['invalidation_notifications'] = invalidation_notifications
             supervisor['invalidation_notifications_id'] = f"invalidation_notifications_{supervisor['user_object_cdd_id']}"

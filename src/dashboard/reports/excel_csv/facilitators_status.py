@@ -8,6 +8,7 @@ import json
 from django.conf import settings
 
 from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from authentication.models import Facilitator
 from dashboard.facilitators.functions import get_cvds
@@ -695,10 +696,8 @@ def get_facilitator_status_excel_csv_under_file_excel_or_csv(request=None, facil
 
             _facilitators.append(f)
     else:
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-        docs_eadls = eadls.all_docs(include_docs=True)['rows']
-        docs_eadls_dict = {doc.get('doc').get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc.get('doc')['administrative_regions_objects']])) for doc in docs_eadls if doc.get('doc') and doc.get('doc').get('type') == 'adl' and doc.get('doc').get('representative') and doc.get('doc').get('administrative_regions_objects')}
+        docs_eadls = [grm_client.attach_administrative_regions_objects(doc) for doc in grm_client.get_all_facilitators()]
+        docs_eadls_dict = {doc.get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']])) for doc in docs_eadls if doc.get('type') == 'adl' and doc.get('representative') and doc.get('administrative_regions_objects')}
 
         # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
         adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
@@ -882,7 +881,8 @@ def get_facilitator_status_excel_csv_under_file_excel_or_csv(request=None, facil
 
 
 
-    file_path = os.path.join(settings.MEDIA_ROOT, f'dict_facilitators_evolution_{datetime.today().strftime().replace("-", "").replace(":", "").replace(" ", "_")}.json')
+    file_path = os.path.join(settings.MEDIA_ROOT, f"dict_facilitators_evolution_{datetime.today().strftime('%Y%m%d_%H%M%S')}.json")
+    # file_path = os.path.join(settings.MEDIA_ROOT, f'dict_facilitators_evolution_{datetime.today().strftime().replace("-", "").replace(":", "").replace(" ", "_")}.json')
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(_facilitators, f, ensure_ascii=False, indent=4)
     

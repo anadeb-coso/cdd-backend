@@ -13,6 +13,7 @@ from django.db.models import Sum
 import itertools
 
 from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.administrative_levels.functions import (get_cascade_villages_by_administrative_level_id,
                                                        get_administrative_level_under_json)
 from process_manager.models import Task, Phase, Activity, AggregatedStatus, Project, Cycle, AggregatedStatusFacilitator
@@ -52,9 +53,8 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
 
         context['list_fields'] = ["phase", "activity", "task", "region", "prefecture", "commune", "canton", "village"]
         
-        
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
-        
+        agg = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first()
+        context['last_update'] = agg.updated_date if agg else None
 
         return context
 
@@ -79,15 +79,12 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
     context_object_name = 'object'
 
     def get_queryset(self):
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-
         # Infos Generales
         project = Project.objects.get(id=self.request.session.get('project_id'))
         cycle = Cycle.objects.get(id=self.request.session.get('cycle_id'))
         project_id = project.id
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+        project_mis_id = project_mis.id if project_mis else 1
         cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
         cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
 
@@ -144,7 +141,11 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
             total_tasks_invalidated=Sum('total_tasks_invalidated'),
             total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+            total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+            total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
             total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+            total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+            total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
         )
         
         nbr_tasks_completed = aggregated_status_project['total_tasks_completed'] or 0
@@ -153,7 +154,11 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
         nbr_tasks_waiting_validation = aggregated_status_project['total_tasks_waiting_validation'] or 0
         nbr_tasks_invalidated = aggregated_status_project['total_tasks_invalidated'] or 0
         nbr_tasks_invalidated_review = aggregated_status_project['total_tasks_invalidated_review'] or 0
+        nbr_tasks_invalidated_review_completed = aggregated_status_project['total_tasks_invalidated_review_completed'] or 0
+        nbr_tasks_invalidated_review_in_pending = aggregated_status_project['total_tasks_invalidated_review_in_pending'] or 0
         nbr_tasks_invalidated_unreview = aggregated_status_project['total_tasks_invalidated_unreview'] or 0
+        nbr_tasks_invalidated_unreview_completed = aggregated_status_project['total_tasks_invalidated_unreview_completed'] or 0
+        nbr_tasks_invalidated_unreview_in_pending = aggregated_status_project['total_tasks_invalidated_unreview_in_pending'] or 0
         percentage_tasks_completed = float("%.2f" % (nbr_tasks_completed / nbr_tasks * 100) if nbr_tasks > 0 else 0)
         percentage_tasks_completed_validated = float("%.2f" % (nbr_tasks_validated / nbr_tasks_completed * 100) if nbr_tasks_completed > 0 else 0)
 
@@ -166,10 +171,10 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             project_mis
         )
         facilitators_stabilized_all_docs = [
-            doc.get('doc') for doc in eadls.all_docs(include_docs=True)['rows'] \
+            doc for doc in grm_client.get_all_facilitators()
                 if (
-                    type(doc) is dict and doc.get('doc') and doc.get('doc').get('type') == 'adl' and \
-                    doc.get('doc').get('representative') and doc.get('doc').get('representative').get('email')
+                    type(doc) is dict and doc.get('type') == 'adl' and \
+                    doc.get('representative') and doc.get('representative').get('email')
                 )
         ]
 
@@ -201,7 +206,11 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             "nbr_tasks_waiting_validation": nbr_tasks_waiting_validation,
             "nbr_tasks_invalidated": nbr_tasks_invalidated,
             "nbr_tasks_invalidated_review": nbr_tasks_invalidated_review,
+            "nbr_tasks_invalidated_review_completed": nbr_tasks_invalidated_review_completed,
+            "nbr_tasks_invalidated_review_in_pending": nbr_tasks_invalidated_review_in_pending,
             "nbr_tasks_invalidated_unreview": nbr_tasks_invalidated_unreview,
+            "nbr_tasks_invalidated_unreview_completed": nbr_tasks_invalidated_unreview_completed,
+            "nbr_tasks_invalidated_unreview_in_pending": nbr_tasks_invalidated_unreview_in_pending,
             "percentage_tasks_completed": percentage_tasks_completed,
             "percentage_tasks_completed_validated": percentage_tasks_completed_validated,
             "facilitators": facilitators,
@@ -228,8 +237,8 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
         project = Project.objects.get(id=self.request.session.get('project_id'))
         cycle = Cycle.objects.get(id=self.request.session.get('cycle_id'))
         project_id = project.id
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-        project_mis_id = project_mis.first().id if project_mis.count() >= 1 else 1
+        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
+        project_mis_id = project_mis.id if project_mis else 1
         cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
         cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
 
@@ -322,7 +331,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                    total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                    total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                    total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                    total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                 )
                 if regions and region.name in regions:
                     regions[region.name]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
@@ -331,7 +344,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     regions[region.name]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
                     regions[region.name]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
                     regions[region.name]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review_completed'] = sums['total_tasks_invalidated_review_completed'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_review_in_pending'] = sums['total_tasks_invalidated_review_in_pending'] or 0
                     regions[region.name]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview_completed'] = sums['total_tasks_invalidated_unreview_completed'] or 0
+                    regions[region.name]['nbr_tasks_invalidated_unreview_in_pending'] = sums['total_tasks_invalidated_unreview_in_pending'] or 0
 
                     regions[region.name]['percentage_tasks_completed'] = ((regions[region.name]["nbr_tasks_completed"]/regions[region.name]["nbr_tasks"])*100) if regions[region.name]["nbr_tasks"] else 0
                     regions[region.name]['percentage_tasks_completed_validated'] = ((regions[region.name]["nbr_tasks_validated"]/regions[region.name]["nbr_tasks_completed"])*100) if regions[region.name]["nbr_tasks_completed"] else 0
@@ -380,7 +397,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                     total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                     total_tasks_invalidated=Sum('total_tasks_invalidated'),
                     total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                    total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                    total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                     total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                    total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                    total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
                 )
                 regions[k]['nbr_tasks_completed'] = sums['total_tasks_completed'] or 0
                 regions[k]['nbr_tasks'] = sums['total_tasks'] or 0
@@ -388,7 +409,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 regions[k]['nbr_tasks_waiting_validation'] = sums['total_tasks_waiting_validation'] or 0
                 regions[k]['nbr_tasks_invalidated'] = sums['total_tasks_invalidated'] or 0
                 regions[k]['nbr_tasks_invalidated_review'] = sums['total_tasks_invalidated_review'] or 0
+                regions[k]['nbr_tasks_invalidated_review_completed'] = sums['total_tasks_invalidated_review_completed'] or 0
+                regions[k]['nbr_tasks_invalidated_review_in_pending'] = sums['total_tasks_invalidated_review_in_pending'] or 0
                 regions[k]['nbr_tasks_invalidated_unreview'] = sums['total_tasks_invalidated_unreview'] or 0
+                regions[k]['nbr_tasks_invalidated_unreview_completed'] = sums['total_tasks_invalidated_unreview_completed'] or 0
+                regions[k]['nbr_tasks_invalidated_unreview_in_pending'] = sums['total_tasks_invalidated_unreview_in_pending'] or 0
 
                 regions[k]['percentage_tasks_completed'] = ((regions[k]["nbr_tasks_completed"]/regions[k]["nbr_tasks"])*100) if regions[k]["nbr_tasks"] else 0
                 regions[k]['percentage_tasks_completed_validated'] = ((regions[k]["nbr_tasks_validated"]/regions[k]["nbr_tasks_completed"])*100) if regions[k]["nbr_tasks_completed"] else 0

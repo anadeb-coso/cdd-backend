@@ -29,6 +29,7 @@ from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
 from no_sql_client import NoSQLClient
+import grm_client
 from dashboard.utils import (
     sync_geographicalunits_with_cvd_on_facilittor, sync_tasks
 )
@@ -69,10 +70,8 @@ def export_administrativelels_situation_to_excel(request):
     type_field = request.GET.get('type_field')
     _id = 0
 
-    nsc = NoSQLClient()
-    eadls = nsc.get_db('eadls')
     facilitators_stabilized = []
-    
+
     project_mis = mis_objects_call.filter_objects(MisProject, name=request.session.get('project_name')).first()
     project_mis_id = project_mis.id if project_mis else 1
 
@@ -97,7 +96,7 @@ def export_administrativelels_situation_to_excel(request):
 
         _("Tasks Total"), _("Tasks Completed"), f'{_("Tasks")} {_("Pending")}', 
         
-        _("Tasks Validated"), _("Tasks Invalidated"), _("Tasks Invalidated Review"), 
+        _("Tasks Validated"), _("Tasks Invalidated"), _("Tasks Invalidated Review"), _("Tasks Invalidated Review No completed"), 
         _("Tasks Invalidated Unreview"), _("Tasks Waiting Validation"),
 
         _("Percentage Completed"), _("Percentage of completed tasks validated"),
@@ -202,17 +201,15 @@ def export_administrativelels_situation_to_excel(request):
     }
 
     # Facilitators stabilization data
-    facilitators_stabilized = eadls.get_view_result(
-        "_design/adl_village_filter", "by_village_id", 
-        keys=_headquarters_village_ids, 
-        include_docs=True
-    )
+    facilitators_stabilized = grm_client.get_facilitator_by_village(_headquarters_village_ids)
+    
     print("ok facilitators Initial")
     _f_s = {}
     _supervisors_s = {}
     if facilitators_stabilized:
-        for elt in [row["doc"] for row in facilitators_stabilized[:] if (_ for _ in ["CommunityFacilitator", "Supervisor"] if _ in row["doc"]["representative"]["groups"]) and row["doc"]["representative"]["is_active"] == True]:
+        for elt in [row for row in facilitators_stabilized[:] if (_ for _ in ["CommunityFacilitator", "Supervisor"] if _ in row["representative"]["groups"]) and row["representative"]["is_active"] == True]:
             if elt not in list(_f_s.values()):
+                grm_client.attach_administrative_regions_objects(elt)
                 for adl_id in _headquarters_village_ids:
                     administratives_stabilized = elt['administrative_regions']
                     administrative_regions_objects = elt.get('administrative_regions_objects')
@@ -243,7 +240,11 @@ def export_administrativelels_situation_to_excel(request):
             'total_tasks_validated': agg['total_tasks_validated'] or 0,
             'total_tasks_invalidated': agg['total_tasks_invalidated'] or 0,
             'total_tasks_invalidated_review': agg['total_tasks_invalidated_review'] or 0,
+            'total_tasks_invalidated_review_completed': agg['total_tasks_invalidated_review_completed'] or 0,
+            'total_tasks_invalidated_review_in_pending': agg['total_tasks_invalidated_review_in_pending'] or 0,
             'total_tasks_invalidated_unreview': agg['total_tasks_invalidated_unreview'] or 0,
+            'total_tasks_invalidated_unreview_completed': agg['total_tasks_invalidated_unreview_completed'] or 0,
+            'total_tasks_invalidated_unreview_in_pending': agg['total_tasks_invalidated_unreview_in_pending'] or 0,
             'total_tasks_waiting_validation': agg['total_tasks_waiting_validation'] or 0
         }
         for agg in aggregs_by_project.values('administrative_level_id').annotate(
@@ -252,7 +253,11 @@ def export_administrativelels_situation_to_excel(request):
             total_tasks_validated=Sum('total_tasks_validated'),
             total_tasks_invalidated=Sum('total_tasks_invalidated'),
             total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+            total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+            total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
             total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+            total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+            total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
             total_tasks_waiting_validation=Sum('total_tasks_waiting_validation')
         )
     }
@@ -290,8 +295,12 @@ def export_administrativelels_situation_to_excel(request):
             _adl.total_tasks_validated = totals['total_tasks_validated']
             _adl.total_tasks_invalidated = totals['total_tasks_invalidated']
             _adl.total_tasks_invalidated_review = totals['total_tasks_invalidated_review']
+            _adl.total_tasks_invalidated_review_completed = totals['total_tasks_invalidated_review_completed']
+            _adl.total_tasks_invalidated_review_in_pending = totals['total_tasks_invalidated_review_in_pending']
             _adl.total_tasks_invalidated_unreview = totals['total_tasks_invalidated_unreview']
-            _adl.total_tasks_waiting_validation = totals['total_tasks_waiting_validation'] + totals['total_tasks_invalidated_review']
+            _adl.total_tasks_invalidated_unreview_completed = totals['total_tasks_invalidated_unreview_completed']
+            _adl.total_tasks_invalidated_unreview_in_pending = totals['total_tasks_invalidated_unreview_in_pending']
+            _adl.total_tasks_waiting_validation = totals['total_tasks_waiting_validation'] + totals['total_tasks_invalidated_review_completed']
 
         _administrativelel = [
             _adl.get_canton().parent.parent.parent.name if _adl.get_canton() and _adl.get_canton().parent and _adl.get_canton().parent.parent and _adl.get_canton().parent.parent.parent else "",
@@ -313,6 +322,7 @@ def export_administrativelels_situation_to_excel(request):
             _adl.total_tasks_validated,
             _adl.total_tasks_invalidated,
             _adl.total_tasks_invalidated_review,
+            _adl.total_tasks_invalidated_review_in_pending,
             _adl.total_tasks_invalidated_unreview,
             _adl.total_tasks_waiting_validation,
 
