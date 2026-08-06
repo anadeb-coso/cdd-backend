@@ -23,7 +23,8 @@
                 <th width="20%">{% translate 'Name' %}</th>
                 {% endif %}
                 <th width="3%">{% translate 'Sex' %}</th>
-                <th width="17%">{% translate 'Tel/Email' %}</th>
+                <th width="17%">{% translate 'Tel' %}</th>
+                <th width="17%">{% translate 'Email' %}</th>
                 <th width="5%">{% translate 'Canton' %}</th>
                 <th width="5%">{% translate 'Nbr locality' %}</th>
                 <th width="50%">{% translate 'Locality' %}</th>
@@ -31,7 +32,33 @@
             </tr>
             </thead>
             <tbody>
-            {% for facilitator in facilitators_stabilized %}
+                {% for facilitator in facilitators_stabilized %}
+                    <tr {% if not facilitator.is_active %} style="color: red;" {% endif %}>
+                        
+                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                        <td align="left">
+                            <a href="https://mgp.coso-togo.com/fr/administrative-levels/{{facilitator.id}}/" target="_blank"
+                                class="" title="{% translate 'See profile' %}">
+                                <i class="fa fa-edit"></i>
+                            </a>
+                        </td>
+                        {% endif %}
+
+                        <td align="left">{{ facilitator.name }}</td>
+
+                        <td align="left">{{ facilitator.sex }}</td>
+                        <td align="left">{{ facilitator.phone }}</td>
+                        <td align="left">{{ facilitator.email }}</td>
+
+                        {% with facilitator.stabilization_administrative_ids|attach_administrative_regions_objects as administrative_regions_objects %}
+                        <td align="left">{{ administrative_regions_objects.cantons }}</td>
+                        <td align="center">{{ administrative_regions_objects.villages_numbers }}</td>
+                        <td align="left">{{ administrative_regions_objects.villages }}</td>
+                        {% endwith %}
+
+                    </tr>
+                {% endfor %}
+            {% comment %} {% for facilitator in facilitators_stabilized %}
                 {% with facilitator|get_facilitator_by_email as facilitator_object %}
                 {% if facilitator_object and facilitator_object.no_sql_db_name %}
                 <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
@@ -61,13 +88,10 @@
                     <td align="left">{{ administrative_regions_objects.villages }}</td>
                     {% endwith %}
 
-                    {% comment %} <td class=" pointer-event ">
-                        <i class=" expand-icon fas fa-chevron-circle-right text-primary"></i>
-                    </td> {% endcomment %}
                 </tr>
                 {% endif %}
                 {% endwith %}
-            {% endfor %}
+            {% endfor %} {% endcomment %}
             </tbody>
         </table>
     </div>

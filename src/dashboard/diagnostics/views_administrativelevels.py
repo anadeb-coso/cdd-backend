@@ -49,8 +49,8 @@ class DashboardDiagnosticsADLView(PageMixin, LoginRequiredMixin, FormView):
         # context['en_bound'] = settings.DIAGNOSTIC_MAP_EN_BOUND
         # context['country_iso_code'] = settings.DIAGNOSTIC_MAP_ISO_CODE
         
-        
-        context['last_update'] = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first().updated_date
+        agg = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first()
+        context['last_update'] = agg.updated_date if agg else None
         
 
         return context
@@ -76,9 +76,6 @@ class DiagnosticsCantonsView(LoginRequiredMixin, ListView):
     context_object_name = 'object'
 
     def get_queryset(self):
-        nsc = NoSQLClient()
-        eadls = nsc.get_db('eadls')
-
         if 'cantons_stabilized_ids' in self.request.session and self.request.session['cantons_stabilized_ids'] and self.request.user.groups.filter(name__in=["Supervisor"]).exists():
             projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
             cycles_order = [c.order for p in projects for c in p.cycle_set.all()]
@@ -130,7 +127,11 @@ class DiagnosticsCantonsView(LoginRequiredMixin, ListView):
                 total_tasks_waiting_validation=Sum('total_tasks_waiting_validation'),
                 total_tasks_invalidated=Sum('total_tasks_invalidated'),
                 total_tasks_invalidated_review=Sum('total_tasks_invalidated_review'),
+                total_tasks_invalidated_review_completed=Sum('total_tasks_invalidated_review_completed'),
+                total_tasks_invalidated_review_in_pending=Sum('total_tasks_invalidated_review_in_pending'),
                 total_tasks_invalidated_unreview=Sum('total_tasks_invalidated_unreview'),
+                total_tasks_invalidated_unreview_completed=Sum('total_tasks_invalidated_unreview_completed'),
+                total_tasks_invalidated_unreview_in_pending=Sum('total_tasks_invalidated_unreview_in_pending'),
             )
         )
         aggregated_map = {
@@ -158,7 +159,11 @@ class DiagnosticsCantonsView(LoginRequiredMixin, ListView):
                         invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_waiting_validation'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_waiting_validation') or 0
                         invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated') or 0
                         invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_review'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_invalidated_review') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_review_completed'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_invalidated_review_completed') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_review_in_pending'] = aggregated_map.get((project.id, cycle.id, canton.id), {}).get('total_tasks_invalidated_review_in_pending') or 0
                         invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_unreview'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated_unreview') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_unreview_completed'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated_unreview_completed') or 0
+                        invalidation_notifications[project.name][cycle.name][(canton.id, canton.name)]['total_tasks_invalidated_unreview_in_pending'] = aggregated_map.get((project.id, cycle.id,  canton.id), {}).get('total_tasks_invalidated_unreview_in_pending') or 0
                     
 
         return invalidation_notifications
@@ -182,6 +187,7 @@ class CantonDetailForListView(LoginRequiredMixin, AJAXRequestMixin, ListView):
             AdministrativeLevel, 
             parent_id=int(context['canton_id']), 
             type="Village",
+            headquarters_village_of_the_cvd__isnull=False
         ).distinct()
 
         villages_ids = [v.id for v in villages]
