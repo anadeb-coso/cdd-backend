@@ -379,6 +379,14 @@ class RestGetActivityByAttributes(APIView):
     
     def post(self, request, *args, **kwargs):
         try:
+            # Bornes de date optionnelles (ex : mois affiché dans le calendrier du mobile) :
+            # retirées de request.data avant le .filter(**kwargs) ci-dessous car elles ne
+            # correspondent pas à un simple champ = valeur mais à un chevauchement de plage
+            # (une activité peut être ponctuelle via planned_date, ou étalée sur plusieurs
+            # jours via planned_datetime_start/end, ex. congés).
+            start_date = request.data.pop('start_date', None)
+            end_date = request.data.pop('end_date', None)
+
             if 'project_id' in request.data:
                 project_id = request.data['project_id']
                 del request.data['project_id']
@@ -392,16 +400,25 @@ class RestGetActivityByAttributes(APIView):
                 username = request.data['user__username']
                 request.data['user__username'] = User.objects.get(email=username).username
 
+            activities = Activity.objects.filter(**dict(request.data))
+
+            if start_date and end_date:
+                activities = activities.filter(
+                    Q(planned_date__range=[start_date, end_date]) |
+                    Q(planned_datetime_start__date__lte=end_date, planned_datetime_end__date__gte=start_date) |
+                    Q(vacation_return_datetime__date__range=[start_date, end_date])
+                )
+
             return Response(
                 ActivitySerializer(
-                    Activity.objects.filter(**dict(request.data)),
-                    many=True).data, 
+                    activities,
+                    many=True).data,
                 status=status.HTTP_200_OK
             )
         except Exception as exc:
             print(exc)
             return Response(
-                {'error': exc.__str__()}, 
+                {'error': exc.__str__()},
                 status=status.HTTP_404_NOT_FOUND
             )
 

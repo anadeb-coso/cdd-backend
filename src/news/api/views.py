@@ -236,10 +236,20 @@ class RestGetNews(APIView):
             else:
                 query = Q(publish=True)
             
-            _ = News.objects.filter(query)
-            
+            # select_related/prefetch_related : NewsSerializer accède à category/facilitator/user
+            # (ForeignKey) et tags (ManyToMany) par simple attribut, donc ces relations profitent
+            # pleinement du cache Django et évitent une requête par actualité pour chacune d'elles
+            # (auparavant N+1 par page de résultats). `files` reste non prefetché car
+            # News.get_files() ré-ordonne la queryset (.order_by), ce qui invalide le cache de
+            # prefetch Django et nécessiterait de changer cette méthode partagée avec d'autres vues.
             paginator = CustomPagination()
-            paginated_data = paginator.paginate_queryset(News.objects.filter(query).order_by('-created_date'), request)
+            paginated_data = paginator.paginate_queryset(
+                News.objects.filter(query)
+                    .select_related('category', 'facilitator', 'user')
+                    .prefetch_related('tags')
+                    .order_by('-created_date'),
+                request
+            )
             serializer = NewsSerializer(paginated_data, many=True)
             
             return paginator.get_paginated_response(serializer.data)
