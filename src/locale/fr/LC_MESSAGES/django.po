@@ -2530,3 +2530,12 @@ msgstr "Mission hors du pays"
 #: .\dashboard
 msgid "Work Environment"
 msgstr "Environnement de travail"
+
+#: .\dashboard
+msgid "Invalidated tasks reviewed by the facilitator (No Completed)"
+msgstr "Tâches invalidées revues par l'animateur (Non terminées)"
+
+#: .\dashboard
+msgid "Tasks Invalidated Unreview by the facilitator"
+msgstr "Tâches invalidées non revues par le facilitateur"
+

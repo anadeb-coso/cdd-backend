@@ -446,25 +446,25 @@
                                                             </div>
 
                                                         </div>
-                                                        <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
+                                                        <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}-{{ activity.order }}">
                                                             <i class="fas fa-chevron-right cursor"></i>
                                                         </div>
                                                     </div>
-                                                    <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
+                                                    <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}-{{ activity.order }}">
                                                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                                     </div>
-                                                    <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
+                                                    <div class="phase__description" id="activityDescription{{ phase.order }}-{{ activity.order }}">
                                                         <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
                                                         <br>
                                                         <br>
                                                     </div>
-                                                    <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
-                                                        <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
-                                                                <a id="previous{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                    <div class="phase__detail" id="phaseDetail{{ phase.order }}-{{ activity.order }}"></div>
+                                                        <div id="pagination{{ phase.order }}-{{ activity.order }}" class="text-right">
+                                                                <a id="previous{{ phase.order }}-{{ activity.order }}" class="btn hidden">
                                                                     <i class="fa fa-chevron-left fs20 align-middle"></i>
                                                                 </a>
-                                                                <div id="currentPage{{ phase.order }}{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                                                                <a id="next{{ phase.order }}{{ activity.order }}" class="btn hidden">
+                                                                <div id="currentPage{{ phase.order }}-{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
+                                                                <a id="next{{ phase.order }}-{{ activity.order }}" class="btn hidden">
                                                                     <i class="fa fa-chevron-right fs20 align-middle"></i>
                                                                 </a>
                                                             </div>
@@ -613,18 +613,17 @@
         document.querySelectorAll('[id^=phaseSpinner]').forEach(element => element.hidden = true);
         document.querySelectorAll('[id^=iconActivity] .fas').forEach(element => element.classList = 'fas fa-chevron-right');
 
-        let id = +this.id.split('iconActivity')[1];
+        // id is "<phaseOrder>-<activityOrder>"; splitting on '-' avoids the
+        // ambiguity of concatenating two numbers together (e.g. phase 2 +
+        // activity 2 used to collapse to "22", which couldn't be split back
+        // into 2 and 2 and silently fell back to activity 1).
+        let id = this.id.split('iconActivity')[1];
+        let activity = id.split('-')[1];
 
-        document.querySelectorAll('[id^=iconActivity' + phaseNumber + ']' + ' .fas').forEach(element => element.classList = 'fas fa-chevron-right');
+        document.querySelectorAll('[id^=iconActivity' + phaseNumber + '-]' + ' .fas').forEach(element => element.classList = 'fas fa-chevron-right');
 
         if($('#iconActivity' +  id + ' .fas')[0].classList.contains('fa-chevron-down') == false) {
             $('#iconActivity' + id + ' .fas')[0].classList = 'fas fa-chevron-down';
-            let activity = id.toString().split(phaseNumber.toString());
-            activity.shift()
-            activity = activity.join('');
-            if (activity == '') {
-                activity = 1;
-            }
             loadActivityTasks(activity);
         }
     }
@@ -648,7 +647,7 @@
     }
     
      function loadTasks() {
-            $('#phaseSpinner' + phaseNumber + activityNumber)[0].hidden = false;
+            $('#phaseSpinner' + phaseNumber + '-' + activityNumber)[0].hidden = false;
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:facilitators:task_list' facilitator_db_name %}",
@@ -665,34 +664,34 @@
                     is_rejected: isRejected
                 },
                 success: function (response) {
-                    $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = response;
-                    $('#phaseDetail' + phaseNumber + activityNumber)[0].hidden = false;
-                    $('#activityDescription' + phaseNumber + activityNumber)[0].hidden = false;
-                    $('#phaseSpinner' + phaseNumber + activityNumber)[0].hidden = true;
+                    $('#phaseDetail' + phaseNumber + '-' + activityNumber)[0].innerHTML = response;
+                    $('#phaseDetail' + phaseNumber + '-' + activityNumber)[0].hidden = false;
+                    $('#activityDescription' + phaseNumber + '-' + activityNumber)[0].hidden = false;
+                    $('#phaseSpinner' + phaseNumber + '-' + activityNumber)[0].hidden = true;
                     total_tasks = $('#totalActTasks')[0].value;
                     admin_level_selected_detail.hide();
                     no_admin_level_selected.hide();
                     admin_level_selected.show();
                     if (index - offset >= 0) {
-                        $('#previous' + phaseNumber + activityNumber)[0].hidden = true;
+                        $('#previous' + phaseNumber + '-' + activityNumber)[0].hidden = true;
                     } else {
-                        $('#previous' + phaseNumber + activityNumber)[0].hidden = false;
+                        $('#previous' + phaseNumber + '-' + activityNumber)[0].hidden = false;
                     }
                     if (index + offset < total_tasks) {
-                        $('#next' + phaseNumber + activityNumber)[0].hidden = true;
+                        $('#next' + phaseNumber + '-' + activityNumber)[0].hidden = true;
                     } else {
-                        $('#next' + phaseNumber + activityNumber)[0].hidden = false;
+                        $('#next' + phaseNumber + '-' + activityNumber)[0].hidden = false;
                     }
                     if (response.trim()) {
                         if (total_tasks == '0') {
-                            $('#phaseDetail' + phaseNumber + activityNumber)[0].innerHTML = `<div class="text-center">{% translate 'No tasks found' %} </div>`;
-                            $('#pagination' + phaseNumber + activityNumber)[0].hidden = false
+                            $('#phaseDetail' + phaseNumber + '-' + activityNumber)[0].innerHTML = `<div class="text-center">{% translate 'No tasks found' %} </div>`;
+                            $('#pagination' + phaseNumber + '-' + activityNumber)[0].hidden = false
                         } else {
-                            $('#currentPage' + phaseNumber + activityNumber)[0].innerHTML = Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset);
-                            $('#pagination' + phaseNumber + activityNumber)[0].hidden = true
+                            $('#currentPage' + phaseNumber + '-' + activityNumber)[0].innerHTML = Math.floor(index / offset) + 1 + " / " + Math.ceil(total_tasks / offset);
+                            $('#pagination' + phaseNumber + '-' + activityNumber)[0].hidden = true
                         }
                     } else {
-                        $('#currentPage' + phaseNumber + activityNumber)[0].innerHTML = "";
+                        $('#currentPage' + phaseNumber + '-' + activityNumber)[0].innerHTML = "";
                     }
                     spin.hide();
                     admin_level_selected_detail.show();
@@ -842,8 +841,9 @@
                 }
             }
 
-            $('#card-item-task-'+task__id).modal('hide');
-            $('#modal_comment').modal('show');
+            $('#card-item-task-'+task__id).one('hidden.bs.modal', function () {
+                $('#modal_comment').modal('show');
+            }).modal('hide');
         });
 
 

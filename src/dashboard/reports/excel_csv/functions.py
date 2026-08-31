@@ -1,6 +1,6 @@
 from django.utils.translation import gettext_lazy
+from django.conf import settings
 import os
-from sys import platform
 from datetime import datetime
 import pandas as pd
 
@@ -99,7 +99,13 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                 print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
                 continue
 
-            query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
+            # Only "facilitator" and "task" docs are used below, so fetch just
+            # those instead of every document in the facilitator's database
+            # (all_docs(include_docs=True) pulls comments, attachments,
+            # phase/activity templates, etc. that are never read here).
+            query_result_docs = facilitator_db.get_query_result(
+                {"type": {"$in": ["facilitator", "task"]}}, limit=1000000
+            )[:]
             f_doc = None
             cvds = []
             name_with_sex = None
@@ -107,7 +113,6 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
             sex = None
             phone = None
             for doc in query_result_docs:
-                doc = doc.get('doc')
                 if doc.get('type') == "facilitator":
                     f_doc = doc
                     cvds = get_cvds(request.session.get('project_couch_id'), cycle_id, f_doc)
@@ -116,8 +121,8 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     sex =  'I' if not f_doc.get('sex') else "F" if f_doc.get('sex') == "Mme" else "M"
                     phone = f_doc["phone"]
                     break
-            
-            query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
+
+            query_result_docs = [doc for doc in query_result_docs if doc.get('cycle_id') == cycle_id and doc.get('project_id') == request.session.get('project_couch_id')]
             
             if f_doc:
                 for cvd in cvds:
@@ -146,7 +151,6 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                                 last_activity_date = "0000-00-00 00:00:00"
 
                                 for _ in query_result_docs:
-                                    _ = doc.get('doc')
                                     if _.get('type') == "task":
                                         last_updated = datetime_complet_str(_.get('last_updated'))
                                         if last_updated and last_activity_date < last_updated:
@@ -243,8 +247,12 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
             except Exception as e:
                 print(f"Error occurred while fetching database for facilitator {f.name}: {e}")
                 continue
-            query_result_docs = facilitator_db.all_docs(include_docs=True)['rows']
-            
+            # Only "facilitator" and "task" docs are used below, so fetch just
+            # those instead of every document in the facilitator's database.
+            query_result_docs = facilitator_db.get_query_result(
+                {"type": {"$in": ["facilitator", "task"]}}, limit=1000000
+            )[:]
+
             f_doc = None
             cvds = []
             name_with_sex = None
@@ -252,7 +260,6 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
             sex = None
             phone = None
             for doc in query_result_docs:
-                doc = doc.get('doc')
                 if doc.get('type') == "facilitator":
                     f_doc = doc
                     cvds = get_cvds(request.session.get('project_couch_id'), cycle_id, f_doc)
@@ -262,7 +269,7 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                     phone = f_doc["phone"]
                     break
 
-            query_result_docs = [doc for doc in query_result_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == request.session.get('project_couch_id')]
+            query_result_docs = [doc for doc in query_result_docs if doc.get('cycle_id') == cycle_id and doc.get('project_id') == request.session.get('project_couch_id')]
             
             
             if f_doc:        
@@ -275,7 +282,6 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
                 last_activity_date = "0000-00-00 00:00:00"
 
                 for _ in query_result_docs:
-                    _ = doc.get('doc')
                     if _.get('type') == "task":
                         last_updated = datetime_complet_str(_.get('last_updated'))
                         if last_updated and last_activity_date < last_updated:
@@ -455,23 +461,27 @@ def get_facilitator_excel_csv_under_file_excel_or_csv(request, facilitator_db_na
             index_f += 1
 
 
-    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
-        os.makedirs("media/"+file_type+"/reports/excel_csv")
+    # Write under settings.MEDIA_ROOT (the same base download() reads from)
+    # instead of a "media/" path relative to the process's working directory,
+    # which may not be the same directory in production and made the freshly
+    # generated file invisible to the download view (404 until, by luck, a
+    # retry landed in the right working directory).
+    relative_dir = os.path.join(file_type, "reports", "excel_csv")
+    absolute_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
+    if not os.path.exists(absolute_dir):
+        os.makedirs(absolute_dir)
 
     file_name = "reports_excel_csv_" + type_field.lower() + "_" + (("reports_excel_csv_".lower() + "_") if "reports_excel_csv_" else "")
+    timestamp = str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_")
 
     if file_type == "csv":
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".csv")
+        pd.DataFrame(datas, columns=cols).to_csv(os.path.join(settings.MEDIA_ROOT, file_path))
     else:
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".xlsx")
+        pd.DataFrame(datas, columns=cols).to_excel(os.path.join(settings.MEDIA_ROOT, file_path))
 
-    if platform == "win32":
-        # windows
-        return file_path.replace("/", "\\\\")
-    else:
-        return file_path
+    return file_path
     
 
 
@@ -799,23 +809,22 @@ def get_villages_monograph_under_file_excel_or_csv(facilitator_db_name, file_typ
                 count += 1
                             
 
-    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
-        os.makedirs("media/"+file_type+"/reports/excel_csv")
+    relative_dir = os.path.join(file_type, "reports", "excel_csv")
+    absolute_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
+    if not os.path.exists(absolute_dir):
+        os.makedirs(absolute_dir)
 
     file_name = "reports_monographie_" + _type.lower() + "_" + (("reports_monographie".lower() + "_") if "reports_monographie" else "")
+    timestamp = str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_")
 
     if file_type == "csv":
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".csv")
+        pd.DataFrame(datas, columns=cols).to_csv(os.path.join(settings.MEDIA_ROOT, file_path))
     else:
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".xlsx")
+        pd.DataFrame(datas, columns=cols).to_excel(os.path.join(settings.MEDIA_ROOT, file_path), index=False)
 
-    if platform == "win32":
-        # windows
-        return file_path.replace("/", "\\\\")
-    else:
-        return file_path
+    return file_path
     
     
 
@@ -1005,23 +1014,22 @@ def get_existences_cvd_under_file_excel_or_csv(facilitator_db_name, file_type="e
 
                 count += 1
 
-    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
-        os.makedirs("media/"+file_type+"/reports/excel_csv")
+    relative_dir = os.path.join(file_type, "reports", "excel_csv")
+    absolute_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
+    if not os.path.exists(absolute_dir):
+        os.makedirs(absolute_dir)
 
     file_name = "reports_existence_cvd_" + _type.lower() + "_" + (("reports_existence_cvd".lower() + "_") if "reports_existence_cvd" else "")
+    timestamp = str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_")
 
     if file_type == "csv":
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".csv")
+        pd.DataFrame(datas, columns=cols).to_csv(os.path.join(settings.MEDIA_ROOT, file_path))
     else:
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".xlsx")
+        pd.DataFrame(datas, columns=cols).to_excel(os.path.join(settings.MEDIA_ROOT, file_path), index=False)
 
-    if platform == "win32":
-        # windows
-        return file_path.replace("/", "\\\\")
-    else:
-        return file_path
+    return file_path
     
     
     
@@ -1519,20 +1527,19 @@ def get_village_priorities_under_file_excel_or_csv(facilitator_db_name, file_typ
                                         break
                 count += 1
 
-    if not os.path.exists("media/"+file_type+"/reports/excel_csv"):
-        os.makedirs("media/"+file_type+"/reports/excel_csv")
+    relative_dir = os.path.join(file_type, "reports", "excel_csv")
+    absolute_dir = os.path.join(settings.MEDIA_ROOT, relative_dir)
+    if not os.path.exists(absolute_dir):
+        os.makedirs(absolute_dir)
 
     file_name = "reports_villages_priorities_" + _type.lower() + "_" + (("reports_villages_priorities".lower() + "_") if "reports_villages_priorities" else "")
+    timestamp = str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_")
 
     if file_type == "csv":
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".csv"
-        pd.DataFrame(datas, columns=cols).to_csv("media/"+file_path, index=False)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".csv")
+        pd.DataFrame(datas, columns=cols).to_csv(os.path.join(settings.MEDIA_ROOT, file_path), index=False)
     else:
-        file_path = file_type+"/reports/excel_csv/" + file_name + str(datetime.today().replace(microsecond=0)).replace("-", "").replace(":", "").replace(" ", "_") +".xlsx"
-        pd.DataFrame(datas, columns=cols).to_excel("media/"+file_path, index=False)
+        file_path = os.path.join(relative_dir, file_name + timestamp + ".xlsx")
+        pd.DataFrame(datas, columns=cols).to_excel(os.path.join(settings.MEDIA_ROOT, file_path), index=False)
 
-    if platform == "win32":
-        # windows
-        return file_path.replace("/", "\\\\")
-    else:
-        return file_path
+    return file_path

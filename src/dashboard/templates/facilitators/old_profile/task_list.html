@@ -95,8 +95,8 @@
                     <td><b>{{ total_tasks_invalidated_updated_after_invalidation }}</b></td>
                     <td><b>{{ total_tasks_invalidated_not_returned_after_invalidation }}</b></td>
                     
-                    <td><b>{{ total_tasks_validated }}</b></td>
                     <td><b>{{ total_tasks_invalidated }}</b></td>
+                    <td><b>{{ total_tasks_validated }}</b></td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -466,7 +466,7 @@
         let action_code = null;
         let id_invalidate_elt = null;
         let btn_send_comment = $('#btn-send-comment');
-        $(document).on('click', '.invalidate_valide', function () {
+        $(document).off('click.taskModal', '.invalidate_valide').on('click.taskModal', '.invalidate_valide', function () {
             task__id = this.id.split("_")[this.id.split("_").length - 1];
             id_invalidate_elt = $(('#id_invalidate_'+task__id));
             for(var i = 0; i < this.classList.length; i++){
@@ -475,8 +475,9 @@
                 }
             }
 
-            $('#card-item-task-'+task__id).modal('hide');
-            $('#modal_comment').modal('show');
+            $('#card-item-task-'+task__id).one('hidden.bs.modal', function () {
+                $('#modal_comment').modal('show');
+            }).modal('hide');
         });
 
 

@@ -150,20 +150,24 @@ def clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(no_sql_
 
 def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
     nsc = NoSQLClient()
+    project_cdd = Project.objects.get(name=mis_objects_call.get_object(ProjectMis, id=project_mis_id).name)
     no_sql_dbs_names_with_village_ids = {}
     cvds = []
     administratives_stabilized = []
     try:
-        facilitator_grm = grm_client.get_facilitator_by_email(facilitator.get('email'))
-        grm_client.attach_administrative_regions_objects(facilitator_grm)
-        administratives_stabilized = facilitator_grm['administrative_regions']
-        administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
-        administratives_stabilized = list(set(
-            (administratives_stabilized if administratives_stabilized else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
-        ))
+        # facilitator_grm = grm_client.get_facilitator_by_email(facilitator.get('email'))
+        # grm_client.attach_administrative_regions_objects(facilitator_grm)
+        # administratives_stabilized = facilitator_grm['administrative_regions']
+        # administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
+        # administratives_stabilized = list(set(
+        #     (administratives_stabilized if administratives_stabilized else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
+        # ))
+        _f = Facilitator.objects.filter(email=facilitator['email']).first()
+        if _f:
+            administratives_stabilized = [str(_id) for _id in _f.stabilization_administrative_ids]
 
         for adl_id in administratives_stabilized:
-            if adl_id not in [elt['id'] for elt in facilitator['administrative_levels']]:
+            if adl_id not in [elt['id'] for elt in facilitator['administrative_levels'] if elt['project_name'] == project_cdd.name]:
                 assing_facilitator_object = mis_objects_call.filter_objects(
                     AssignAdministrativeLevelToFacilitator, 
                     project_id=project_mis_id,
@@ -177,8 +181,7 @@ def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
                     no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name] = {}
                     no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['ids'] = list(set(_ids))
                     no_sql_dbs_names_with_village_ids[_facilitator.no_sql_db_name]['facilitator'] = _facilitator
-
-        project_cdd = Project.objects.get(name=mis_objects_call.get_object(ProjectMis, id=project_mis_id).name)
+        
         for k, v in no_sql_dbs_names_with_village_ids.items():
             cvds += get_cvds(project_cdd.couch_id, project_cdd.get_cycles().last().couch_id, nsc.get_db(k).get_query_result({"type": 'facilitator'})[:][0], v['ids'])
     

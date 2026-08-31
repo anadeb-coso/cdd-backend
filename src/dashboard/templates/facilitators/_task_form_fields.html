@@ -1,0 +1,33 @@
+{% load i18n humanize custom_tags %}
+{% for field, dicts in fields.items %}
+    {% if dicts.value|checkType:'dict' %}
+        <div class="fieldset"><fieldset>
+            <legend>{{ dicts.name }}</legend>
+            <div class="content">
+                {% include "facilitators/_task_form_fields.html" with fields=dicts.value %}
+            </div>
+        </fieldset></div>
+    {% elif dicts.value|checkType:'list' %}
+        <div class="fieldset"><fieldset>
+            <legend>{{ dicts.name }}</legend>
+            <div class="content">
+                {% for item in dicts.value %}
+                    <div><fieldset>
+                        <legend>{{ forloop.counter }}</legend>
+                        <div class="content">
+                            {% include "facilitators/_task_form_fields.html" with fields=item %}
+                        </div>
+                    </fieldset></div>
+                {% endfor %}
+            </div>
+        </fieldset></div>
+    {% else %}
+        <div class="form-group row">
+            <label class="col-sm-3 col-form-label">{{ dicts.name }}</label>
+            <div class="col-sm-9">
+                <input type="text" readonly value="{% if dicts.value %}{% if dicts.value|checkType:'int' or dicts.value|checkType:'float' %}{{ dicts.value|intcomma }}{% else %}{{ dicts.value }}{% endif %}{% else %}-{% endif %}" class="form-control" />
+            </div>
+            <div class="clearfix"></div>
+        </div>
+    {% endif %}
+{% endfor %}

@@ -45,15 +45,21 @@ class StoreProject(BaseModel):
     
 class StoreApp(BaseModel):
     project = models.ForeignKey('StoreProject', on_delete=models.CASCADE, verbose_name=_('Project'))
-    version_code = models.IntegerField(unique=True, verbose_name=_('Version Code'))
+    version_code = models.IntegerField(verbose_name=_('Version Code'))
     app_version = models.CharField(max_length=45, verbose_name=_('Version'))
     apk = models.FileField(upload_to=app_path, blank=True, null=True, storage=S3Boto3Storage(), verbose_name=_('APK'))
     apk_aws_s3_url = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('APK AWS S3 Url'))
-    app_code = models.CharField(max_length=255, unique=True, verbose_name=_('App Code'))
+    app_code = models.CharField(max_length=255, verbose_name=_('App Code'))
     description = models.TextField(verbose_name=_('App Description'))
     
     def __str__(self):
         return f"{self.project.name} {self.version_code}({self.app_version})"
+
+    class Meta:
+        unique_together = [
+            ['project', 'version_code'],
+            ['project', 'app_code']
+        ]
 
     @property
     def name(self):

@@ -158,116 +158,62 @@ def structure_the_fields(task):
 
 
 
+def _field_config(config, field):
+    try:
+        return config.get(field) or {}
+    except AttributeError:
+        return {}
+
+
+def _nested_config(sub_config):
+    # Dict-type fields describe their sub-fields under "fields";
+    # list-type fields describe each item's sub-fields under "item.fields".
+    nested = sub_config.get('fields')
+    if not nested:
+        nested = (sub_config.get('item') or {}).get('fields')
+    return nested
+
+
+def _structure_value(value, config):
+    """Recursively re-shape a form_response value into {'name', 'value'} nodes,
+    resolving each field's label from the form's field configuration at every depth."""
+    config = config or {}
+    if type(value) == dict:
+        result = {}
+        for field, sub_value in value.items():
+            sub_config = _field_config(config, field)
+            label = sub_config.get('label')
+            result[field] = {
+                'name': label if label else utils_structure_the_words(field),
+                'value': _structure_value(sub_value, _nested_config(sub_config)),
+            }
+        return result
+    if type(value) == list:
+        return [_structure_value(item, config) for item in value]
+    return value
+
+
 @register.filter(name="structureTheFieldsLabels")
 def structure_the_fields_labels(task):
     fields_values = []
     if task.get("form_response"):
-        i = 0
-        form = task.get("form")
-        for fields in task.get("form_response"):
+        form = task.get("form") or []
+        for i, fields in enumerate(task.get("form_response")):
             try:
                 fields_options = form[i].get('options').get('fields')
-            except:
+            except Exception:
                 fields_options = {}
             dict_values = {}
             for field, value in fields.items():
-                try:
-                    label = fields_options.get(field).get('label')
-                except:
-                    label = utils_structure_the_words(field)
-                if type(value) in (dict, list):
-                    if type(value) == list:
-                        _list1 = []
-                        for l_field in value:
-                            item1 = {}
-                            for field1, value1 in l_field.items():
-                                if type(value1) in (dict, list):
-                                    if type(value1) == list:
-                                        _list2 = []
-                                        for l_field in value1:
-                                            item2 = {}
-                                            for field2, value2 in l_field.items():
-                                                item2[field2] = {'name': utils_structure_the_words(field2), 'value': value2}
-                                            _list2.append(item2)
-                                        item1[field1] = {'name': utils_structure_the_words(field1), 'value': _list2}
-                                    else:
-                                        dict1 = {}
-                                        for field3, value3 in value1.items():
-                                            if type(value3) == list:
-                                                _list3 = []
-                                                for l_field in value3:
-                                                    item4 = {}
-                                                    for field4, value4 in l_field.items():
-                                                        item4[field4] = {'name': utils_structure_the_words(field4), 'value': value4}
-                                                    _list3.append(item4)
-                                                dict1[field3] = {'name': utils_structure_the_words(field3), 'value': _list3}
-                                            else:
-                                                dict1[field3] = {'name': utils_structure_the_words(field3), 'value': value3}
-                                        item1[field1] = {'name': utils_structure_the_words(field1), 'value': dict1}
-                                else:
-                                    item1[field1] = {'name': utils_structure_the_words(field1), 'value': value1}
-                            _list1.append(item1)
-                        dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': _list1}
-                    else:
-                        dict2 = {}
-                        ii = 0
-                        value = order_dict(task.get('sql_id'), field, value)
-                        for field5, value5 in value.items():
-                            try:
-                                fields1 = fields_options.get(field).get('fields')
-                                label1 = fields1[field5].get('label') if fields1[field5].get('label') else utils_structure_the_words(field5)
-                            except Exception as ex:
-                                label1 = utils_structure_the_words(field5)
-                            if type(value5) in (dict, list):
-                                if type(value5) == list:
-                                    _list4 = []
-                                    for l_field in value5:
-                                        item5 = {}
-                                        for field6, value6 in l_field.items():
-                                            item5[field6] = {'name': utils_structure_the_words(field6), 'value': value6}
-                                        _list4.append(item5)
-                                    dict2[field5] = {'name': label1, 'value': _list4}
-                                else:
-                                    item6 = {}
-                                    for field7, value7 in value5.items():
-                                        try:
-                                            label2 = fields1[field5].get('fields').get(field7).get('label') if fields1[field5].get('fields').get(field7).get('label') else utils_structure_the_words(field7)
-                                        except Exception as ex:
-                                            label2 = utils_structure_the_words(field7)
-
-                                        if type(value7) in (dict, list):
-                                            if type(value7) == list:
-                                                _list5 = []
-                                                for l_field in value7:
-                                                    item7 = {}
-                                                    for field8, value8 in l_field.items():
-                                                        item7[field8] = {'name': utils_structure_the_words(field8), 'value': value8}
-                                                    _list5.append(item7)
-                                                item6[field5] = {'name': label2, 'value': _list5}
-                                            else:
-                                                item8 = {}
-                                                for field9, value9 in value7.items():
-                                                    try:
-                                                        label3 = fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') if fields1[field5].get('fields').get(field7).get('fields').get(field9).get('label') else utils_structure_the_words(field9)
-                                                    except Exception as ex:
-                                                        label3 = utils_structure_the_words(field9)
-                                                    item8[field7] = {'name': label3, 'value': value9}
-                                                item6[field5] = {'name': label2, 'value': item6}
-                                        else:
-                                            item6[field7] = {'name': label2, 'value': value7}
-
-
-                                        # item6[field7] = {'name': label2, 'value': value7}
-                                    dict2[field5] = {'name': label1, 'value': item6}
-                            else:
-                                dict2[field5] = {'name': label1, 'value': value5}
-                            ii += 1
-                        dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': dict2}
-                else:
-                    dict_values[field] = {'name': label if label else utils_structure_the_words(field), 'value': value}
+                sub_config = _field_config(fields_options, field)
+                label = sub_config.get('label')
+                if type(value) == dict:
+                    value = order_dict(task.get('sql_id'), field, value)
+                dict_values[field] = {
+                    'name': label if label else utils_structure_the_words(field),
+                    'value': _structure_value(value, _nested_config(sub_config)),
+                }
             fields_values.append(dict_values)
-            i += 1
-    # print(fields_values)
     return fields_values
 
 

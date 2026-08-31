@@ -64,7 +64,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             groups__name__in=['Supervisor'],
             is_active=True,
             projects__in=[self.request.session.get('project_id')]
-        ).values_list('id', 'email', 'username')}
+        ).values_list('id', 'email', 'username', 'last_name', 'first_name')}
         adls_emails = list(_supervisors.keys())
 
         def get_supervisors(docs=None):
@@ -123,6 +123,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             grm_client.attach_administrative_regions_objects(supervisor)
             supervisor['user_object_cdd_id'] = _supervisors[supervisor['representative']['email']][0]
             supervisor['user_object_cdd_username'] = _supervisors[supervisor['representative']['email']][2]
+            supervisor['user_object_cdd_full_name'] = f"{_supervisors[supervisor['representative']['email']][3]} {_supervisors[supervisor['representative']['email']][4]}"
 
 
             administrative_regions_objects = supervisor.get('administrative_regions_objects')
