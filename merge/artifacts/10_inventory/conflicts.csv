@@ -1,0 +1,5 @@
+table,type_conflit,detail
+authentication_governmentworker,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
+authentication_user,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
+authentication_user_groups,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
+authentication_user_user_permissions,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques

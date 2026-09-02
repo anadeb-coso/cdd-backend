@@ -1,0 +1,118 @@
+table,existe_dans_cdd,existe_dans_cosomis,lignes_cdd,lignes_cosomis,migration_cdd,migration_cosomis,managed_cdd,managed_cosomis,acces_via_using,categorie
+administrativelevels_administrativelevel,non,oui,,2199,,administrativelevels/0001_initial,True,True,,"B (miroir, propriétaire=cosomis)"
+administrativelevels_cvd,non,oui,,1740,,administrativelevels/0009_unitgeographic_cvd_administrativelevel_cvd,True,True,,"B (miroir, propriétaire=cosomis)"
+administrativelevels_geographicalunit,non,oui,,1669,,,True,True,,"B (miroir, propriétaire=cosomis)"
+assignments_assignadministrativeleveltofacilitator,non,oui,,2159,,assignments/0001_initial,True,True,,"B (miroir, propriétaire=cosomis)"
+auth_group,oui,oui,31,31,auth/0001_initial,auth/0001_initial,True,True,,A
+auth_group_permissions,oui,oui,0,0,,,True,True,,A (vide des deux côtés — rien à fusionner)
+auth_permission,oui,oui,244,232,auth/0001_initial,auth/0001_initial,True,True,,reconstruite (§4.6)
+auth_user,oui,oui,82,79,auth/0001_initial,auth/0001_initial,True,True,,A
+auth_user_groups,oui,oui,89,80,,,True,True,,A
+auth_user_user_permissions,oui,oui,0,0,,,True,True,,A (vide des deux côtés — rien à fusionner)
+authentication_facilitator,oui,non,241,,authentication/0001_initial,,True,True,,"B (miroir, propriétaire=cdd)"
+authentication_governmentworker,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
+authentication_user,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
+authentication_user_groups,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
+authentication_user_user_permissions,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
+authtoken_token,oui,oui,0,0,authtoken/0001_initial;authtoken/0003_tokenproxy,authtoken/0001_initial;authtoken/0003_tokenproxy,True,True,,A (vide des deux côtés — rien à fusionner)
+custom_file_customerfile,non,oui,,0,,custom_file/0001_initial,,True,,C — cosomis_only
+django_admin_log,oui,oui,1107,663,admin/0001_initial,admin/0001_initial,True,True,,reconstruite (§4.6)
+django_celery_results_chordcounter,oui,oui,0,0,django_celery_results/0008_chordcounter,django_celery_results/0008_chordcounter,True,True,,reconstruite (§4.6)
+django_celery_results_groupresult,oui,oui,0,0,django_celery_results/0009_groupresult,django_celery_results/0009_groupresult,True,True,,reconstruite (§4.6)
+django_celery_results_taskresult,oui,oui,0,0,django_celery_results/0001_initial,django_celery_results/0001_initial,True,True,,reconstruite (§4.6)
+django_content_type,oui,oui,61,57,contenttypes/0001_initial,contenttypes/0001_initial,True,True,,reconstruite (§4.6)
+django_migrations,oui,oui,152,180,,,,,,reconstruite (§4.6)
+django_session,oui,oui,1113,351,sessions/0001_initial,sessions/0001_initial,True,True,,reconstruite (§4.6)
+financial_account,non,oui,,154,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_activity,non,oui,,0,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_activity_funding,non,oui,,0,,financial/0037_tag_activity_budget_previsionnel_and_more,,True,,C — cosomis_only
+financial_activity_structures_impliquees,non,oui,,0,,,,True,,C — cosomis_only
+financial_activity_structures_responsables,non,oui,,0,,,,True,,C — cosomis_only
+financial_administrativeLevel_allocation,non,oui,,214,,financial/0001_initial,,True,,C — cosomis_only
+financial_annual_work_plan,non,oui,,0,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_bank,non,oui,,1,,financial/0002_bank_alter_administrativelevelallocation_table,,True,,C — cosomis_only
+financial_bank_transfer,non,oui,,153,,financial/0005_alter_administrativelevelallocation_description_and_more,,True,,C — cosomis_only
+financial_bank_transfer_disbursements,non,oui,,0,,,,True,,C — cosomis_only
+financial_bank_transfer_supporting_documents,non,oui,,0,,,,True,,C — cosomis_only
+financial_disbursement,non,oui,,0,,financial/0005_alter_administrativelevelallocation_description_and_more,,True,,C — cosomis_only
+financial_disbursement_request,non,oui,,0,,financial/0005_alter_administrativelevelallocation_description_and_more,,True,,C — cosomis_only
+financial_disbursement_request_validation,non,oui,,0,,financial/0024_disbursementrequestvalidation,,True,,C — cosomis_only
+financial_funding,non,oui,,0,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_supporting_document,non,oui,,0,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_supporting_document_activity,non,oui,,0,,financial/0017_activity_supportingdocument_and_more,,True,,C — cosomis_only
+financial_supporting_document_activity_file,non,oui,,0,,financial/0035_remove_banktransfer_disbursement_and_more,,True,,C — cosomis_only
+financial_tag,non,oui,,0,,financial/0037_tag_activity_budget_previsionnel_and_more,,True,,C — cosomis_only
+news_category,oui,non,10,,news/0001_initial,,True,,,C — cdd_only
+news_news,oui,non,107,,news/0001_initial,,True,,,C — cdd_only
+news_news_tags,oui,non,228,,,,True,,,C — cdd_only
+news_newsfile,oui,non,398,,news/0001_initial,,True,,,C — cdd_only
+news_subscription,oui,non,158,,news/0012_subscription,,True,,,C — cdd_only
+news_tag,oui,non,28,,news/0001_initial,,True,,,C — cdd_only
+planning_activity,oui,non,14890,,planning/0001_initial,,True,,,C — cdd_only
+planning_activitycomment,oui,non,42,,planning/0003_activitycomment,,True,,,C — cdd_only
+planning_activitydeadline,oui,non,0,,planning/0017_activitydeadline,,True,,,C — cdd_only
+planning_activitydeadline_activities_deadline_groups,oui,non,0,,,,True,,,C — cdd_only
+planning_activityfile,oui,non,7239,,planning/0001_initial,,True,,,C — cdd_only
+planning_activitygeolocation,oui,non,3336,,planning/0021_remove_activity_geolocation_end_and_more,,True,,,C — cdd_only
+planning_activityvalidate,oui,non,12214,,planning/0001_initial,,True,,,C — cdd_only
+planning_validationgroupsprocess,oui,non,4,,planning/0010_validationgroupsprocess,,True,,,C — cdd_only
+planning_validationgroupsprocess_planners_groups,oui,non,16,,,,True,,,C — cdd_only
+planning_validationgroupsprocess_validators_groups,oui,non,8,,,,True,,,C — cdd_only
+process_manager_activity,oui,non,48,,process_manager/0001_initial,,True,,,C — cdd_only
+process_manager_activity_cycles,oui,non,48,,,,True,,,C — cdd_only
+process_manager_administrativelevelwave,oui,oui,35,59,process_manager/0010_administrativelevelwave_deployment_wave_and_more,process_manager/0001_initial,True,True,,A
+process_manager_aggregatedstatus,oui,non,99812,,process_manager/0008_aggregatedstatus,,True,,,C — cdd_only
+process_manager_aggregatedstatusfacilitator,oui,non,298,,process_manager/0030_aggregatedstatusfacilitator,,True,,,C — cdd_only
+process_manager_cycle,oui,non,3,,process_manager/0024_activity_create_by_user_activity_created_date_and_more,,True,,,C — cdd_only
+process_manager_deployment,oui,non,5,,process_manager/0010_administrativelevelwave_deployment_wave_and_more,,True,,,C — cdd_only
+process_manager_emailaddresseswhichsendemails,oui,non,3,,process_manager/0020_emailaddresseswhichsendemails,,True,,,C — cdd_only
+process_manager_facilitatordeployment,oui,non,0,,process_manager/0010_administrativelevelwave_deployment_wave_and_more,,True,,,C — cdd_only
+process_manager_facilitatorwave,oui,non,50,,process_manager/0010_administrativelevelwave_deployment_wave_and_more,,True,,,C — cdd_only
+process_manager_periodwave,non,oui,,10,,process_manager/0001_initial,,True,,C — cosomis_only
+process_manager_periodwave_administrative_levels,non,oui,,70,,,,True,,C — cosomis_only
+process_manager_phase,oui,non,17,,process_manager/0001_initial,,True,,,C — cdd_only
+process_manager_phase_cycles,oui,non,17,,,,True,,,C — cdd_only
+process_manager_processaddorremoveadl,oui,non,533,,process_manager/0021_processaddorremoveadl,,True,,,C — cdd_only
+process_manager_project,oui,non,3,,process_manager/0001_initial,,True,,,C — cdd_only
+process_manager_project_facilitators,oui,non,388,,,,True,,,C — cdd_only
+process_manager_project_users,oui,non,160,,,,True,,,C — cdd_only
+process_manager_task,oui,non,137,,process_manager/0001_initial,,True,,,C — cdd_only
+process_manager_task_cycles,oui,non,137,,,,True,,,C — cdd_only
+process_manager_wave,oui,oui,5,6,process_manager/0010_administrativelevelwave_deployment_wave_and_more,process_manager/0001_initial,True,True,,A
+reports_villagecommittee,oui,non,9676,,reports/0001_initial,,True,,,C — cdd_only
+storeapp_storeapp,oui,non,31,,storeapp/0001_initial,,True,,,C — cdd_only
+storeapp_storeproject,oui,non,2,,storeapp/0001_initial,,True,,,C — cdd_only
+subprojects_category_ida,non,oui,,0,,subprojects/0066_component_amount_component_funding_component_project_and_more,,True,,C — cosomis_only
+subprojects_component,non,oui,,10,,subprojects/0008_component_remove_subproject_sub_component_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_component_fundings,non,oui,,0,,,,True,,C — cosomis_only
+subprojects_cycle,non,oui,,3,,subprojects/0044_remove_project_financier_project_financiers_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_cycle_administrative_levels,non,oui,,2624,,,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_filecomment,non,oui,,16,,subprojects/0061_subprojectfile_facilitator_id_subprojectfile_user_and_more,,True,,C — cosomis_only
+subprojects_financier,non,oui,,1,,subprojects/0019_financier_project_subproject_financier_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_level,non,oui,,1065,,subprojects/0021_step_subprojectstep_level,,True,,C — cosomis_only
+subprojects_project,non,oui,,3,,subprojects/0019_financier_project_subproject_financier_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_project_administrative_levels,non,oui,,2625,,,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_project_financiers,non,oui,,2,,,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_step,non,oui,,20,,subprojects/0021_step_subprojectstep_level,,True,,C — cosomis_only
+subprojects_step_next_steps,non,oui,,44,,,,True,,C — cosomis_only
+subprojects_subproject,non,oui,,1541,,subprojects/0001_initial,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_subproject_financiers,non,oui,,2,,,,True,,C — cosomis_only
+subprojects_subproject_list_of_beneficiary_villages,non,oui,,11138,,,,True,,C — cosomis_only
+subprojects_subproject_list_of_villages_crossed_by_the_track_or_electrification,non,oui,,16,,,,True,,C — cosomis_only
+subprojects_subproject_priorities,non,oui,,0,,,,True,,C — cosomis_only
+subprojects_subproject_projects,non,oui,,1541,,,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_subprojectfile,non,oui,,6530,,,,True,,C — cosomis_only
+subprojects_subprojectsector,non,oui,,0,,subprojects/0041_subprojectsector_subprojecttype,,True,,C — cosomis_only
+subprojects_subprojectstep,non,oui,,12652,,subprojects/0021_step_subprojectstep_level,,True,,C — cosomis_only
+subprojects_subprojecttype,non,oui,,0,,subprojects/0041_subprojectsector_subprojecttype,,True,,C — cosomis_only
+subprojects_typemain,non,oui,,0,,subprojects/0004_villagepriority_villageobstacle_villagegoal_typemain_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_villagegoal,non,oui,,0,,subprojects/0004_villagepriority_villageobstacle_villagegoal_typemain_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_villagemeeting,non,oui,,0,,subprojects/0005_villagemeeting_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_villageobstacle,non,oui,,0,,subprojects/0004_villagepriority_villageobstacle_villagegoal_typemain_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_villagepriority,non,oui,,0,,subprojects/0004_villagepriority_villageobstacle_villagegoal_typemain_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_vulnerablegroup,non,oui,,0,,subprojects/0001_initial,True,True,,"B (miroir, propriétaire=cosomis)"
+supportmaterial_lesson,oui,non,11,,supportmaterial/0001_initial,,True,,,C — cdd_only
+supportmaterial_subject,oui,non,5,,supportmaterial/0001_initial,,True,,,C — cdd_only
+supportmaterial_supportingmaterial,oui,non,13,,supportmaterial/0001_initial,,True,,,C — cdd_only
+usermanager_usertoken,non,oui,,78,,usermanager/0001_initial,,True,,C — cosomis_only
+usermanager_validationcode,oui,non,698,,usermanager/0001_initial,,True,,,C — cdd_only

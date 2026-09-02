@@ -1,0 +1,912 @@
+{
+ "generated_at": "2026-09-02T14:22:59",
+ "sources": {
+  "cdd": {
+   "authentication_facilitator": {
+    "count": 241,
+    "max_id": 712,
+    "pk": [
+     "id"
+    ]
+   },
+   "authtoken_token": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "key"
+    ]
+   },
+   "auth_group": {
+    "count": 31,
+    "max_id": 31,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_group_permissions": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_permission": {
+    "count": 244,
+    "max_id": 244,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user": {
+    "count": 82,
+    "max_id": 84,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user_groups": {
+    "count": 89,
+    "max_id": 181,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user_user_permissions": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_admin_log": {
+    "count": 1107,
+    "max_id": 1107,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_chordcounter": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_groupresult": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_taskresult": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_content_type": {
+    "count": 61,
+    "max_id": 61,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_migrations": {
+    "count": 152,
+    "max_id": 152,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_session": {
+    "count": 1113,
+    "max_id": null,
+    "pk": [
+     "session_key"
+    ]
+   },
+   "news_category": {
+    "count": 10,
+    "max_id": 10,
+    "pk": [
+     "id"
+    ]
+   },
+   "news_news": {
+    "count": 107,
+    "max_id": 167,
+    "pk": [
+     "id"
+    ]
+   },
+   "news_newsfile": {
+    "count": 398,
+    "max_id": 528,
+    "pk": [
+     "id"
+    ]
+   },
+   "news_news_tags": {
+    "count": 228,
+    "max_id": 305,
+    "pk": [
+     "id"
+    ]
+   },
+   "news_subscription": {
+    "count": 158,
+    "max_id": 429,
+    "pk": [
+     "id"
+    ]
+   },
+   "news_tag": {
+    "count": 28,
+    "max_id": 28,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activity": {
+    "count": 14890,
+    "max_id": 16307,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activitycomment": {
+    "count": 42,
+    "max_id": 47,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activitydeadline": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activitydeadline_activities_deadline_groups": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activityfile": {
+    "count": 7239,
+    "max_id": 7395,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activitygeolocation": {
+    "count": 3336,
+    "max_id": 3356,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_activityvalidate": {
+    "count": 12214,
+    "max_id": 12214,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_validationgroupsprocess": {
+    "count": 4,
+    "max_id": 4,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_validationgroupsprocess_planners_groups": {
+    "count": 16,
+    "max_id": 20,
+    "pk": [
+     "id"
+    ]
+   },
+   "planning_validationgroupsprocess_validators_groups": {
+    "count": 8,
+    "max_id": 21,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_activity": {
+    "count": 48,
+    "max_id": 50,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_activity_cycles": {
+    "count": 48,
+    "max_id": 48,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_administrativelevelwave": {
+    "count": 35,
+    "max_id": 35,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_aggregatedstatus": {
+    "count": 99812,
+    "max_id": 386962,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_aggregatedstatusfacilitator": {
+    "count": 298,
+    "max_id": 1102,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_cycle": {
+    "count": 3,
+    "max_id": 3,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_deployment": {
+    "count": 5,
+    "max_id": 5,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_emailaddresseswhichsendemails": {
+    "count": 3,
+    "max_id": 3,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_facilitatordeployment": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_facilitatorwave": {
+    "count": 50,
+    "max_id": 50,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_phase": {
+    "count": 17,
+    "max_id": 19,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_phase_cycles": {
+    "count": 17,
+    "max_id": 17,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_processaddorremoveadl": {
+    "count": 533,
+    "max_id": 533,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_project": {
+    "count": 3,
+    "max_id": 6,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_project_facilitators": {
+    "count": 388,
+    "max_id": 1417,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_project_users": {
+    "count": 160,
+    "max_id": 165,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_task": {
+    "count": 137,
+    "max_id": 154,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_task_cycles": {
+    "count": 137,
+    "max_id": 137,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_wave": {
+    "count": 5,
+    "max_id": 5,
+    "pk": [
+     "id"
+    ]
+   },
+   "reports_villagecommittee": {
+    "count": 9676,
+    "max_id": 9676,
+    "pk": [
+     "id"
+    ]
+   },
+   "storeapp_storeapp": {
+    "count": 31,
+    "max_id": 36,
+    "pk": [
+     "id"
+    ]
+   },
+   "storeapp_storeproject": {
+    "count": 2,
+    "max_id": 2,
+    "pk": [
+     "id"
+    ]
+   },
+   "supportmaterial_lesson": {
+    "count": 11,
+    "max_id": 13,
+    "pk": [
+     "id"
+    ]
+   },
+   "supportmaterial_subject": {
+    "count": 5,
+    "max_id": 6,
+    "pk": [
+     "id"
+    ]
+   },
+   "supportmaterial_supportingmaterial": {
+    "count": 13,
+    "max_id": 15,
+    "pk": [
+     "id"
+    ]
+   },
+   "usermanager_validationcode": {
+    "count": 698,
+    "max_id": 698,
+    "pk": [
+     "id"
+    ]
+   }
+  },
+  "mis": {
+   "administrativelevels_administrativelevel": {
+    "count": 2199,
+    "max_id": 6832,
+    "pk": [
+     "id"
+    ]
+   },
+   "administrativelevels_cvd": {
+    "count": 1740,
+    "max_id": 1822,
+    "pk": [
+     "id"
+    ]
+   },
+   "administrativelevels_geographicalunit": {
+    "count": 1669,
+    "max_id": 1745,
+    "pk": [
+     "id"
+    ]
+   },
+   "assignments_assignadministrativeleveltofacilitator": {
+    "count": 2159,
+    "max_id": 2611,
+    "pk": [
+     "id"
+    ]
+   },
+   "authtoken_token": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "key"
+    ]
+   },
+   "auth_group": {
+    "count": 31,
+    "max_id": 31,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_group_permissions": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_permission": {
+    "count": 232,
+    "max_id": 232,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user": {
+    "count": 79,
+    "max_id": 81,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user_groups": {
+    "count": 80,
+    "max_id": 135,
+    "pk": [
+     "id"
+    ]
+   },
+   "auth_user_user_permissions": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "custom_file_customerfile": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_admin_log": {
+    "count": 663,
+    "max_id": 663,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_chordcounter": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_groupresult": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_celery_results_taskresult": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_content_type": {
+    "count": 57,
+    "max_id": 57,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_migrations": {
+    "count": 180,
+    "max_id": 180,
+    "pk": [
+     "id"
+    ]
+   },
+   "django_session": {
+    "count": 351,
+    "max_id": null,
+    "pk": [
+     "session_key"
+    ]
+   },
+   "financial_account": {
+    "count": 154,
+    "max_id": 154,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_activity": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_activity_funding": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_activity_structures_impliquees": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_activity_structures_responsables": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_administrativelevel_allocation": {
+    "count": 214,
+    "max_id": 305,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_annual_work_plan": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_bank": {
+    "count": 1,
+    "max_id": 1,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_bank_transfer": {
+    "count": 153,
+    "max_id": 235,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_bank_transfer_disbursements": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_bank_transfer_supporting_documents": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_disbursement": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_disbursement_request": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_disbursement_request_validation": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_funding": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_supporting_document": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_supporting_document_activity": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_supporting_document_activity_file": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "financial_tag": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_administrativelevelwave": {
+    "count": 59,
+    "max_id": 94,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_periodwave": {
+    "count": 10,
+    "max_id": 10,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_periodwave_administrative_levels": {
+    "count": 70,
+    "max_id": 70,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_wave": {
+    "count": 6,
+    "max_id": 6,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_category_ida": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_component": {
+    "count": 10,
+    "max_id": 10,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_component_fundings": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_cycle": {
+    "count": 3,
+    "max_id": 3,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_cycle_administrative_levels": {
+    "count": 2624,
+    "max_id": 5616,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_filecomment": {
+    "count": 16,
+    "max_id": 30,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_financier": {
+    "count": 1,
+    "max_id": 1,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_level": {
+    "count": 1065,
+    "max_id": 1441,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_project": {
+    "count": 3,
+    "max_id": 3,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_project_administrative_levels": {
+    "count": 2625,
+    "max_id": 5403,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_project_financiers": {
+    "count": 2,
+    "max_id": 2,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_step": {
+    "count": 20,
+    "max_id": 20,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_step_next_steps": {
+    "count": 44,
+    "max_id": 44,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject": {
+    "count": 1541,
+    "max_id": 2129,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subprojectfile": {
+    "count": 6530,
+    "max_id": 7144,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subprojectsector": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subprojectstep": {
+    "count": 12652,
+    "max_id": 20679,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subprojecttype": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject_financiers": {
+    "count": 2,
+    "max_id": 4,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject_list_of_beneficiary_villages": {
+    "count": 11138,
+    "max_id": 21156,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject_list_of_villages_crossed_by_the_trackfee7": {
+    "count": 16,
+    "max_id": 25,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject_priorities": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_subproject_projects": {
+    "count": 1541,
+    "max_id": 6417,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_typemain": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_villagegoal": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_villagemeeting": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_villageobstacle": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_villagepriority": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "subprojects_vulnerablegroup": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
+   "usermanager_usertoken": {
+    "count": 78,
+    "max_id": 78,
+    "pk": [
+     "id"
+    ]
+   }
+  }
+ }
+}

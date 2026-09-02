@@ -146,3 +146,16 @@ media/
 *.bak
 *.dat
 *.dir
+
+# --- Fusion cdd + cosomis (branche merge/cdd-cosomis) ---
+# Dumps et extractions volumineux : non versionnés (CLAUDE.md §7).
+# On versionne les rapports, plans, id_map.csv, fusion_plan.yml, empreintes SHA-256.
+merge/artifacts/00_raw/cdd/
+merge/artifacts/00_raw/mis/
+merge/artifacts/00_raw/cosomis/
+merge/artifacts/40_unified/*.csv
+merge/artifacts/40_unified/*.sql
+merge/artifacts/50_postgres/*.sql
+merge/artifacts/**/schema_inventory.json
+!merge/artifacts/**/*.md
+!merge/artifacts/**/*.sha256
