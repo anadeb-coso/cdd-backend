@@ -1,0 +1,186 @@
+table,source,ref,type,detail
+auth_user,cosomis,id=1->1,valeur,password: cdd='pbkdf2_sha256$320000$fbMdnf7eXI4Ykev5x0LlAt$cEg/J+nIPnAUr8/kenraxLPvIpAZ54axUdIRr9Y5Jgg=' mis='pbkdf2_sha256$390000$OoGm35Xd1GrwiniYjghwON$HoqioDIijHrZ7E/Y2RRxVwext2VmvkkaBeWG8ZVY2mk=' (CDD gagne)
+auth_user,cosomis,id=1->1,valeur,last_login: cdd='2025-02-21 13:12:24.209965' mis='2025-03-21 13:42:35.506058' (CDD gagne)
+auth_user,cosomis,id=3->3,valeur,password: cdd='pbkdf2_sha256$320000$YXsFOAqlHHmtgejMuvjQdI$CQ0X4GGUYa4huzwYSr7jr9tq4qFxw0yeYzMhbBJnQgQ=' mis='pbkdf2_sha256$390000$XnLkSDyzgMuDSNTZ8NMcTb$pczZYNAfgbPvFreefx4ufyfxBdIdqmDtY3QEvOJ0io0=' (CDD gagne)
+auth_user,cosomis,id=3->3,valeur,last_login: cdd='2026-08-13 14:21:28.410820' mis='2026-08-12 12:01:29.039630' (CDD gagne)
+auth_user,cosomis,id=3->3,valeur,date_joined: cdd='2023-01-16 13:48:59' mis='2023-03-16 14:29:55' (CDD gagne)
+auth_user,cosomis,id=4->5,valeur,password: cdd='pbkdf2_sha256$320000$rCoSEkVc27oIubeSJwkyFx$Xaxw2K6W0hHXsFtmUETRYdRxmusOL2xuQRaQ/wO6S8s=' mis='pbkdf2_sha256$390000$ja0bRIr6u5naEwc3a1aiVn$iQ3yrtCR0wkJQ5C8R7tsBq0dnNUW+AnksKi8zhLF7Bg=' (CDD gagne)
+auth_user,cosomis,id=4->5,valeur,last_login: cdd='2026-07-27 09:43:34.069237' mis='2026-07-10 11:19:01.638826' (CDD gagne)
+auth_user,cosomis,id=4->5,valeur,date_joined: cdd='2023-03-16 13:04:39' mis='2023-03-16 14:31:39' (CDD gagne)
+auth_user,cosomis,id=5->6,valeur,password: cdd='pbkdf2_sha256$320000$ufyNTxeGsYNE5vtW7ZHv5g$uRAVaCegcH6iUjqvDR6CAEXmQHXHtU4xgl0bTvMCkzo=' mis='pbkdf2_sha256$390000$PHyMHX8F5x02ssOGL2kbwv$Ri6bMlamtYAHBfPkyxXQzxC01V8XcesFJ7Vu7xtFFQ0=' (CDD gagne)
+auth_user,cosomis,id=5->6,valeur,last_login: cdd='2026-02-23 09:46:27.226467' mis='2026-02-26 16:45:00.852069' (CDD gagne)
+auth_user,cosomis,id=5->6,valeur,date_joined: cdd='2023-03-16 13:08:50' mis='2023-03-16 14:32:30' (CDD gagne)
+auth_user,cosomis,id=6->7,valeur,password: cdd='pbkdf2_sha256$320000$jHyKiUHibGZouFXreVH4Br$I4AEc8+wVSZFJNtv8eJfwhNKyIi4SQHphv++SInyPrY=' mis='pbkdf2_sha256$390000$paoNEVcn4s2Ww0K8ZBcK1Z$IpNgYy0V90hiGiQCBvgaoRggVh8u6c+CIA9v7DS389k=' (CDD gagne)
+auth_user,cosomis,id=6->7,valeur,last_login: cdd='2026-07-06 11:16:25.305187' mis='2026-07-06 11:17:05.741152' (CDD gagne)
+auth_user,cosomis,id=6->7,valeur,date_joined: cdd='2023-03-16 13:34:40' mis='2023-03-16 14:34:05' (CDD gagne)
+auth_user,cosomis,id=7->8,valeur,password: cdd='pbkdf2_sha256$320000$GCCTKiGj7uYrNBD52kKtmK$NAZxYViwH0kRvDe21nUSukdSmJD/vDIM2aDP6NzklZ8=' mis='pbkdf2_sha256$390000$nHdvFmJYKA8ncuecIfa0S3$+IsAxiRGWpG/0c/r7UzhY1plsWfSfkt6H+43jytFfDE=' (CDD gagne)
+auth_user,cosomis,id=7->8,valeur,last_login: cdd='2026-07-22 12:20:44.486182' mis='2026-07-14 18:08:03.361753' (CDD gagne)
+auth_user,cosomis,id=8->9,valeur,last_login: cdd='2025-10-01 07:05:56.909129' mis='2025-07-10 09:51:09.232534' (CDD gagne)
+auth_user,cosomis,id=8->9,valeur,date_joined: cdd='2023-04-01 12:25:51' mis='2023-04-01 12:17:53' (CDD gagne)
+auth_user,cosomis,id=9->10,valeur,password: cdd='pbkdf2_sha256$320000$vkIep6a9HCR4lJsOrJuaSE$HmzfyRtblb4lozOaUOVsyvqowaYE0KJP8/CVAqVYltc=' mis='pbkdf2_sha256$390000$VhVWepTz9S2IKncHqcFQEj$J8WFdpqNV4GOlg6LX4ei4Gm6Wtam0kThzc3heMzBzMw=' (CDD gagne)
+auth_user,cosomis,id=9->10,valeur,last_login: cdd='2024-07-25 08:20:26.754663' mis='2024-07-25 08:23:12.624455' (CDD gagne)
+auth_user,cosomis,id=9->10,valeur,date_joined: cdd='2023-05-26 06:02:45' mis='2023-05-26 06:00:06' (CDD gagne)
+auth_user,cosomis,id=10->11,valeur,password: cdd='pbkdf2_sha256$320000$mhWK1YycSiLEpMhEVMf62A$CtBpYgZFOPHGyPWeVbQb7UZltlIOZK1hO9FMle9VYAw=' mis='pbkdf2_sha256$390000$fIKlr1N4kz7K9MInCjQOZC$jhDBoZ/Ks687/2bAjD2N7TnWkbkG9635ozwY1zPs11A=' (CDD gagne)
+auth_user,cosomis,id=10->11,valeur,date_joined: cdd='2023-05-28 18:58:32' mis='2023-05-28 18:58:35' (CDD gagne)
+auth_user,cosomis,id=11->12,valeur,password: cdd='pbkdf2_sha256$320000$zsEbGyGN0oh2tQjEBB7TQE$SrPcembpNEVlOUBrVrLt0DS59JQ1AKnJiDvlcGr4NmQ=' mis='pbkdf2_sha256$390000$I9iSBzIxTh4SILFvsep669$g1/5I86kQFAP5khLK+FUtUjd569LJX4Zjiqy75I6BPg=' (CDD gagne)
+auth_user,cosomis,id=11->12,valeur,last_login: cdd='2023-10-12 16:59:50.187912' mis='2023-10-26 17:13:07.745919' (CDD gagne)
+auth_user,cosomis,id=12->13,valeur,password: cdd='pbkdf2_sha256$320000$ysmWAYUzOrFkAiehcNIeTy$cJAr6/vH3Lc72jF0JM9RTC/PWFdkL8ryL2g8oCvbdRI=' mis='pbkdf2_sha256$390000$n1gtOFnGuAZb0nDn5uh4CT$GbGQxWmzCRnjU/0EcYT0WtrMYxuYYP2p1s8TYsM5FFk=' (CDD gagne)
+auth_user,cosomis,id=12->13,valeur,last_login: cdd='2024-09-04 16:09:54.753542' mis='2024-09-04 16:34:32.198707' (CDD gagne)
+auth_user,cosomis,id=13->14,valeur,password: cdd='pbkdf2_sha256$320000$Jv5i9EPa57k5kLX8rvaty9$ICqDeHGbxj5/uKwe6uA1ISqhiSWnfnY95HqnX/vBq0I=' mis='pbkdf2_sha256$390000$bmPGQy8C1sizaU4FmM08rw$38kSNuXswTLO9SWKuAiiArWOdtZonU2WF80/B/HpO9g=' (CDD gagne)
+auth_user,cosomis,id=13->14,valeur,last_login: cdd='2024-09-30 09:36:41.280106' mis='2024-09-20 08:06:23.906051' (CDD gagne)
+auth_user,cosomis,id=17->17,valeur,last_login: cdd='2026-05-11 17:06:24.574834' mis='2024-06-28 20:40:42.816905' (CDD gagne)
+auth_user,cosomis,id=18->18,valeur,password: cdd='pbkdf2_sha256$320000$n0nBSAMfsE3GwdN8UXmftA$DhLfOR1e6Cq9vJVMRszPAJQtC0ibdgrwpNn5yT0qc20=' mis='pbkdf2_sha256$390000$803UE7ymx41RMm8q87lF8I$dsGg8jtzb2WT3OMoVaRp/zSuZ2mimFjkl0+azTjhv3c=' (CDD gagne)
+auth_user,cosomis,id=18->18,valeur,last_login: cdd='2026-02-06 10:41:16.652209' mis='2026-02-06 10:58:37.356913' (CDD gagne)
+auth_user,cosomis,id=19->19,valeur,password: cdd='pbkdf2_sha256$320000$ZWE5qCq1RZhlWhAKNlrRqk$3KP0lOexLc6DvvsvUxHBVM3/ZFsYwXksehQ+E19Kc3A=' mis='pbkdf2_sha256$390000$anwMbz6DvuHSNTFbw67AR7$YRb0odaQ6ZNjRiQRpkpIq6iZBe5liBlAKwgESTioKPw=' (CDD gagne)
+auth_user,cosomis,id=19->19,valeur,last_login: cdd='2026-02-06 10:20:07.323819' mis='2026-08-06 12:13:38.716673' (CDD gagne)
+auth_user,cosomis,id=20->20,valeur,password: cdd='pbkdf2_sha256$320000$qeGgAOG51i8x4C475beGNy$25LZ/MmQldpotW+xYdbZYpUfGOs7AjLZ2a+7tt6MJtM=' mis='pbkdf2_sha256$390000$Wz4r2TcxGgHByW1FEintDI$gg49sh2fBnuilxeu6COE6jPRxO30/8E8+nsHNmGviro=' (CDD gagne)
+auth_user,cosomis,id=22->22,valeur,password: cdd='pbkdf2_sha256$320000$4cALNynSPTOlWlY2FKntVT$K0RYVAs6JAmKD7tksZcx6OiDeGkZW86Wp8n3CzzY4As=' mis='pbkdf2_sha256$390000$zpRNvXx6PNtfBIZ9VNu0X6$r7l77CGAzZB2/knfMo1dxHANhzkpaLkgUoBjQwtCX20=' (CDD gagne)
+auth_user,cosomis,id=23->23,valeur,date_joined: cdd='2023-09-12 12:53:59' mis='2023-09-12 12:53:59.658005' (CDD gagne)
+auth_user,cosomis,id=24->24,valeur,password: cdd='pbkdf2_sha256$320000$BdyUy7hICrDN4GLwII6ZuH$txvYx+puGwG80+dXwhg/ILevIFuX2qa8M6W41h1xP0Y=' mis='pbkdf2_sha256$390000$oxiNPk16RoRW8vcpsLTTTT$tqzqAIJ8wgaeqTVegDNgHcKpIRHIpJrYmkQ0ud3lp6A=' (CDD gagne)
+auth_user,cosomis,id=24->24,valeur,last_login: cdd='2026-06-22 19:21:07.909584' mis='2026-06-22 11:52:57.082531' (CDD gagne)
+auth_user,cosomis,id=26->26,valeur,password: cdd='pbkdf2_sha256$320000$qBqkyWav3jLIkflqvhLVoG$NoY9nfwIcVQr0skwVOwZz3f4lfyfrnIphsgT8X7oFW8=' mis='pbkdf2_sha256$390000$R6rX2oJlzjjFVYpRZBY585$g/t0jRYfOwMFS1WrUAoqKu0dg3mXu4Et82K/2z+e/xw=' (CDD gagne)
+auth_user,cosomis,id=27->27,valeur,password: cdd='pbkdf2_sha256$320000$dKE1ox2VqFtlVTRWO3rB3Y$Xf0Kszzd+duS8fhtmE5XcSUz0IO8q46giZL5ak6vZ/Y=' mis='pbkdf2_sha256$390000$HuhZjQDnlJqbf48OuZeRnz$mN6GAQlGEGBRhzohUocK9HaL0BfyAcfUZYowCLCDXHE=' (CDD gagne)
+auth_user,cosomis,id=27->27,valeur,last_login: cdd='2026-06-22 19:17:32.770084' mis='2026-06-22 10:38:04.370046' (CDD gagne)
+auth_user,cosomis,id=27->27,valeur,date_joined: cdd='2023-09-22 08:58:18' mis='2023-09-22 08:58:18.094517' (CDD gagne)
+auth_user,cosomis,id=28->28,valeur,password: cdd='pbkdf2_sha256$320000$HvIDRO7AXPH3jAnPDTZsh5$EBHmi67Pyn21YdGwgYcQx532H6yqnMrIXWC8lrILQL8=' mis='pbkdf2_sha256$390000$ty02o9uOsVOYtWYPrqCeU3$OLcrjqheVZqvWMTyNNAI9dpDdILDTfL1rDoZm0e5oPQ=' (CDD gagne)
+auth_user,cosomis,id=28->28,valeur,last_login: cdd='2026-06-22 19:43:26.976497' mis='2026-06-22 15:20:54.493526' (CDD gagne)
+auth_user,cosomis,id=29->29,valeur,password: cdd='pbkdf2_sha256$320000$QBEODwJh2KvnAPXDOJMk2T$s09QePXwYDNstAVRNiIn0fZIHtdiiAgs9A625bK0pjQ=' mis='pbkdf2_sha256$390000$LgUCkamYPLFPhqfPg78eEJ$nPsMUYrWlZnCantWlKEUdwnelnfkZsfWK3qzurYPLxQ=' (CDD gagne)
+auth_user,cosomis,id=29->29,valeur,last_login: cdd='2025-10-08 15:01:23' mis='2025-10-08 11:18:53' (CDD gagne)
+auth_user,cosomis,id=32->32,valeur,date_joined: cdd='2023-09-22 09:15:49' mis='2023-09-22 09:15:49.114029' (CDD gagne)
+auth_user,cosomis,id=33->33,valeur,last_login: cdd='2025-10-08 17:31:13.617573' mis='2025-10-08 11:14:26.737557' (CDD gagne)
+auth_user,cosomis,id=34->34,valeur,password: cdd='pbkdf2_sha256$320000$aZuBptonTzvZDQaQfUtHa7$DqdU+OpPoLFZgRue7tB2NHnLi5UwCjZhQzR8IhaHku4=' mis='pbkdf2_sha256$390000$IXKCpYdQL5R5EzRWJpxMPG$FOS7uJzM7N/vGSd9INC+uShM2DH9yAyk1ixaiVs/aB4=' (CDD gagne)
+auth_user,cosomis,id=34->34,valeur,last_login: cdd='2026-06-16 12:54:26.551537' mis='2026-07-07 11:05:06.647342' (CDD gagne)
+auth_user,cosomis,id=37->2,valeur,password: cdd='pbkdf2_sha256$320000$nYfiXyCggs5LpjmLOLsVmA$2p9uLBs0CgU9Aph49KVGwWRt+kfdIRgrNPy0Fq1nTaY=' mis='pbkdf2_sha256$600000$cqX8VPsHmbkQYlk0m2Fmck$SWr9+/jCZOOCIkxpVUbwKWK3zfo8ViltibPKhyY9kFg=' (CDD gagne)
+auth_user,cosomis,id=37->2,valeur,last_login: cdd='2026-08-31 04:20:07.593211' mis='2026-08-26 07:57:53.044926' (CDD gagne)
+auth_user,cosomis,id=39->38,valeur,password: cdd='pbkdf2_sha256$320000$BpveLvWOeCikdr7mlCJp2Y$DJJtPLCNbEHES5uukiT6GmL0bOPSvz+ddPdjCnwOvVo=' mis='pbkdf2_sha256$390000$42wwzrhxwj3ZJyFQMW4cBF$3y0qXF5akF3UXPxWEQWlcDDGhtwxcPT2oN+tMXPJWgQ=' (CDD gagne)
+auth_user,cosomis,id=39->38,valeur,last_login: cdd='2024-04-23 14:24:40.596419' mis='2024-04-17 17:54:22.529370' (CDD gagne)
+auth_user,cosomis,id=41->40,valeur,password: cdd='pbkdf2_sha256$320000$T9sIRkMbpRXNXfcLNJpMas$YyI+6Ef7CgfmnZxnjMBGc/6lZUpKU3jbtN8B3mHgcb8=' mis='pbkdf2_sha256$390000$3TnvPlEZZWijaMsVN9PWT8$PTIUDIa3JmGuFOWU5rGyUkln3JfQmsF365oy6UETm9M=' (CDD gagne)
+auth_user,cosomis,id=43->42,valeur,password: cdd='pbkdf2_sha256$320000$SE5AqqpVFmMa9Rl4IgGMlt$1DowPu02j8eN2Yj6fXsFDz0wM6NTynYiboZWXSdT9cY=' mis='pbkdf2_sha256$390000$OYxs3MGwiitIYLdreV7teM$4x+bglP+COtXrW7vW6Py7TOrtIqyf8chqT6qCNMNg0c=' (CDD gagne)
+auth_user,cosomis,id=43->42,valeur,last_login: cdd='2025-10-08 15:03:09.464681' mis='2025-10-08 11:13:35.258928' (CDD gagne)
+auth_user,cosomis,id=45->44,valeur,password: cdd='pbkdf2_sha256$320000$XHldM0GmarQA4Bjv93AW7r$b8sMUnmt8xv2Sl72DVIEM7TGNu+cWFYTwEGif8K99d4=' mis='pbkdf2_sha256$390000$2alaNjpc6NXGBhHKp1aj3B$9jK9eJPGgD0BYpo4AtNqzpX1ih98qcjlU0T6xnnweuY=' (CDD gagne)
+auth_user,cosomis,id=45->44,valeur,last_login: cdd='2026-08-02 13:28:34.340666' mis='2026-03-02 10:35:56.385526' (CDD gagne)
+auth_user,cosomis,id=46->45,valeur,password: cdd='pbkdf2_sha256$320000$6y2sVBaborC2fniLkqiCnH$gr1IgnNgIKLRJuS2XF9f+u4Bmd7yo/efGayqeCscYnA=' mis='pbkdf2_sha256$390000$TZgp7Mgrz4UvlKR6npbI9v$JipVjctLkE6p0qhxWRUm+2VL90wTo7TXOOkDn/UtSpE=' (CDD gagne)
+auth_user,cosomis,id=46->45,valeur,last_login: cdd='2026-06-12 08:43:19.889875' mis='2026-08-03 06:14:27.835320' (CDD gagne)
+auth_user,cosomis,id=47->46,valeur,password: cdd='pbkdf2_sha256$320000$bC141ioLJzzUx1EoQEtuVN$di4n9lSsLWHQBAMkRZ5QS3Zbxu4nBn28YxlGV1SSnGI=' mis='pbkdf2_sha256$390000$KP2GjvTC6VETj9W3abRiRs$ctC6ZGs/6lu0kj1eUkiz9Eutm/LJ/aSB4d2pLMbZ9SU=' (CDD gagne)
+auth_user,cosomis,id=47->46,valeur,last_login: cdd='2026-05-11 06:02:56.943060' mis='2026-07-06 06:07:17.599314' (CDD gagne)
+auth_user,cosomis,id=48->47,valeur,password: cdd='pbkdf2_sha256$320000$hNnyseffFmCFQ0efm3w08R$/4uc9v8OkZBYuC/fpbGDVEUoa2A0FfRA95PCDG7gQf8=' mis='pbkdf2_sha256$390000$pl5lxRlHRoXqbjkiC4iUmX$Xt8jDcZIfrdRd+0LGOtKdj1TEemY7egcLL7+G0sTgaA=' (CDD gagne)
+auth_user,cosomis,id=48->47,valeur,last_login: cdd='2026-07-15 22:21:00.486059' mis='2026-08-16 11:55:52.434884' (CDD gagne)
+auth_user,cosomis,id=49->48,valeur,last_login: cdd='2026-08-11 08:16:07.561292' mis='2026-05-19 08:52:08.681818' (CDD gagne)
+auth_user,cosomis,id=49->48,valeur,date_joined: cdd='2024-09-02 10:20:16' mis='2024-09-02 10:20:16.579158' (CDD gagne)
+auth_user,cosomis,id=50->49,valeur,password: cdd='pbkdf2_sha256$320000$I6EvBNG5oJW2ocYpdQ6ch1$k+IzxMA58+pDCD1IWWIqTitAG1wk+gtMFfZ2ASKAF3s=' mis='pbkdf2_sha256$390000$xUr4LbQglDKuCsd3ZZjhZq$41+tLrTs/J9JdRo6XSrEquTG6dim6RVAgX+4GVt0ai8=' (CDD gagne)
+auth_user,cosomis,id=50->49,valeur,last_login: cdd='2026-07-26 15:37:02.864409' mis='2026-07-07 16:08:31.129551' (CDD gagne)
+auth_user,cosomis,id=51->50,valeur,last_login: cdd='2026-08-04 17:50:47.893237' mis='2026-07-09 09:59:42.801150' (CDD gagne)
+auth_user,cosomis,id=54->53,valeur,password: cdd='pbkdf2_sha256$320000$l1yqZj6PpIzQgCdzmx2sJT$fmlmzEX7BDbpOvoIExIqBJw3Fuc10bsc56AtOtTHfcE=' mis='pbkdf2_sha256$390000$s8B52sc9OBnV0FfZfU4MYA$tlYgjwhm9h4aXf1ODP/a5ezxftAJug521Nk1NgWzPHs=' (CDD gagne)
+auth_user,cosomis,id=54->53,valeur,last_login: cdd='2024-09-19 09:06:58.462675' mis='2024-09-19 10:52:15.469438' (CDD gagne)
+auth_user,cosomis,id=55->54,valeur,password: cdd='pbkdf2_sha256$320000$gD9EWhMzNKYwzZnjo5mUtB$10V7VVcj7Rj7mmdDK9/+yy5YrHHi42nCdlI3dDqp5J0=' mis='pbkdf2_sha256$390000$uy9SKCVAm3rCU6CUpNMOfe$dvyA5fbK2ZSp4yR3i/3TN/pyvfk9ECzVPlLpCgZDmmI=' (CDD gagne)
+auth_user,cosomis,id=55->54,valeur,last_login: cdd='2024-09-21 18:17:58.443435' mis='2024-09-28 19:03:10.599829' (CDD gagne)
+auth_user,cosomis,id=57->56,valeur,password: cdd='pbkdf2_sha256$320000$hOpYMFUgcwWNcpo2WMQRBw$zZCgRip0Xsb5JpbQru+LhJt+3SD1MOJPUxJt2CogN8s=' mis='pbkdf2_sha256$390000$hZj2qFG8KkvbxtQiLs28Ii$VaAlGwb9Irsypx2LypKqUV+eLp5tbzHtWugZJ9CJ8Ig=' (CDD gagne)
+auth_user,cosomis,id=57->56,valeur,last_login: cdd='2024-09-25 14:31:48.571287' mis='2024-09-25 14:33:58.802851' (CDD gagne)
+auth_user,cosomis,id=61->60,valeur,password: cdd='pbkdf2_sha256$320000$b7jDs1Vpa1IVFJdIPvtMsg$4DqfGt3moHKhb/y3aG4+uSeTuG8yRyurdCBJDHrOXSs=' mis='pbkdf2_sha256$390000$9ieIRo4CSAPJ1O7MsaGKav$ZZ5bQPQK3zW8Ng2GZglkak9/gs8vExiulAqUDs94NCE=' (CDD gagne)
+auth_user,cosomis,id=61->60,valeur,last_login: cdd='2026-06-29 15:58:50.349059' mis='2026-06-29 15:34:47.483881' (CDD gagne)
+auth_user,cosomis,id=67->66,valeur,password: cdd='pbkdf2_sha256$320000$mj0WBs9XPIN3puMlUM4HEr$zUPQ/P7Uwv+NEjG++eRSMa/fySaBCMihOH15ja9g+Jg=' mis='pbkdf2_sha256$390000$qr1xhQrXqVOFJ40hV0pnbl$HyOTNzj+X3D0nstyyRQ/yVW4MpIig6fJQz/HN+GFzas=' (CDD gagne)
+auth_user,cosomis,id=67->66,valeur,last_login: cdd='2026-07-30 10:14:47.280247' mis='2026-06-22 10:51:39' (CDD gagne)
+auth_user,cosomis,id=68->67,valeur,date_joined: cdd='2025-10-10 09:09:11' mis='2025-10-10 09:09:11.264560' (CDD gagne)
+auth_user,cosomis,id=72->75,valeur,password: cdd='pbkdf2_sha256$320000$7xo3mssfydJl1kqNBP1uCF$nmfmFqnyXs/Gp+O9uFEhw0nn4UPw6cdglA4Y8a2Lrq8=' mis='pbkdf2_sha256$390000$cEZnh9JBY28W4MLcVnXrru$+Z1yYtEy1o69CggW7MeYfCQA87wHIgh68PB4cv0kgg4=' (CDD gagne)
+auth_user,cosomis,id=73->76,valeur,password: cdd='pbkdf2_sha256$320000$WX8MO7AAhDcWkNpuIfMbWt$bic5tdtRK7XFSbJ8F82Lp12oUKBgy18Ww0r0TPmIrOs=' mis='pbkdf2_sha256$390000$7RV4H8GnRDgaXPqYFaG5yc$eJUq4EQb3Xex0vSN1obrlJlOmROpleHWvCEQLi43KVk=' (CDD gagne)
+auth_user,cosomis,id=75->78,valeur,password: cdd='pbkdf2_sha256$320000$O2PY3TeQGZk1Pui5Gwn8Fn$oLssytDzdsemdaxilTHAxWyIEjCHGmrVqYhfLYvFa2k=' mis='pbkdf2_sha256$390000$wIM7IRUHBtpfcFPujGQS5d$dmWtVJQYONPGyrtwaszPv6L/5+rjpmfroDMzkU6Lpb4=' (CDD gagne)
+auth_user,cosomis,id=76->79,valeur,password: cdd='pbkdf2_sha256$320000$B219hHjP4ps7Pwt6EVHBt9$wtZ6O2Cy2Z5nB8sP7Z+Kz48BbnpebnsnsInu1PVAsmU=' mis='pbkdf2_sha256$390000$MdHg5owlKUghDZaq1ESkOL$4k6HaVcj57z4Go91NbZVgWI4NIEvFmxhEia0Wj77FgI=' (CDD gagne)
+auth_user,cosomis,id=77->80,valeur,password: cdd='pbkdf2_sha256$320000$GNJH9h7hildw5ffCDhbWiv$yk7/Spvk/sDFaFNLys5Ax1DzzrZYtlk0sEBUO8ledAc=' mis='pbkdf2_sha256$390000$LfZw8FkO8L2CMnZpaYI3Ve$EXr8ylV/d62gvRVa46NGz+nuaKgdWDrIhuDZKvNWsW4=' (CDD gagne)
+auth_user,cosomis,id=77->80,valeur,last_login: cdd='2026-06-12 10:36:44.422349' mis='2026-03-09 10:19:09.232008' (CDD gagne)
+auth_user,cosomis,id=78->81,valeur,password: cdd='pbkdf2_sha256$320000$uJIhvGVyZpIHQ5A6hmFide$b1K/hakbc0+aAznd7Chx49M0T97ICQ3gXB+RO8ciQRU=' mis='pbkdf2_sha256$390000$qaH5UQAFpgAFuDxvPxnSNQ$PK+FpsQFrM9dOHP7K5fTEsIMFg0+Z2fZlvpIDairqc8=' (CDD gagne)
+auth_user,cosomis,id=78->81,valeur,last_login: cdd='2026-07-10 13:00:21.964312' mis='2026-07-10 13:02:10.539526' (CDD gagne)
+auth_user,cosomis,id=79->82,valeur,password: cdd='pbkdf2_sha256$320000$BNL76bBq7Ma84GncsekSsV$Mua8OoMW2lvf/Q7uM4OERpnx+bL+Rtx25pkUk/racx0=' mis='pbkdf2_sha256$390000$mivzKY5DfAdLYtXrFiX1Bn$7U8QLCEpIOuNjpwr4Ga4iyAYb3o9zZBeky6QZXJz8yg=' (CDD gagne)
+auth_user,cosomis,id=79->82,valeur,last_login: cdd='2026-06-22 19:19:24.969702' mis='2026-06-22 10:52:12.348826' (CDD gagne)
+auth_user,cosomis,id=80->83,valeur,password: cdd='pbkdf2_sha256$320000$WvKM865Ox2GGzP4zqBFVTt$aoOPqjp4vFl6TNUD7KiO/EVfLLI6uTLNe7vpzEKoMto=' mis='pbkdf2_sha256$390000$NzREVufhwH1NqKIYUsoghp$7ZzY0O1xlPvJ86jWgKI8Iqv3haj1If+m35j2wezJ5EQ=' (CDD gagne)
+auth_user,cosomis,id=80->83,valeur,last_login: cdd='2026-07-02 17:09:31.830222' mis='2026-07-02 17:11:44.534991' (CDD gagne)
+auth_user,cosomis,id=81->84,valeur,password: cdd='pbkdf2_sha256$320000$gsdXReKRRUH0T926YNxiMF$TZZMQFeob6jXICT6G8Qxqu6Jhqlxhrj0qzicIolgZnU=' mis='pbkdf2_sha256$390000$jIiE69Ks068yPlHNunJbQ9$ETT5lVfZy+gAaXK9zLZDFS13Q+dTsfZDS7rRbH795ck=' (CDD gagne)
+auth_user,cosomis,id=81->84,valeur,last_login: cdd='2026-07-16 15:38:34.751210' mis='2026-07-16 11:00:21.468083' (CDD gagne)
+process_manager_wave,cosomis,id=1->1,valeur,created_date: cdd='2023-05-24 07:30:54.691968' mis='2023-09-01 08:09:25.213919' (CDD gagne)
+process_manager_wave,cosomis,id=1->1,valeur,updated_date: cdd='2023-05-24 07:30:54.691997' mis='2023-09-01 08:09:25.213970' (CDD gagne)
+process_manager_wave,cosomis,id=2->2,valeur,created_date: cdd='2023-05-24 07:31:16.050539' mis='2023-09-01 08:09:25.214006' (CDD gagne)
+process_manager_wave,cosomis,id=2->2,valeur,updated_date: cdd='2023-05-24 07:31:16.050604' mis='2023-09-01 08:09:25.214022' (CDD gagne)
+process_manager_wave,cosomis,id=3->3,valeur,created_date: cdd='2023-05-24 07:31:30.246734' mis='2023-09-01 08:09:25.214043' (CDD gagne)
+process_manager_wave,cosomis,id=3->3,valeur,updated_date: cdd='2023-05-24 07:31:30.246777' mis='2023-09-01 08:09:25.214057' (CDD gagne)
+process_manager_wave,cosomis,id=4->4,valeur,created_date: cdd='2023-05-24 07:31:44.772259' mis='2023-09-01 08:09:25.214077' (CDD gagne)
+process_manager_wave,cosomis,id=4->4,valeur,updated_date: cdd='2023-05-24 07:31:44.772291' mis='2023-09-01 08:09:25.214089' (CDD gagne)
+process_manager_wave,cosomis,id=5->5,valeur,created_date: cdd='2023-05-24 07:32:02.764776' mis='2023-09-01 08:09:25.214109' (CDD gagne)
+process_manager_wave,cosomis,id=5->5,valeur,updated_date: cdd='2023-05-24 07:32:02.764816' mis='2023-09-01 08:09:25.214122' (CDD gagne)
+process_manager_administrativelevelwave,-,-,rapprochement,"0 appariement : `mis` n'a pas de table process_manager_project, project_id disjoints (cdd={4} vs mis={1,3}). Toutes les lignes mis → new_allocation. À confirmer."
+auth_user_groups,cosomis,id=2,doublon_liaison,"['user_id', 'group_id']=('6', '1') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=3,doublon_liaison,"['user_id', 'group_id']=('5', '1') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=6,doublon_liaison,"['user_id', 'group_id']=('3', '3') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=7,doublon_liaison,"['user_id', 'group_id']=('7', '6') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=8,doublon_liaison,"['user_id', 'group_id']=('10', '9') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=9,doublon_liaison,"['user_id', 'group_id']=('11', '7') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=10,doublon_liaison,"['user_id', 'group_id']=('12', '8') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=11,doublon_liaison,"['user_id', 'group_id']=('13', '8') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=12,doublon_liaison,"['user_id', 'group_id']=('14', '8') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=15,doublon_liaison,"['user_id', 'group_id']=('19', '4') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=18,doublon_liaison,"['user_id', 'group_id']=('22', '4') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=19,doublon_liaison,"['user_id', 'group_id']=('20', '4') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=20,doublon_liaison,"['user_id', 'group_id']=('24', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=21,doublon_liaison,"['user_id', 'group_id']=('25', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=22,doublon_liaison,"['user_id', 'group_id']=('26', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=23,doublon_liaison,"['user_id', 'group_id']=('21', '4') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=29,doublon_liaison,"['user_id', 'group_id']=('16', '2') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=30,doublon_liaison,"['user_id', 'group_id']=('16', '13') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=31,doublon_liaison,"['user_id', 'group_id']=('16', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=32,doublon_liaison,"['user_id', 'group_id']=('16', '16') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=33,doublon_liaison,"['user_id', 'group_id']=('15', '2') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=34,doublon_liaison,"['user_id', 'group_id']=('15', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=35,doublon_liaison,"['user_id', 'group_id']=('15', '16') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=37,doublon_liaison,"['user_id', 'group_id']=('41', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=38,doublon_liaison,"['user_id', 'group_id']=('41', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=56,doublon_liaison,"['user_id', 'group_id']=('49', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=57,doublon_liaison,"['user_id', 'group_id']=('49', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=58,doublon_liaison,"['user_id', 'group_id']=('49', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=59,doublon_liaison,"['user_id', 'group_id']=('47', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=60,doublon_liaison,"['user_id', 'group_id']=('47', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=61,doublon_liaison,"['user_id', 'group_id']=('47', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=62,doublon_liaison,"['user_id', 'group_id']=('46', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=63,doublon_liaison,"['user_id', 'group_id']=('46', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=64,doublon_liaison,"['user_id', 'group_id']=('46', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=68,doublon_liaison,"['user_id', 'group_id']=('48', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=69,doublon_liaison,"['user_id', 'group_id']=('48', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=70,doublon_liaison,"['user_id', 'group_id']=('48', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=74,doublon_liaison,"['user_id', 'group_id']=('31', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=75,doublon_liaison,"['user_id', 'group_id']=('31', '16') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=76,doublon_liaison,"['user_id', 'group_id']=('31', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=77,doublon_liaison,"['user_id', 'group_id']=('33', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=78,doublon_liaison,"['user_id', 'group_id']=('33', '16') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=79,doublon_liaison,"['user_id', 'group_id']=('33', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=83,doublon_liaison,"['user_id', 'group_id']=('42', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=84,doublon_liaison,"['user_id', 'group_id']=('42', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=85,doublon_liaison,"['user_id', 'group_id']=('30', '14') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=86,doublon_liaison,"['user_id', 'group_id']=('30', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=88,doublon_liaison,"['user_id', 'group_id']=('8', '2') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=89,doublon_liaison,"['user_id', 'group_id']=('8', '22') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=91,doublon_liaison,"['user_id', 'group_id']=('2', '21') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=94,doublon_liaison,"['user_id', 'group_id']=('58', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=95,doublon_liaison,"['user_id', 'group_id']=('59', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=105,doublon_liaison,"['user_id', 'group_id']=('45', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=106,doublon_liaison,"['user_id', 'group_id']=('45', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=107,doublon_liaison,"['user_id', 'group_id']=('45', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=108,doublon_liaison,"['user_id', 'group_id']=('60', '5') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=109,doublon_liaison,"['user_id', 'group_id']=('61', '5') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=110,doublon_liaison,"['user_id', 'group_id']=('62', '5') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=111,doublon_liaison,"['user_id', 'group_id']=('63', '3') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=113,doublon_liaison,"['user_id', 'group_id']=('65', '3') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=114,doublon_liaison,"['user_id', 'group_id']=('66', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=115,doublon_liaison,"['user_id', 'group_id']=('44', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=116,doublon_liaison,"['user_id', 'group_id']=('44', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=117,doublon_liaison,"['user_id', 'group_id']=('44', '19') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=118,doublon_liaison,"['user_id', 'group_id']=('67', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=121,doublon_liaison,"['user_id', 'group_id']=('70', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=123,doublon_liaison,"['user_id', 'group_id']=('69', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=124,doublon_liaison,"['user_id', 'group_id']=('69', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=125,doublon_liaison,"['user_id', 'group_id']=('68', '17') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=126,doublon_liaison,"['user_id', 'group_id']=('18', '4') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=127,doublon_liaison,"['user_id', 'group_id']=('18', '24') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=128,doublon_liaison,"['user_id', 'group_id']=('79', '29') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=129,doublon_liaison,"['user_id', 'group_id']=('29', '30') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=130,doublon_liaison,"['user_id', 'group_id']=('81', '28') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=131,doublon_liaison,"['user_id', 'group_id']=('82', '12') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=133,doublon_liaison,"['user_id', 'group_id']=('50', '11') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=134,doublon_liaison,"['user_id', 'group_id']=('50', '18') déjà présent côté CDD → ligne abandonnée"
+auth_user_groups,cosomis,id=135,doublon_liaison,"['user_id', 'group_id']=('50', '19') déjà présent côté CDD → ligne abandonnée"
