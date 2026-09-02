@@ -38,6 +38,12 @@ PLAN = REPO / "merge" / "fusion_plan.yml"
 COSOMIS_OWNED_APPS = ["subprojects", "administrativelevels", "assignments"]
 # apps propres à COSOMIS (catégorie C côté mis) — COSOMIS les migre aussi
 COSOMIS_ONLY_APPS = ["financial", "custom_file", "kobotoolbox", "unicorn"]
+# apps homonymes contenant AUSSI des tables propres à COSOMIS (mis_only) :
+# process_manager_periodwave*, usermanager_usertoken. Au chargement PG (Étape 5,
+# syncdb), COSOMIS crée ces tables manquantes ; les tables homonymes déjà
+# créées par CDD sont ignorées. Dans le système déployé, ces tables restent
+# gérées par un routeur au niveau modèle, pas au niveau app.
+COSOMIS_EXTRA_SYNCDB_APPS = ["process_manager", "usermanager"]
 # tout le reste (dont auth, contenttypes, sessions, admin, authtoken,
 # authentication, usermanager, reports, process_manager, planning, news,
 # storeapp, supportmaterial) est migré par CDD.
