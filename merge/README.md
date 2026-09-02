@@ -40,14 +40,36 @@ Bases **locales** (MariaDB 10.4.32) : `cdd` (57 tables), `mis` (72 tables).
 
 | Étape | État | Sortie |
 |---|---|---|
-| 0 — Extraction | **faite** (bases locales, `--apply`) | `artifacts/00_raw/` — DDL + CSV + `_information_schema.json` par base, `cutpoint.json`, `rapport_extraction.md` |
-| 1 — Inventaire | **faite** (code + bases physiques, catégories fermes) | `artifacts/10_inventory/` — `ownership.csv`, `collisions.md`, `conflicts.csv`, `rapport_inventaire.md` |
-| 2 — Plan de fusion | **prête à démarrer** (voir points ouverts ci-dessous) | — |
-| 3 — id_map | non commencée | — |
-| 4 — Jeu unifié | non commencée | — |
-| 5 — PostgreSQL | non commencée | — |
-| 6 — Adaptation code | non commencée ; deux apps restent distinctes | — |
-| 7 — Remap CouchDB / JSON | non commencée | — |
+| 0 — Extraction | **faite** (bases locales, `--apply`) | `artifacts/00_raw/` — DDL + CSV + `_information_schema.json`, `cutpoint.json` |
+| 1 — Inventaire | **faite** (catégories §4.1 fermes) | `artifacts/10_inventory/` — `ownership.csv`, `collisions.md`, `conflicts.csv` |
+| 2 — Plan de fusion | **faite** | `merge/fusion_plan.yml`, `artifacts/20_plan/rapport_plan.md` |
+| 3 — id_map | **faite** | `merge/id_map.csv` (255 l.), `merge/conflicts.csv` (185 l.), `artifacts/30_idmap/` |
+| 4 — Jeu unifié | **faite** | `artifacts/40_unified/` — 105 CSV + `dump_mysql_unifie.sql` (non versionnés), `rapport_unifie.md` |
+| 5 — PostgreSQL | **faite** — 105/105 tables, 199 599 lignes | base `cdd_cosomis_unified` (PG 18) ; `05_load_postgres.py`, `artifacts/50_postgres/rapport_postgres.md` |
+| 6 — Adaptation code | **artefacts générés** ; non appliqués aux dépôts | `artifacts/60_code/` — routeurs, snippets settings, `mirror_removal.md`, `dead_models.md` |
+| 7 — Remap CouchDB | **dry-run fait** ; `--apply` en attente de feu vert + levée d'ambiguïté | `artifacts/70_checks/rapport_remap_couchdb.md` |
+| Contrôles §6 | **1-5 automatisés : OK** ; 6-8 à faire | `artifacts/70_checks/report.md` |
+
+### Reste à faire avant bascule
+
+1. **Décision §6.3** — 59 FK `process_manager_administrativelevelwave.project_id`
+   orphelines (COSOMIS `project_id` ∈ {1,3} sans table `process_manager_project`
+   côté `mis`). Choisir : mettre `project_id` à NULL / remapper vers un projet
+   CDD / exclure les 59 lignes COSOMIS. Cf. `merge/conflicts.csv` type
+   `rapprochement`.
+2. **Appliquer l'Étape 6** aux dépôts (`src/` et `cosomis/`) : routeurs,
+   settings PG, `Meta.managed=False` sur les 19 miroirs CDD +
+   `authentication_facilitator` COSOMIS, retrait des 4 modèles orphelins,
+   `__iexact` sur `auth_user.username/email`.
+3. **Contrôles §6.6-6.8** : `manage.py check` + `makemigrations --check` sur PG ;
+   exports `fc_situation` / `views_docx` / tableau de bord financier avant
+   (MySQL) et après (PG) ; jeu de tests casse.
+4. **Étape 7 `--apply`** après confirmation que les bases `facilitator_*`
+   scannées sont d'origine COSOMIS (sinon les `user_id` CDD seraient corrompus).
+5. `dump_mysql_unifie.sql` : livrable d'archive ; versionner son empreinte
+   SHA-256 (§7) — non chargé dans MySQL.
+6. **Note d'env** : `psycopg2-binary` a été installé dans `venv_mis` pour
+   l'Étape 5 (migrate PG). `pip uninstall psycopg2-binary` si non souhaité.
 
 ### Étape 1 — résultats fermes
 
@@ -109,11 +131,28 @@ Autres relevés dans `collisions.md` : `Facilitator.code` CharField 100 vs 6
 | Script | Rôle |
 |---|---|
 | `scripts/_introspect_project.py` | introspection ORM d'un projet, à lancer dans son venv |
-| `scripts/00_extract.py` | Étape 0 — extraction lecture seule des bases locales `cdd` + `mis` (`--dry-run` par défaut, `--apply` pour écrire) |
-| `scripts/01_inventory.py` | Étape 1 — introspection des deux projets + croisement avec `00_raw/` → `artifacts/10_inventory/` |
+| `scripts/00_extract.py` | Étape 0 — extraction lecture seule `cdd` + `mis` (`--dry-run` défaut, `--apply`) |
+| `scripts/01_inventory.py` | Étape 1 — inventaire + qualification §4.1 → `artifacts/10_inventory/` |
+| `scripts/02_build_plan.py` | Étape 2 — `merge/fusion_plan.yml` (+ contrôle d'unicité des clés naturelles) |
+| `scripts/03_build_id_map.py` | Étape 3 — `merge/id_map.csv` + `merge/conflicts.csv` |
+| `scripts/04_build_unified.py` | Étape 4 — `artifacts/40_unified/*.csv` + `dump_mysql_unifie.sql` |
+| `scripts/05_load_postgres.py` | Étape 5 — provision + migrate + COPY + setval sur PostgreSQL |
+| `scripts/06_codemod.py` | Étape 6 — génère `artifacts/60_code/` (routeurs, settings, patches) |
+| `scripts/07_remap_couchdb.py` | Étape 7 — remap CouchDB (`--dry-run` défaut) |
+| `scripts/checks/run_checks.py` | Contrôles d'acceptation §6.1-6.5 → `artifacts/70_checks/report.md` |
 
-Rejouer (idempotent) :
+Rejouer tout le pipeline (idempotent) :
 ```
-D:\COSO\PROJECTS\MIS\venv_mis\Scripts\python.exe merge/scripts/00_extract.py --apply
-D:\COSO\PROJECTS\CDD\backend\venv_cdd\Scripts\python.exe merge/scripts/01_inventory.py
+venv_mis  … 00_extract.py --apply
+venv_cdd  … 01_inventory.py
+venv_cdd  … 02_build_plan.py
+venv_cdd  … 03_build_id_map.py
+venv_cdd  … 04_build_unified.py
+venv_cdd  … 06_codemod.py
+venv_cdd  … 05_load_postgres.py
+venv_cdd  … 07_remap_couchdb.py
+venv_cdd  … checks/run_checks.py
 ```
+(`venv_cdd` = `D:\COSO\PROJECTS\CDD\backend\venv_cdd\Scripts\python.exe`,
+`venv_mis` = `D:\COSO\PROJECTS\MIS\venv_mis\Scripts\python.exe` ; forcer
+`PYTHONUTF8=1` sous PowerShell.)
