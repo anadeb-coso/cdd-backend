@@ -72,7 +72,24 @@ def export_administrativelels_situation_to_excel(request):
 
     facilitators_stabilized = []
 
-    project_mis = mis_objects_call.filter_objects(MisProject, name=request.session.get('project_name')).first()
+    # Projet ciblé : override optionnel via ?project=<nom> (sinon projet de session),
+    # pour permettre l'export "par projet" (COSO, FA-COSO...) sans changer le projet de session.
+    override_project_name = request.GET.get('project') or request.GET.get('project_name')
+    if override_project_name:
+        _cdd_project = Project.objects.filter(name=override_project_name).first()
+        _session_project_name = _cdd_project.name if _cdd_project else override_project_name
+        _mis_project = mis_objects_call.filter_objects(MisProject, name=_session_project_name).first()
+        _session_project_mis_id = _mis_project.id if _mis_project else request.session.get("project_mis_id")
+        _session_project_id = _cdd_project.id if _cdd_project else request.session.get("project_id")
+        _first_cycle = _cdd_project.cycle_set.order_by('order').first() if _cdd_project else None
+        _session_cycle_id = _first_cycle.id if _first_cycle else request.session.get("cycle_id")
+    else:
+        _session_project_name = request.session.get('project_name')
+        _session_project_mis_id = request.session.get("project_mis_id")
+        _session_project_id = request.session.get("project_id")
+        _session_cycle_id = request.session.get("cycle_id")
+
+    project_mis = mis_objects_call.filter_objects(MisProject, name=_session_project_name).first()
     project_mis_id = project_mis.id if project_mis else 1
 
 
@@ -165,7 +182,7 @@ def export_administrativelels_situation_to_excel(request):
     last_deactivated_subquery = mis_objects_call.filter_objects(
         AssignAdministrativeLevelToFacilitator,
         administrative_level_id=OuterRef('administrative_level_id'),
-        project_id=request.session.get("project_mis_id"),
+        project_id=_session_project_mis_id,
         activated=False
     ).order_by('-updated_date').values('facilitator_id')[:1]  # Prendre le plus récent
 
@@ -173,7 +190,7 @@ def export_administrativelels_situation_to_excel(request):
     _assigned_data = mis_objects_call.filter_objects(
         AssignAdministrativeLevelToFacilitator,
         administrative_level_id__in=_headquarters_village_ids,
-        project_id=request.session.get("project_mis_id")
+        project_id=_session_project_mis_id
     ).annotate(
         last_deactivated_facilitator=Subquery(last_deactivated_subquery)
     ).values_list('administrative_level_id', 'facilitator_id', 'last_deactivated_facilitator')
@@ -226,8 +243,8 @@ def export_administrativelels_situation_to_excel(request):
     # Récupérer les agrégations associées aux quartiers généraux des villages
     aggregs_by_project = AggregatedStatus.objects.filter(
         administrative_level_id__in=_headquarters_village_ids,
-        project_id=request.session.get("project_id"),
-        cycle_id=request.session.get("cycle_id"),
+        project_id=_session_project_id,
+        cycle_id=_session_cycle_id,
         task=None,
         facilitator=None
     )

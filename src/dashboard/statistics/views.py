@@ -16,6 +16,7 @@ from .functions_reports import priorities_pav_pac_situation, priorities_situatio
 from dashboard.reports.excel_csv.functions_cdd_datas import all_cdd_datas
 from process_manager.models import Task
 from cdd.utils import timeout
+from .utils import cdd_projects_for_request, resolve_project_context
 
 
 class StatisticView(PageMixin, LoginRequiredMixin, TemplateView):
@@ -55,6 +56,11 @@ class StatisticView(PageMixin, LoginRequiredMixin, TemplateView):
     #     context['form_f'] = ReportsFacilitatorsStatusForm(Facilitator.objects.filter(develop_mode=context['is_develop'], training_mode=context['is_training'], projects__in=[self.request.session.get('project_id')]))
 
     #     return context
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cdd_projects'] = cdd_projects_for_request(self.request)
+        return context
 
 
 
@@ -114,13 +120,14 @@ class GetGlobalStatistic(PageMixin, LoginRequiredMixin, TemplateView):
                  
         file_path = ""
         # try:
+        pctx = resolve_project_context(self.request)
         file_path = get_global_statistic_under_file_excel_or_csv(
             facilitator_dbs_name=facilitator_dbs_name,
             params={
-                "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                "session_project_id": self.request.session.get('project_id'), 
-                "session_project_name": self.request.session.get('project_name'), 
-                "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+                "type": _type, "ids_administrativelevel": ids_administrative_level,
+                "session_project_id": pctx['project_id'],
+                "session_project_name": pctx['project_name'],
+                "session_cycle_couch_id": pctx['cycle_couch_id']
             }
         )
 
@@ -226,13 +233,14 @@ class PrioritiesPAVPACSituationCSVView(PageMixin, LoginRequiredMixin, TemplateVi
 
         file_path = ""
         try:
+            pctx = resolve_project_context(self.request)
             file_path = priorities_pav_pac_situation(
                 facilitator_dbs_name=facilitator_dbs_name,
                 params={
-                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                    "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name'), 
-                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+                    "type": _type, "ids_administrativelevel": ids_administrative_level,
+                    "session_project_id": pctx['project_id'],
+                    "session_project_name": pctx['project_name'],
+                    "session_cycle_couch_id": pctx['cycle_couch_id']
                     }
             )
         except Exception as exc:
@@ -308,13 +316,14 @@ class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
 
         file_path = ""
         try:
+            pctx = resolve_project_context(self.request)
             file_path = priorities_situation(
                 facilitator_dbs_name=facilitator_dbs_name,
                 params={
-                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                    "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_name": self.request.session.get('project_name'), 
-                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id')
+                    "type": _type, "ids_administrativelevel": ids_administrative_level,
+                    "session_project_id": pctx['project_id'],
+                    "session_project_name": pctx['project_name'],
+                    "session_cycle_couch_id": pctx['cycle_couch_id']
                 }
             )
 
@@ -402,14 +411,15 @@ class CddDatasCSVView(PageMixin, LoginRequiredMixin, TemplateView):
         
         file_path = ""
         try:
+            pctx = resolve_project_context(self.request)
             file_path = all_cdd_datas(
                 facilitator_dbs_name=facilitator_dbs_name,
                 params={
-                    "type": _type, "ids_administrativelevel": ids_administrative_level, 
-                    "session_project_id": self.request.session.get('project_id'), 
-                    "session_project_couch_id": self.request.session.get('project_couch_id'), 
-                    "session_project_name": self.request.session.get('project_name'), 
-                    "session_cycle_couch_id": self.request.session.get('cycle_couch_id'), 
+                    "type": _type, "ids_administrativelevel": ids_administrative_level,
+                    "session_project_id": pctx['project_id'],
+                    "session_project_couch_id": pctx['project_couch_id'],
+                    "session_project_name": pctx['project_name'],
+                    "session_cycle_couch_id": pctx['cycle_couch_id'],
                     "include_form_fields": include_form_fields,
                     "include_history": include_history,
                     "include_all_id_and_adl": include_all_id_and_adl,

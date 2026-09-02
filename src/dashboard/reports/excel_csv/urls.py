@@ -15,4 +15,6 @@ urlpatterns = [
 
     path('facilitators-status-excel-csv/', views.GetFacilitatorStatusExcelCSVRport.as_view(), name="app_excel_csv_facilitators_status_p"),
 
+    path('facilitators-status-fc-situation-excel-csv/', views.GetFCSituationExcelCSVReport.as_view(), name="app_excel_csv_fc_situation"),
+
 ]

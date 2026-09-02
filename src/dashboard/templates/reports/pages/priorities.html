@@ -3,38 +3,133 @@
     <div class="row">
         <div class="col-md-12">
 
-
             {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
-                <div class="float-right mb-3">
-                    <a href="{% url 'dashboard:statistics:app_excel_reports_prorities_pav_pac_situation' %}"
-                       class="btn btn-primary btn-sm rounded-xl reports_prorities_situation" id="app_excel_reports_prorities_pav_pac_situation">
-                        <i class="fa fa-file-excel-o mr-2"></i>
-                        {% translate "Priorities & PAV situation" %}
-                    </a>
+
+                <p class="text-muted mb-3">
+                    {% translate "Generate Excel reports on the situation of the task(s) selected in the filters above." %}
+                </p>
+
+                <h6 class="filter-group-label">{% translate "Consolidated reports" %}</h6>
+                <div class="row task-situation-reports">
+                    <div class="col-12 col-lg-4 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
+                                    <i class="fas fa-list-ol text-primary mr-2"></i>{% translate "FC situation (by task)" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "One row per FC: number of tasks completed and validated per project, plus the CVD detail sheets. Follows the phase(s), activity(ies) or task(s) selected above." %}
+                                </p>
+                                <a href="{% url 'dashboard:reports:excel_csv:app_excel_csv_fc_situation' %}"
+                                   class="btn btn-primary btn-sm align-self-start report-download-btn reports_fc_situation" id="app_excel_csv_fc_situation">
+                                    <i class="fas fa-file-excel mr-2"></i>{% translate "Download" %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
+                                    <i class="fas fa-map-marked-alt text-primary mr-2"></i>{% translate "Priorities & PAV situation" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "Per-village situation of the priorities, PAV and PAC tasks: form details, attachments, completion and validation." %}
+                                </p>
+                                <div class="align-self-start">
+                                    {% for project in cdd_projects %}
+                                        <a href="{% url 'dashboard:statistics:app_excel_reports_prorities_pav_pac_situation' %}"
+                                           data-project="{{ project.name }}"
+                                           class="btn btn-primary btn-sm mr-2 mb-1 report-download-btn reports_prorities_situation">
+                                            <i class="fas fa-file-excel mr-2"></i>{{ project.name }}
+                                        </a>
+                                    {% empty %}
+                                        <span class="text-muted small">{% translate "No project available." %}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
+                                    <i class="fas fa-user-clock text-primary mr-2"></i>{% translate "AC & Priorities situation" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "List of facilitators whose priority tasks are unfinished, not validated or missing the 3 required priorities." %}
+                                </p>
+                                <div class="align-self-start">
+                                    {% for project in cdd_projects %}
+                                        <a href="{% url 'dashboard:statistics:app_excel_reports_prorities_situation' %}"
+                                           data-project="{{ project.name }}"
+                                           class="btn btn-primary btn-sm mr-2 mb-1 report-download-btn reports_prorities_situation">
+                                            <i class="fas fa-file-excel mr-2"></i>{{ project.name }}
+                                        </a>
+                                    {% empty %}
+                                        <span class="text-muted small">{% translate "No project available." %}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="float-right mb-3">&nbsp;&nbsp;</div>
-                <div class="float-right mb-3">
-                    <a href="{% url 'dashboard:statistics:app_excel_reports_prorities_situation' %}"
-                       class="btn btn-primary btn-sm rounded-xl reports_prorities_situation" id="app_excel_reports_prorities_situation">
-                        <i class="fa fa-file-excel-o mr-2"></i>
-                        {% translate "AC & Priorities situation" %}
-                    </a>
+
+                <h6 class="filter-group-label mt-2">{% translate "Detailed situations (raw exports)" %}</h6>
+                <div class="row task-situation-sources">
+                    <div class="col-12 col-lg-6 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
+                                    <i class="fas fa-user-friends text-primary mr-2"></i>{% translate "FC situations" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "Per-FC situation of the prioritization tasks (one row per FC, all projects)." %}
+                                    <span class="d-block mt-1"><em>{% translate "This export may take a while." %}</em></span>
+                                </p>
+                                <a href="{% url 'dashboard:facilitators:export_fc_to_excel' %}" target="_blank"
+                                   class="btn btn-outline-primary btn-sm align-self-start report-download-btn export_fc_raw">
+                                    <i class="fas fa-file-excel mr-2"></i>{% translate "Download" %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
+                                    <i class="fas fa-map-marker-alt text-primary mr-2"></i>{% translate "CVD / headquarters village situations" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "CDD cycle situation per CVD / headquarters village, by project. Follows the selected geographic area." %}
+                                    <span class="d-block mt-1"><em>{% translate "This export may take a while." %}</em></span>
+                                </p>
+                                <div class="align-self-start">
+                                    {% for project in cdd_projects %}
+                                        <a href="{% url 'dashboard:administrative_levels:export_administrativelels_situation_to_excel' %}"
+                                           data-project="{{ project.name }}"
+                                           class="btn btn-outline-primary btn-sm mr-2 mb-1 report-download-btn export_adl_situation">
+                                            <i class="fas fa-file-excel mr-2"></i>{{ project.name }}
+                                        </a>
+                                    {% empty %}
+                                        <span class="text-muted small">{% translate "No project available." %}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="clearfix"></div>
-                <div id="download-message" class="float-right mb-3" style="display:none;">
-                    <p style="font-size: 25px;font-weight: bold;">{% translate "Download in progress..." %}</p>
-                    <div class="clearfix"></div>
+
+                <div id="download-complete-message" class="mb-2" style="display:none;">
+                    <p class="text-success font-weight-bold mb-0">
+                        <i class="fas fa-check-circle mr-2"></i>{% translate "Download complete!" %}
+                    </p>
                 </div>
-                <div id="download-complete-message" class="float-right mb-3" style="display:none;">
-                    <p style="font-size: 25px;font-weight: bold;">{% translate "Download complete!" %}</p>
-                    <div class="clearfix"></div>
-                </div>
-                <div class="clearfix"></div>
+
             {% endif %}
-            <div class="clearfix"></div>
-
-
-
 
         </div>
 
@@ -44,64 +139,137 @@
 
     {% comment %} <script src="{% static 'js/cascade_requests.js' %}"></script> {% endcomment %}
     <script type="text/javascript">
-        var app_excel_reports_prorities_pav_pac_situation = $('#app_excel_reports_prorities_pav_pac_situation');
-        var app_excel_reports_prorities_situation = $('#app_excel_reports_prorities_situation');
-        
-        $(document).ready(function() {
-            $(".reports_prorities_situation").on("click", function(event) {
-                event.preventDefault(); // Empêche le comportement par défaut du lien
-          
-                // Afficher le message de téléchargement en cours
-                $("#download-message").show();
-                $("#download-complete-message").hide();
-          
-                var url = $(this).attr('href'); // L'URL de téléchargement
+        // Gestionnaire commun aux boutons de téléchargement des rapports (onglets "États").
+        // - désactive TOUS les boutons ".report-download-btn" présents pendant un téléchargement
+        // - affiche "Téléchargement en cours..." juste à côté du bouton cliqué
+        // - réactive tout et retire le message à la fin
+        window.reportDownloadUI = window.reportDownloadUI || (function () {
+            var SEL = "a.report-download-btn, button.report-download-btn";
+            var busy = false;
+            var LABEL = "{% translate 'Download in progress...' %}";
+            return {
+                isBusy: function () { return busy; },
+                begin: function ($btn) {
+                    if (busy) { return false; }
+                    busy = true;
+                    $(SEL).addClass("disabled").prop("disabled", true).attr("aria-disabled", "true");
+                    $(".download-inline-status").remove();
+                    $('<span class="download-inline-status text-primary small ml-2">'
+                        + '<i class="fas fa-spinner fa-spin mr-1"></i>' + LABEL + '</span>')
+                        .insertAfter($btn);
+                    $("#download-complete-message").hide();
+                    return true;
+                },
+                end: function (showComplete) {
+                    busy = false;
+                    $(SEL).removeClass("disabled").prop("disabled", false).removeAttr("aria-disabled");
+                    $(".download-inline-status").remove();
+                    if (showComplete) {
+                        $("#download-complete-message").show();
+                        setTimeout(function () { $("#download-complete-message").hide(); }, 5000);
+                    }
+                }
+            };
+        })();
 
+        $(document).ready(function() {
+
+            // Export "source" : la vue renvoie directement le fichier (attachment) -> navigation.
+            $(".export_adl_situation").on("click", function(event) {
+                event.preventDefault();
+                var $btn = $(this);
+                if (!window.reportDownloadUI.begin($btn)) { return; }
+
+                var url = $btn.attr('href') + "?project=" + encodeURIComponent($btn.data('project'));
+                if (administrative_level_type && administrative_level_id) {
+                    url += "&id_" + administrative_level_type + "=" + administrative_level_id
+                         + "&type_field=" + administrative_level_type;
+                }
+                url += "&is_training=" + "{{ is_training }}" + "&is_develop=" + "{{ is_develop }}";
+
+                window.location.href = url;
+                // Pas de callback possible sur un téléchargement direct : on réactive après un délai.
+                setTimeout(function () { window.reportDownloadUI.end(false); }, 8000);
+            });
+
+            // Export "source" brut (nouvel onglet).
+            $(".export_fc_raw").on("click", function(event) {
+                var $btn = $(this);
+                if (!window.reportDownloadUI.begin($btn)) { event.preventDefault(); return; }
+                setTimeout(function () { window.reportDownloadUI.end(false); }, 8000);
+            });
+
+            $(".reports_fc_situation").on("click", function(event) {
+                event.preventDefault();
+                var $btn = $(this);
+                if (!window.reportDownloadUI.begin($btn)) { return; }
+
+                var url = $btn.attr('href');
                 let val_facilitator = $("#id_facilitator").val();
 
                 url += (`?id_region=` + id_region.val() +
-                `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
-                `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type + 
-                `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}");
+                    `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() +
+                    `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type +
+                    `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}") +
+                    `&id_phase=` + $('#id_phase').val() + `&id_activity=` + $('#id_activity').val() + `&id_task=` + $('#id_task').val();
 
                 if(!['', ' ', null, undefined, []].includes(val_facilitator)){
                     url += `&facilitator_db_name=` + val_facilitator;
                 }
-                
-        
 
-                app_excel_reports_prorities_pav_pac_situation.prop('disabled', true);
-                app_excel_reports_prorities_situation.prop('disabled', true);
-                // Faire une requête AJAX pour vérifier si le fichier est disponible
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function(response) {
+                        let path = response.replaceAll('/', '___').replaceAll('\\', '___');
+                        let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
+                        window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
+                        window.reportDownloadUI.end(true);
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Erreur lors du téléchargement du fichier.");
+                        window.reportDownloadUI.end(false);
+                    }
+                });
+            });
+
+            $(".reports_prorities_situation").on("click", function(event) {
+                event.preventDefault();
+                var $btn = $(this);
+                if (!window.reportDownloadUI.begin($btn)) { return; }
+
+                var url = $btn.attr('href');
+                let val_facilitator = $("#id_facilitator").val();
+
+                url += (`?id_region=` + id_region.val() +
+                `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() +
+                `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type +
+                `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}");
+
+                if(!['', ' ', null, undefined, []].includes($btn.data('project'))){
+                    url += `&project=` + encodeURIComponent($btn.data('project'));
+                }
+
+                if(!['', ' ', null, undefined, []].includes(val_facilitator)){
+                    url += `&facilitator_db_name=` + val_facilitator;
+                }
+
                 $.ajax({
                   url: url,
                   type: 'GET',
                   success: function(response) {
-                    // Quand la requête AJAX a réussi, déclencher le téléchargement
                     let path = response.replaceAll('/', '___').replaceAll('\\', '___');
                     let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
                     window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
-                    
-          
-                    // Cacher le message de téléchargement en cours et afficher le message de fin
-                    $("#download-message").hide();
-                    $("#download-complete-message").show();
-
-                    
-                    app_excel_reports_prorities_pav_pac_situation.prop('disabled', false);
-                    app_excel_reports_prorities_situation.prop('disabled', false);
-
-                    setTimeout(function() {
-                        $("#download-message").hide();
-                        $("#download-complete-message").hide();
-                      }, 5000);
+                    window.reportDownloadUI.end(true);
                   },
                   error: function(xhr, status, error) {
                     alert("Erreur lors du téléchargement du fichier.");
+                    window.reportDownloadUI.end(false);
                   }
                 });
               });
-          
+
           });
 
 

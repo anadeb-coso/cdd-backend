@@ -2539,3 +2539,86 @@ msgstr "Tâches invalidées revues par l'animateur (Non terminées)"
 msgid "Tasks Invalidated Unreview by the facilitator"
 msgstr "Tâches invalidées non revues par le facilitateur"
 
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Facilitators status"
+msgstr "Situation des animateurs communautaires"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Statistics, progress and task situation of the community facilitators"
+msgstr "Statistiques, progression et situation des tâches des animateurs communautaires"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Filters"
+msgstr "Filtres"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Geographic area"
+msgstr "Zone géographique"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Task scope"
+msgstr "Périmètre de tâche"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "AC evolution"
+msgstr "Évolution des AC"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "Task situation"
+msgstr "Situation des tâches"
+
+#: dashboard/templates/reports/pages/facilitators.html
+msgid "CDD Datas"
+msgstr "Données CDD"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "FC situation (by task)"
+msgstr "Situation des FC (par tâche)"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "Generate Excel reports on the situation of the task(s) selected in the filters above."
+msgstr "Générer des rapports Excel sur la situation de la ou des tâches sélectionnées dans les filtres ci-dessus."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "One row per FC: number of tasks completed and validated per project, plus the CVD detail sheets. Follows the phase(s), activity(ies) or task(s) selected above."
+msgstr "Une ligne par AC : nombre de tâches achevées et validées par projet, plus les feuilles de détail par CVD. Suit la ou les phases, activités ou tâches sélectionnées ci-dessus."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "Per-village situation of the priorities, PAV and PAC tasks: form details, attachments, completion and validation."
+msgstr "Situation par village des tâches priorités, PAV et PAC : détails des formulaires, pièces jointes, achèvement et validation."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "List of facilitators whose priority tasks are unfinished, not validated or missing the 3 required priorities."
+msgstr "Liste des animateurs communautaires dont les tâches de priorisation sont inachevées, non validées ou ne comptant pas les 3 priorités requises."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "Consolidated reports"
+msgstr "Rapports consolidés"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "Detailed situations (raw exports)"
+msgstr "Situations détaillées (exports bruts)"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "FC situations"
+msgstr "Situations des FC"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "Per-FC situation of the prioritization tasks (one row per FC, all projects)."
+msgstr "Situation par FC des tâches de priorisation (une ligne par FC, tous projets)."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "This export may take a while."
+msgstr "Cet export peut prendre un moment."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "CVD / headquarters village situations"
+msgstr "Situations des CVD / villages sièges"
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "CDD cycle situation per CVD / headquarters village, by project. Follows the selected geographic area."
+msgstr "Situation du cycle CDD par CVD / village siège, par projet. Suit la zone géographique sélectionnée."
+
+#: dashboard/templates/reports/pages/priorities.html
+msgid "No project available."
+msgstr "Aucun projet disponible."

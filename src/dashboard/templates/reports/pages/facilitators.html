@@ -3,144 +3,171 @@
 {% block extracss %}
     {{ block.super }}
     <link href="{% static 'AdminLTE/plugins/chart.js/Chart.css' %}" rel="stylesheet">
+    <style>
+        .fstatus-header { display: flex; align-items: center; margin-bottom: 1rem; }
+        .fstatus-header .fstatus-icon {
+            width: 46px; height: 46px; margin-right: .85rem; border-radius: .55rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: #007bff; background: rgba(0, 123, 255, .12);
+        }
+        .fstatus-header h4 { font-weight: 700; margin: 0; }
+
+        .fstatus-filters .card-header .card-title { font-size: .95rem; font-weight: 600; }
+        .fstatus-filters .form-group { margin-bottom: .5rem; }
+        .fstatus-filters .select2-container { width: 100% !important; }
+        .fstatus-filters .select2-container--default .select2-selection--single { height: calc(2.25rem + 2px); }
+        .fstatus-filters .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 2.25rem; }
+        .filter-group-label {
+            display: block; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .04em; font-size: .72rem; color: #869099; margin-bottom: .35rem;
+        }
+        #task-filter { background: #f6f8fa; border: 1px solid #eef1f4; border-radius: .45rem; padding: .6rem .55rem .15rem; }
+
+        .fstatus-tabs .nav-tabs .nav-link { font-weight: 600; font-size: .84rem; color: #6c757d; padding: .65rem 1rem; }
+        .fstatus-tabs .nav-tabs .nav-link:hover { color: #007bff; }
+        .fstatus-tabs .nav-tabs .nav-link.active { color: #007bff; }
+        .fstatus-tabs .tab-pane-inner { min-height: 140px; padding-top: .25rem; }
+        .fstatus-tabs .tab-loading-area > h5 { font-weight: 600; }
+    </style>
 {% endblock extracss %}
 
 {% block content %}
     <div class="row">
         <div class="col-12">
-            <div class="clearfix"></div>
-            <div class="row filter_fields">
-                <div class="col-1 administrative-level-filter">
-                    {% bootstrap_field form.region show_label=False %}
-                </div>
-                <div class="col-1 administrative-level-filter">
-                    {% bootstrap_field form.prefecture show_label=False %}
-                </div>
-                <div class="col-2 administrative-level-filter">
-                    {% bootstrap_field form.commune show_label=False %}
-                </div>
-                <div class="col-2 administrative-level-filter">
-                    {% bootstrap_field form.canton show_label=False %}
-                </div>
-                <div class="col-2 administrative-level-filter">
-                    {% bootstrap_field form.village show_label=False %}
-                </div>
-                
-                <div class="col-2">
-                    {% bootstrap_field form_f.facilitator show_label=False %}
-                </div>
 
-                <div class="col-2 administrative-level-filter">
-                    <a class="btn fs12 text-bold-family text-primary pull-right p-0" style="margin-top: 8px;"
-                        id="clear_all_filters">
-                        {% translate "Clear all filters" %}
-                    </a>
+            <div class="fstatus-header">
+                <span class="fstatus-icon"><i class="fas fa-users-cog"></i></span>
+                <div>
+                    <h4>{% translate "Facilitators status" %}</h4>
+                    <small class="text-muted">{% translate "Statistics, progress and task situation of the community facilitators" %}</small>
                 </div>
             </div>
 
-            <div class="row filter_fields" id="task-filter">
-                <div class="col-3 task-filter">
-                    {% bootstrap_field form_task.phase show_label=False %}
+            <div class="card card-primary card-outline fstatus-filters">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-filter mr-2"></i>{% translate "Filters" %}</h3>
+                    <div class="card-tools">
+                        <a class="btn btn-tool text-primary" id="clear_all_filters" title="{% translate 'Clear all filters' %}">
+                            <i class="fas fa-eraser mr-1"></i>{% translate "Clear all filters" %}
+                        </a>
+                    </div>
                 </div>
-                <div class="col-3 task-filter">
-                    {% bootstrap_field form_task.activity show_label=False %}
-                </div>
-                <div class="col-4 task-filter">
-                    {% bootstrap_field form_task.task show_label=False %}
+                <div class="card-body">
+                    <div class="row filter_fields">
+                        <div class="col-12">
+                            <span class="filter-group-label">{% translate "Geographic area" %}</span>
+                        </div>
+                        <div class="col-6 col-md-4 col-xl administrative-level-filter">
+                            {% bootstrap_field form.region show_label=False %}
+                        </div>
+                        <div class="col-6 col-md-4 col-xl administrative-level-filter">
+                            {% bootstrap_field form.prefecture show_label=False %}
+                        </div>
+                        <div class="col-6 col-md-4 col-xl administrative-level-filter">
+                            {% bootstrap_field form.commune show_label=False %}
+                        </div>
+                        <div class="col-6 col-md-4 col-xl administrative-level-filter">
+                            {% bootstrap_field form.canton show_label=False %}
+                        </div>
+                        <div class="col-6 col-md-4 col-xl administrative-level-filter">
+                            {% bootstrap_field form.village show_label=False %}
+                        </div>
+                        <div class="col-6 col-md-4 col-xl">
+                            {% bootstrap_field form_f.facilitator show_label=False %}
+                        </div>
+                    </div>
+
+                    <div class="row filter_fields" id="task-filter">
+                        <div class="col-12">
+                            <span class="filter-group-label">{% translate "Task scope" %}</span>
+                        </div>
+                        <div class="col-12 col-md-4 task-filter">
+                            {% bootstrap_field form_task.phase show_label=False %}
+                        </div>
+                        <div class="col-12 col-md-4 task-filter">
+                            {% bootstrap_field form_task.activity show_label=False %}
+                        </div>
+                        <div class="col-12 col-md-4 task-filter">
+                            {% bootstrap_field form_task.task show_label=False %}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-
-
-
-
-            <div class="card">
-
-
-                <div class="container">
-                    <ul class="nav nav-tabs">
-                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link active nav-tab-toggle" data-toggle="tab" href="#statistics" >{% translate "Statistics" %}</a></li>
-                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#facilitators_evolutions" >{% translate "Evolutions des AC" %}</a></li>
-                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#priorities" >{% translate "Priorities" %}</a></li>
-                        <li style="width: 25%;" class="nav-item btn"><a style="font-size: 11px;" class="nav-link nav-tab-toggle" data-toggle="tab" href="#cdd_datas" >{% translate "CDD Datas" %}</a></li>
+            <div class="card card-primary card-outline-tabs fstatus-tabs">
+                <div class="card-header p-0 border-bottom-0">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active nav-tab-toggle" data-toggle="tab" href="#statistics" role="tab">
+                                <i class="fas fa-chart-pie mr-1"></i>{% translate "Statistics" %}
+                            </a>
+                        </li>
+                        {% comment %} <li class="nav-item">
+                            <a class="nav-link nav-tab-toggle" data-toggle="tab" href="#facilitators_evolutions" role="tab">
+                                <i class="fas fa-chart-line mr-1"></i>{% translate "AC evolution" %}
+                            </a>
+                        </li> {% endcomment %}
+                        <li class="nav-item">
+                            <a class="nav-link nav-tab-toggle" data-toggle="tab" href="#priorities" role="tab">
+                                <i class="fas fa-tasks mr-1"></i>{% translate "Task situation" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-tab-toggle" data-toggle="tab" href="#cdd_datas" role="tab">
+                                <i class="fas fa-database mr-1"></i>{% translate "CDD Datas" %}
+                            </a>
+                        </li>
                     </ul>
+                </div>
 
+                <div class="card-body">
                     <div class="tab-content">
                         <div id="statistics" class="tab-pane active">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="statistics-list">
-                                        <h3>{% translate "Statistics" %}</h3>
-                                        {% comment %} <div class="tab-pane">
-                                            {% include 'common/under_construction_col.html' %}
-                                        </div> {% endcomment %}
-                                    </div>
+                            <div class="position-relative tab-pane-inner">
+                                <div id="statistics-list" class="tab-loading-area">
+                                    <h5 class="text-muted"><i class="fas fa-chart-pie mr-2"></i>{% translate "Statistics" %}</h5>
                                 </div>
                                 <div class="overlay" id="statistics-spin">
                                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                 </div>
                             </div>
-
                         </div>
-                        
-                        <div id="facilitators_evolutions" class="tab-pane">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="facilitators_evolutions-list">
-                                        <h3>{% translate "Evolutions des AC" %}</h3>
-                                        {% comment %} <div class="tab-pane">
-                                            {% include 'common/under_construction_col.html' %}
-                                        </div> {% endcomment %}
-                                    </div>
+
+                        {% comment %} <div id="facilitators_evolutions" class="tab-pane">
+                            <div class="position-relative tab-pane-inner">
+                                <div id="facilitators_evolutions-list" class="tab-loading-area">
+                                    <h5 class="text-muted"><i class="fas fa-chart-line mr-2"></i>{% translate "AC evolution" %}</h5>
                                 </div>
                                 <div class="overlay" id="facilitators_evolutions-spin">
                                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                 </div>
                             </div>
-                        </div>
-                        
+                        </div> {% endcomment %}
+
                         <div id="priorities" class="tab-pane">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="priorities-list">
-                                        <h3>{% translate "Priorities" %}</h3>
-                                        {% comment %} <div class="tab-pane">
-                                            {% include 'common/under_construction_col.html' %}
-                                        </div> {% endcomment %}
-                                    </div>
+                            <div class="position-relative tab-pane-inner">
+                                <div id="priorities-list" class="tab-loading-area">
+                                    <h5 class="text-muted"><i class="fas fa-tasks mr-2"></i>{% translate "Task situation" %}</h5>
                                 </div>
                                 <div class="overlay" id="priorities-spin">
                                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div id="cdd_datas" class="tab-pane">
-                            <div class="card">
-                                <div class="card-body">
-                                    <div id="cdd_datas-list">
-                                        <h3>{% translate "CDD Datas" %}</h3>
-                                        {% comment %} <div class="tab-pane">
-                                            {% include 'common/under_construction_col.html' %}
-                                        </div> {% endcomment %}
-                                    </div>
+                            <div class="position-relative tab-pane-inner">
+                                <div id="cdd_datas-list" class="tab-loading-area">
+                                    <h5 class="text-muted"><i class="fas fa-database mr-2"></i>{% translate "CDD Datas" %}</h5>
                                 </div>
                                 <div class="overlay" id="cdd_datas-spin">
                                     <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                                 </div>
                             </div>
                         </div>
-
                     </div>
-
-
                 </div>
-
-
-
-                    
             </div>
-
 
         </div>
     </div>
@@ -286,7 +313,7 @@
 
             
             function callNavLinkPage(){
-                if(current_nav_link.includes('cdd_datas')){
+                if(current_nav_link.includes('cdd_datas') || current_nav_link.includes('priorities')){
                     $('#task-filter').show();
                 }else{
                     $('#task-filter').hide();

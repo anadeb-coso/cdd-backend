@@ -42,10 +42,14 @@ def user_manager(request):
             grm_user = {}
             with connections['grm'].cursor() as cursor:
                 try:
-                    cursor.execute(f"""SELECT id, username, first_name, last_name, email, password, phone_number 
-                                FROM authentication_user 
-                                WHERE email='{email}' AND is_active=1
-                    """)
+                    cursor.execute(
+                        """
+                        SELECT id, username, first_name, last_name, email, password, phone_number
+                        FROM authentication_user
+                        WHERE email = %s AND is_active = TRUE
+                        """,
+                        [email],
+                    )
                     
                     count = 0
                     for row in cursor.fetchall():

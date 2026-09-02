@@ -7,6 +7,7 @@ from authentication.models import Facilitator
 from dashboard.facilitators.forms import FilterFacilitatorForm, FilterFacilitatorFormMultiChoices, FilterTaskFormMultiChoices
 from ...facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from ...facilitators.repository.facilitator_criteria import FacilitatorCriteria
+from dashboard.statistics.utils import cdd_projects_for_request
 
 
 class ReportsFacilitatorsStatusView(PageMixin, LoginRequiredMixin, FormView):
@@ -86,12 +87,12 @@ class FacilitatorsEvolutionView(PageMixin, LoginRequiredMixin, TemplateView):
 
 
 class PrioritiesView(PageMixin, LoginRequiredMixin, TemplateView):
-    
+
     template_name = 'reports/pages/priorities.html'
     context_object_name = 'reports'
     title = gettext_lazy('Priorities')
     active_level1 = 'states'
-    
+
     breadcrumb = [
         {
             'url': '',
@@ -99,17 +100,28 @@ class PrioritiesView(PageMixin, LoginRequiredMixin, TemplateView):
         },
     ]
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Projets CDD proposés pour les exports "par projet" (un bouton par projet).
+        context['cdd_projects'] = cdd_projects_for_request(self.request)
+        return context
+
 
 class CddDatasView(PageMixin, LoginRequiredMixin, TemplateView):
-    
+
     template_name = 'reports/pages/cdd_datas.html'
     context_object_name = 'reports'
     title = gettext_lazy('CDD Datas')
     active_level1 = 'states'
-    
+
     breadcrumb = [
         {
             'url': '',
             'title': title
         },
     ]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cdd_projects'] = cdd_projects_for_request(self.request)
+        return context

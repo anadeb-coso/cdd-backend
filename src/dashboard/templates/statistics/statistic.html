@@ -28,10 +28,17 @@
                                     <div class="row">
 
                                         <div class="col-5">
-                                            <div class="form-group">
-                                                <input type="button" name="generate" class="btn btn-primary" 
-                                                    style="margin-top: 25px; font-size: 11px !important;"
-                                                    value="{% translate 'Generate a download link' %}" required id="id_generate" />
+                                            <div class="form-group" style="margin-top: 25px;">
+                                                <p class="text-muted small mb-1">{% translate 'Generate a download link' %} :</p>
+                                                {% for project in cdd_projects %}
+                                                    <button type="button"
+                                                        class="btn btn-primary btn-sm mr-2 mb-2 report-download-btn stat_generate"
+                                                        data-project="{{ project.name }}">
+                                                        <i class="fas fa-file-excel mr-2"></i>{{ project.name }}
+                                                    </button>
+                                                {% empty %}
+                                                    <span class="text-muted small">{% translate "No project available." %}</span>
+                                                {% endfor %}
                                             </div>
                                         </div>
 
@@ -96,6 +103,35 @@
         var spin_pdf = $('#spin-pdf');
         spin_pdf.hide();
 
+        window.reportDownloadUI = window.reportDownloadUI || (function () {
+            var SEL = "a.report-download-btn, button.report-download-btn";
+            var busy = false;
+            var LABEL = "{% translate 'Download in progress...' %}";
+            return {
+                isBusy: function () { return busy; },
+                begin: function ($btn) {
+                    if (busy) { return false; }
+                    busy = true;
+                    $(SEL).addClass("disabled").prop("disabled", true).attr("aria-disabled", "true");
+                    $(".download-inline-status").remove();
+                    $('<span class="download-inline-status text-primary small ml-2">'
+                        + '<i class="fas fa-spinner fa-spin mr-1"></i>' + LABEL + '</span>')
+                        .insertAfter($btn);
+                    $("#download-complete-message").hide();
+                    return true;
+                },
+                end: function (showComplete) {
+                    busy = false;
+                    $(SEL).removeClass("disabled").prop("disabled", false).removeAttr("aria-disabled");
+                    $(".download-inline-status").remove();
+                    if (showComplete) {
+                        $("#download-complete-message").show();
+                        setTimeout(function () { $("#download-complete-message").hide(); }, 5000);
+                    }
+                }
+            };
+        })();
+
         $("#clear_all_filters").on("click", function () {
             $('.facilitators-filter input').val('');
             $('.facilitators-filter select').val(null).trigger('change.select2');
@@ -111,38 +147,37 @@
         });
 
 
-        $("#id_generate").click(function(event){
+        $(".stat_generate").click(function(event){
             event.preventDefault();
+            var $btn = $(this);
+            if (!window.reportDownloadUI.begin($btn)) { return; }
+
             let val_facilitator = $("#id_facilitator").val();
+            let project = $btn.data('project');
 
             spin_pdf.show();
-            let href = "";
-            
-            {% comment %} if(!['', ' ', null, undefined, []].includes(val_facilitator)){
-                href = `{% url 'dashboard:statistics:app_excel_statistics_by_facilitator' '_var_' %}`;
-                href = href.replace('_var_', val_facilitator);
-            }else{
-                href = `{% url 'dashboard:statistics:app_excel_statistics' %}`;
-            } {% endcomment %}
-            href = `{% url 'dashboard:statistics:app_excel_statistics' %}`;
-            
+
+            let href = `{% url 'dashboard:statistics:app_excel_statistics' %}`;
+
             href += (`?id_region=` + id_region.val() +
-            `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() + 
-            `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type + 
+            `&id_prefecture=` + id_prefecture.val() + `&id_commune=` + id_commune.val() + `&id_canton=` + id_canton.val() +
+            `&id_village=` + id_village.val() + `&administrative_level_id=` + administrative_level_id + `&type_field=` + administrative_level_type +
             `&is_training=` + "{{ is_training }}" + `&is_develop=` + "{{ is_develop }}");
-            // + 
-            //`&id_in_details=`+ (id_in_details.checked ? 1 : 0));
-            
+
+            if(!['', ' ', null, undefined, []].includes(project)){
+                href += `&project=` + encodeURIComponent(project);
+            }
+
             if(!['', ' ', null, undefined, []].includes(val_facilitator)){
                 href += `&facilitator_db_name=` + val_facilitator;
             }
-            
-            $('#pdf-display').html(`
-            <a target="_blank" href=`+ href +`>{% translate 'Link generated. Click to generate the EXCEL' %}</a>
+
+            $('#pdf-display').append(`
+            <div class="mb-1"><span class="badge badge-primary mr-2">`+ project +`</span>
+            <a target="_blank" href="`+ href +`">{% translate 'Link generated. Click to generate the EXCEL' %}</a></div>
             `);
             spin_pdf.hide();
-        
-            
+            setTimeout(function () { window.reportDownloadUI.end(false); }, 1200);
         });
         
 

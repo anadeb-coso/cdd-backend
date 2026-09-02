@@ -19,8 +19,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
-from django.db import connections
-import logging
 
 from usermanager.functions import user_manager_email_notification, generate_random_code_combine, validate_password
 from usermanager.models import ValidationCode
@@ -45,10 +43,14 @@ def reset_password_ask_email(request):
         grm_user = {}
         with connections['grm'].cursor() as cursor:
             try:
-                cursor.execute(f"""SELECT id, username, first_name, last_name, email, password, phone_number 
-                            FROM authentication_user 
-                            WHERE email='{email}' AND is_active=1
-                """)
+                cursor.execute(
+                    """
+                    SELECT id, username, first_name, last_name, email, password, phone_number
+                    FROM authentication_user
+                    WHERE email = %s AND is_active = TRUE
+                    """,
+                    [email],
+                )
                 
                 count = 0
                 for row in cursor.fetchall():
