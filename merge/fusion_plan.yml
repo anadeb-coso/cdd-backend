@@ -1,0 +1,1838 @@
+# Généré par merge/scripts/02_build_plan.py — déclaratif, à relire.
+# Ne pas éditer le code de fusion pour y mettre des règles : tout est ici.
+
+meta:
+  generated_by: merge/scripts/02_build_plan.py
+  generated_at: '2026-09-02T17:43:27'
+  pilote: src/CLAUDE.md §4-5
+  source_databases:
+    cdd:
+      engine: 10.4.32-MariaDB
+      charset: utf8mb4
+      collation: utf8mb4_general_ci
+    mis:
+      engine: 10.4.32-MariaDB
+      charset: utf8mb4
+      collation: utf8mb4_general_ci
+  status: OK
+defaults:
+  value_conflict: cdd_wins
+  null_fill_from_cosomis: true
+  case_insensitive_lookup_scope:
+  - auth_user.username
+  - auth_user.email
+  mysql_to_pg:
+    tinyint1_to_bool: true
+    zero_dates_to_null: true
+    naive_datetime_tz: UTC (à vérifier sur échantillon — Togo = UTC+0)
+    json_validate_before_load: true
+categories_count:
+  B: 20
+  A: 8
+  reconstruite: 8
+  orpheline: 4
+  C: 77
+soft_remap:
+- db: mis
+  table: usermanager_usertoken
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: usermanager_usertoken
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: usermanager_usertoken
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_subproject
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subproject
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subproject
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_step
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_step
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_step
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_subprojectstep
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectstep
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectstep
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_level
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_level
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_level
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_vulnerablegroup
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_vulnerablegroup
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_vulnerablegroup
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_villageobstacle
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villageobstacle
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villageobstacle
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_villagegoal
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagegoal
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagegoal
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_villagepriority
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagepriority
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagepriority
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_typemain
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_typemain
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_typemain
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_villagemeeting
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagemeeting
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_villagemeeting
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_category_ida
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_category_ida
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_category_ida
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_component
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_component
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_component
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_subprojectfile
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectfile
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectfile
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_filecomment
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_filecomment
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_filecomment
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_financier
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_financier
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_financier
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_project
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_project
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_project
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_cycle
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_cycle
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_cycle
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_subprojectsector
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectsector
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojectsector
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: subprojects_subprojecttype
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojecttype
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: subprojects_subprojecttype
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: administrativelevels_administrativelevel
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_administrativelevel
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_administrativelevel
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: administrativelevels_geographicalunit
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_geographicalunit
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_geographicalunit
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: administrativelevels_cvd
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_cvd
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: administrativelevels_cvd
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: authentication_facilitator
+  column: administrative_levels_ids
+  structure: id_list
+  target: administrativelevels_administrativelevel
+  action: aucun_remap (cat. B, ID inchangés)
+  confirm: false
+- db: mis
+  table: authentication_facilitator
+  column: stabilization_administrative_ids
+  structure: id_list
+  target: administrativelevels_administrativelevel
+  action: aucun_remap (cat. B, ID inchangés)
+  confirm: false
+- db: mis
+  table: authentication_facilitator
+  column: additional_administrative_ids
+  structure: id_list
+  target: administrativelevels_administrativelevel
+  action: aucun_remap (cat. B, ID inchangés)
+  confirm: false
+- db: mis
+  table: assignments_assignadministrativeleveltofacilitator
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: assignments_assignadministrativeleveltofacilitator
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: assignments_assignadministrativeleveltofacilitator
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_bank
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_bank
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_bank
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_account
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_account
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_account
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_funding
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_funding
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_funding
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_annual_work_plan
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_annual_work_plan
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_annual_work_plan
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_tag
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_tag
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_tag
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_activity
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_activity
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_activity
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_activity_funding
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_activity_funding
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_activity_funding
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_supporting_document
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_supporting_document_activity
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document_activity
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document_activity
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_supporting_document_activity_file
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document_activity_file
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_supporting_document_activity_file
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_administrativeLevel_allocation
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_administrativeLevel_allocation
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_administrativeLevel_allocation
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_bank_transfer
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_bank_transfer
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_bank_transfer
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_disbursement_request
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement_request
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement_request
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_disbursement_request_validation
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement_request_validation
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement_request_validation
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: financial_disbursement
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: financial_disbursement
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: process_manager_wave
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_wave
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_wave
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: process_manager_administrativelevelwave
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_administrativelevelwave
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_administrativelevelwave
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: process_manager_periodwave
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_periodwave
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: process_manager_periodwave
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+- db: mis
+  table: custom_file_customerfile
+  column: create_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: custom_file_customerfile
+  column: update_by_user
+  structure: user_snapshot
+  target: auth_user
+  action: remap_json_key:id via id_map(auth_user)
+  confirm: true
+- db: mis
+  table: custom_file_customerfile
+  column: users_involved
+  structure: audit_libre
+  target: auth_user
+  action: aucun_remap (journal d'audit — trop imbriqué)
+  confirm: false
+tables:
+  administrativelevels_administrativelevel:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - administrativelevels.AdministrativeLevel
+      modules:
+      - administrativelevels.models
+  administrativelevels_cvd:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - administrativelevels.CVD
+      modules:
+      - administrativelevels.models
+  administrativelevels_geographicalunit:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - administrativelevels.GeographicalUnit
+      modules:
+      - administrativelevels.models
+  assignments_assignadministrativeleveltofacilitator:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - assignments.AssignAdministrativeLevelToFacilitator
+      modules:
+      - assignments.models
+  auth_group:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '31'
+      mis: '31'
+    natural_key:
+    - name
+    natural_key_unicity:
+      cdd: unique
+      mis: unique
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk:
+    - db: mis
+      table: auth_group_permissions
+      column: group_id
+    - db: mis
+      table: auth_user_groups
+      column: group_id
+  auth_group_permissions:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '0'
+      mis: '0'
+    natural_key: null
+    link_columns: &id001
+    - group_id
+    - permission_id
+    dedupe_on: *id001
+    note: 'table de liaison : PK id transportée (§4.4), FK remappées, dédoublonnage sur link_columns'
+    field_conflicts:
+    - name: id
+      cdd: bigint(20)
+      cosomis: int(11)
+      retained: bigint(20)
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk: []
+  auth_permission:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  auth_user:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '82'
+      mis: '79'
+    natural_key:
+    - username
+    natural_key_crosscheck:
+    - email
+    natural_key_unicity:
+      cdd: unique
+      mis: unique
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk:
+    - db: mis
+      table: auth_user_groups
+      column: user_id
+    - db: mis
+      table: auth_user_user_permissions
+      column: user_id
+    - db: mis
+      table: authtoken_token
+      column: user_id
+    - db: mis
+      table: django_admin_log
+      column: user_id
+    - db: mis
+      table: subprojects_filecomment
+      column: user_id
+    - db: mis
+      table: subprojects_subprojectfile
+      column: user_id
+    - db: mis
+      table: usermanager_usertoken
+      column: user_id
+  auth_user_groups:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '89'
+      mis: '80'
+    natural_key: null
+    link_columns: &id002
+    - user_id
+    - group_id
+    dedupe_on: *id002
+    note: 'table de liaison : PK id transportée (§4.4), FK remappées, dédoublonnage sur link_columns'
+    field_conflicts:
+    - name: id
+      cdd: bigint(20)
+      cosomis: int(11)
+      retained: bigint(20)
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk: []
+  auth_user_user_permissions:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '0'
+      mis: '0'
+    natural_key: null
+    link_columns: &id003
+    - user_id
+    - permission_id
+    dedupe_on: *id003
+    note: 'table de liaison : PK id transportée (§4.4), FK remappées, dédoublonnage sur link_columns'
+    field_conflicts:
+    - name: id
+      cdd: bigint(20)
+      cosomis: int(11)
+      retained: bigint(20)
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk: []
+  authentication_facilitator:
+    category: B
+    strategy: mirror
+    schema_owner: cdd
+    data_source: cdd
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cosomis
+      remove_mirror_declaration:
+      - authentication.Facilitator
+      modules:
+      - authentication.models
+  authentication_governmentworker:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
+  authentication_user:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
+  authentication_user_groups:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
+  authentication_user_user_permissions:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
+  authtoken_token:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '0'
+      mis: '0'
+    natural_key: null
+    link_columns: &id004
+    - user_id
+    dedupe_on: *id004
+    note: 'table de liaison : PK id transportée (§4.4), FK remappées, dédoublonnage sur link_columns'
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk: []
+  custom_file_customerfile:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  django_admin_log:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_celery_results_chordcounter:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_celery_results_groupresult:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_celery_results_taskresult:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_content_type:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_migrations:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  django_session:
+    category: reconstruite
+    strategy: rebuild
+    note: reconstruite par Django (§4.6) — non fusionnée
+  financial_account:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_activity:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_activity_funding:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_activity_structures_impliquees:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_activity_structures_responsables:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_administrativeLevel_allocation:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_annual_work_plan:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_bank:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_bank_transfer:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_bank_transfer_disbursements:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_bank_transfer_supporting_documents:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_disbursement:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_disbursement_request:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_disbursement_request_validation:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_funding:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_supporting_document:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_supporting_document_activity:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_supporting_document_activity_file:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  financial_tag:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  news_category:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  news_news:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  news_news_tags:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  news_newsfile:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  news_subscription:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  news_tag:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activity:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activitycomment:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activitydeadline:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activitydeadline_activities_deadline_groups:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activityfile:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activitygeolocation:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_activityvalidate:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_validationgroupsprocess:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_validationgroupsprocess_planners_groups:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  planning_validationgroupsprocess_validators_groups:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_activity:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_activity_cycles:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_administrativelevelwave:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '35'
+      mis: '59'
+    natural_key:
+    - project_id
+    - wave.number
+    - administrative_level_id
+    natural_key_unicity:
+      cdd: unique
+      mis: unique
+    fields_added_from_cosomis:
+    - name: delete_by_user
+      type: longtext
+      force: null=True, blank=True
+    field_conflicts:
+    - name: administrative_level_id
+      cdd: int(11)
+      cosomis: bigint(20)
+      retained: bigint(20)
+    fields_cdd_only_kept:
+    - cycle_id
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk:
+    - db: mis
+      table: process_manager_periodwave_administrative_levels
+      column: administrativelevelwave_id
+  process_manager_aggregatedstatus:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_aggregatedstatusfacilitator:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_cycle:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_deployment:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_emailaddresseswhichsendemails:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_facilitatordeployment:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_facilitatorwave:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_periodwave:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_periodwave_administrative_levels:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_phase:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_phase_cycles:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_processaddorremoveadl:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_project:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_project_facilitators:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_project_users:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_task:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_task_cycles:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  process_manager_wave:
+    category: A
+    strategy: merge
+    rows:
+      cdd: '5'
+      mis: '6'
+    natural_key:
+    - number
+    natural_key_unicity:
+      cdd: unique
+      mis: unique
+    fields_added_from_cosomis:
+    - name: delete_by_user
+      type: longtext
+      force: null=True, blank=True
+    id_policy: ligne appariée → id CDD ; ligne COSOMIS seule → nouvel id > MAX(cdd.id) ; via id_map
+    value_conflict: cdd_wins
+    remap_incoming_fk:
+    - db: mis
+      table: process_manager_administrativelevelwave
+      column: wave_id
+    - db: mis
+      table: process_manager_periodwave
+      column: wave_id
+  reports_villagecommittee:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  storeapp_storeapp:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  storeapp_storeproject:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_category_ida:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_component:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Component
+      modules:
+      - subprojects.models
+  subprojects_component_fundings:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_cycle:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Cycle
+      modules:
+      - subprojects.models
+  subprojects_cycle_administrative_levels:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Cycle_administrative_levels
+      modules:
+      - subprojects.models
+  subprojects_filecomment:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_financier:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Financier
+      modules:
+      - subprojects.models
+  subprojects_level:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_project:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Project
+      modules:
+      - subprojects.models
+  subprojects_project_administrative_levels:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Project_administrative_levels
+      modules:
+      - subprojects.models
+  subprojects_project_financiers:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Project_financiers
+      modules:
+      - subprojects.models
+  subprojects_step:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_step_next_steps:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subproject:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Subproject
+      modules:
+      - subprojects.models
+  subprojects_subproject_financiers:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subproject_list_of_beneficiary_villages:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subproject_list_of_villages_crossed_by_the_track_or_electrification:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subproject_priorities:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subproject_projects:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.Subproject_projects
+      modules:
+      - subprojects.models
+  subprojects_subprojectfile:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subprojectsector:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subprojectstep:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_subprojecttype:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  subprojects_typemain:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.TypeMain
+      modules:
+      - subprojects.models
+  subprojects_villagegoal:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.VillageGoal
+      modules:
+      - subprojects.models
+  subprojects_villagemeeting:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.VillageMeeting
+      modules:
+      - subprojects.models
+  subprojects_villageobstacle:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.VillageObstacle
+      modules:
+      - subprojects.models
+  subprojects_villagepriority:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.VillagePriority
+      modules:
+      - subprojects.models
+  subprojects_vulnerablegroup:
+    category: B
+    strategy: mirror
+    schema_owner: cosomis
+    data_source: cosomis
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cdd
+      remove_mirror_declaration:
+      - subprojects.VulnerableGroup
+      modules:
+      - subprojects.models
+  supportmaterial_lesson:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  supportmaterial_subject:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  supportmaterial_supportingmaterial:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
+  usermanager_usertoken:
+    category: C
+    strategy: mis_only
+    data_source: cosomis
+    id_policy: transport tel quel (ids inchangés)
+  usermanager_validationcode:
+    category: C
+    strategy: cdd_only
+    data_source: cdd
+    id_policy: transport tel quel (ids inchangés)
