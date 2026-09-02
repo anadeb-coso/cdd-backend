@@ -1,0 +1,167 @@
+# Rapport — Étape 7 : Remappage CouchDB
+
+- Généré : 2026-09-02T18:06:49
+- Mode : DRY-RUN
+- Bases scannées : 318 (préfixes ('facilitator_', 'administrative_levels', 'eadls', 'adb', 'process_design'))
+- Documents parcourus : 113990
+- id_map : tables dont l'ID change = {'auth_group': 13, 'auth_user': 57, 'auth_user_groups': 2}
+
+## Références à réécrire : **102628** (dans 47020 documents)
+- `auth_user:user_id` : 102628
+
+## Par base
+- `facilitator_1672056294` : 1774
+- `facilitator_1676650018` : 1616
+- `facilitator_1676912740` : 1516
+- `facilitator_1676595094` : 1483
+- `facilitator_1670845196` : 1480
+- `facilitator_1670861226` : 1468
+- `facilitator_1670843421` : 1460
+- `facilitator_1676651269` : 1404
+- `facilitator_1670848212` : 1398
+- `facilitator_1670842896` : 1391
+- `facilitator_1676595394` : 1383
+- `facilitator_1676912936` : 1336
+- `facilitator_1676592635` : 1330
+- `facilitator_1670865114` : 1325
+- `facilitator_1676651580` : 1318
+- `facilitator_1677107662` : 1308
+- `facilitator_1676594429` : 1263
+- `facilitator_1677008296` : 1250
+- `facilitator_1670846356` : 1241
+- `facilitator_1676843264` : 1232
+- `facilitator_1673012693` : 1223
+- `facilitator_1676590614` : 1215
+- `facilitator_1676913532` : 1214
+- `facilitator_1676913121` : 1212
+- `facilitator_1677008976` : 1202
+- `facilitator_1676651439` : 1164
+- `facilitator_1676593490` : 1149
+- `facilitator_1676914408` : 1147
+- `facilitator_1676649683` : 1144
+- `facilitator_1677008444` : 1143
+- `facilitator_1676592893` : 1141
+- `facilitator_1677009331` : 1129
+- `facilitator_1677106339` : 1115
+- `facilitator_1673014287` : 1111
+- `facilitator_1677106472` : 1109
+- `facilitator_1673013271` : 1106
+- `facilitator_1673013736` : 1090
+- `facilitator_1670845858` : 1086
+- `facilitator_1673013470` : 1083
+- `facilitator_1677008832` : 1080
+- `facilitator_1676715831` : 1058
+- `facilitator_1672082702` : 1053
+- `facilitator_1670847209` : 1014
+- `facilitator_1677436316` : 995
+- `facilitator_1676844142` : 986
+- `facilitator_1676844462` : 983
+- `facilitator_1676649880` : 973
+- `facilitator_1715075022` : 970
+- `facilitator_1677107211` : 968
+- `facilitator_1676843632` : 963
+- `facilitator_1677285978` : 957
+- `facilitator_1676843452` : 939
+- `facilitator_1676914261` : 900
+- `facilitator_1676650960` : 884
+- `facilitator_1676913289` : 864
+- `facilitator_1677009476` : 855
+- `facilitator_1673013111` : 853
+- `facilitator_1670848625` : 833
+- `facilitator_1676591832` : 833
+- `facilitator_1670846715` : 829
+- `facilitator_1670863086` : 824
+- `facilitator_1673012837` : 820
+- `facilitator_1670845432` : 811
+- `facilitator_1684486663` : 795
+- `facilitator_1670861617` : 792
+- `facilitator_1672058607` : 781
+- `facilitator_1676913686` : 780
+- `facilitator_1673012385` : 771
+- `facilitator_1670864874` : 762
+- `facilitator_1672058312` : 723
+- `facilitator_1677106644` : 715
+- `facilitator_1670846160` : 704
+- `facilitator_1673014134` : 698
+- `facilitator_1673013947` : 694
+- `facilitator_1677107503` : 684
+- `facilitator_1676843031` : 657
+- `facilitator_1725824209` : 651
+- `facilitator_1677009618` : 639
+- `facilitator_1677106925` : 624
+- `facilitator_1677107329` : 623
+- `facilitator_1670847954` : 570
+- `facilitator_1715074201` : 554
+- `facilitator_1677009195` : 543
+- `facilitator_1738740350` : 542
+- `facilitator_1677436818` : 526
+- `facilitator_1736175033` : 516
+- `facilitator_1677285839` : 509
+- `facilitator_1676843965` : 503
+- `facilitator_1725828557` : 498
+- `facilitator_1738740229` : 493
+- `facilitator_1738740011` : 479
+- `facilitator_1715074798` : 468
+- `facilitator_1676842875` : 464
+- `facilitator_1738739851` : 456
+- `facilitator_1731266610` : 455
+- `facilitator_1715073643` : 446
+- `facilitator_1718103953` : 437
+- `facilitator_1715074463` : 430
+- `facilitator_1738739610` : 419
+- `facilitator_1725826543` : 418
+- `facilitator_1715073966` : 417
+- `facilitator_1715074078` : 417
+- `facilitator_1725825016` : 415
+- `facilitator_1731266983` : 410
+- `facilitator_1725826124` : 395
+- `facilitator_1744193609` : 388
+- `facilitator_1677285660` : 385
+- `facilitator_1725824749` : 385
+- `facilitator_1725826688` : 383
+- `facilitator_1715073758` : 357
+- `facilitator_1738784341` : 332
+- `facilitator_1715073327` : 331
+- `facilitator_1731263851` : 274
+- `facilitator_1731262712` : 255
+- `facilitator_1731317022` : 254
+- `facilitator_1738740539` : 253
+- `facilitator_1750929436` : 248
+- `facilitator_1731264663` : 242
+- `facilitator_1731267494` : 241
+- `facilitator_1731083025` : 209
+- `facilitator_1750765737` : 169
+- `facilitator_1750929151` : 161
+- `facilitator_1731264797` : 158
+- `facilitator_1731266730` : 144
+- `facilitator_1731262852` : 137
+- `facilitator_1731261519` : 129
+- `facilitator_1731262471` : 129
+- `facilitator_1731264000` : 110
+- `facilitator_1731264373` : 110
+- `facilitator_1731261704` : 107
+- `facilitator_1750765481` : 106
+- `facilitator_1731267691` : 104
+- `facilitator_1731261960` : 98
+- `facilitator_1667421691` : 93
+- `facilitator_1677436650` : 72
+- `facilitator_1715074636` : 66
+- `facilitator_1731261842` : 55
+- `facilitator_1752061732` : 50
+- `facilitator_1731316918` : 44
+- `facilitator_1734377069` : 32
+- `facilitator_1686092092` : 28
+- `facilitator_1731185568` : 26
+- `facilitator_1731262258` : 24
+- `facilitator_1731186221` : 22
+- `facilitator_1731261354` : 20
+- `facilitator_1731265604` : 18
+- `facilitator_1731266385` : 2
+
+## ⚠ Caveat — ambiguïté d'origine
+Ces occurrences sont des **candidats**, pas des réécritures sûres. Le scan repère tout `user_id = N` où `N` figure dans `id_map[auth_user]` (57 utilisateurs COSOMIS dont l'ID a changé). Mais un `user_id = N` peut aussi désigner l'utilisateur **CDD** N, dont l'ID est inchangé : le réécrire corromprait la référence. Avant tout `--apply` :
+1. Confirmer que les bases `facilitator_*` scannées synchronisent avec le backend **COSOMIS** (donc `user_id` = ID COSOMIS).
+2. Sinon, restreindre le remap aux bases dont on sait l'origine, ou ajouter un discriminant dans les docs.
+
+## Suite
+Dry-run uniquement (décision). `--apply` exige `--i-understand-ambiguity` après levée du caveat ci-dessus.
