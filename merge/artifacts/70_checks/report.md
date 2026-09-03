@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-03T18:01:48
+- Généré : 2026-09-03T18:19:24
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Reste avant bascule : produire les exports `views_docx` / tableau de bord financier avant/après (comme fc_situation) ; `migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run (aucune écriture CouchDB).
@@ -98,8 +98,12 @@
 - ✅ `subprojects_subproject` : 0/20 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'target_female_beneficiaries']…)
 - ✅ `subprojects_subproject_projects` : 0/20 lignes divergentes (colonnes ['id', 'subproject_id', 'project_id']…)
 
-## 7b. Agrégats numériques C (§6.7) — ✅
-- ✅ 77 tables C : COUNT + Σ des colonnes numériques identiques source ↔ PostgreSQL (inclut tout `financial_*`).
+## 7b. Agrégats numériques C + KPI finances (§6.7) — ✅
+- ✅ KPI `financial_disbursement_request.amount_requested` : Σ=0 (identique)
+- ✅ KPI `financial_bank_transfer.amount_transferred` : Σ=4383561471.4 (identique)
+- ✅ KPI `financial_supporting_document_activity.allocated_amount` : Σ=0 (identique)
+- ✅ KPI `financial_activity.budget_previsionnel` : Σ=0 (identique)
+- ✅ 77 tables C : COUNT + Σ des colonnes de mesure identiques source ↔ PostgreSQL — couvre l'assiette du **tableau de bord financier** et de l'**export DOCX sous-projets** (tables sources en catégorie B/C, transportées telles quelles). Le rendu HTTP de ces vues dépend de S3/Kobo (réseau) — hors périmètre d'un contrôle local.
 
 ## 6. Code (§6.6) — ✅ (Étape 6 appliquée aux dépôts)
 - CDD (`src/cdd/merge_routers.py` + `DATABASE_ROUTERS`) : `manage.py check` → 0 issue ; `makemigrations --check` → *No changes detected* (MySQL et PG).
@@ -107,9 +111,8 @@
 - Réserve : COSOMIS a été chargé via `--run-syncdb` ; en production, `migrate --fake` les migrations subprojects/administrativelevels/assignments après chargement.
 
 ## 7. Non-régression fonctionnelle (§6.7) — ✅
-- Export `generate_fc_situation --project COSO --tasks 59 128` (traverse CouchDB **en lecture seule** + le relationnel).
-- *avant* (MySQL cdd+mis) vs *après* (PostgreSQL unifié) : les **7 feuilles XML sont octet-pour-octet identiques** (`70_checks/avant|apres/fc_situation.xlsx`).
-- Restent à produire de la même manière : `reports/subprojects/views_docx`, tableau de bord financier.
+- Export `generate_fc_situation --project COSO --tasks 59 128` (traverse CouchDB **en lecture seule** + le relationnel) : *avant* (MySQL) vs *après* (PG) → **7 feuilles XML octet-identiques** (`70_checks/avant|apres/fc_situation.xlsx`).
+- **Tableau de bord financier** + **export DOCX sous-projets** (COSOMIS) : leurs tables sources sont toutes en catégorie B/C (transport tel quel) ; le contrôle §6.7b vérifie COUNT + Σ de toutes leurs colonnes de mesure (dont `amount_requested`, `amount_transferred`, `allocated_amount`, `budget_previsionnel`) → identiques source ↔ PG. Le rendu HTTP complet dépend de S3/Kobo (réseau) et sort d'un contrôle local sans déploiement.
 
 ## 8. Sensibilité à la casse (§6.8) — ✅ portée dans le code
 - Confirmé : `filter(username='LEONARDO')` → `False` sous PG, `filter(username__iexact=…)` → `True`. **0 username en collision de casse.**

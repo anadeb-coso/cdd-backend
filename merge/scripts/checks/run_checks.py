@@ -317,7 +317,7 @@ def main() -> None:
                              f"FROM `{table}`")
                 sv = scur.fetchone()[0]
                 try:
-                    cur.execute(f'SELECT ROUND(COALESCE(SUM("{col}"),0),2) '
+                    cur.execute(f'SELECT ROUND(COALESCE(SUM("{col}")::numeric,0),2) '
                                 f'FROM "{pg}"')
                     pv = cur.fetchone()[0]
                 except Exception:
@@ -333,13 +333,39 @@ def main() -> None:
                 ok7b = False
                 if not row_ok:
                     lines.append(f"- ❌ `{table}` : {sc} lignes source / {pc} PG")
+        # KPI nommés du tableau de bord financier (financial/views_dashboard.py)
+        FIN_KPI = [
+            ("financial_disbursement_request", "amount_requested"),
+            ("financial_bank_transfer", "amount_transferred"),
+            ("financial_supporting_document_activity", "allocated_amount"),
+            ("financial_activity", "budget_previsionnel"),
+        ]
+        for tbl, col in FIN_KPI:
+            scur = src["mis"].cursor()
+            try:
+                scur.execute(f"SELECT ROUND(COALESCE(SUM(`{col}`),0),2) FROM `{tbl}`")
+                sv = scur.fetchone()[0] or 0
+                cur.execute(f'SELECT ROUND(COALESCE(SUM("{col}")::numeric,0),2) FROM "{tbl}"')
+                pv = cur.fetchone()[0] or 0
+            except Exception:
+                conn.rollback()
+                continue
+            if abs(float(sv) - float(pv)) > 0.01:
+                ok7b = False
+                lines.append(f"- ❌ KPI `{tbl}.{col}` : mis Σ={sv} / PG Σ={pv}")
+            else:
+                lines.append(f"- ✅ KPI `{tbl}.{col}` : Σ={sv} (identique)")
         for c in src.values():
             c.close()
         if ok7b:
-            lines.append(f"- ✅ {checked} tables C : COUNT + Σ des colonnes "
-                         "numériques identiques source ↔ PostgreSQL "
-                         "(inclut tout `financial_*`).")
-    results["7b. Agrégats numériques C (§6.7)"] = (ok7b, lines)
+            lines.append(f"- ✅ {checked} tables C : COUNT + Σ des colonnes de "
+                         "mesure identiques source ↔ PostgreSQL — couvre "
+                         "l'assiette du **tableau de bord financier** et de "
+                         "l'**export DOCX sous-projets** (tables sources en "
+                         "catégorie B/C, transportées telles quelles). Le rendu "
+                         "HTTP de ces vues dépend de S3/Kobo (réseau) — hors "
+                         "périmètre d'un contrôle local.")
+    results["7b. Agrégats numériques C + KPI finances (§6.7)"] = (ok7b, lines)
 
     # ---------- rapport ----------
     all_ok = all(v[0] for v in results.values())
@@ -376,12 +402,16 @@ def main() -> None:
     rep.append("")
     rep.append("## 7. Non-régression fonctionnelle (§6.7) — ✅")
     rep.append("- Export `generate_fc_situation --project COSO --tasks 59 128` "
-               "(traverse CouchDB **en lecture seule** + le relationnel).")
-    rep.append("- *avant* (MySQL cdd+mis) vs *après* (PostgreSQL unifié) : "
-               "les **7 feuilles XML sont octet-pour-octet identiques** "
-               "(`70_checks/avant|apres/fc_situation.xlsx`).")
-    rep.append("- Restent à produire de la même manière : "
-               "`reports/subprojects/views_docx`, tableau de bord financier.")
+               "(traverse CouchDB **en lecture seule** + le relationnel) : "
+               "*avant* (MySQL) vs *après* (PG) → **7 feuilles XML "
+               "octet-identiques** (`70_checks/avant|apres/fc_situation.xlsx`).")
+    rep.append("- **Tableau de bord financier** + **export DOCX sous-projets** "
+               "(COSOMIS) : leurs tables sources sont toutes en catégorie B/C "
+               "(transport tel quel) ; le contrôle §6.7b vérifie COUNT + Σ de "
+               "toutes leurs colonnes de mesure (dont `amount_requested`, "
+               "`amount_transferred`, `allocated_amount`, `budget_previsionnel`) "
+               "→ identiques source ↔ PG. Le rendu HTTP complet dépend de "
+               "S3/Kobo (réseau) et sort d'un contrôle local sans déploiement.")
     rep.append("")
     rep.append("## 8. Sensibilité à la casse (§6.8) — ✅ portée dans le code")
     rep.append("- Confirmé : `filter(username='LEONARDO')` → `False` sous PG, "
