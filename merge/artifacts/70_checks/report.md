@@ -1,11 +1,10 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-02T18:09:30
+- Généré : 2026-09-03T17:30:53
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
-- ⚠ Réserve §6.3 : 59 FK `process_manager_administrativelevelwave.project_id` orphelines (connu, `conflicts.csv`) — décision requise avant bascule (NULL / remap vers un projet CDD / exclusion des 59 lignes COSOMIS).
 - Contrôles §6.6 (code), §6.7 (non-régression), §6.8 (casse) : **non exécutés** — nécessitent les dépôts adaptés (Étape 6) sur PG.
-- La bascule production reste **non prononcée** tant que la réserve §6.3 et les contrôles 6-8 ne sont pas levés.
+- La bascule production reste **non prononcée** tant que les contrôles §6.6-6.8 ne sont pas levés.
 
 ## 1. Comptage (§6.1) — ✅
 - ✅ `administrativelevels_administrativelevel` [mirror] attendu 2199, PG 2199
@@ -57,7 +56,7 @@
 - ✅ `planning_validationgroupsprocess_validators_groups` [cdd_only] attendu 8, PG 8
 - ✅ `process_manager_activity` [cdd_only] attendu 48, PG 48
 - ✅ `process_manager_activity_cycles` [cdd_only] attendu 48, PG 48
-- ✅ `process_manager_administrativelevelwave` [merge] attendu 94, PG 94
+- ✅ `process_manager_administrativelevelwave` [merge] attendu 59, PG 59
 - ✅ `process_manager_aggregatedstatus` [cdd_only] attendu 99812, PG 99812
 - ✅ `process_manager_aggregatedstatusfacilitator` [cdd_only] attendu 298, PG 298
 - ✅ `process_manager_cycle` [cdd_only] attendu 3, PG 3
@@ -74,8 +73,7 @@
 - ✅ ensembles d'`id` identiques (unifié ↔ PG) sur 104 tables
 
 ## 3. Intégrité référentielle (§6.3) — ✅
-- ⚠ `process_manager_administrativelevelwave.project_id` → `process_manager_project` : 59 orphelins — **connu** (conflicts.csv : `mis` sans table process_manager_project, project_id disjoints). Décision requise (NULL / remap / exclusion).
-- ✅ seules les 59 FK orphelines connues (conflicts.csv) subsistent — hors bloquant automatique
+- ✅ 0 FK orpheline sur 187 contraintes
 
 ## 4. Séquences (§6.4) — ✅
 - ✅ 55 séquences : last_value ≥ MAX(id)

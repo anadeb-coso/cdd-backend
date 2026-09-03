@@ -146,6 +146,12 @@ def main() -> None:
             snap_cols[s["table"]].add(s["column"])
     umap = idmap.get("auth_user", {})
 
+    # concepts inter-tables (Project…) : (table, column) -> table CDD survivante
+    cross_remap = {}
+    for c in (plan.get("cross_concept") or {}).values():
+        for rc in c.get("remap_columns", []):
+            cross_remap[(rc["table"], rc["column"])] = c["cdd_table"]
+
     unified_schema: dict[str, list[str]] = {}
     row_counts: dict[str, dict] = {}
     written_tables: list[str] = []
@@ -170,6 +176,9 @@ def main() -> None:
             ref = fk.get(("mis", table, c))
             if ref in A_TABLES and row[i] not in (NULL, ""):
                 row[i] = idmap.get(ref, {}).get(row[i], row[i])
+            cx = cross_remap.get((table, c))
+            if cx and row[i] not in (NULL, ""):
+                row[i] = idmap.get(cx, {}).get(row[i], row[i])
             if c in snap_cols.get(table, ()):
                 row[i] = remap_user_snapshot(row[i], umap)
         return row
@@ -194,7 +203,8 @@ def main() -> None:
             header, rows = read_rows("mis", table)
             # remap FK -> tables A + snapshots, sur ces lignes d'origine mis
             need = any(fk.get(("mis", table, c)) in A_TABLES for c in header) \
-                or table in snap_cols
+                or table in snap_cols \
+                or any((table, c) in cross_remap for c in header)
             if need:
                 rows = [remap_row("mis", table, header, r, is_A_self=False)
                         for r in rows]

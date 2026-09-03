@@ -269,16 +269,15 @@ def main() -> None:
            f"- Généré : {datetime.now().isoformat(timespec='seconds')}",
            f"- Base : cdd_cosomis_unified (PostgreSQL 18)",
            f"- Contrôles 1-5 automatisés : "
-           f"{'✅ tous passés' if all_ok else '❌ échec'}",
-           "- ⚠ Réserve §6.3 : 59 FK `process_manager_administrativelevelwave."
-           "project_id` orphelines (connu, `conflicts.csv`) — décision requise "
-           "avant bascule (NULL / remap vers un projet CDD / exclusion des 59 "
-           "lignes COSOMIS).",
-           "- Contrôles §6.6 (code), §6.7 (non-régression), §6.8 (casse) : "
-           "**non exécutés** — nécessitent les dépôts adaptés (Étape 6) sur PG.",
-           "- La bascule production reste **non prononcée** tant que la réserve "
-           "§6.3 et les contrôles 6-8 ne sont pas levés.",
-           ""]
+           f"{'✅ tous passés' if all_ok else '❌ échec'}"]
+    if orphan_total:
+        rep.append(f"- ⚠ {orphan_total} FK orphelines connues subsistent "
+                   "(voir §6.3) — décision requise avant bascule.")
+    rep += ["- Contrôles §6.6 (code), §6.7 (non-régression), §6.8 (casse) : "
+            "**non exécutés** — nécessitent les dépôts adaptés (Étape 6) sur PG.",
+            "- La bascule production reste **non prononcée** tant que les "
+            "contrôles §6.6-6.8 ne sont pas levés.",
+            ""]
     for name, (ok, ls) in results.items():
         rep.append(f"## {name} — {'✅' if ok else '❌'}")
         rep.extend(ls[:60])

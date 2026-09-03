@@ -101,6 +101,49 @@ def main() -> None:
         "auth_user_user_permissions": ["user_id", "permission_id"],
     }
 
+    # ---- 0. concepts partagés inter-tables (Project, Cycle) — D'ABORD --
+    #     pour que PROJ_MAP serve à résoudre project_id ailleurs.
+    PROJ_MAP: dict[str, str] = {}
+    for concept, spec in (plan.get("cross_concept") or {}).items():
+        ct, dt = spec["cosomis_table"], spec["cdd_table"]
+        ckey = spec["natural_key"]
+        try:
+            d_idx, d_rows = rows("cdd", dt)
+            cc_idx, cc_rows = rows("mis", ct)
+        except FileNotFoundError:
+            continue
+
+        def _kt(row, idx, is_cdd):
+            parts = []
+            for k in ckey:
+                v = row[idx[k]]
+                if k == "project_id" and not is_cdd:
+                    v = PROJ_MAP.get(v, v)
+                parts.append(v)
+            return tuple(parts)
+
+        d_index = {_kt(r, d_idx, True): r[d_idx["id"]] for r in d_rows}
+        m0 = n0 = 0
+        max_cdd = max((int(r[d_idx["id"]]) for r in d_rows), default=0)
+        alloc = 0
+        for r in sorted(cc_rows, key=lambda x: int(x[cc_idx["id"]])):
+            old = r[cc_idx["id"]]
+            k = _kt(r, cc_idx, False)
+            if k in d_index:
+                new = d_index[k]
+                id_map_rows.append((dt, "cosomis", old, new, "matched"))
+                m0 += 1
+            else:
+                alloc += 1
+                new = str(max_cdd + alloc)
+                id_map_rows.append((dt, "cosomis", old, new, "new_allocation"))
+                n0 += 1
+            if dt == "process_manager_project":
+                PROJ_MAP[old] = new
+        summary[f"{concept} ({ct}→{dt})"] = {
+            "cdd": len(d_rows), "mis": len(cc_rows),
+            "matched": m0, "new_allocation": n0}
+
     # ---- 1. tables A à clé naturelle ---------------------------------
     for table, (key, resolve, crosscheck) in NATKEY.items():
         c_idx, c_rows, c_index = natural_key_index("cdd", table, key, resolve)
@@ -118,6 +161,8 @@ def main() -> None:
                 if k in maps:
                     fkcol, mm = maps[k]
                     parts.append(mm.get(r[m_idx[fkcol]], "<?>"))
+                elif k == "project_id":
+                    parts.append(PROJ_MAP.get(r[m_idx[k]], r[m_idx[k]]))
                 else:
                     parts.append(r[m_idx[k]])
             kt = tuple(parts)
@@ -148,12 +193,12 @@ def main() -> None:
                 new_alloc += 1
         summary[table] = {"cdd": len(c_rows), "mis": len(m_rows),
                           "matched": matched, "new_allocation": new_alloc}
-        if table == "process_manager_administrativelevelwave" and matched == 0:
+        if table == "process_manager_administrativelevelwave":
             conflict_rows.append((table, "-", "-", "rapprochement",
-                                  "0 appariement : `mis` n'a pas de table "
-                                  "process_manager_project, project_id disjoints "
-                                  "(cdd={4} vs mis={1,3}). Toutes les lignes mis "
-                                  "→ new_allocation. À confirmer."))
+                                  f"{matched} appariées / {new_alloc} nouvelles "
+                                  "après résolution du concept Project "
+                                  "(subprojects_project → process_manager_project "
+                                  "par name)."))
 
     # ---- 2. tables de liaison A ------------------------------------
     # id_map des cibles déjà construit

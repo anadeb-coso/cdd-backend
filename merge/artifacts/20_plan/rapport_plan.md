@@ -1,6 +1,6 @@
 # Rapport — Étape 2 : Plan de fusion
 
-- Généré : 2026-09-02T17:43:27
+- Généré : 2026-09-03T17:27:28
 - Statut : **OK**
 - Plan : `merge/fusion_plan.yml` (117 tables)
 
@@ -79,6 +79,8 @@
 - 46 colonne(s) sans remap : `users_involved` (audit libre) et les listes d'ID adl (catégorie B, ID inchangés).
 - Détail complet dans `fusion_plan.yml` → `soft_remap`.
 
+## Alertes
+- Concepts inter-tables : Project, Cycle (voir cross_concept dans le YAML)
 
 ## Suite
 Plan **OK** → Étape 3 : `merge/scripts/03_build_id_map.py`.

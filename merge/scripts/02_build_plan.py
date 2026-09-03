@@ -50,6 +50,31 @@ NATURAL_KEYS: dict[str, dict] = {
         "resolve": {"wave.number": ("wave_id", "process_manager_wave", "number")},
     },
 }
+# Concepts partagés portés par des tables de NOMS DIFFÉRENTS dans les deux
+# projets (§0, §4.5). Catégorie A « inter-tables » : on apparie par clé
+# naturelle, le modèle CDD survit, et on remappe les colonnes COSOMIS qui
+# pointent l'espace d'ID COSOMIS vers l'espace CDD.
+CROSS_CONCEPT = {
+    "Project": {
+        "cosomis_table": "subprojects_project",
+        "cdd_table": "process_manager_project",   # survivant
+        "key": ["name"],
+        # colonnes de lignes d'origine COSOMIS à réécrire vers l'ID CDD :
+        # uniquement celles dont la FK (schéma survivant) vise cdd_table.
+        "remap_columns": [
+            ("mis", "process_manager_administrativelevelwave", "project_id"),
+        ],
+    },
+    # Cycle : clés naturelles définies mais espaces d'ID disjoints et AUCUNE
+    # FK croisée en base → aucun remap nécessaire pour l'instant.
+    "Cycle": {
+        "cosomis_table": "subprojects_cycle",
+        "cdd_table": "process_manager_cycle",
+        "key": ["project_id", "order"],
+        "remap_columns": [],
+    },
+}
+
 # Tables A « techniques » (M2M / jetons) : pas de clé naturelle, PK id
 # transportée (§4.4), FK remappées, dédoublonnage sur le couple de FK.
 LINK_TABLES_A = {
@@ -327,6 +352,21 @@ def main() -> None:
                     "action": "aucun_remap (cat. B, ID inchangés)",
                     "confirm": False})
 
+    # --- concepts partagés inter-tables (Project, Cycle) ------------------
+    cross_concept = {}
+    for concept, spec in CROSS_CONCEPT.items():
+        cross_concept[concept] = {
+            "concept": concept,
+            "cosomis_table": spec["cosomis_table"],
+            "cdd_table": spec["cdd_table"],
+            "survivor": spec["cdd_table"],
+            "natural_key": spec["key"],
+            "remap_columns": [{"db": d, "table": t, "column": c}
+                              for (d, t, c) in spec["remap_columns"]],
+        }
+    report.append(f"Concepts inter-tables : {', '.join(cross_concept)} "
+                  "(voir cross_concept dans le YAML)")
+
     plan = {
         "meta": {
             "generated_by": "merge/scripts/02_build_plan.py",
@@ -355,6 +395,7 @@ def main() -> None:
         },
         "categories_count": dict(Counter(v["category"].split(" ")[0]
                                          for v in tables_plan.values())),
+        "cross_concept": cross_concept,
         "soft_remap": soft_remap,
         "tables": tables_plan,
     }

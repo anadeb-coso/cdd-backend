@@ -3,7 +3,7 @@
 
 meta:
   generated_by: merge/scripts/02_build_plan.py
-  generated_at: '2026-09-02T17:43:27'
+  generated_at: '2026-09-03T17:27:28'
   pilote: src/CLAUDE.md §4-5
   source_databases:
     cdd:
@@ -32,6 +32,27 @@ categories_count:
   reconstruite: 8
   orpheline: 4
   C: 77
+cross_concept:
+  Project:
+    concept: Project
+    cosomis_table: subprojects_project
+    cdd_table: process_manager_project
+    survivor: process_manager_project
+    natural_key:
+    - name
+    remap_columns:
+    - db: mis
+      table: process_manager_administrativelevelwave
+      column: project_id
+  Cycle:
+    concept: Cycle
+    cosomis_table: subprojects_cycle
+    cdd_table: process_manager_cycle
+    survivor: process_manager_cycle
+    natural_key:
+    - project_id
+    - order
+    remap_columns: []
 soft_remap:
 - db: mis
   table: usermanager_usertoken
