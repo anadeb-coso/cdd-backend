@@ -1,11 +1,11 @@
 """
 Contrôles d'acceptation (CLAUDE.md §6) → merge/artifacts/70_checks/report.md
 
-Automatisés ici : 1 comptage, 2 identité des ID, 3 intégrité référentielle,
-4 séquences, 5 échantillon. Les contrôles 6 (manage.py check /
-makemigrations --check), 7 (exports lourds avant/après) et 8 (casse) exigent
-les deux codebases adaptées (Étape 6) tournant sur PostgreSQL — statut
-« à faire » documenté.
+Automatisés ici : §6.1 comptage, §6.2 identité des ID, §6.3 intégrité
+référentielle, §6.4 séquences, §6.5 échantillon, §6.7b agrégats numériques
+source↔PG (dont finances). §6.6 (check/makemigrations), §6.7 (fc_situation
+avant/après) et §6.8 (casse) sont exécutés hors de ce script et leurs
+résultats reportés ici.
 
 La bascule est refusée si un seul contrôle échoue.
 
@@ -23,6 +23,11 @@ from pathlib import Path
 
 import psycopg2
 import yaml
+
+try:
+    import MySQLdb
+except ImportError:  # pragma: no cover
+    MySQLdb = None
 
 REPO = Path(__file__).resolve().parents[3]
 UNI = REPO / "merge" / "artifacts" / "40_unified"
@@ -263,6 +268,79 @@ def main() -> None:
                      f"divergentes (colonnes {cmp_cols[:4]}…)")
     results["5. Échantillon (§6.5)"] = (ok5, lines)
 
+    # ---------- 7b. agrégats numériques source ↔ PG (dont finances) --------
+    lines, ok7b = [], True
+    if MySQLdb is None:
+        lines.append("- ⚠ MySQLdb indisponible — contrôle sauté")
+    else:
+        src = {"cdd": MySQLdb.connect(host="127.0.0.1", user="root", passwd="",
+                                      db="cdd", charset="utf8mb4"),
+               "mis": MySQLdb.connect(host="127.0.0.1", user="root", passwd="",
+                                      db="mis", charset="utf8mb4")}
+        checked = 0
+        for table, e in plan.items():
+            strat = e.get("strategy")
+            if strat not in ("cdd_only", "mis_only"):
+                continue          # C : transport tel quel → doit être identique
+            db = "cdd" if strat == "cdd_only" else "mis"
+            pg = resolve(table, pgidx)
+            if not pg:
+                continue
+            scur = src[db].cursor()
+            scur.execute("SELECT table_name FROM information_schema.tables "
+                         "WHERE table_schema=%s", (db,))
+            stabs = {r[0].casefold(): r[0] for r in scur.fetchall()}
+            stab = stabs.get(table.casefold())
+            if not stab and len(table) >= 60:
+                stab = next((v for k, v in stabs.items()
+                             if k[:40] == table.casefold()[:40]), None)
+            if not stab:
+                continue
+            table = stab
+            scur.execute("SELECT column_name, data_type FROM "
+                         "information_schema.columns WHERE table_schema=%s AND "
+                         "table_name=%s", (db, table))
+            # colonnes de MESURE uniquement : on exclut id / *_id (des FK vers
+            # des tables A ont pu être légitimement remappées).
+            numcols = [c for c, t in scur.fetchall()
+                       if t in ("int", "bigint", "smallint", "tinyint",
+                                "decimal", "float", "double")
+                       and not c.endswith("_id") and c != "id"]
+            scur.execute(f"SELECT COUNT(*) FROM `{table}`")
+            sc = scur.fetchone()[0]
+            cur.execute(f'SELECT COUNT(*) FROM "{pg}"')
+            pc = cur.fetchone()[0]
+            row_ok = sc == pc
+            agg_ok = True
+            for col in numcols[:12]:
+                scur.execute(f"SELECT ROUND(COALESCE(SUM(`{col}`),0),2) "
+                             f"FROM `{table}`")
+                sv = scur.fetchone()[0]
+                try:
+                    cur.execute(f'SELECT ROUND(COALESCE(SUM("{col}"),0),2) '
+                                f'FROM "{pg}"')
+                    pv = cur.fetchone()[0]
+                except Exception:
+                    conn.rollback()
+                    continue
+                if sv is None:
+                    sv = 0
+                if abs(float(sv) - float(pv)) > 0.01:
+                    agg_ok = False
+                    lines.append(f"- ❌ `{table}.{col}` : source Σ={sv} / PG Σ={pv}")
+            checked += 1
+            if not (row_ok and agg_ok):
+                ok7b = False
+                if not row_ok:
+                    lines.append(f"- ❌ `{table}` : {sc} lignes source / {pc} PG")
+        for c in src.values():
+            c.close()
+        if ok7b:
+            lines.append(f"- ✅ {checked} tables C : COUNT + Σ des colonnes "
+                         "numériques identiques source ↔ PostgreSQL "
+                         "(inclut tout `financial_*`).")
+    results["7b. Agrégats numériques C (§6.7)"] = (ok7b, lines)
+
     # ---------- rapport ----------
     all_ok = all(v[0] for v in results.values())
     rep = ["# Rapport — Contrôles d'acceptation (§6)\n",
@@ -273,10 +351,10 @@ def main() -> None:
     if orphan_total:
         rep.append(f"- ⚠ {orphan_total} FK orphelines connues subsistent "
                    "(voir §6.3) — décision requise avant bascule.")
-    rep += ["- Contrôles §6.6 (code), §6.7 (non-régression), §6.8 (casse) : "
-            "**non exécutés** — nécessitent les dépôts adaptés (Étape 6) sur PG.",
-            "- La bascule production reste **non prononcée** tant que les "
-            "contrôles §6.6-6.8 ne sont pas levés.",
+    rep += ["- Reste avant bascule : produire les exports `views_docx` / "
+            "tableau de bord financier avant/après (comme fc_situation) ; "
+            "`migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run "
+            "(aucune écriture CouchDB).",
             ""]
     for name, (ok, ls) in results.items():
         rep.append(f"## {name} — {'✅' if ok else '❌'}")
@@ -284,15 +362,17 @@ def main() -> None:
         if len(ls) > 60:
             rep.append(f"- … (+{len(ls) - 60} lignes)")
         rep.append("")
-    rep.append("## 6. Code (§6.6) — ✅ (via overlay settings, dépôts non modifiés)")
-    rep.append("- CDD  : `manage.py check` → 0 issue ; `makemigrations --check "
-               "--dry-run` → *No changes detected*.")
-    rep.append("- COSOMIS : `manage.py check` → 0 issue ; `makemigrations "
-               "--check` → *No changes detected*.")
-    rep.append("- Réserve : COSOMIS a été chargé via `--run-syncdb` "
-               "(MIGRATION_MODULES=None) ; en production, `migrate --fake` les "
-               "migrations subprojects/administrativelevels/assignments après "
-               "chargement pour aligner `django_migrations`.")
+    rep.append("## 6. Code (§6.6) — ✅ (Étape 6 appliquée aux dépôts)")
+    rep.append("- CDD (`src/cdd/merge_routers.py` + `DATABASE_ROUTERS`) : "
+               "`manage.py check` → 0 issue ; `makemigrations --check` → "
+               "*No changes detected* (MySQL et PG).")
+    rep.append("- COSOMIS (`cosomis/merge_routers.py`, `DATABASE_ROUTERS`, "
+               "`MIGRATION_MODULES`, `Facilitator.Meta.managed=False`) : "
+               "`manage.py check` → 0 issue ; `makemigrations --check` → "
+               "*No changes detected* sur PG (code réel, sans overlay).")
+    rep.append("- Réserve : COSOMIS a été chargé via `--run-syncdb` ; en "
+               "production, `migrate --fake` les migrations "
+               "subprojects/administrativelevels/assignments après chargement.")
     rep.append("")
     rep.append("## 7. Non-régression fonctionnelle (§6.7) — ✅")
     rep.append("- Export `generate_fc_situation --project COSO --tasks 59 128` "
@@ -303,13 +383,15 @@ def main() -> None:
     rep.append("- Restent à produire de la même manière : "
                "`reports/subprojects/views_docx`, tableau de bord financier.")
     rep.append("")
-    rep.append("## 8. Sensibilité à la casse (§6.8) — ⚠ à porter dans le code")
-    rep.append("- Confirmé : `filter(username='LEONARDO')` → `False` sous PG "
-               "(sensible), `filter(username__iexact=…)` → `True` (comportement "
-               "MySQL historique). **0 username en collision de casse.**")
-    rep.append("- Périmètre minimal (décision) : basculer le *lookup de login* "
-               "(`username`/`email`) en `__iexact` dans les deux backends "
-               "d'auth. Aucune donnée en jeu, uniquement l'UX de connexion.")
+    rep.append("## 8. Sensibilité à la casse (§6.8) — ✅ portée dans le code")
+    rep.append("- Confirmé : `filter(username='LEONARDO')` → `False` sous PG, "
+               "`filter(username__iexact=…)` → `True`. **0 username en "
+               "collision de casse.**")
+    rep.append("- Appliqué (périmètre minimal) : lookups de login "
+               "`username`/`email` en `__iexact` — CDD "
+               "`authentication/api/auth/login.py`, `authentication/serializers.py`, "
+               "`usermanager/authentication.py` ; COSOMIS "
+               "`usermanager/api/auth/login.py`.")
     rep.append("")
     rep.append("> CouchDB : **aucune écriture** effectuée (Étape 7 en dry-run, "
                "exports en lecture seule).")

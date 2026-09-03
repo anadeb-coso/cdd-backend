@@ -177,14 +177,19 @@ def main() -> None:
 
     # --- dead models ---
     dead = ["# Modèles orphelins — aucune table physique (Étape 6)\n",
-            "Déclarés dans le code COSOMIS, aucune table nulle part. "
-            "À retirer (ou `managed=False` + jamais migrés).\n"]
+            "Déclarés dans le code COSOMIS, aucune table nulle part.\n",
+            "⚠ Vérifié : `authentication.User` (`class User(AbstractUser)`, "
+            "importé `as GrmUser`) et `authentication.GovernmentWorker` "
+            "relèvent du **domaine GRM** (`grm_client`, `grm_objects_call`) — "
+            "**hors périmètre §3, NE PAS y toucher**. Leur table vit dans la "
+            "base `grm`, jamais fusionnée. Aucune action Étape 6.\n"]
     for t, e in plan["tables"].items():
         if e.get("category", "").startswith("orpheline"):
             mods = sorted({m["model_module"]
                            for m in sinv["projects"]["cosomis"]["models"]
                            if m["db_table"] == t})
-            dead.append(f"- `{t}` — modules : {', '.join(mods) or '?'}")
+            dead.append(f"- `{t}` — modules : {', '.join(mods) or '?'} — GRM, "
+                        "laissé tel quel")
     (OUT / "dead_models.md").write_text("\n".join(dead) + "\n", "utf-8")
 
     # --- rapport ---
@@ -201,8 +206,8 @@ def main() -> None:
            "3. `mirror_removal.md` : passer les modèles miroirs en "
            "`Meta.managed = False` (18 côté CDD, `authentication_facilitator` "
            "côté COSOMIS).",
-           "4. `dead_models.md` : retirer les modèles orphelins COSOMIS "
-           "(`authentication.User`, `.GovernmentWorker` et leurs M2M).",
+           "4. `dead_models.md` : `authentication.User` / `.GovernmentWorker` "
+           "= domaine GRM (§3) — laissés tels quels.",
            "5. Sensibilité à la casse : basculer `username` / `email` "
            "d'authentification en `__iexact` (périmètre minimal, décision).",
            "6. Ne PAS toucher `grm` / `grm_objects_call` (§3).",
