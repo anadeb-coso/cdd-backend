@@ -130,6 +130,12 @@ DATABASES = {
     EXTERNAL_GRM_DATABASE_NAME: env.db('LEGACY_GRM_DATABASE_URL')
 }
 
+# Fusion cdd + cosomis (branche merge/cdd-cosomis) : une fois `.env` pointant
+# DATABASE_URL et LEGACY_DATABASE_URL sur la même base PostgreSQL unifiée,
+# ce routeur empêche CDD de migrer les apps possédées par COSOMIS
+# (subprojects, administrativelevels, assignments). `grm` reste externe (§3).
+DATABASE_ROUTERS = ['cdd.merge_routers.CddMergeRouter']
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
