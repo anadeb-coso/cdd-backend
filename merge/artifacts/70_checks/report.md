@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-03T18:19:24
+- Généré : 2026-09-03T18:26:29
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Reste avant bascule : produire les exports `views_docx` / tableau de bord financier avant/après (comme fc_situation) ; `migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run (aucune écriture CouchDB).

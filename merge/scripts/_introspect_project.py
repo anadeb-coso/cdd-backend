@@ -33,6 +33,11 @@ def main():
 
     django.setup()
 
+    # L'inventaire doit voir TOUTES les migrations sur disque, indépendamment
+    # d'un éventuel MIGRATION_MODULES ajouté au settings pour le déploiement
+    # unifié (Étape 6) — sinon la qualification §4.1 devient non idempotente.
+    settings.MIGRATION_MODULES = {}
+
     out = {
         "project": project_label,
         "project_root": proj_root,

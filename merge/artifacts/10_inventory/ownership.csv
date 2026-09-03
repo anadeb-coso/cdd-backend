@@ -9,7 +9,7 @@ auth_permission,oui,oui,244,232,auth/0001_initial,auth/0001_initial,True,True,,r
 auth_user,oui,oui,82,79,auth/0001_initial,auth/0001_initial,True,True,,A
 auth_user_groups,oui,oui,89,80,,,True,True,,A
 auth_user_user_permissions,oui,oui,0,0,,,True,True,,A (vide des deux côtés — rien à fusionner)
-authentication_facilitator,oui,non,241,,authentication/0001_initial,,True,True,,"B (miroir, propriétaire=cdd)"
+authentication_facilitator,oui,non,241,,authentication/0001_initial,,True,False,,"B (miroir, propriétaire=cdd)"
 authentication_governmentworker,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
 authentication_user,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
 authentication_user_groups,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"

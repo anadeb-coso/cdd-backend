@@ -17,7 +17,7 @@
 | CVD | administrativelevels | `administrativelevels_cvd` | administrativelevels | `administrativelevels_cvd` | True | True | — | oui |
 | Cycle | subprojects | `subprojects_cycle` | subprojects | `subprojects_cycle` | True | True | — | oui |
 | Cycle_administrative_levels | subprojects | `subprojects_cycle_administrative_levels` | subprojects | `subprojects_cycle_administrative_levels` | True | True | — | — |
-| Facilitator | authentication | `authentication_facilitator` | authentication | `authentication_facilitator` | True | True | oui | — |
+| Facilitator | authentication | `authentication_facilitator` | authentication | `authentication_facilitator` | True | False | oui | — |
 | Financier | subprojects | `subprojects_financier` | subprojects | `subprojects_financier` | True | True | — | oui |
 | GeographicalUnit | administrativelevels | `administrativelevels_geographicalunit` | administrativelevels | `administrativelevels_geographicalunit` | True | True | — | — |
 | Group | auth | `auth_group` | auth | `auth_group` | True | True | oui | oui |
@@ -263,7 +263,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
 
 
 ### projet cdd
-- `.using(` : 190 occurrence(s)
+- `.using(` : 191 occurrence(s)
   - grm_client.py:145
   - grm_client.py:174
   - grm_client.py:178
@@ -290,6 +290,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - cdd/call_objects_from_other_db.py:14
   - cdd/call_objects_from_other_db.py:17
   - cdd/call_objects_from_other_db.py:20
+  - cdd/merge_routers.py:5
   - cdd/utils.py:17
   - dashboard/tasks.py:132
   - dashboard/utils.py:147
@@ -303,8 +304,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - dashboard/utils.py:2675
   - dashboard/utils.py:2692
   - dashboard/utils.py:2871
-  - dashboard/utils.py:2888
-  - … (+150)
+  - … (+151)
 - `mis_objects_call` : 229 occurrence(s)
   - authentication/functions.py:5
   - authentication/functions.py:10
@@ -375,7 +375,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - usermanager/api/views_change_password.py:24
 
 ### projet cosomis
-- `.using(` : 17 occurrence(s)
+- `.using(` : 18 occurrence(s)
   - administrativelevels/models.py:135
   - administrativelevels/models.py:141
   - administrativelevels/views_components.py:104
@@ -383,6 +383,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - assignments/functions.py:32
   - assignments/functions.py:40
   - assignments/models.py:28
+  - authentication/models.py:40
   - cosomis/call_objects_from_other_db.py:11
   - cosomis/call_objects_from_other_db.py:14
   - cosomis/call_objects_from_other_db.py:17
@@ -392,7 +393,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - cosomis/utils.py:109
   - subprojects/export/views.py:259
   - usermanager/api/auth/login.py:40
-  - usermanager/api/auth/login.py:61
+  - usermanager/api/auth/login.py:63
 - `mis_objects_call` : 0 occurrence(s)
 - `cdd_objects_call` : 4 occurrence(s)
   - cosomis/call_objects_from_other_db.py:27

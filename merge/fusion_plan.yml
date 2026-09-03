@@ -3,7 +3,7 @@
 
 meta:
   generated_by: merge/scripts/02_build_plan.py
-  generated_at: '2026-09-03T17:27:28'
+  generated_at: '2026-09-03T18:24:54'
   pilote: src/CLAUDE.md §4-5
   source_databases:
     cdd:

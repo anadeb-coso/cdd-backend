@@ -4,8 +4,8 @@
 - Projet COSOMIS : `D:\COSO\PROJECTS\MIS\cosomis\cosomis` (Django 4.2.30, 77 modèles)
 - Alias base CDD : ['default', 'mis', 'grm']
 - Alias base COSOMIS : ['default', 'cdd']
-- Routeurs CDD : aucun
-- Routeurs COSOMIS : aucun
+- Routeurs CDD : ["'cdd.merge_routers.CddMergeRouter'"]
+- Routeurs COSOMIS : ["'cosomis.merge_routers.CosomisMergeRouter'"]
 
 ## Chiffres clés
 - Modèles de même `object_name` : **38**
