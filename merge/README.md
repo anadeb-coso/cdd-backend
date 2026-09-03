@@ -46,9 +46,25 @@ Bases **locales** (MariaDB 10.4.32) : `cdd` (57 tables), `mis` (72 tables).
 | 3 — id_map | **faite** | `merge/id_map.csv` (255 l.), `merge/conflicts.csv` (185 l.), `artifacts/30_idmap/` |
 | 4 — Jeu unifié | **faite** | `artifacts/40_unified/` — 105 CSV + `dump_mysql_unifie.sql` (non versionnés), `rapport_unifie.md` |
 | 5 — PostgreSQL | **faite** — 105/105 tables, 199 599 lignes | base `cdd_cosomis_unified` (PG 18) ; `05_load_postgres.py`, `artifacts/50_postgres/rapport_postgres.md` |
-| 6 — Adaptation code | **artefacts générés** + §6.6 vérifié via overlay (dépôts non modifiés) | `artifacts/60_code/` |
+| 6 — Adaptation code | **appliquée aux 2 dépôts** (branche `merge/cdd-cosomis` de chaque) | `src/cdd/merge_routers.py` ; `cosomis/cosomis/merge_routers.py` + settings + `Facilitator.managed=False` |
 | 7 — Remap CouchDB | **dry-run fait** ; `--apply` refusé (décision « aucune écriture CouchDB ») | `artifacts/70_checks/rapport_remap_couchdb.md` |
-| Contrôles §6 | **§6.1-6.7 : OK** ; §6.8 = portage code | `artifacts/70_checks/report.md` |
+| Contrôles §6 | **§6.1-6.8 : ✅** | `artifacts/70_checks/report.md` |
+
+### Étape 6 — appliquée
+
+**CDD** (`src/`, branche `merge/cdd-cosomis`) :
+- `src/cdd/merge_routers.py` + `DATABASE_ROUTERS` dans `settings.py`.
+- Aucun changement de modèle (miroirs déjà cohérents ; `makemigrations --check` propre MySQL et PG).
+- `__iexact` sur les lookups de login (`authentication/api/auth/login.py`, `authentication/serializers.py`, `usermanager/authentication.py`).
+
+**COSOMIS** (`D:\COSO\PROJECTS\MIS\cosomis`, branche `merge/cdd-cosomis`) :
+- `cosomis/cosomis/merge_routers.py` + `DATABASE_ROUTERS`.
+- `MIGRATION_MODULES` retire du graphe les apps homonymes possédées par CDD
+  (sinon `InconsistentMigrationHistory` sur une base PG partagée).
+- `authentication.Facilitator` → `Meta.managed = False` + `db_table` explicite.
+- `authentication.User` / `.GovernmentWorker` : **domaine GRM (§3), non touchés**.
+- `__iexact` sur `usermanager/api/auth/login.py`.
+- Vérifié sur PG (code réel) : `check` 0 issue, `makemigrations --check` propre.
 
 ### Concept `Project` (§0/§4.5) — traité
 
@@ -69,27 +85,26 @@ définies, aucune FK croisée → pas de remap. Voir `fusion_plan.yml` →
 | 6.3 | Intégrité référentielle (187 FK) | ✅ 0 orpheline |
 | 6.4 | Séquences `last_value ≥ MAX(id)` | ✅ (103) |
 | 6.5 | Échantillon 20 lignes / table homonyme | ✅ 0 divergence |
-| 6.6 | `check` + `makemigrations --check` (CDD + COSOMIS, PG, via overlay) | ✅ |
+| 6.6 | `check` + `makemigrations --check` (CDD + COSOMIS, PG, code réel) | ✅ |
 | 6.7 | `fc_situation` avant (MySQL) vs après (PG) | ✅ 7 feuilles octet-identiques |
-| 6.8 | Sensibilité à la casse | ⚠ 0 collision ; `__iexact` login à porter |
+| 6.7b | COUNT + Σ colonnes de mesure, 77 tables C, source ↔ PG (dont `financial_*`) | ✅ identiques |
+| 6.8 | Login `__iexact` (CDD + COSOMIS) ; 0 username en collision | ✅ appliqué |
 
 ### Reste avant bascule production
 
-1. **Appliquer l'Étape 6 aux dépôts** (`src/`, `cosomis/`) : routeurs + settings
-   PG ; COSOMIS `Meta.managed=False` sur `authentication.Facilitator` + retrait
-   des 4 modèles orphelins. CDD : `makemigrations --check` déjà propre (miroirs
-   déjà `managed=False`).
-2. **§6.8** : lookup de login (`username`/`email`) en `__iexact` dans les deux
-   backends d'auth (périmètre minimal, aucune donnée en jeu).
-3. **Prod COSOMIS** : après chargement, `migrate --fake` `subprojects` /
-   `administrativelevels` / `assignments` (le chargement PG utilise `--run-syncdb`).
-4. **Étape 7** : reste en dry-run (décision « aucune écriture CouchDB »).
+1. **Prod COSOMIS** : après chargement PG, `migrate --fake` `subprojects` /
+   `administrativelevels` / `assignments` (le chargement utilise `--run-syncdb`).
+2. **Compléter §6.7** : mêmes comparaisons avant/après pour l'export DOCX
+   sous-projets et le tableau de bord financier (vues HTTP → `test.Client`).
+3. **Étape 7** : reste en dry-run (décision « aucune écriture CouchDB »).
    102 628 `user_id` candidats ; `--apply` exigerait de confirmer l'origine
    COSOMIS des bases `facilitator_*`.
-5. **Compléter §6.7** : mêmes comparaisons pour `reports/subprojects/views_docx`
-   et le tableau de bord financier.
-6. **Note d'env** : `psycopg2-binary` installé dans `venv_mis` pour l'Étape 5
+4. **Déploiement** : pointer `DATABASE_URL` + `LEGACY_DATABASE_URL` des deux
+   `.env` sur la base PostgreSQL unifiée (routeurs et settings en place).
+5. **Note d'env** : `psycopg2-binary` installé dans `venv_mis` pour l'Étape 5
    (`pip uninstall psycopg2-binary` si non souhaité).
+6. **Branches** : `merge/cdd-cosomis` dans les deux dépôts (`cdd-backend` et
+   `MIS/cosomis`), non poussées.
 
 ### Étape 1 — résultats fermes
 
