@@ -159,5 +159,7 @@ merge/artifacts/50_postgres/*.sql
 merge/artifacts/50_postgres/overlay/
 merge/artifacts/50_postgres/migrate.log
 merge/artifacts/**/schema_inventory.json
+merge/artifacts/70_checks/avant/
+merge/artifacts/70_checks/apres/
 !merge/artifacts/**/*.md
 !merge/artifacts/**/*.sha256

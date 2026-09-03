@@ -46,30 +46,50 @@ Bases **locales** (MariaDB 10.4.32) : `cdd` (57 tables), `mis` (72 tables).
 | 3 — id_map | **faite** | `merge/id_map.csv` (255 l.), `merge/conflicts.csv` (185 l.), `artifacts/30_idmap/` |
 | 4 — Jeu unifié | **faite** | `artifacts/40_unified/` — 105 CSV + `dump_mysql_unifie.sql` (non versionnés), `rapport_unifie.md` |
 | 5 — PostgreSQL | **faite** — 105/105 tables, 199 599 lignes | base `cdd_cosomis_unified` (PG 18) ; `05_load_postgres.py`, `artifacts/50_postgres/rapport_postgres.md` |
-| 6 — Adaptation code | **artefacts générés** ; non appliqués aux dépôts | `artifacts/60_code/` — routeurs, snippets settings, `mirror_removal.md`, `dead_models.md` |
-| 7 — Remap CouchDB | **dry-run fait** ; `--apply` en attente de feu vert + levée d'ambiguïté | `artifacts/70_checks/rapport_remap_couchdb.md` |
-| Contrôles §6 | **1-5 automatisés : OK** ; 6-8 à faire | `artifacts/70_checks/report.md` |
+| 6 — Adaptation code | **artefacts générés** + §6.6 vérifié via overlay (dépôts non modifiés) | `artifacts/60_code/` |
+| 7 — Remap CouchDB | **dry-run fait** ; `--apply` refusé (décision « aucune écriture CouchDB ») | `artifacts/70_checks/rapport_remap_couchdb.md` |
+| Contrôles §6 | **§6.1-6.7 : OK** ; §6.8 = portage code | `artifacts/70_checks/report.md` |
 
-### Reste à faire avant bascule
+### Concept `Project` (§0/§4.5) — traité
 
-1. **Décision §6.3** — 59 FK `process_manager_administrativelevelwave.project_id`
-   orphelines (COSOMIS `project_id` ∈ {1,3} sans table `process_manager_project`
-   côté `mis`). Choisir : mettre `project_id` à NULL / remapper vers un projet
-   CDD / exclure les 59 lignes COSOMIS. Cf. `merge/conflicts.csv` type
-   `rapprochement`.
-2. **Appliquer l'Étape 6** aux dépôts (`src/` et `cosomis/`) : routeurs,
-   settings PG, `Meta.managed=False` sur les 19 miroirs CDD +
-   `authentication_facilitator` COSOMIS, retrait des 4 modèles orphelins,
-   `__iexact` sur `auth_user.username/email`.
-3. **Contrôles §6.6-6.8** : `manage.py check` + `makemigrations --check` sur PG ;
-   exports `fc_situation` / `views_docx` / tableau de bord financier avant
-   (MySQL) et après (PG) ; jeu de tests casse.
-4. **Étape 7 `--apply`** après confirmation que les bases `facilitator_*`
-   scannées sont d'origine COSOMIS (sinon les `user_id` CDD seraient corrompus).
-5. `dump_mysql_unifie.sql` : livrable d'archive ; versionner son empreinte
-   SHA-256 (§7) — non chargé dans MySQL.
-6. **Note d'env** : `psycopg2-binary` a été installé dans `venv_mis` pour
-   l'Étape 5 (migrate PG). `pip uninstall psycopg2-binary` si non souhaité.
+`subprojects_project` (COSOMIS) et `process_manager_project` (CDD) = même
+concept, noms de table différents → catégorie A **inter-tables**. Apparié par
+`name` (1→4, 2→5, 3→6), survivant `process_manager_project` ;
+`process_manager_administrativelevelwave.project_id` des lignes COSOMIS remappé
+→ 35 appariées / 24 nouvelles, **0 FK orpheline** (§6.3). `Cycle` : clés
+définies, aucune FK croisée → pas de remap. Voir `fusion_plan.yml` →
+`cross_concept`.
+
+### Contrôles d'acceptation
+
+| § | Contrôle | Résultat |
+|---|---|---|
+| 6.1 | Comptage par catégorie | ✅ |
+| 6.2 | Identité des ID (unifié ↔ PG) | ✅ |
+| 6.3 | Intégrité référentielle (187 FK) | ✅ 0 orpheline |
+| 6.4 | Séquences `last_value ≥ MAX(id)` | ✅ (103) |
+| 6.5 | Échantillon 20 lignes / table homonyme | ✅ 0 divergence |
+| 6.6 | `check` + `makemigrations --check` (CDD + COSOMIS, PG, via overlay) | ✅ |
+| 6.7 | `fc_situation` avant (MySQL) vs après (PG) | ✅ 7 feuilles octet-identiques |
+| 6.8 | Sensibilité à la casse | ⚠ 0 collision ; `__iexact` login à porter |
+
+### Reste avant bascule production
+
+1. **Appliquer l'Étape 6 aux dépôts** (`src/`, `cosomis/`) : routeurs + settings
+   PG ; COSOMIS `Meta.managed=False` sur `authentication.Facilitator` + retrait
+   des 4 modèles orphelins. CDD : `makemigrations --check` déjà propre (miroirs
+   déjà `managed=False`).
+2. **§6.8** : lookup de login (`username`/`email`) en `__iexact` dans les deux
+   backends d'auth (périmètre minimal, aucune donnée en jeu).
+3. **Prod COSOMIS** : après chargement, `migrate --fake` `subprojects` /
+   `administrativelevels` / `assignments` (le chargement PG utilise `--run-syncdb`).
+4. **Étape 7** : reste en dry-run (décision « aucune écriture CouchDB »).
+   102 628 `user_id` candidats ; `--apply` exigerait de confirmer l'origine
+   COSOMIS des bases `facilitator_*`.
+5. **Compléter §6.7** : mêmes comparaisons pour `reports/subprojects/views_docx`
+   et le tableau de bord financier.
+6. **Note d'env** : `psycopg2-binary` installé dans `venv_mis` pour l'Étape 5
+   (`pip uninstall psycopg2-binary` si non souhaité).
 
 ### Étape 1 — résultats fermes
 

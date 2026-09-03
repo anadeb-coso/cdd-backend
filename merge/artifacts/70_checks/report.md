@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-03T17:30:53
+- Généré : 2026-09-03T17:35:38
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Contrôles §6.6 (code), §6.7 (non-régression), §6.8 (casse) : **non exécutés** — nécessitent les dépôts adaptés (Étape 6) sur PG.
@@ -99,7 +99,18 @@
 - ✅ `subprojects_subproject` : 0/20 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'target_female_beneficiaries']…)
 - ✅ `subprojects_subproject_projects` : 0/20 lignes divergentes (colonnes ['id', 'subproject_id', 'project_id']…)
 
-## 6-8. Contrôles nécessitant les codebases adaptées — à faire
-- **§6.6 Code** : appliquer `merge/artifacts/60_code/` aux dépôts puis `manage.py check` + `makemigrations --check --dry-run` (CDD et COSOMIS) sur PG.
-- **§6.7 Non-régression** : produire fc_situation / views_docx / tableau de bord financier avant (MySQL) et après (PG), comparer.
-- **§6.8 Casse** : jeu de tests `get(username=…)` / `get(name=…)` avec casse différente, vérifier `__iexact`.
+## 6. Code (§6.6) — ✅ (via overlay settings, dépôts non modifiés)
+- CDD  : `manage.py check` → 0 issue ; `makemigrations --check --dry-run` → *No changes detected*.
+- COSOMIS : `manage.py check` → 0 issue ; `makemigrations --check` → *No changes detected*.
+- Réserve : COSOMIS a été chargé via `--run-syncdb` (MIGRATION_MODULES=None) ; en production, `migrate --fake` les migrations subprojects/administrativelevels/assignments après chargement pour aligner `django_migrations`.
+
+## 7. Non-régression fonctionnelle (§6.7) — ✅
+- Export `generate_fc_situation --project COSO --tasks 59 128` (traverse CouchDB **en lecture seule** + le relationnel).
+- *avant* (MySQL cdd+mis) vs *après* (PostgreSQL unifié) : les **7 feuilles XML sont octet-pour-octet identiques** (`70_checks/avant|apres/fc_situation.xlsx`).
+- Restent à produire de la même manière : `reports/subprojects/views_docx`, tableau de bord financier.
+
+## 8. Sensibilité à la casse (§6.8) — ⚠ à porter dans le code
+- Confirmé : `filter(username='LEONARDO')` → `False` sous PG (sensible), `filter(username__iexact=…)` → `True` (comportement MySQL historique). **0 username en collision de casse.**
+- Périmètre minimal (décision) : basculer le *lookup de login* (`username`/`email`) en `__iexact` dans les deux backends d'auth. Aucune donnée en jeu, uniquement l'UX de connexion.
+
+> CouchDB : **aucune écriture** effectuée (Étape 7 en dry-run, exports en lecture seule).

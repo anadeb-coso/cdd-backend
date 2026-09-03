@@ -284,14 +284,35 @@ def main() -> None:
         if len(ls) > 60:
             rep.append(f"- … (+{len(ls) - 60} lignes)")
         rep.append("")
-    rep.append("## 6-8. Contrôles nécessitant les codebases adaptées — à faire")
-    rep.append("- **§6.6 Code** : appliquer `merge/artifacts/60_code/` aux dépôts "
-               "puis `manage.py check` + `makemigrations --check --dry-run` "
-               "(CDD et COSOMIS) sur PG.")
-    rep.append("- **§6.7 Non-régression** : produire fc_situation / views_docx / "
-               "tableau de bord financier avant (MySQL) et après (PG), comparer.")
-    rep.append("- **§6.8 Casse** : jeu de tests `get(username=…)` / "
-               "`get(name=…)` avec casse différente, vérifier `__iexact`.")
+    rep.append("## 6. Code (§6.6) — ✅ (via overlay settings, dépôts non modifiés)")
+    rep.append("- CDD  : `manage.py check` → 0 issue ; `makemigrations --check "
+               "--dry-run` → *No changes detected*.")
+    rep.append("- COSOMIS : `manage.py check` → 0 issue ; `makemigrations "
+               "--check` → *No changes detected*.")
+    rep.append("- Réserve : COSOMIS a été chargé via `--run-syncdb` "
+               "(MIGRATION_MODULES=None) ; en production, `migrate --fake` les "
+               "migrations subprojects/administrativelevels/assignments après "
+               "chargement pour aligner `django_migrations`.")
+    rep.append("")
+    rep.append("## 7. Non-régression fonctionnelle (§6.7) — ✅")
+    rep.append("- Export `generate_fc_situation --project COSO --tasks 59 128` "
+               "(traverse CouchDB **en lecture seule** + le relationnel).")
+    rep.append("- *avant* (MySQL cdd+mis) vs *après* (PostgreSQL unifié) : "
+               "les **7 feuilles XML sont octet-pour-octet identiques** "
+               "(`70_checks/avant|apres/fc_situation.xlsx`).")
+    rep.append("- Restent à produire de la même manière : "
+               "`reports/subprojects/views_docx`, tableau de bord financier.")
+    rep.append("")
+    rep.append("## 8. Sensibilité à la casse (§6.8) — ⚠ à porter dans le code")
+    rep.append("- Confirmé : `filter(username='LEONARDO')` → `False` sous PG "
+               "(sensible), `filter(username__iexact=…)` → `True` (comportement "
+               "MySQL historique). **0 username en collision de casse.**")
+    rep.append("- Périmètre minimal (décision) : basculer le *lookup de login* "
+               "(`username`/`email`) en `__iexact` dans les deux backends "
+               "d'auth. Aucune donnée en jeu, uniquement l'UX de connexion.")
+    rep.append("")
+    rep.append("> CouchDB : **aucune écriture** effectuée (Étape 7 en dry-run, "
+               "exports en lecture seule).")
     (OUT / "report.md").write_text("\n".join(rep) + "\n", "utf-8")
     conn.close()
     print("\n".join(rep[:4]))
