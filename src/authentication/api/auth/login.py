@@ -14,8 +14,10 @@ class CheckUserSerializer(serializers.Serializer):
 		username = data.get('username')
 		password = data.get('password')
 	
-		user = User.objects.filter(Q(email=username) | Q(username=username)).first()
-		user = Facilitator.objects.filter(Q(email=username) | Q(username=username)).first() if not user else user
+		# Fusion PostgreSQL : PostgreSQL est sensible à la casse là où MySQL ne
+		# l'était pas → __iexact préserve le comportement de connexion historique.
+		user = User.objects.filter(Q(email__iexact=username) | Q(username__iexact=username)).first()
+		user = Facilitator.objects.filter(Q(email__iexact=username) | Q(username__iexact=username)).first() if not user else user
 
 		if user and check_password(password, user.password):
 			if not user.is_active:

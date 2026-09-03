@@ -78,8 +78,10 @@ class UserAuthSerializer(serializers.Serializer):
         password = attrs.get('password')
 
         if username and password:
-            user = Facilitator.objects.filter(Q(email=username) | Q(username=username), active=True).first()
-            user = User.objects.filter(Q(email=username) | Q(username=username), is_active=True).first() if not user else user
+            # Fusion PostgreSQL : __iexact préserve la connexion insensible à la
+            # casse (comportement MySQL historique).
+            user = Facilitator.objects.filter(Q(email__iexact=username) | Q(username__iexact=username), active=True).first()
+            user = User.objects.filter(Q(email__iexact=username) | Q(username__iexact=username), is_active=True).first() if not user else user
             
             if not user or not check_password(password, user.password):
                 msg = self.default_error_messages['credentials']
