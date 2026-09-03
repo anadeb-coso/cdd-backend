@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-03T18:26:29
+- Généré : 2026-09-03T18:50:23
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Reste avant bascule : produire les exports `views_docx` / tableau de bord financier avant/après (comme fc_situation) ; `migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run (aucune écriture CouchDB).
@@ -103,7 +103,7 @@
 - ✅ KPI `financial_bank_transfer.amount_transferred` : Σ=4383561471.4 (identique)
 - ✅ KPI `financial_supporting_document_activity.allocated_amount` : Σ=0 (identique)
 - ✅ KPI `financial_activity.budget_previsionnel` : Σ=0 (identique)
-- ✅ 77 tables C : COUNT + Σ des colonnes de mesure identiques source ↔ PostgreSQL — couvre l'assiette du **tableau de bord financier** et de l'**export DOCX sous-projets** (tables sources en catégorie B/C, transportées telles quelles). Le rendu HTTP de ces vues dépend de S3/Kobo (réseau) — hors périmètre d'un contrôle local.
+- ✅ 97 tables B+C : COUNT + Σ des colonnes de mesure (toutes, matching tronqué 63 c.) identiques source ↔ PostgreSQL — couvre l'assiette du **tableau de bord financier** et de l'**export DOCX sous-projets** (tables sources en catégorie B/C, transportées telles quelles). Le rendu HTTP de ces vues dépend de S3/Kobo (réseau) — hors périmètre d'un contrôle local.
 
 ## 6. Code (§6.6) — ✅ (Étape 6 appliquée aux dépôts)
 - CDD (`src/cdd/merge_routers.py` + `DATABASE_ROUTERS`) : `manage.py check` → 0 issue ; `makemigrations --check` → *No changes detected* (MySQL et PG).

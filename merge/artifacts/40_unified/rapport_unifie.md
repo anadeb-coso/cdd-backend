@@ -1,6 +1,6 @@
 # Rapport — Étape 4 : Jeu de données unifié
 
-- Généré : 2026-09-03T18:25:03
+- Généré : 2026-09-03T18:47:15
 - Tables écrites : 105 (`merge/artifacts/40_unified/`)
 - Dump archive : `dump_mysql_unifie.sql` (105412 Kio)
 - ⚠ 3 table(s) dans un cycle de FK (administrativelevels_administrativelevel, administrativelevels_cvd, administrativelevels_geographicalunit) — arêtes retour cassées pour l'ordre ([('administrativelevels_cvd', 'administrativelevels_administrativelevel'), ('administrativelevels_geographicalunit', 'administrativelevels_administrativelevel')]). Le dump SQL est encadré par SET FOREIGN_KEY_CHECKS=0 ; l'Étape 5 charge avec contraintes différées.

@@ -1,6 +1,6 @@
 # Rapport — Étape 2 : Plan de fusion
 
-- Généré : 2026-09-03T18:24:54
+- Généré : 2026-09-03T18:47:06
 - Statut : **OK**
 - Plan : `merge/fusion_plan.yml` (117 tables)
 

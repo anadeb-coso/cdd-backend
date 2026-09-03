@@ -206,7 +206,16 @@ def load(cur, log):
         if not pgcols:
             fail[csv_name] = "table absente en PG (migration non appliquée)"
             continue
-        common = [c for c in header if c in pgcols]
+        # PostgreSQL tronque les identifiants à 63 octets : un nom de colonne
+        # MySQL plus long est chargé dans sa version tronquée côté PG.
+        pg_by_trunc = {c[:63]: c for c in pgcols}
+        col_map = {}          # nom CSV -> nom PG réel
+        for c in header:
+            if c in pgcols:
+                col_map[c] = c
+            elif len(c) > 63 and c[:63] in pg_by_trunc:
+                col_map[c] = pg_by_trunc[c[:63]]
+        common = [c for c in header if c in col_map]
         if "id" in header and "id" not in common:
             fail[csv_name] = "colonne id absente en PG"
             continue
@@ -221,14 +230,14 @@ def load(cur, log):
             for row in r:
                 out = []
                 for c in common:
-                    v = transform(row[hi[c]], pgcols[c][0])
+                    v = transform(row[hi[c]], pgcols[col_map[c]][0])
                     if v is None:
                         bad += 1
                         v = NULL
                     out.append(v)
                 w.writerow(out)
         buf.seek(0)
-        collist = ", ".join(f'"{c}"' for c in common)
+        collist = ", ".join(f'"{col_map[c]}"' for c in common)
         try:
             cur.execute("SAVEPOINT s")
             cur.copy_expert(

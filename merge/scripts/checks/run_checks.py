@@ -280,9 +280,16 @@ def main() -> None:
         checked = 0
         for table, e in plan.items():
             strat = e.get("strategy")
-            if strat not in ("cdd_only", "mis_only"):
-                continue          # C : transport tel quel → doit être identique
-            db = "cdd" if strat == "cdd_only" else "mis"
+            # C (cdd_only/mis_only) ET B (mirror) : transport tel quel →
+            # COUNT + Σ des colonnes de mesure doivent être identiques.
+            if strat == "cdd_only":
+                db = "cdd"
+            elif strat == "mis_only":
+                db = "mis"
+            elif strat == "mirror":
+                db = "cdd" if e.get("data_source") == "cdd" else "mis"
+            else:
+                continue
             pg = resolve(table, pgidx)
             if not pg:
                 continue
@@ -306,18 +313,28 @@ def main() -> None:
                        if t in ("int", "bigint", "smallint", "tinyint",
                                 "decimal", "float", "double")
                        and not c.endswith("_id") and c != "id"]
+            cur.execute("SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema='public' AND table_name=%s", (pg,))
+            pgcols_t = {r[0] for r in cur.fetchall()}
+            pgcols_trunc = {c[:63]: c for c in pgcols_t}
             scur.execute(f"SELECT COUNT(*) FROM `{table}`")
             sc = scur.fetchone()[0]
             cur.execute(f'SELECT COUNT(*) FROM "{pg}"')
             pc = cur.fetchone()[0]
             row_ok = sc == pc
             agg_ok = True
-            for col in numcols[:12]:
+            for col in numcols:            # toutes les colonnes de mesure
+                pcol = col if col in pgcols_t else pgcols_trunc.get(col[:63])
+                if pcol is None:
+                    agg_ok = False
+                    lines.append(f"- ❌ `{table}.{col}` : **absente côté PG** "
+                                 "(perte de colonne)")
+                    continue
                 scur.execute(f"SELECT ROUND(COALESCE(SUM(`{col}`),0),2) "
                              f"FROM `{table}`")
                 sv = scur.fetchone()[0]
                 try:
-                    cur.execute(f'SELECT ROUND(COALESCE(SUM("{col}")::numeric,0),2) '
+                    cur.execute(f'SELECT ROUND(COALESCE(SUM("{pcol}")::numeric,0),2) '
                                 f'FROM "{pg}"')
                     pv = cur.fetchone()[0]
                 except Exception:
@@ -358,8 +375,9 @@ def main() -> None:
         for c in src.values():
             c.close()
         if ok7b:
-            lines.append(f"- ✅ {checked} tables C : COUNT + Σ des colonnes de "
-                         "mesure identiques source ↔ PostgreSQL — couvre "
+            lines.append(f"- ✅ {checked} tables B+C : COUNT + Σ des colonnes de "
+                         "mesure (toutes, matching tronqué 63 c.) identiques source ↔ "
+                         "PostgreSQL — couvre "
                          "l'assiette du **tableau de bord financier** et de "
                          "l'**export DOCX sous-projets** (tables sources en "
                          "catégorie B/C, transportées telles quelles). Le rendu "
