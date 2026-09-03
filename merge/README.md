@@ -46,9 +46,10 @@ Bases **locales** (MariaDB 10.4.32) : `cdd` (57 tables), `mis` (72 tables).
 | 3 — id_map | **faite** | `merge/id_map.csv` (255 l.), `merge/conflicts.csv` (185 l.), `artifacts/30_idmap/` |
 | 4 — Jeu unifié | **faite** | `artifacts/40_unified/` — 105 CSV + `dump_mysql_unifie.sql` (non versionnés), `rapport_unifie.md` |
 | 5 — PostgreSQL | **faite** — 105/105 tables, 199 599 lignes | base `cdd_cosomis_unified` (PG 18) ; `05_load_postgres.py`, `artifacts/50_postgres/rapport_postgres.md` |
-| 6 — Adaptation code | **appliquée aux 2 dépôts** (branche `merge/cdd-cosomis` de chaque) | `src/cdd/merge_routers.py` ; `cosomis/cosomis/merge_routers.py` + settings + `Facilitator.managed=False` |
+| 6 — Adaptation code | **appliquée aux 2 dépôts** (branche `merge/cdd-cosomis` de chaque) | `src/cdd/merge_routers.py` ; `cosomis/cosomis/merge_routers.py` + settings + `Facilitator.managed=False` + `db_column` PG63 + migration 0072 |
+| `.env` | **PostgreSQL intégré** dans `src/cdd/.env` et `cosomis/cosomis/.env` (`DATABASE_URL` + `LEGACY_DATABASE_URL` → `cdd_cosomis_unified`) ; anciens MySQL en commentaire. `*.env` non versionné. |
 | 7 — Remap CouchDB | **dry-run fait** ; `--apply` refusé (décision « aucune écriture CouchDB ») | `artifacts/70_checks/rapport_remap_couchdb.md` |
-| Contrôles §6 | **§6.1-6.8 : ✅** | `artifacts/70_checks/report.md` |
+| Contrôles §6 + tests | **§6.1-6.8 : ✅** ; 25 tests COSOMIS `financial` + `subprojects` : ✅ sur PG | `artifacts/70_checks/report.md` |
 
 ### Étape 6 — appliquée
 
@@ -85,10 +86,18 @@ définies, aucune FK croisée → pas de remap. Voir `fusion_plan.yml` →
 | 6.3 | Intégrité référentielle (187 FK) | ✅ 0 orpheline |
 | 6.4 | Séquences `last_value ≥ MAX(id)` | ✅ (103) |
 | 6.5 | Échantillon 20 lignes / table homonyme | ✅ 0 divergence |
-| 6.6 | `check` + `makemigrations --check` (CDD + COSOMIS, PG, code réel) | ✅ |
-| 6.7 | `fc_situation` avant (MySQL) vs après (PG) | ✅ 7 feuilles octet-identiques |
-| 6.7b | COUNT + Σ colonnes de mesure, 77 tables C, source ↔ PG (dont `financial_*`) | ✅ identiques |
+| 6.6 | `check` + `makemigrations --check` (CDD + COSOMIS, PG, code réel, config depuis `.env`) | ✅ |
+| 6.7 | `fc_situation` avant (MySQL) vs après (PG, config `.env`) | ✅ 7 feuilles octet-identiques |
+| 6.7b | COUNT + Σ de **toutes** les colonnes de mesure (matching tronqué 63 c.), **97 tables B+C**, source ↔ PG (dont `financial_*` KPI) | ✅ identiques |
 | 6.8 | Login `__iexact` (CDD + COSOMIS) ; 0 username en collision | ✅ appliqué |
+| Tests | 25 tests unitaires COSOMIS `financial` + `subprojects` sur base PG | ✅ (via settings de test `MIGRATION_MODULES=None` → syncdb) |
+
+**Bug corrigé au passage** : `subprojects_subproject.amount_of_the_care_and_maintenance_fund_expected_to_be_mobilized`
+(64 c.) dépasse la limite d'identifiant PostgreSQL (63) → l'Étape 5 chargeait
+la table **sans cette colonne** (135 valeurs, Σ 40 723 250, silencieusement
+perdues). Corrigé : `db_column` explicite côté modèle COSOMIS + migration 0072
++ mapping de troncature dans le chargeur + §6.7b détecte désormais toute
+colonne absente côté PG.
 
 ### Idempotence
 
@@ -98,9 +107,9 @@ Pipeline complet rejoué de zéro (00→06→05→checks) : **résultat identiqu
 `MIGRATION_MODULES` ajouté au settings COSOMIS par l'Étape 6.
 
 `migrate --fake` des apps possédées par COSOMIS (`administrativelevels`,
-`subprojects`, `assignments`, `financial`, `custom_file`) exécuté **localement**
-sur `cdd_cosomis_unified` → `django_migrations` aligné, `makemigrations --check`
-propre.
+`subprojects` — dont la migration 0072 —, `assignments`, `financial`,
+`custom_file`) exécuté **localement** sur `cdd_cosomis_unified` →
+`django_migrations` aligné, `makemigrations --check` propre.
 
 ### Reste avant bascule production (rien à faire en ligne / aucun déploiement AWS ici)
 
