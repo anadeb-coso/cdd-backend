@@ -90,20 +90,33 @@ définies, aucune FK croisée → pas de remap. Voir `fusion_plan.yml` →
 | 6.7b | COUNT + Σ colonnes de mesure, 77 tables C, source ↔ PG (dont `financial_*`) | ✅ identiques |
 | 6.8 | Login `__iexact` (CDD + COSOMIS) ; 0 username en collision | ✅ appliqué |
 
-### Reste avant bascule production
+### Idempotence
 
-1. **Prod COSOMIS** : après chargement PG, `migrate --fake` `subprojects` /
-   `administrativelevels` / `assignments` (le chargement utilise `--run-syncdb`).
-2. **Compléter §6.7** : mêmes comparaisons avant/après pour l'export DOCX
-   sous-projets et le tableau de bord financier (vues HTTP → `test.Client`).
-3. **Étape 7** : reste en dry-run (décision « aucune écriture CouchDB »).
+Pipeline complet rejoué de zéro (00→06→05→checks) : **résultat identique**
+(105/105 tables, A=8, contrôles §6.1-6.8 verts). `_introspect_project.py` force
+`MIGRATION_MODULES = {}` pour que la qualification §4.1 ne dépende pas du
+`MIGRATION_MODULES` ajouté au settings COSOMIS par l'Étape 6.
+
+`migrate --fake` des apps possédées par COSOMIS (`administrativelevels`,
+`subprojects`, `assignments`, `financial`, `custom_file`) exécuté **localement**
+sur `cdd_cosomis_unified` → `django_migrations` aligné, `makemigrations --check`
+propre.
+
+### Reste avant bascule production (rien à faire en ligne / aucun déploiement AWS ici)
+
+1. **Compléter §6.7** : comparaison avant/après du rendu HTTP de l'export DOCX
+   sous-projets et du tableau de bord financier (dépend de S3/Kobo réseau ;
+   l'assiette de données est déjà vérifiée identique par §6.7b).
+2. **Étape 7** : reste en dry-run (décision « aucune écriture CouchDB »).
    102 628 `user_id` candidats ; `--apply` exigerait de confirmer l'origine
    COSOMIS des bases `facilitator_*`.
-4. **Déploiement** : pointer `DATABASE_URL` + `LEGACY_DATABASE_URL` des deux
-   `.env` sur la base PostgreSQL unifiée (routeurs et settings en place).
-5. **Note d'env** : `psycopg2-binary` installé dans `venv_mis` pour l'Étape 5
+3. **Déploiement** (hors périmètre de ces travaux) : pointer `DATABASE_URL` +
+   `LEGACY_DATABASE_URL` des deux `.env` sur la base PostgreSQL unifiée
+   (routeurs et settings en place) ; sur une base fraîche, `migrate --fake` les
+   apps COSOMIS comme fait ici en local.
+4. **Note d'env** : `psycopg2-binary` installé dans `venv_mis` pour l'Étape 5
    (`pip uninstall psycopg2-binary` si non souhaité).
-6. **Branches** : `merge/cdd-cosomis` dans les deux dépôts (`cdd-backend` et
+5. **Branches** : `merge/cdd-cosomis` dans les deux dépôts (`cdd-backend` et
    `MIS/cosomis`), non poussées.
 
 ### Étape 1 — résultats fermes
