@@ -47,7 +47,7 @@ Bases **locales** (MariaDB 10.4.32) : `cdd` (57 tables), `mis` (72 tables).
 | 4 — Jeu unifié | **faite** | `artifacts/40_unified/` — 105 CSV + `dump_mysql_unifie.sql` (non versionnés), `rapport_unifie.md` |
 | 5 — PostgreSQL | **faite** — 105/105 tables, 199 599 lignes | base `cdd_cosomis_unified` (PG 18) ; `05_load_postgres.py`, `artifacts/50_postgres/rapport_postgres.md` |
 | 6 — Adaptation code | **appliquée aux 2 dépôts** (branche `merge/cdd-cosomis` de chaque) | `src/cdd/merge_routers.py` ; `cosomis/cosomis/merge_routers.py` + settings + `Facilitator.managed=False` + `db_column` PG63 + migration 0072 |
-| `.env` | **PostgreSQL intégré** dans `src/cdd/.env` et `cosomis/cosomis/.env` (`DATABASE_URL` + `LEGACY_DATABASE_URL` → `cdd_cosomis_unified`) ; anciens MySQL en commentaire. `*.env` non versionné. |
+| `.env` | **PostgreSQL intégré** dans `src/cdd/.env` et `cosomis/cosomis/.env` : `DATABASE_URL` → `cdd_cosomis_unified`. **`LEGACY_DATABASE_URL` supprimé** — l'alias inter-bases (`mis` / `cdd`) est dérivé de `DATABASE_URL` dans `settings.py` (`EXTERNAL_DATABASE_NAME: env.db()`). `*.env` non versionné. |
 | 7 — Remap CouchDB | **dry-run fait** ; `--apply` refusé (décision « aucune écriture CouchDB ») | `artifacts/70_checks/rapport_remap_couchdb.md` |
 | Contrôles §6 + tests | **§6.1-6.8 : ✅** ; 25 tests COSOMIS `financial` + `subprojects` : ✅ sur PG | `artifacts/70_checks/report.md` |
 
