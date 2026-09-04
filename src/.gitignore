@@ -3,3 +3,8 @@
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+
+# CLAUDE AI
+CLAUDE.md
+../context/
