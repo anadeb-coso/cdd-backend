@@ -52,8 +52,7 @@ COSOMIS_PY = Path(r"D:\COSO\PROJECTS\MIS\venv_mis\Scripts\python.exe")
 
 BASE_ENV = {
     "SECRET_KEY": "merge-etape5",
-    "DATABASE_URL": PG_URL,
-    "LEGACY_DATABASE_URL": PG_URL,
+    "DATABASE_URL": PG_URL,      # `default` ET l'alias mis/cdd en dérivent
     "LEGACY_GRM_DATABASE_URL": "sqlite:////tmp/grm-none.db",
     "GRM_DATABASE_URL": "sqlite:////tmp/grm-none.db",
     "DEBUG": "False",

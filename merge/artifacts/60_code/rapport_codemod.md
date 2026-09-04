@@ -1,6 +1,6 @@
 # Rapport — Étape 6 : Adaptation du code (artefacts générés)
 
-- Généré : 2026-09-03T18:02:18
+- Généré : 2026-09-04T06:07:41
 - Sortie : `merge/artifacts/60_code/`
 
 ## À appliquer

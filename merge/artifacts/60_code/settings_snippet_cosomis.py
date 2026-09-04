@@ -1,8 +1,8 @@
-# À intégrer dans cosomis/cosomis/settings.py (Étape 6)
-import environ
-env = environ.Env()
+# Appliqué dans cosomis/cosomis/settings.py.
+# `default` ET l'alias `cdd` dérivent de DATABASE_URL (plus de
+# LEGACY_DATABASE_URL).
 DATABASES = {
-    "default": env.db("DATABASE_URL"),   # postgres://…/cdd_cosomis_unified
-    "cdd": env.db("DATABASE_URL"),       # même base ; .using("cdd") reste valide
+    "default": env.db(),                 # postgres://…/cdd_cosomis_unified
+    EXTERNAL_DATABASE_NAME: env.db(),    # alias `cdd` = même base
 }
 DATABASE_ROUTERS = ["cosomis.merge_routers.CosomisMergeRouter"]

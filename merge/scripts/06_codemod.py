@@ -128,26 +128,25 @@ def main() -> None:
         .replace("{owned}", ", ".join(COSOMIS_OWNED_APPS)),
         "utf-8")
 
-    # --- settings snippets ---
+    # --- settings snippets (déjà appliqués aux dépôts, pour référence) ---
     (OUT / "settings_snippet_cdd.py").write_text(
-        '# À intégrer dans src/cdd/settings.py (Étape 6, base PG unifiée)\n'
-        '# `default` et `mis` pointent la MÊME base PostgreSQL ; `grm` reste MySQL.\n'
-        'import environ\n'
-        'env = environ.Env()\n'
+        '# Appliqué dans src/cdd/settings.py — base PG unifiée.\n'
+        '# `default` ET l\'alias `mis` dérivent de DATABASE_URL (plus de\n'
+        '# LEGACY_DATABASE_URL) ; `grm` reste externe (§3).\n'
         'DATABASES = {\n'
-        '    "default": env.db("DATABASE_URL"),          # postgres://…/cdd_cosomis_unified\n'
-        '    "mis": env.db("DATABASE_URL"),              # même base\n'
-        '    "grm": env.db("LEGACY_GRM_DATABASE_URL"),   # MySQL externe, inchangé\n'
+        '    "default": env.db(),                        # postgres://…/cdd_cosomis_unified\n'
+        '    EXTERNAL_DATABASE_NAME: env.db(),           # alias `mis` = même base\n'
+        '    EXTERNAL_GRM_DATABASE_NAME: env.db("LEGACY_GRM_DATABASE_URL"),\n'
         '}\n'
         'DATABASE_ROUTERS = ["cdd.merge_routers.CddMergeRouter"]\n',
         "utf-8")
     (OUT / "settings_snippet_cosomis.py").write_text(
-        '# À intégrer dans cosomis/cosomis/settings.py (Étape 6)\n'
-        'import environ\n'
-        'env = environ.Env()\n'
+        '# Appliqué dans cosomis/cosomis/settings.py.\n'
+        '# `default` ET l\'alias `cdd` dérivent de DATABASE_URL (plus de\n'
+        '# LEGACY_DATABASE_URL).\n'
         'DATABASES = {\n'
-        '    "default": env.db("DATABASE_URL"),   # postgres://…/cdd_cosomis_unified\n'
-        '    "cdd": env.db("DATABASE_URL"),       # même base ; .using("cdd") reste valide\n'
+        '    "default": env.db(),                 # postgres://…/cdd_cosomis_unified\n'
+        '    EXTERNAL_DATABASE_NAME: env.db(),    # alias `cdd` = même base\n'
         '}\n'
         'DATABASE_ROUTERS = ["cosomis.merge_routers.CosomisMergeRouter"]\n',
         "utf-8")
