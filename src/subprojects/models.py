@@ -126,6 +126,13 @@ class Project(BaseModel):
 
     administrative_levels = models.ManyToManyField(AdministrativeLevel, default=[], blank=True, verbose_name=_("Administrative Levels"), related_name="administrative_levels_projects")
 
+    class Meta:
+        # Fusion cdd + cosomis : le concept Project est unifié dans la table
+        # survivante `process_manager_project` (§4.3). Ce modèle miroir, lu via
+        # l'alias `mis`, doit donc pointer sur cette table et non sur
+        # `subprojects_project` qui n'existe plus dans la base unifiée.
+        db_table = 'process_manager_project'
+
     def __str__(self):
         return self.name
 

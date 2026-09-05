@@ -81,7 +81,7 @@ class GetFunnelsView(AJAXRequestMixin, LoginRequiredMixin, ListView):
 
         status = []
 
-        aggregated_status_project = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
+        aggregated_status_project = AggregatedStatus.all_objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), facilitator=None)
         if _type in ["region", "prefecture", "commune", "canton", "village"]:
             search_by_locality = True
             status = aggregated_status_project.filter(administrative_level_id=int(sql_id), task__isnull=False)

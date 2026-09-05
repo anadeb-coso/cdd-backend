@@ -33,7 +33,13 @@ class Project(BaseModel):
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField()
     parent = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE, related_name="children")
-    couch_id = models.CharField(max_length=255, blank=True)
+    # Fusion cdd + cosomis : `process_manager_project` est la table survivante du
+    # concept Project (§4.3/§4.5). `couch_id` devient nullable (les lignes venant
+    # de COSOMIS ne le renseignent pas) et on ajoute les champs propres à
+    # COSOMIS (`external_id`, `status`).
+    couch_id = models.CharField(max_length=255, blank=True, null=True)
+    external_id = models.CharField(max_length=50, null=True, blank=True, unique=True)
+    status = models.CharField(max_length=20, null=True, blank=True)
     facilitators = models.ManyToManyField(Facilitator, related_name="projects", default=[], blank=True)
     users = models.ManyToManyField(User, related_name="projects", default=[], blank=True)
     def __str__(self):
@@ -478,7 +484,7 @@ class Task(BaseModel):
 class SoftAggregatedStatusConsiderationManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(
-            Q(task__isnull=False, its_adl_has_sub_project=False, task_needs_subproject=False) | # For tasks hasn't subproject, we get only planification tasks or before its
+            Q(task__isnull=False, task_needs_subproject=False) | # For tasks hasn't subproject, we get only planification tasks or before its
 
             # For tasks has subproject or don't know, we get all tasks of CDD cycle
             Q(task__isnull=False, its_adl_has_sub_project__isnull=True) | 

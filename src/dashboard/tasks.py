@@ -298,14 +298,16 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                 _adls_ids = _adls_ids_dict.get(str(adl.id))
                 
                 for task in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by('id'):
-                    children_agg = AggregatedStatus.all_objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
+                    # all_objects
+                    children_agg = AggregatedStatus.objects.filter(task_id=task.id, administrative_level_id__in=_adls_ids, project_id=project_id, cycle_id=cycle_id, facilitator=None)
                     
                     aggreg_last_activity = None
                     if children_agg:
                         aggreg_last_activity = children_agg.latest('last_activity')
 
                     task_action = "update"
-                    a = AggregatedStatus.all_objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                    # all_objects
+                    a = AggregatedStatus.objects.filter(administrative_level_id=adl.id, task_id=task.id, project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
                     if not a:
                         a = AggregatedStatus()
                         a.administrative_level_id = adl.id
@@ -319,13 +321,7 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
                             a.task_needs_subproject = True
                         task_action = "create"
 
-                    if villages_ids_have_subproject:
-                        if adl.id in villages_ids_have_subproject:
-                            a.its_adl_has_sub_project = True
-                        else:
-                            a.its_adl_has_sub_project = False
-                    else:
-                        a.its_adl_has_sub_project = None
+                    a.its_adl_has_sub_project = None
                     
                     a.last_activity = aggreg_last_activity.last_activity if aggreg_last_activity else None
 

@@ -136,6 +136,12 @@ DATABASES = {
 # (subprojects, administrativelevels, assignments). `grm` reste externe (§3).
 DATABASE_ROUTERS = ['cdd.merge_routers.CddMergeRouter']
 
+# Fusion cdd + cosomis : `process_manager.Project` (survivant, alias `default`) et
+# le modèle miroir `subprojects.Project` (lu via l'alias `mis`) partagent
+# volontairement la table `process_manager_project`. Le W035 qui en découle est
+# attendu et géré par le routeur.
+SILENCED_SYSTEM_CHECKS = ['models.W035']
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators

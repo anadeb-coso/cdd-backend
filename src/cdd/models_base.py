@@ -8,6 +8,12 @@ class BaseModel(models.Model):
     updated_date = models.DateTimeField(auto_now = True, blank=True, null=True)
     create_by_user = models.JSONField(blank=True, null=True)
     update_by_user = models.JSONField(blank=True, null=True)
+    # Fusion cdd + cosomis : le BaseModel COSOMIS porte `delete_by_user` ; on
+    # l'ajoute au BaseModel CDD (survivant, §4.3) pour que les tables de
+    # catégorie A dont CDD possède le schéma (process_manager_wave,
+    # process_manager_administrativelevelwave, …) aient la colonne attendue
+    # par le code COSOMIS.
+    delete_by_user = models.JSONField(blank=True, null=True)
     users_involved = models.JSONField(blank=True, null=True)
 
     class Meta:
