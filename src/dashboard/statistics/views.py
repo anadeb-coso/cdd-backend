@@ -250,13 +250,13 @@ class PrioritiesPAVPACSituationCSVView(PageMixin, LoginRequiredMixin, TemplateVi
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:
-            # return download_file.download(
-            #     request, 
-            #     file_path,
-            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            # )
-            
-            return HttpResponse(file_path)
+            # Une seule requête HTTP : évite le second aller-retour vers download_file_view
+            # (fragile derrière un load-balancer multi-instances sans stockage partagé).
+            return download_file.download(
+                request,
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         
 
 class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
@@ -333,12 +333,13 @@ class PrioritiesSituationCSVView(PageMixin, LoginRequiredMixin, TemplateView):
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:
-            # return download_file.download(
-            #     request, 
-            #     file_path,
-            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            # )
-            return HttpResponse(file_path)
+            # Une seule requête HTTP : évite le second aller-retour vers download_file_view
+            # (fragile derrière un load-balancer multi-instances sans stockage partagé).
+            return download_file.download(
+                request,
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         
 
 
@@ -434,4 +435,10 @@ class CddDatasCSVView(PageMixin, LoginRequiredMixin, TemplateView):
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:
-            return HttpResponse(file_path)
+            # Une seule requête HTTP : évite le second aller-retour vers download_file_view
+            # (fragile derrière un load-balancer multi-instances sans stockage partagé).
+            return download_file.download(
+                request,
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )

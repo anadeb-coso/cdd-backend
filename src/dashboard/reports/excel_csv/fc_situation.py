@@ -13,6 +13,7 @@ achèvement / validation pures.
 Point d'entrée : `build_fc_situation_workbook(params) -> chemin relatif media/`.
 """
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from sys import platform
 
@@ -301,6 +302,26 @@ def _iter_scope_task_docs(db, project_couch_ids, cycle_couch_id_by_project, all_
                 yield row
         except Exception as exc:  # noqa: BLE001 - on log et on continue
             print(f"[fc_situation] get_query_result KO ({project_couch_id}): {exc}")
+
+
+# Bornes du pool de threads scannant les bases CouchDB des FC. Ces requêtes sont
+# uniquement en lecture (I/O réseau) : les paralléliser réduit d'un facteur ~N le temps
+# de génération sans jamais écrire dans CouchDB.
+_FC_SCAN_MAX_WORKERS = 16
+
+
+def _fetch_facilitator_task_docs(facilitator, project_couch_ids, cycle_couch_id_by_project, all_sql_ids):
+    """Exécuté dans un thread du pool : sa propre connexion CouchDB (le client `cloudant`
+    n'est pas garanti thread-safe), donc jamais le `nsc`/`db` du thread appelant."""
+    try:
+        db = NoSQLClient().get_db(facilitator.no_sql_db_name)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[fc_situation] db KO {facilitator.name}: {exc}")
+        return []
+    return [
+        doc for doc in _iter_scope_task_docs(db, project_couch_ids, cycle_couch_id_by_project, all_sql_ids)
+        if doc.get("type") == "task"
+    ]
 
 
 # --- Feuille FC_SITUATION --------------------------------------------------
@@ -617,15 +638,21 @@ def build_fc_situation_workbook(params):
     task_docs_by_project = {name: [] for name in project_names}
     project_couch_ids = [project_couch_id_by_name[n] for n in project_names]
 
-    for facilitator in cvd_universe_facilitators:
-        try:
-            db = nsc.get_db(facilitator.no_sql_db_name)
-        except Exception as exc:  # noqa: BLE001
-            print(f"[fc_situation] db KO {facilitator.name}: {exc}")
-            continue
-        for doc in _iter_scope_task_docs(db, project_couch_ids, cycle_couch_id_by_project, all_sql_ids):
-            if doc.get("type") == "task" and doc.get("project_name") in task_docs_by_project:
-                task_docs_by_project[doc["project_name"]].append(doc)
+    # Un aller-retour CouchDB par FC (x par projet) : indépendants et en lecture seule,
+    # on les parallélise pour ne pas dépasser le délai du proxy/load-balancer AWS
+    # (cause du 504 observé en production sur un périmètre large).
+    if cvd_universe_facilitators:
+        with ThreadPoolExecutor(max_workers=min(_FC_SCAN_MAX_WORKERS, len(cvd_universe_facilitators))) as executor:
+            futures = {
+                executor.submit(
+                    _fetch_facilitator_task_docs, facilitator, project_couch_ids, cycle_couch_id_by_project, all_sql_ids
+                ): facilitator
+                for facilitator in cvd_universe_facilitators
+            }
+            for future in as_completed(futures):
+                for doc in future.result():
+                    if doc.get("project_name") in task_docs_by_project:
+                        task_docs_by_project[doc["project_name"]].append(doc)
 
     try:
         backup_db = nsc.get_db("backup_db_facilitators_docs")

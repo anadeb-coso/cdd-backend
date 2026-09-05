@@ -119,22 +119,32 @@
               url: url,
               type: 'GET',
               data: data,
-              success: function(response) {
-                
-                let path = response.replaceAll('/', '___').replaceAll('\\', '___');
-                let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
-                {% comment %} window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None'); {% endcomment %}
-                var finalUrl = download_file_view_url.replace('path', path).replace('content_type', 'None');
+              // La vue renvoie désormais le fichier directement dans cette réponse (une
+              // seule requête HTTP, plus de second aller-retour vers download_file_view) :
+              // on le récupère en blob et on déclenche l'enregistrement nous-mêmes.
+              xhrFields: { responseType: 'blob' },
+              success: function(blob, status, xhr) {
+                var contentType = (xhr.getResponseHeader('Content-Type') || '');
+                if (contentType.indexOf('html') !== -1) {
+                    alert("Erreur lors du téléchargement du fichier.");
+                    $("#download-message").hide();
+                    return;
+                }
+                var disposition = xhr.getResponseHeader('Content-Disposition') || '';
+                var match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+                var filename = match ? decodeURIComponent(match[1]) : "planning.xlsx";
+                var blobUrl = window.URL.createObjectURL(blob);
 
-                // Creation d’un lien invisible pour forcer le téléchargement
+                // Creation d'un lien invisible pour forcer le téléchargement
                 var link = document.createElement("a");
-                link.href = finalUrl;
-                link.download = "";   // precision que c'est un fichier (navigateur mobile)
+                link.href = blobUrl;
+                link.download = filename;   // precision que c'est un fichier (navigateur mobile)
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
 
-    
+
                 $("#download-message").hide();
                 $("#download-complete-message").show();
 
@@ -146,6 +156,7 @@
               },
               error: function(xhr, status, error) {
                 alert("Erreur lors du téléchargement du fichier.");
+                $("#download-message").hide();
               }
             });
           });

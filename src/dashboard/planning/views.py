@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.shortcuts import render
 from django.http import Http404, HttpResponse
 from django.db.models import Q
+from cdd.my_librairies import download_file
 from django.forms.models import model_to_dict
 import json
 import pytz
@@ -1156,12 +1157,15 @@ class PlanningCSVView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:
-            # return download_file.download(
-            #     request, 
-            #     file_path,
-            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            # )
-            return HttpResponse(file_path)
+            # Une seule requête HTTP : le fichier vient d'être écrit par ce process, on le
+            # renvoie directement au lieu de faire suivre son chemin pour un second
+            # aller-retour (download_file_view), qui échoue si l'ALB route cette seconde
+            # requête vers une autre instance ne l'ayant pas sur son disque local.
+            return download_file.download(
+                request,
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         
 
 class PlanningAnonymousCSVView(PageMixin, generic.TemplateView):
@@ -1190,9 +1194,12 @@ class PlanningAnonymousCSVView(PageMixin, generic.TemplateView):
         if not file_path:
             return redirect('dashboard:facilitators:list')
         else:
-            # return download_file.download(
-            #     request, 
-            #     file_path,
-            #     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            # )
-            return HttpResponse(file_path)
+            # Une seule requête HTTP : le fichier vient d'être écrit par ce process, on le
+            # renvoie directement au lieu de faire suivre son chemin pour un second
+            # aller-retour (download_file_view), qui échoue si l'ALB route cette seconde
+            # requête vers une autre instance ne l'ayant pas sur son disque local.
+            return download_file.download(
+                request,
+                file_path,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )

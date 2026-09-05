@@ -329,7 +329,16 @@ class GetFCSituationExcelCSVReport(PageMixin, LoginRequiredMixin, TemplateView):
 
         if not file_path:
             return redirect('dashboard:facilitators:list')
-        return HttpResponse(file_path)
+        # Le fichier vient d'être écrit par ce même process : on le renvoie directement
+        # dans cette réponse (une seule requête HTTP) au lieu de faire suivre son chemin
+        # au client pour un second aller-retour vers download_file_view. Ça élimine le
+        # risque qu'une instance différente (derrière l'ALB) serve la seconde requête
+        # sans avoir le fichier sur son disque local.
+        return download_file.download(
+            request,
+            file_path,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
 
 class GetFacilitatorStatusExcelCSVRport(PageMixin, LoginRequiredMixin, TemplateView):

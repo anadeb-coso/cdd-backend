@@ -1,6 +1,6 @@
 import os
 from django.conf import settings
-from django.http import HttpResponse, Http404
+from django.http import FileResponse, HttpResponse, Http404
 from sys import platform
 import requests
 
@@ -9,17 +9,18 @@ def download(request, path, content_type="application/pdf", param_download=True)
     # -
     if ".." in path:
         raise Http404("Invalid file path")
-    
+
     file_path = os.path.join(settings.MEDIA_ROOT, path)
     if os.path.exists(file_path):
-        with open(file_path, 'rb') as fh:
-            response = HttpResponse(fh.read(), content_type)
-            # response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
-            content = 'inline; filename=' + os.path.basename(file_path)
-            if param_download:
-                content = "attachment; filename=" + os.path.basename(file_path)
-            response['Content-Disposition'] = content
-            return response
+        # FileResponse envoie le fichier par blocs (streaming) plutôt que de le charger
+        # intégralement en mémoire avec fh.read() : évite un pic mémoire sur les gros
+        # exports et laisse le serveur commencer à répondre sans attendre d'avoir tout lu.
+        content = 'inline; filename=' + os.path.basename(file_path)
+        if param_download:
+            content = "attachment; filename=" + os.path.basename(file_path)
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+        response['Content-Disposition'] = content
+        return response
     raise Http404
 
 

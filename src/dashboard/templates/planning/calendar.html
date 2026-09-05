@@ -352,14 +352,29 @@ renderCalendar(currentWeek);
               url: url,
               type: 'GET',
               data: data,
-              success: function(response) {
-                console.log("response")
-                console.log(response)
-                let path = response.replaceAll('/', '___').replaceAll('\\', '___');
-                let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
-                window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
-                
-    
+              // La vue renvoie désormais le fichier directement dans cette réponse (une
+              // seule requête HTTP, plus de second aller-retour vers download_file_view) :
+              // on le récupère en blob et on déclenche l'enregistrement nous-mêmes.
+              xhrFields: { responseType: 'blob' },
+              success: function(blob, status, xhr) {
+                var contentType = (xhr.getResponseHeader('Content-Type') || '');
+                if (contentType.indexOf('html') !== -1) {
+                    alert("Erreur lors du téléchargement du fichier.");
+                    $("#download-message").hide();
+                    return;
+                }
+                var disposition = xhr.getResponseHeader('Content-Disposition') || '';
+                var match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+                var filename = match ? decodeURIComponent(match[1]) : "planning.xlsx";
+                var blobUrl = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(blobUrl);
+
                 $("#download-message").hide();
                 $("#download-complete-message").show();
 
@@ -371,6 +386,7 @@ renderCalendar(currentWeek);
               },
               error: function(xhr, status, error) {
                 alert("Erreur lors du téléchargement du fichier.");
+                $("#download-message").hide();
               }
             });
           });

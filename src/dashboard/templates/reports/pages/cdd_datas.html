@@ -101,6 +101,37 @@
                         $("#download-complete-message").show();
                         setTimeout(function () { $("#download-complete-message").hide(); }, 5000);
                     }
+                },
+                // La vue renvoie le fichier directement dans la réponse (une seule requête
+                // HTTP) : on le récupère en blob et on déclenche l'enregistrement nous-mêmes.
+                ajaxDownload: function (url, fallbackName, onSuccess, onError) {
+                    $.ajax({
+                        url: url,
+                        type: 'GET',
+                        xhrFields: { responseType: 'blob' },
+                        success: function (blob, status, xhr) {
+                            var contentType = (xhr.getResponseHeader('Content-Type') || '');
+                            if (contentType.indexOf('html') !== -1) {
+                                onError && onError();
+                                return;
+                            }
+                            var disposition = xhr.getResponseHeader('Content-Disposition') || '';
+                            var match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+                            var filename = match ? decodeURIComponent(match[1]) : fallbackName;
+                            var blobUrl = window.URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = blobUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(blobUrl);
+                            onSuccess && onSuccess();
+                        },
+                        error: function () {
+                            onError && onError();
+                        }
+                    });
                 }
             };
         })();
@@ -130,20 +161,13 @@
                     url += `&facilitator_db_name=` + val_facilitator;
                 }
 
-                $.ajax({
-                  url: url,
-                  type: 'GET',
-                  success: function(response) {
-                    let path = response.replaceAll('/', '___').replaceAll('\\', '___');
-                    let download_file_view_url = "{% url 'download_file_view' 'path' 'content_type' %}";
-                    window.location.href = download_file_view_url.replace('path', path).replace('content_type', 'None');
-                    window.reportDownloadUI.end(true);
-                  },
-                  error: function(xhr, status, error) {
-                    alert("Erreur lors du téléchargement du fichier.");
-                    window.reportDownloadUI.end(false);
-                  }
-                });
+                window.reportDownloadUI.ajaxDownload(url, "cdd_datas.xlsx",
+                    function () { window.reportDownloadUI.end(true); },
+                    function () {
+                        alert("Erreur lors du téléchargement du fichier.");
+                        window.reportDownloadUI.end(false);
+                    }
+                );
               });
 
           });
