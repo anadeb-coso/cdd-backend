@@ -415,66 +415,10 @@
                         </div>
                          <strong class="col-auto" style="cursor: pointer;" id="allStatus" onclick="filterBy('all')">{% translate 'All' %}</strong>
                     </div>
-                        {%  for phase in phases %}
-                           <div class="card phase phase--{{ phase.order }} flex-column col-12">
-                                <div class="w-100 p-0 row align-items-start">
-                                    <div class="flex-column col mb-2">
-                                        <div class="phase__title">
-                                            {% translate 'Phase' %} {{ phase.order }}
-                                        </div>
-                                        <div class="phase__description">
-                                            {{ phase.name }}
-                                        </div>
-                                    </div>
-                                    <div class="ml-auto pointer-event fs20 expand-icon" id="icon{{ phase.order }}">
-                                        <i class="fas fa-chevron-right cursor"></i>
-                                    </div>
-                                </div>
-    
-                                <div class="w-100">
-                                    <div id="content{{ phase.order }}">
-                                        {% for activity in activities_per_phase|get:phase.order %}
-                                            <div class="card-item task-card">
-                                                <div class="row">
-                                                    <div class="col-12">
-                                                     <div class="w-100 p-0 row align-items-start">
-                                                        <div class="flex-column col mb-2">
-                                                            <div class="phase__title">
-                                                                {% translate 'Etape' %} {{ activity.order }}: {{ activity.name }}
-                                                            </div>
-    
-                                                        </div>
-                                                        <div class="ml-auto pointer-event fs20 expand-act-icon" id="iconActivity{{ phase.order }}{{ activity.order }}">
-                                                            <i class="fas fa-chevron-right cursor"></i>
-                                                        </div>
-                                                     </div>
-                                                     <div class="phase__detail mt-1 text-center" id="phaseSpinner{{ phase.order }}{{ activity.order }}">
-                                                            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                                                     </div>
-                                                     <div class="phase__description" id="activityDescription{{ phase.order }}{{ activity.order }}">
-                                                         <strong>{% translate 'Description' %}</strong>: {{ activity.description }}
-                                                         <br>
-                                                         <br>
-                                                     </div>
-                                                     <div class="phase__detail" id="phaseDetail{{ phase.order }}{{ activity.order }}"></div>
-                                                           <div id="pagination{{ phase.order }}{{ activity.order }}" class="text-right">
-                                                                <a id="previous{{ phase.order }}{{ activity.order }}" class="btn hidden">
-                                                                    <i class="fa fa-chevron-left fs20 align-middle"></i>
-                                                                </a>
-                                                                <div id="currentPage{{ phase.order }}{{ activity.order }}" class="d-inline-block fs14 text-regular-family ml-4 mr-4"></div>
-                                                                <a id="next{{ phase.order }}{{ activity.order }}" class="btn hidden">
-                                                                    <i class="fa fa-chevron-right fs20 align-middle"></i>
-                                                                </a>
-                                                            </div>
-                                                     </div>
-                                                </div>
-                                            </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-    
+                        <div id="planning-cycle-content" class="col-12 p-0">
+                            {% include 'administrative_levels/profile/components/planning_cycle.html' %}
+                        </div>
+
                     </div>
     
                 </div>
@@ -590,26 +534,68 @@
                 }
             });
 
-            $('#taskModalLong').on('shown.bs.modal', function (e) {
-                let pk = e.relatedTarget.id.split('-')[3];
-                let base_url = "{% url 'dashboard:administrative_levels:task_detail' 0 %}";
-                base_url = base_url.replace(0, pk);
+            // Détail d'une tâche du cycle de planification : le pk vient de l'id
+            // de la puce (v-pills-task-<sql_id>-tab), le village du sélecteur.
+            $('#taskModalLong').on('show.bs.modal', function (e) {
+                var pk = e.relatedTarget ? e.relatedTarget.id.split('-')[3] : null;
+                var adl = (typeof adminLevelId !== 'undefined' && adminLevelId) ? adminLevelId : "{{ administrative_level_id }}";
+                $('#modal-content').html('<div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>');
+                if (!pk) { return; }
                 $.ajax({
                     type: "GET",
-                    url: base_url,
+                    url: "{% url 'dashboard:administrative_levels:task_detail_by_village' facilitator_db_name %}",
+                    data: { administrative_level: adl, task: pk },
                     success: function (response) {
-                        console.log(response);
                         $('#modal-content').html(response);
+                    },
+                    error: function (x) {
+                        $('#modal-content').html('<div class="modal-body text-center text-danger p-4">'
+                            + error_server_message + ' ' + (x ? x.status : '') + '</div>');
                     }
                 });
-            })
+            });
+            $('#taskModalLong').on('hidden.bs.modal', function () {
+                $('#modal-content').empty();
+            });
             });
     </script>
+
+    <!-- Modale de détail d'une tâche du cycle de planification -->
+    <div class="modal fade" id="taskModalLong" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content" id="modal-content">
+                <div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de saisie du commentaire de validation / invalidation -->
+    <div class="modal fade modal-confirmation" id="modal_comment">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="text-primary text-center fs17 lh19 text-bold mb-4" style="padding: 0 45px 0 45px;">
+                        {% translate "Please enter a comment" %}
+                    </div>
+                    <div class="form-group">
+                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
+                            title="" required="" id="id_in_validation_comment" spellcheck="true"
+                            placeholder="{% translate 'Add Comment' %}"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button id="btn-send-comment" type="submit" class="btn btn-lg btn-primary text-right">
+                        {% translate "Send" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 
 
     <script>
-        
+
         {% comment %} var total_tasks = parseInt("{{ total_tasks }}"); {% endcomment %}
 
 
@@ -675,33 +661,62 @@
 
 
     function filterByVillage(village_name, admin_level_id) {
+        if (!admin_level_id) { return; }
         no_admin_level_selected.hide();
-        admin_level_selected.hide();
         hideTask(true);
-        //let adminLevelId = "{{ administrative_level_id }}";//null;
         isValidated = null;
         isCompleted = null;
         isPending = null;
         isRejected = null;
 
+        $('#villageName').html(village_name);
+        if ($(".information--selected").length > 0) {
+             $(".information--selected")[0].classList = "information";
+        }
+        adminLevelId = admin_level_id;
+        var row = document.getElementById(admin_level_id);
+        if (row) { row.classList = "information information--selected"; }
+        admin_level_selected.show();
+        admin_level_selected_detail.show();
+
+        // Recharge le seul bloc « Cycle de planification » pour ce village,
+        // sans recharger la page (comme le sélecteur de projet côté PURS).
+        filterBy('all');
         spin.show();
-        /*if (adminLevelId == admin_level_id) {
-             adminLevelId = null;
-             $('#' + admin_level_id)[0].classList = "information";
-             no_admin_level_selected.show();
-             admin_level_selected.hide();
-             spin.hide();
-        } else {*/
-            $('#villageName').html(village_name);
-            if ($(".information--selected").length > 0) {
-                 $(".information--selected")[0].classList = "information";
+        $.ajax({
+            type: "GET",
+            url: "{% url 'dashboard:administrative_levels:planning_cycle' facilitator_db_name %}",
+            data: { administrative_level: admin_level_id },
+            success: function (response) {
+                $('#planning-cycle-content').html(response);
+            },
+            error: function (data) {
+                alert(error_server_message + "Error " + (data ? data.status : ''));
+            },
+            complete: function () {
+                spin.hide();
             }
-            adminLevelId = admin_level_id;
-             $('#' + admin_level_id)[0].classList = "information information--selected";
-             spin.hide();
-             admin_level_selected.show();
-             admin_level_selected_detail.show();
-        //}
+        });
+    }
+
+    // Recharge le bloc « Cycle de planification » du village courant (après une
+    // action « complété / validé » sur une tâche) pour rafraîchir les puces,
+    // le stepper et l'anneau de progression.
+    function reloadPlanningCycle() {
+        if (!adminLevelId) { return; }
+        $.ajax({
+            type: "GET",
+            url: "{% url 'dashboard:administrative_levels:planning_cycle' facilitator_db_name %}",
+            data: { administrative_level: adminLevelId },
+            success: function (response) {
+                $('#planning-cycle-content').html(response);
+                // Réapplique le filtre de statut courant sur le bloc reconstruit.
+                var cyc = document.getElementById('cdd-cycle');
+                if (cyc && typeof _activeTaskFilter !== 'undefined' && _activeTaskFilter) {
+                    cyc.classList.add('cdd-filter-' + _activeTaskFilter);
+                }
+            }
+        });
     }
     function iconPhaseClick() {
         hideTask(true);
@@ -815,82 +830,35 @@
         }
 
 
+        // Filtrage client-side des puces de tâches du cycle de planification.
+        // Un clic sur un filtre déjà actif revient à « Tout ».
+        var _activeTaskFilter = null;
         function filterBy(field) {
-            if (field == 'validated') {
-                isPending = null;
-                isCompleted = null;
-                isRejected = null;
-                if (isValidated) {
-                    isValidated = null;
-                    $('#validatedStatus')[0].classList = 'filters__item col-2';
-                } else {
-                    isValidated = true;
-                    $('#validatedStatus')[0].classList = 'filters__item filters__item--selected col-2';
-                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
-                    $('#pendingStatus')[0].classList = 'filters__item col-2';
-                    $('#completedStatus')[0].classList = 'filters__item col-2';
-                    $('#allStatus')[0].classList = 'filters__item col-2';
-                }
-            } else if (field == 'completed') {
-                isValidated = null;
-                isPending = null;
-                isRejected = null;
-                if (isCompleted) {
-                    isCompleted = null;
-                    $('#completedStatus')[0].classList = 'filters__item col-2';
-                } else {
-                    isCompleted = true;
-                    $('#completedStatus')[0].classList = 'filters__item filters__item--selected col-2';
-                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
-                    $('#pendingStatus')[0].classList = 'filters__item col-2';
-                    $('#validatedStatus')[0].classList = 'filters__item col-2';
-                    $('#allStatus')[0].classList = 'filters__item col-2';
-                }
-            } else if (field == 'pending') {
-                isValidated = null;
-                isCompleted = null;
-                isRejected = null;
-                if (isPending) {
-                    isPending = null;
-                    $('#pendingStatus')[0].classList = 'filters__item col-2';
-                } else {
-                    isPending = true;
-                    $('#pendingStatus')[0].classList = 'filters__item filters__item--selected col-2';
-                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
-                    $('#validatedStatus')[0].classList = 'filters__item col-2';
-                    $('#completedStatus')[0].classList = 'filters__item col-2';
-                    $('#allStatus')[0].classList = 'filters__item col-2';
-                }
-            } else if (field == 'rejected') {
-                isValidated = null;
-                isCompleted = null;
-                isPending = null;
-                if (isRejected) {
-                    isRejected = null;
-                    $('#rejectedStatus')[0].classList = 'filters__item col-2';
-                } else {
-                    isRejected = true;
-                    $('#rejectedStatus')[0].classList = 'filters__item filters__item--selected col-2';
-                    $('#validatedStatus')[0].classList = 'filters__item col-2';
-                    $('#pendingStatus')[0].classList = 'filters__item col-2';
-                    $('#completedStatus')[0].classList = 'filters__item col-2';
-                    $('#allStatus')[0].classList = 'filters__item col-2';
-                }
-            } else {
-                isValidated = null;
-                isPending = null;
-                isRejected = null;
-                isCompleted = null;
-                $('#pendingStatus')[0].classList = 'filters__item col-2';
-                $('#rejectedStatus')[0].classList = 'filters__item col-2';
-                $('#validatedStatus')[0].classList = 'filters__item col-2';
-                $('#completedStatus')[0].classList = 'filters__item col-2';
-                $('#allStatus')[0].classList = 'filters__item filters__item--selected col-2';
+            var map = {
+                pending:   '#pendingStatus',
+                completed: '#completedStatus',
+                rejected:  '#rejectedStatus',
+                validated: '#validatedStatus'
+            };
+            if (field === _activeTaskFilter) {
+                field = 'all';
             }
-            for(let i  = 1; i < 8; i++) {
-                $('#pagination' + i).hide();
+            _activeTaskFilter = (field === 'all') ? null : field;
+
+            Object.keys(map).forEach(function (k) {
+                var el = $(map[k])[0];
+                if (el) { el.classList = 'filters__item col-2' + (k === field ? ' filters__item--selected' : ''); }
+            });
+            var allEl = $('#allStatus')[0];
+            if (allEl) { allEl.classList = 'filters__item col-2' + (field === 'all' ? ' filters__item--selected' : ''); }
+
+            var cycle = document.getElementById('cdd-cycle');
+            if (cycle) {
+                cycle.classList.remove('cdd-filter-pending', 'cdd-filter-completed', 'cdd-filter-rejected', 'cdd-filter-validated');
+                if (field !== 'all') {
+                    cycle.classList.add('cdd-filter-' + field);
+                }
             }
-            loadTasks();
         }
 
 
@@ -954,6 +922,7 @@
                 }
     
                 $('#card-item-task-'+task__id).modal('hide');
+                $('#taskModalLong').modal('hide');
                 $('#modal_comment').modal('show');
             });
     
@@ -1047,6 +1016,7 @@
                                     id_invalidate_elt.hide();
                                 }*/
                                 $('#id_in_validation_comment').val("");
+                                reloadPlanningCycle();
                             }else{
                                 alert(response.message);
                             }
@@ -1079,8 +1049,8 @@
     
     
             //Complet Uncomplet
-            $('.uncomplete_complete').click(function () {
-    
+            $(document).on('click', '.uncomplete_complete', function () {
+
                 //Completed Uncompleted
                 let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
                 let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
@@ -1131,16 +1101,17 @@
                         }else{
                             alert(response.message);
                         }
-    
+
                         loadTaskComments(facilitator_db_name, task_completed__id);
-                        
+                        reloadPlanningCycle();
+
                     },
                     error: function (data) {
                         spin.hide();
                         alert(error_server_message + "Error " + data.status);
                     }
                 });
-                    
+
             });
             //End complet Uncomplet
     

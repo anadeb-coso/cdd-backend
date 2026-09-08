@@ -3,7 +3,7 @@
 
 meta:
   generated_by: merge/scripts/02_build_plan.py
-  generated_at: '2026-09-03T18:47:06'
+  generated_at: '2026-09-04T08:14:18'
   pilote: src/CLAUDE.md §4-5
   source_databases:
     cdd:
@@ -27,11 +27,11 @@ defaults:
     naive_datetime_tz: UTC (à vérifier sur échantillon — Togo = UTC+0)
     json_validate_before_load: true
 categories_count:
-  B: 20
+  B: 18
   A: 8
   reconstruite: 8
-  orpheline: 4
-  C: 77
+  orpheline: 6
+  C: 79
 cross_concept:
   Project:
     concept: Project
@@ -40,9 +40,49 @@ cross_concept:
     survivor: process_manager_project
     natural_key:
     - name
+    fold_into_survivor: true
+    m2m_through_renames:
+      subprojects_project_administrative_levels: process_manager_project_administrative_levels
+      subprojects_project_financiers: process_manager_project_financiers
     remap_columns:
     - db: mis
       table: process_manager_administrativelevelwave
+      column: project_id
+    - db: mis
+      table: process_manager_periodwave
+      column: project_id
+    - db: mis
+      table: assignments_assignadministrativeleveltofacilitator
+      column: project_id
+    - db: mis
+      table: financial_administrativeLevel_allocation
+      column: project_id
+    - db: mis
+      table: financial_annual_work_plan
+      column: project_id
+    - db: mis
+      table: financial_disbursement_request
+      column: project_id
+    - db: mis
+      table: financial_funding
+      column: project_id
+    - db: mis
+      table: subprojects_category_ida
+      column: project_id
+    - db: mis
+      table: subprojects_component
+      column: project_id
+    - db: mis
+      table: subprojects_cycle
+      column: project_id
+    - db: mis
+      table: subprojects_project_administrative_levels
+      column: project_id
+    - db: mis
+      table: subprojects_project_financiers
+      column: project_id
+    - db: mis
+      table: subprojects_subproject_projects
       column: project_id
   Cycle:
     concept: Cycle
@@ -52,6 +92,8 @@ cross_concept:
     natural_key:
     - project_id
     - order
+    fold_into_survivor: false
+    m2m_through_renames: {}
     remap_columns: []
 soft_remap:
 - db: mis
@@ -391,21 +433,21 @@ soft_remap:
   action: aucun_remap (journal d'audit — trop imbriqué)
   confirm: false
 - db: mis
-  table: subprojects_project
+  table: process_manager_project
   column: create_by_user
   structure: user_snapshot
   target: auth_user
   action: remap_json_key:id via id_map(auth_user)
   confirm: true
 - db: mis
-  table: subprojects_project
+  table: process_manager_project
   column: update_by_user
   structure: user_snapshot
   target: auth_user
   action: remap_json_key:id via id_map(auth_user)
   confirm: true
 - db: mis
-  table: subprojects_project
+  table: process_manager_project
   column: users_involved
   structure: audit_libre
   target: auth_user
@@ -1504,15 +1546,31 @@ tables:
     data_source: cdd
     id_policy: transport tel quel (ids inchangés)
   process_manager_project:
-    category: C
-    strategy: cdd_only
+    category: B
+    strategy: mirror
+    schema_owner: cdd
     data_source: cdd
-    id_policy: transport tel quel (ids inchangés)
+    id_policy: aucun — table physique unique (§4.4)
+    id_map_entries: aucune
+    code_action:
+      project: cosomis
+      remove_mirror_declaration:
+      - subprojects.Project
+      modules:
+      - subprojects.models
+  process_manager_project_administrative_levels:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
   process_manager_project_facilitators:
     category: C
     strategy: cdd_only
     data_source: cdd
     id_policy: transport tel quel (ids inchangés)
+  process_manager_project_financiers:
+    category: orpheline
+    strategy: skip
+    note: déclarée dans le code, aucune table physique — déclaration morte, nettoyage Étape 6
   process_manager_project_users:
     category: C
     strategy: cdd_only
@@ -1640,44 +1698,19 @@ tables:
     data_source: cosomis
     id_policy: transport tel quel (ids inchangés)
   subprojects_project:
-    category: B
-    strategy: mirror
-    schema_owner: cosomis
-    data_source: cosomis
-    id_policy: aucun — table physique unique (§4.4)
-    id_map_entries: aucune
-    code_action:
-      project: cdd
-      remove_mirror_declaration:
-      - subprojects.Project
-      modules:
-      - subprojects.models
+    category: C
+    strategy: fold
+    note: 'concept inter-tables : fusionnée dans la table survivante (voir cross_concept), non chargée'
   subprojects_project_administrative_levels:
-    category: B
-    strategy: mirror
-    schema_owner: cosomis
+    category: C
+    strategy: mis_only
     data_source: cosomis
-    id_policy: aucun — table physique unique (§4.4)
-    id_map_entries: aucune
-    code_action:
-      project: cdd
-      remove_mirror_declaration:
-      - subprojects.Project_administrative_levels
-      modules:
-      - subprojects.models
+    id_policy: transport tel quel (ids inchangés)
   subprojects_project_financiers:
-    category: B
-    strategy: mirror
-    schema_owner: cosomis
+    category: C
+    strategy: mis_only
     data_source: cosomis
-    id_policy: aucun — table physique unique (§4.4)
-    id_map_entries: aucune
-    code_action:
-      project: cdd
-      remove_mirror_declaration:
-      - subprojects.Project_financiers
-      modules:
-      - subprojects.models
+    id_policy: transport tel quel (ids inchangés)
   subprojects_step:
     category: C
     strategy: mis_only

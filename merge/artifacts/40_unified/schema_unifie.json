@@ -951,7 +951,10 @@
   "parent_id",
   "update_by_user",
   "updated_date",
-  "users_involved"
+  "users_involved",
+  "status",
+  "external_id",
+  "delete_by_user"
  ],
  "process_manager_project_facilitators": [
   "id",
@@ -1153,26 +1156,12 @@
   "users_involved",
   "delete_by_user"
  ],
- "subprojects_project": [
-  "id",
-  "created_date",
-  "updated_date",
-  "name",
-  "description",
-  "create_by_user",
-  "update_by_user",
-  "users_involved",
-  "parent_id",
-  "status",
-  "external_id",
-  "delete_by_user"
- ],
- "subprojects_project_administrative_levels": [
+ "process_manager_project_administrative_levels": [
   "id",
   "project_id",
   "administrativelevel_id"
  ],
- "subprojects_project_financiers": [
+ "process_manager_project_financiers": [
   "id",
   "project_id",
   "financier_id"

@@ -1,0 +1,496 @@
+{% load static i18n humanize custom_tags %}
+
+{% comment %}
+    Cycle de planification du village (profil facilitateur CDD).
+
+    Repris du composant « Planning Cycle » du portail PURS
+    (local-development-portal/cosomis) : trois niveaux imbriqués — Phases >
+    Activités > Tâches — rendus comme un parcours de progression :
+      • un bandeau de synthèse avec un anneau de complétion + compteurs,
+      • un stepper horizontal de phases sur lequel on clique pour naviguer,
+      • des accordéons d'activités par phase dont les tâches ouvrent la
+        modale de détail existante (#taskModalLong).
+
+    Différence CDD : le statut d'une tâche vient de son document CouchDB
+    pour ce village. Quatre états (cf. build_admin_level_planning_cycle) :
+      pending    → pas encore terminée        (gris / idle)
+      completed  → terminée, en validation     (orange / in progress)
+      rejected   → terminée mais rejetée       (rouge / attention)
+      validated  → terminée et validée         (vert / done)
+
+    Ce partiel est aussi rendu seul par AdministrativeLevelPlanningCycleAjaxView
+    quand le sélecteur de village du profil change de village.
+{% endcomment %}
+
+<style>
+    .cdd-cycle {
+        --cdd-done: #4f46e5;
+        --cdd-done-soft: #eef2ff;
+        --cdd-done-darker: #3730a3;
+        --cdd-progress: #f59e0b;
+        --cdd-progress-soft: #fef3e2;
+        --cdd-idle: #adb5bd;
+        --cdd-idle-soft: #f1f3f5;
+        --cdd-error: #dc3545;
+        --cdd-error-soft: #fdecee;
+        --cdd-line: #e6e9ec;
+        color: #3a4750;
+    }
+
+    /* ---------- Bandeau de synthèse ---------- */
+    .cdd-overview {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.75rem;
+        padding: 1.5rem 1.75rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #ffffff 0%, var(--cdd-done-soft) 100%);
+        border: 1px solid #c7d2fe;
+        box-shadow: 0 10px 28px rgba(79, 70, 229, .08);
+        margin-bottom: 1.75rem;
+    }
+    .cdd-ring {
+        --pct: 0;
+        flex: 0 0 auto;
+        width: 116px;
+        height: 116px;
+        border-radius: 50%;
+        background: conic-gradient(var(--cdd-done) calc(var(--pct) * 1%), #e9edf0 0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .6s ease;
+    }
+    .cdd-ring-inner {
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,.03);
+    }
+    .cdd-ring-pct { font-size: 1.65rem; font-weight: 700; line-height: 1; color: var(--cdd-done-darker); }
+    .cdd-ring-cap { font-size: .62rem; text-transform: uppercase; letter-spacing: .8px; color: #8a97a0; margin-top: 3px; }
+
+    .cdd-overview-body { flex: 1 1 320px; min-width: 260px; }
+    .cdd-overview-title { font-weight: 700; font-size: 1.05rem; color: var(--cdd-done-darker); margin: 0 0 .9rem; }
+    .cdd-stats { display: flex; flex-wrap: wrap; gap: .75rem; }
+    .cdd-stat {
+        flex: 1 1 120px;
+        background: #fff;
+        border: 1px solid #eef1f3;
+        border-radius: 12px;
+        padding: .7rem .9rem;
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+    }
+    .cdd-stat-ic {
+        width: 38px; height: 38px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; color: #fff; flex: 0 0 auto;
+    }
+    .cdd-stat-ic.phases { background: linear-gradient(135deg,#4f46e5,#4338ca); }
+    .cdd-stat-ic.activities { background: linear-gradient(135deg,#22b8cf,#1098ad); }
+    .cdd-stat-ic.validated { background: linear-gradient(135deg,#22c55e,#16a34a); }
+    .cdd-stat-ic.pending { background: linear-gradient(135deg,#f59e0b,#d97706); }
+    .cdd-stat-val { font-size: 1.1rem; font-weight: 700; color: #2b343b; line-height: 1.1; }
+    .cdd-stat-val small { font-weight: 500; color: #9aa5ac; font-size: .8rem; }
+    .cdd-stat-lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: #8a97a0; }
+
+    /* ---------- Légende ---------- */
+    .cdd-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1.25rem; font-size: .78rem; color: #6c757d; }
+    .cdd-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+    .cdd-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .cdd-dot.validated { background: var(--cdd-done); }
+    .cdd-dot.completed { background: var(--cdd-progress); }
+    .cdd-dot.pending { background: var(--cdd-idle); }
+    .cdd-dot.rejected { background: var(--cdd-error); }
+
+    /* ---------- Stepper de phases ---------- */
+    .cdd-stepper {
+        display: flex;
+        gap: 0;
+        overflow-x: auto;
+        padding: .5rem .25rem 1.25rem;
+        margin-bottom: 1.5rem;
+        scrollbar-width: thin;
+    }
+    .cdd-step {
+        flex: 1 0 150px;
+        position: relative;
+        background: transparent;
+        border: 0;
+        padding: 0 .35rem;
+        text-align: center;
+        cursor: pointer;
+        outline: none;
+    }
+    .cdd-step::before, .cdd-step::after {
+        content: "";
+        position: absolute;
+        top: 23px;
+        height: 3px;
+        background: var(--cdd-line);
+        width: 50%;
+        z-index: 0;
+    }
+    .cdd-step::before { left: 0; }
+    .cdd-step::after { right: 0; }
+    .cdd-step:first-child::before { display: none; }
+    .cdd-step:last-child::after { display: none; }
+    .cdd-step.is-validated::before, .cdd-step.is-validated::after { background: var(--cdd-done); }
+
+    .cdd-step-dot {
+        position: relative;
+        z-index: 1;
+        width: 48px; height: 48px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid var(--cdd-line);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1rem; color: #97a2aa;
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .cdd-step.is-validated .cdd-step-dot { border-color: var(--cdd-done); background: var(--cdd-done); color: #fff; }
+    .cdd-step.is-completed .cdd-step-dot { border-color: var(--cdd-progress); color: var(--cdd-progress); background: var(--cdd-progress-soft); }
+    .cdd-step.is-rejected .cdd-step-dot { border-color: var(--cdd-error); color: var(--cdd-error); background: var(--cdd-error-soft); }
+
+    .cdd-step.is-active .cdd-step-dot { transform: scale(1.12); box-shadow: 0 0 0 5px rgba(79,70,229,.14); }
+    .cdd-step:hover .cdd-step-dot { transform: scale(1.08); }
+
+    .cdd-step-name {
+        display: block;
+        margin-top: .55rem;
+        font-size: .82rem;
+        font-weight: 600;
+        color: #5a6671;
+        line-height: 1.25;
+    }
+    .cdd-step.is-active .cdd-step-name { color: var(--cdd-done-darker); }
+    .cdd-step-meta { display: block; font-size: .7rem; color: #9aa5ac; margin-top: .15rem; }
+    .cdd-step-bar { display: block; height: 4px; border-radius: 4px; background: var(--cdd-line); margin: .55rem .9rem 0; overflow: hidden; }
+    .cdd-step-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--cdd-done); transition: width .5s ease; }
+
+    /* ---------- Panneau de phase ---------- */
+    .cdd-panel { display: none; animation: cddFade .25s ease; }
+    .cdd-panel.is-active { display: block; }
+    @keyframes cddFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .cdd-panel-head {
+        display: flex; align-items: center; flex-wrap: wrap; gap: .75rem;
+        padding: 1rem 1.25rem;
+        border-radius: 14px 14px 0 0;
+        background: var(--cdd-done-darker);
+        color: #fff;
+    }
+    .cdd-panel-head h5 { margin: 0; font-weight: 700; font-size: 1.05rem; color: #fff; }
+    .cdd-panel-badge { margin-left: auto; font-size: .8rem; opacity: .92; }
+    .cdd-panel-bar { flex: 1 1 100%; height: 6px; border-radius: 6px; background: rgba(255,255,255,.22); overflow: hidden; }
+    .cdd-panel-bar > i { display: block; height: 100%; background: #c7d2fe; border-radius: 6px; transition: width .5s ease; }
+
+    .cdd-activities {
+        border: 1px solid #eef1f3;
+        border-top: 0;
+        border-radius: 0 0 14px 14px;
+        background: #fbfcfc;
+        padding: .85rem;
+    }
+
+    /* ---------- Activité (accordéon) ---------- */
+    .cdd-activity {
+        background: #fff;
+        border: 1px solid #eef1f3;
+        border-left: 4px solid var(--cdd-idle);
+        border-radius: 10px;
+        margin-bottom: .75rem;
+        overflow: hidden;
+        transition: box-shadow .2s ease;
+    }
+    .cdd-activity:last-child { margin-bottom: 0; }
+    .cdd-activity:hover { box-shadow: 0 6px 18px rgba(0,0,0,.05); }
+    .cdd-activity.is-validated { border-left-color: var(--cdd-done); }
+    .cdd-activity.is-completed { border-left-color: var(--cdd-progress); }
+    .cdd-activity.is-rejected { border-left-color: var(--cdd-error); }
+
+    .cdd-activity-head {
+        display: flex; align-items: center; gap: .85rem;
+        width: 100%; border: 0; background: transparent;
+        padding: .85rem 1rem; cursor: pointer; text-align: left;
+    }
+    .cdd-status-ic {
+        flex: 0 0 auto;
+        width: 30px; height: 30px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .8rem;
+    }
+    .is-validated > .cdd-activity-head .cdd-status-ic,
+    .cdd-task.is-validated .cdd-status-ic { background: var(--cdd-done-soft); color: var(--cdd-done); }
+    .is-completed > .cdd-activity-head .cdd-status-ic,
+    .cdd-task.is-completed .cdd-status-ic { background: var(--cdd-progress-soft); color: var(--cdd-progress); }
+    .is-rejected > .cdd-activity-head .cdd-status-ic,
+    .cdd-task.is-rejected .cdd-status-ic { background: var(--cdd-error-soft); color: var(--cdd-error); }
+    .is-pending > .cdd-activity-head .cdd-status-ic,
+    .cdd-task.is-pending .cdd-status-ic { background: var(--cdd-idle-soft); color: var(--cdd-idle); }
+
+    .cdd-activity-title { flex: 1 1 auto; min-width: 0; }
+    .cdd-activity-title b { display: block; font-size: .92rem; font-weight: 600; color: #36424b; }
+    .cdd-activity-title .cdd-sub { font-size: .74rem; color: #9aa5ac; }
+    .cdd-mini-bar { width: 86px; height: 5px; border-radius: 5px; background: var(--cdd-idle-soft); overflow: hidden; flex: 0 0 auto; }
+    .cdd-mini-bar > i { display: block; height: 100%; background: var(--cdd-done); border-radius: 5px; }
+    .cdd-count-pill {
+        flex: 0 0 auto; font-size: .72rem; font-weight: 600; color: #6c757d;
+        background: #f1f3f5; border-radius: 20px; padding: .15rem .6rem;
+    }
+    .cdd-chevron { flex: 0 0 auto; color: #b4bdc4; transition: transform .25s ease; }
+    .cdd-activity.is-open .cdd-chevron { transform: rotate(90deg); }
+
+    .cdd-activity-body { display: none; padding: 0 1rem 1rem 1rem; }
+    .cdd-activity.is-open .cdd-activity-body { display: block; }
+    .cdd-tasks { display: flex; flex-direction: column; gap: .5rem; padding-left: 3rem; }
+
+    /* ---------- Puces de tâches ---------- */
+    .cdd-task {
+        display: flex; align-items: center; gap: .7rem;
+        width: 100%; text-align: left;
+        border: 1px solid #eef1f3; background: #fff;
+        border-radius: 9px; padding: .55rem .8rem;
+        cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .1s ease;
+    }
+    .cdd-task:hover { border-color: #c7d2fe; background: var(--cdd-done-soft); transform: translateX(2px); }
+    .cdd-task .cdd-status-ic { width: 26px; height: 26px; font-size: .72rem; }
+    .cdd-task .cdd-chevron { margin-left: .1rem; font-size: .7rem; }
+    .cdd-task-name { flex: 1 1 auto; font-size: .85rem; color: #46525b; }
+    .cdd-task.is-pending .cdd-task-name { color: #9aa5ac; }
+    .cdd-task-state {
+        flex: 0 0 auto; font-size: .68rem; text-transform: uppercase; letter-spacing: .4px;
+        font-weight: 600; padding: .12rem .5rem; border-radius: 20px;
+    }
+    .cdd-task.is-validated .cdd-task-state { background: var(--cdd-done-soft); color: var(--cdd-done); }
+    .cdd-task.is-completed .cdd-task-state { background: var(--cdd-progress-soft); color: #b5750a; }
+    .cdd-task.is-rejected .cdd-task-state { background: var(--cdd-error-soft); color: var(--cdd-error); }
+    .cdd-task.is-pending .cdd-task-state { background: var(--cdd-idle-soft); color: #8a97a0; }
+
+    /* ---------- Filtre par statut (barre « Filtrer par ») ---------- */
+    .cdd-cycle.cdd-filter-pending   .cdd-task:not(.is-pending),
+    .cdd-cycle.cdd-filter-completed .cdd-task:not(.is-completed),
+    .cdd-cycle.cdd-filter-rejected  .cdd-task:not(.is-rejected),
+    .cdd-cycle.cdd-filter-validated .cdd-task:not(.is-validated) { display: none; }
+
+    .cdd-empty { text-align: center; padding: 3rem 1rem; color: #9aa5ac; }
+    .cdd-empty i { font-size: 2.5rem; margin-bottom: .75rem; color: #c7d2fe; }
+
+    @media (max-width: 575.98px) {
+        .cdd-overview { padding: 1.1rem; gap: 1.1rem; }
+        .cdd-tasks { padding-left: 0; }
+        .cdd-mini-bar, .cdd-step-meta { display: none; }
+    }
+</style>
+
+<div class="cdd-cycle" id="cdd-cycle">
+    {% if planning_cycle %}
+    <!-- Bandeau de synthèse -->
+    <div class="cdd-overview">
+        <div class="cdd-ring" style="--pct: {{ planning_overview.percent }};">
+            <div class="cdd-ring-inner">
+                <span class="cdd-ring-pct">{{ planning_overview.percent }}%</span>
+                <span class="cdd-ring-cap">{% translate "Done" %}</span>
+            </div>
+        </div>
+        <div class="cdd-overview-body">
+            <p class="cdd-overview-title">{% translate "Planning cycle progress" %}</p>
+            <div class="cdd-stats">
+                <div class="cdd-stat">
+                    <span class="cdd-stat-ic phases"><i class="fas fa-layer-group"></i></span>
+                    <span>
+                        <span class="cdd-stat-val">{{ planning_overview.phases_done }}<small>/{{ planning_overview.phases_total }}</small></span>
+                        <span class="cdd-stat-lbl d-block">{% translate "Phases" %}</span>
+                    </span>
+                </div>
+                <div class="cdd-stat">
+                    <span class="cdd-stat-ic activities"><i class="fas fa-tasks"></i></span>
+                    <span>
+                        <span class="cdd-stat-val">{{ planning_overview.activities_done }}<small>/{{ planning_overview.activities_total }}</small></span>
+                        <span class="cdd-stat-lbl d-block">{% translate "Activities" %}</span>
+                    </span>
+                </div>
+                <div class="cdd-stat">
+                    <span class="cdd-stat-ic validated"><i class="fas fa-check-double"></i></span>
+                    <span>
+                        <span class="cdd-stat-val">{{ planning_overview.validated }}<small>/{{ planning_overview.total }}</small></span>
+                        <span class="cdd-stat-lbl d-block">{% translate "Validated" %}</span>
+                    </span>
+                </div>
+                <div class="cdd-stat">
+                    <span class="cdd-stat-ic pending"><i class="fas fa-hourglass-half"></i></span>
+                    <span>
+                        <span class="cdd-stat-val">{{ planning_overview.pending }}<small>/{{ planning_overview.total }}</small></span>
+                        <span class="cdd-stat-lbl d-block">{% translate "To do" %}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Légende -->
+    <div class="cdd-legend">
+        <span><i class="cdd-dot validated"></i>{% translate "Validated" %}</span>
+        <span><i class="cdd-dot completed"></i>{% translate "En validation" %}</span>
+        <span><i class="cdd-dot rejected"></i>{% translate "Rejected" %}</span>
+        <span><i class="cdd-dot pending"></i>{% translate "To do" %}</span>
+    </div>
+
+    <!-- Stepper de phases -->
+    <div class="cdd-stepper" role="tablist" aria-label="{% translate 'Phases' %}">
+        {% for phase in planning_cycle %}
+        <button type="button"
+                class="cdd-step is-{{ phase.status }}"
+                data-cdd-step="{{ phase.id }}"
+                role="tab"
+                title="{{ phase.name }}">
+            <span class="cdd-step-dot">
+                {% if phase.status == 'validated' %}<i class="fas fa-check"></i>
+                {% elif phase.status == 'rejected' %}<i class="fas fa-exclamation"></i>
+                {% else %}{{ phase.order }}{% endif %}
+            </span>
+            <span class="cdd-step-name">{{ phase.name|truncatechars:30 }}</span>
+            <span class="cdd-step-meta">{{ phase.done }}/{{ phase.task_total }} {% translate "tasks" %}</span>
+            <span class="cdd-step-bar"><i style="width: {{ phase.percent }}%;"></i></span>
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- Panneaux de phase -->
+    {% for phase in planning_cycle %}
+    <div class="cdd-panel" data-cdd-panel="{{ phase.id }}">
+        <div class="cdd-panel-head">
+            <h5>{{ phase.order }}. {{ phase.name }}</h5>
+            <span class="cdd-panel-badge">{{ phase.done }} / {{ phase.task_total }} {% translate "tasks validated" %} · {{ phase.percent }}%</span>
+            <span class="cdd-panel-bar"><i style="width: {{ phase.percent }}%;"></i></span>
+        </div>
+        <div class="cdd-activities">
+            {% for activity in phase.activities %}
+            <div class="cdd-activity is-{{ activity.status }}" data-cdd-activity-status="{{ activity.status }}">
+                <button type="button" class="cdd-activity-head" data-cdd-activity-toggle>
+                    <span class="cdd-status-ic">
+                        {% if activity.status == 'validated' %}<i class="fas fa-check"></i>
+                        {% elif activity.status == 'completed' %}<i class="fas fa-hourglass-half"></i>
+                        {% elif activity.status == 'rejected' %}<i class="fas fa-exclamation"></i>
+                        {% else %}<i class="far fa-circle"></i>{% endif %}
+                    </span>
+                    <span class="cdd-activity-title">
+                        <b>{{ activity.order }}. {{ activity.name }}</b>
+                        <span class="cdd-sub">{{ activity.done }}/{{ activity.total }} {% translate "tasks" %} · {{ activity.percent }}%</span>
+                    </span>
+                    <span class="cdd-mini-bar"><i style="width: {{ activity.percent }}%;"></i></span>
+                    <span class="cdd-count-pill">{{ activity.tasks|length }}</span>
+                    <i class="fas fa-chevron-right cdd-chevron"></i>
+                </button>
+                <div class="cdd-activity-body">
+                    <div class="cdd-tasks">
+                        {% for task in activity.tasks %}
+                        <button type="button"
+                                class="cdd-task is-{{ task.status }}"
+                                id="v-pills-task-{{ task.id }}-tab"
+                                data-toggle="modal" data-target="#taskModalLong">
+                            <span class="cdd-status-ic">
+                                {% if task.status == 'validated' %}<i class="fas fa-check"></i>
+                                {% elif task.status == 'completed' %}<i class="fas fa-hourglass-half"></i>
+                                {% elif task.status == 'rejected' %}<i class="fas fa-exclamation"></i>
+                                {% else %}<i class="far fa-circle"></i>{% endif %}
+                            </span>
+                            <span class="cdd-task-name">{{ task.order }}. {{ task.name }}</span>
+                            <span class="cdd-task-state">
+                                {% if task.status == 'validated' %}{% translate "Validated" %}
+                                {% elif task.status == 'completed' %}{% translate "En validation" %}
+                                {% elif task.status == 'rejected' %}{% translate "Rejected" %}
+                                {% else %}{% translate "To do" %}{% endif %}
+                            </span>
+                            <i class="fas fa-chevron-right cdd-chevron"></i>
+                        </button>
+                        {% empty %}
+                        <p class="text-muted mb-0" style="font-size:.82rem;">{% translate "No tasks recorded for this activity." %}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted mb-0 p-2">{% translate "No activities recorded for this phase." %}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="cdd-empty">
+        <div><i class="fas fa-stream"></i></div>
+        <h5 class="mb-1" style="color:#6c757d;">{% translate "No planning cycle yet" %}</h5>
+        <p class="mb-0">{% translate "Select a village to review their respective phases" %}</p>
+    </div>
+    {% endif %}
+</div>
+
+<script type="text/javascript">
+    (function () {
+        // Rendu à la fois en ligne (chargement initial) et réinjecté en AJAX par
+        // le sélecteur de village du profil. #planning-cycle-content est le
+        // conteneur commun dans les deux cas.
+        var root = document.getElementById('planning-cycle-content') || document;
+
+        function initCddCycle() {
+            var cycle = root.querySelector('.cdd-cycle');
+            if (!cycle || cycle.dataset.cddReady) return;
+            cycle.dataset.cddReady = '1';
+
+            var steps = Array.prototype.slice.call(cycle.querySelectorAll('.cdd-step'));
+            var panels = Array.prototype.slice.call(cycle.querySelectorAll('.cdd-panel'));
+
+            function autoExpand(panel) {
+                if (!panel || panel.dataset.cddExpanded) return;
+                panel.dataset.cddExpanded = '1';
+                var activities = Array.prototype.slice.call(panel.querySelectorAll('.cdd-activity'));
+                if (!activities.length) return;
+                // Ouvre en priorité l'activité qui demande attention, sinon celle
+                // en cours, sinon la première — pour tomber sur « ce qui suit ».
+                var focus = activities.filter(function (a) { return a.dataset.cddActivityStatus === 'rejected'; })[0]
+                    || activities.filter(function (a) { return a.dataset.cddActivityStatus === 'completed'; })[0]
+                    || activities[0];
+                focus.classList.add('is-open');
+            }
+
+            function selectStep(id) {
+                steps.forEach(function (s) { s.classList.toggle('is-active', s.dataset.cddStep === id); });
+                panels.forEach(function (p) { p.classList.toggle('is-active', p.dataset.cddPanel === id); });
+                autoExpand(panels.filter(function (p) { return p.dataset.cddPanel === id; })[0]);
+            }
+
+            steps.forEach(function (step) {
+                step.addEventListener('click', function () { selectStep(step.dataset.cddStep); });
+            });
+
+            cycle.addEventListener('click', function (e) {
+                var head = e.target.closest('[data-cdd-activity-toggle]');
+                if (!head) return;
+                head.closest('.cdd-activity').classList.toggle('is-open');
+            });
+
+            if (steps.length) {
+                var initial = steps.filter(function (s) { return s.classList.contains('is-rejected'); })[0]
+                    || steps.filter(function (s) { return s.classList.contains('is-completed'); })[0]
+                    || steps[0];
+                selectStep(initial.dataset.cddStep);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCddCycle);
+        } else {
+            initCddCycle();
+        }
+    })();
+</script>

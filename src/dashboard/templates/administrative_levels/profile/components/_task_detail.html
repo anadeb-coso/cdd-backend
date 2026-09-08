@@ -1,0 +1,103 @@
+{% load static i18n custom_tags %}
+{% comment %}
+    Contenu de la modale #taskModalLong (cycle de planification du profil village).
+    Détail d'une tâche pour un village : réponses de formulaire, pièces jointes,
+    statut, historique des commentaires, et — selon le rôle — les actions
+    « marquer complété / non complété » et « valider / invalider » (identiques
+    aux autres pages de détail de tâche, cf. facilitators/task_list.html).
+    `task` est le document CouchDB du facilitateur (ou None). Injecté par
+    AdministrativeLevelTaskDetailAjaxView.
+{% endcomment %}
+{% if task %}
+{% with cid=task|get:'_id' %}
+<div class="modal-header">
+    <h5 class="modal-title text-primary">
+        {{ task.name }}{% if task.administrative_level_name %} <small class="text-muted">(CVD : {{ task.administrative_level_name }})</small>{% endif %}
+    </h5>
+    <div class="ml-auto text-right mr-2">
+        <div class="modal_text_completed_{{ cid }} d-inline-block">
+            {% if task.completed %}
+                <span class="badge badge-pill badge-success status-badge badge-completed">{% translate 'Completed' %}</span>
+            {% else %}
+                <span class="badge badge-pill badge-secondary status-badge badge-pending">{% translate 'Pending' %}</span>
+            {% endif %}
+        </div>
+        <div class="modal_text_{{ cid }} d-inline-block">
+            {% if task.completed %}
+                {% if task.validated %}
+                    <span class="badge badge-pill badge-success status-badge success-color"><i class="fas fa-check mr-1"></i>{% translate 'Task validated' %}</span>
+                {% elif task.validated == False %}
+                    <span class="badge badge-pill badge-warning status-badge warning-color"><i class="fas fa-times mr-1"></i>{% translate 'Task not validated' %}</span>
+                {% else %}
+                    <span class="badge badge-pill badge-warning status-badge warning-color"><i class="fas fa-exclamation-triangle mr-1"></i>{% translate 'Unseen task' %}</span>
+                {% endif %}
+            {% endif %}
+        </div>
+        <span class="text_{{ cid }}"></span>
+    </div>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
+<div class="modal-body">
+    {% if task.description %}<p class="text-muted">{{ task.description }}</p>{% endif %}
+    <p class="small text-muted mb-3">
+        <i class="far fa-calendar-alt mr-1"></i>{% translate 'Completed on' %} :
+        {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}{{ task.completed_date }}{% else %}-{% endif %}
+    </p>
+
+    {% include "facilitators/task_form.html" %}
+
+    <hr>
+    <h6 class="text-bold-family">{% translate "Comments and actions history" %}</h6>
+    <div class="task_comments" id="task_comments_{{ cid }}">
+        {% include 'facilitators/comments.html' with comments=task.actions_by %}
+    </div>
+    <button class="btn btn-sm btn-outline-secondary mt-2" onclick="loadTaskComments('{{ facilitator_db_name }}', '{{ cid }}')">
+        <i class="fas fa-sync"></i>
+    </button>
+    <div class="overlay" id="load-comments-spin-{{ cid }}" style="display: none;">
+        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+    </div>
+</div>
+
+{% if user.is_superuser or user|has_group:"Admin" or user|has_group:"Evaluator" %}
+<div class="modal-footer d-block">
+    <input type="hidden" value="{% if task.completed %}0{% else %}1{% endif %}"
+           name="{{ cid }}" id="action_code_completed_{{ cid }}" />
+    {% if task.completed %}
+        {% include "facilitators/validation_invalidation.html" %}
+        <div style="width: 30%; margin: auto; float: right;">
+            <button type="button" name="uncomplete_complete" class="btn btn-warning uncomplete_complete"
+                    required id="id_uncomplete_complete_{{ cid }}">
+                {% translate 'Mark as uncompleted' %}
+            </button>
+        </div>
+        <div style="clear: both;"></div>
+    {% else %}
+        <button type="button" name="uncomplete_complete" class="btn btn-primary uncomplete_complete"
+                style="width: 50%; margin: auto; display: block;"
+                required id="id_uncomplete_complete_{{ cid }}">
+            {% translate 'Mark as completed' %}
+        </button>
+    {% endif %}
+</div>
+{% elif task.completed and user|has_group:"CDDSpecialist" or task.completed and user|has_group:"Evaluator" or task.completed and user|has_group:"Validator" or task.completed and user|has_group:"Supervisor" %}
+<div class="modal-footer d-block">
+    {% include "facilitators/validation_invalidation.html" %}
+    <div style="clear: both;"></div>
+</div>
+{% endif %}
+{% endwith %}
+{% else %}
+<div class="modal-header">
+    <h5 class="modal-title">{% translate "Task" %}</h5>
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+<div class="modal-body">
+    <p class="text-center text-muted p-3">{% translate "This task has no record for this village yet." %}</p>
+</div>
+{% endif %}

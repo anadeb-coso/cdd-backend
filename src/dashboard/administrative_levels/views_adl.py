@@ -609,6 +609,175 @@ class AdministrativeLevelDetailForListView(FacilitatorMixin, AJAXRequestMixin, L
 
 
 
+# --- Cycle de planification du profil village ------------------------------
+# Reprend le composant « Planning Cycle » du portail PURS : l'arbre complet
+# phases -> activites -> taches d'un village est construit en une passe (pas
+# d'AJAX ni de pagination par activite), chaque tache portant son statut deduit
+# de son document CouchDB pour ce village.
+
+_PLANNING_STATUS_RANK = {"validated": 0, "completed": 1, "rejected": 2, "pending": 3}
+
+
+def _derive_planning_task_status(doc):
+    """pending : pas encore terminee · completed : terminee, validation non tranchee
+    · validated : terminee et validee · rejected : terminee mais rejetee."""
+    if not doc or not doc.get("completed"):
+        return "pending"
+    validated = doc.get("validated")
+    if validated is True:
+        return "validated"
+    if validated is False:
+        return "rejected"
+    return "completed"
+
+
+def _rollup_planning_status(statuses):
+    statuses = list(statuses)
+    if not statuses:
+        return "pending"
+    if any(s == "rejected" for s in statuses):
+        return "rejected"
+    if all(s == "validated" for s in statuses):
+        return "validated"
+    if any(s in ("validated", "completed") for s in statuses):
+        return "completed"
+    return "pending"
+
+
+def build_admin_level_planning_cycle(request, facilitator_db, administrative_level_id):
+    """Renvoie (phases, overview) pour un village. `phases` est une liste de
+    dicts imbriques {..., activities: [{..., tasks: [{..., status}]}]} prete a
+    rendre par administrative_levels/profile/components/planning_cycle.html."""
+    doc_by_sql_id = {}
+    if administrative_level_id and facilitator_db is not None:
+        selector = {"type": "task", "administrative_level_id": str(administrative_level_id)}
+        if request.session.get("project_couch_id"):
+            selector["project_id"] = request.session.get("project_couch_id")
+        if request.session.get("cycle_couch_id"):
+            selector["cycle_id"] = request.session.get("cycle_couch_id")
+        try:
+            for doc in facilitator_db.get_query_result(selector):
+                try:
+                    sid = int(doc.get("sql_id"))
+                except (TypeError, ValueError):
+                    continue
+                prev = doc_by_sql_id.get(sid)
+                if prev is None or (
+                    _PLANNING_STATUS_RANK[_derive_planning_task_status(doc)]
+                    < _PLANNING_STATUS_RANK[_derive_planning_task_status(prev)]
+                ):
+                    doc_by_sql_id[sid] = doc
+        except Exception as exc:  # noqa: BLE001
+            print(f"[planning_cycle] CouchDB KO ({administrative_level_id}): {exc}")
+
+    tasks_qs = (
+        Task.objects.get_objects_by_general_filtre(request=request, attrs=None)
+        .select_related("phase", "activity")
+        .order_by("phase__order", "activity__order", "order", "task_order")
+    )
+
+    phases_map = {}
+    for task in tasks_qs:
+        phase_node = phases_map.setdefault(task.phase_id, {
+            "id": task.phase_id, "order": task.phase.order, "name": task.phase.name,
+            "_activities": {},
+        })
+        activity_node = phase_node["_activities"].setdefault(task.activity_id, {
+            "id": task.activity_id, "order": task.activity.order,
+            "name": task.activity.name, "description": task.activity.description,
+            "tasks": [],
+        })
+        _doc = doc_by_sql_id.get(task.id)
+        activity_node["tasks"].append({
+            "id": task.id, "order": task.order, "name": task.name,
+            "status": _derive_planning_task_status(_doc),
+            "couch_id": (_doc or {}).get("_id") or "",
+        })
+
+    overview = {
+        "validated": 0, "completed": 0, "rejected": 0, "pending": 0, "total": 0,
+        "phases_total": 0, "phases_done": 0, "activities_total": 0, "activities_done": 0,
+    }
+    phases = []
+    for phase_node in sorted(phases_map.values(), key=lambda p: p["order"]):
+        activities = []
+        for activity_node in sorted(phase_node["_activities"].values(), key=lambda a: a["order"]):
+            activity_node["status"] = _rollup_planning_status(t["status"] for t in activity_node["tasks"])
+            activity_node["done"] = sum(1 for t in activity_node["tasks"] if t["status"] == "validated")
+            activity_node["total"] = len(activity_node["tasks"])
+            activity_node["percent"] = round(activity_node["done"] * 100 / activity_node["total"]) if activity_node["total"] else 0
+            activities.append(activity_node)
+            overview["activities_total"] += 1
+            if activity_node["status"] == "validated":
+                overview["activities_done"] += 1
+            for t in activity_node["tasks"]:
+                overview["total"] += 1
+                overview[t["status"]] += 1
+        phase_node["status"] = _rollup_planning_status(a["status"] for a in activities)
+        phase_node["activities"] = activities
+        phase_node["done"] = sum(a["done"] for a in activities)
+        phase_node["task_total"] = sum(a["total"] for a in activities)
+        phase_node["percent"] = round(phase_node["done"] * 100 / phase_node["task_total"]) if phase_node["task_total"] else 0
+        phase_node.pop("_activities", None)
+        phases.append(phase_node)
+        overview["phases_total"] += 1
+        if phase_node["status"] == "validated":
+            overview["phases_done"] += 1
+
+    done = overview["validated"] + overview["completed"]
+    overview["percent"] = round(done * 100 / overview["total"]) if overview["total"] else 0
+    return phases, overview
+
+
+class AdministrativeLevelPlanningCycleAjaxView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.TemplateView):
+    """Re-rend le seul bloc « Cycle de planification » pour un village donne
+    (?administrative_level=<id>), pour que le selecteur de village du profil
+    puisse changer de village sans recharger la page. Pendant CDD de
+    VillagePlanningCycleAjaxView du portail PURS."""
+    template_name = 'administrative_levels/profile/components/planning_cycle.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        adl_id = self.request.GET.get('administrative_level')
+        phases, overview = build_admin_level_planning_cycle(self.request, self.facilitator_db, adl_id)
+        context['planning_cycle'] = phases
+        context['planning_overview'] = overview
+        context['administrative_level_id'] = adl_id
+        return context
+
+
+class AdministrativeLevelTaskDetailAjaxView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.TemplateView):
+    """Detail (lecture seule) d'une tache pour un village : reponses de
+    formulaire, pieces jointes, statut, historique des commentaires. Alimente
+    la modale #taskModalLong des puces du cycle de planification. Lit le
+    document CouchDB du facilitateur, n'y ecrit jamais."""
+    template_name = 'administrative_levels/profile/components/_task_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        adl_id = self.request.GET.get('administrative_level')
+        sql_id = self.request.GET.get('task')
+        doc = None
+        if adl_id and sql_id and self.facilitator_db is not None:
+            selector = {"type": "task", "administrative_level_id": str(adl_id)}
+            try:
+                selector["sql_id"] = int(sql_id)
+            except (TypeError, ValueError):
+                selector["sql_id"] = sql_id
+            if self.request.session.get("project_couch_id"):
+                selector["project_id"] = self.request.session.get("project_couch_id")
+            if self.request.session.get("cycle_couch_id"):
+                selector["cycle_id"] = self.request.session.get("cycle_couch_id")
+            try:
+                rows = list(self.facilitator_db.get_query_result(selector))
+                doc = rows[0] if rows else None
+            except Exception as exc:  # noqa: BLE001
+                print(f"[task_detail] CouchDB KO: {exc}")
+        context['task'] = doc
+        context['facilitator_db_name'] = self.facilitator_db_name
+        return context
+
+
 class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, generic.DetailView):
     template_name = 'administrative_levels/profile/profile.html'
     context_object_name = 'adl_doc'
@@ -942,6 +1111,17 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
         context['total_tasks'] = total_tasks
         context['percentage_tasks_completed'] = ((total_tasks_completed / total_tasks) * 100) if total_tasks else 0
         context['nbr_villages'] = 0
+
+        # Cycle de planification (bloc phases/activites/taches, style PURS) pour
+        # le village selectionne via ?administrative_level=<id>. Sinon vide :
+        # le bloc se charge en AJAX quand un village est choisi dans la liste.
+        _planning_adl_id = self.request.GET.get('administrative_level')
+        if _planning_adl_id:
+            context['planning_cycle'], context['planning_overview'] = build_admin_level_planning_cycle(
+                self.request, self.facilitator_db, _planning_adl_id
+            )
+        else:
+            context['planning_cycle'], context['planning_overview'] = [], None
 
         context['dict_administrative_levels_with_infos'] = dict_administrative_levels_with_infos
         if last_activity_date == "0000-00-00 00:00:00":

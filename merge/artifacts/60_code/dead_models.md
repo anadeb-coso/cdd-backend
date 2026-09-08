@@ -8,3 +8,5 @@ Déclarés dans le code COSOMIS, aucune table nulle part.
 - `authentication_user` — modules : authentication.models — GRM, laissé tel quel
 - `authentication_user_groups` — modules : authentication.models — GRM, laissé tel quel
 - `authentication_user_user_permissions` — modules : authentication.models — GRM, laissé tel quel
+- `process_manager_project_administrative_levels` — modules : subprojects.models — GRM, laissé tel quel
+- `process_manager_project_financiers` — modules : subprojects.models — GRM, laissé tel quel

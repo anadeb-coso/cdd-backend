@@ -146,11 +146,15 @@ def main() -> None:
             snap_cols[s["table"]].add(s["column"])
     umap = idmap.get("auth_user", {})
 
-    # concepts inter-tables (Project…) : (table, column) -> table CDD survivante
+    # concepts inter-tables (Project…) : (table_casefold, column) -> table
+    # CDD survivante. Casefold : le plan peut écrire des noms en casse mixte.
     cross_remap = {}
+    table_renames = {}   # ancien nom (source) -> nom final (schéma survivant)
     for c in (plan.get("cross_concept") or {}).values():
         for rc in c.get("remap_columns", []):
-            cross_remap[(rc["table"], rc["column"])] = c["cdd_table"]
+            cross_remap[(rc["table"].casefold(), rc["column"])] = c["cdd_table"]
+        for old, new in (c.get("m2m_through_renames") or {}).items():
+            table_renames[old] = new
 
     unified_schema: dict[str, list[str]] = {}
     row_counts: dict[str, dict] = {}
@@ -158,12 +162,15 @@ def main() -> None:
     notes: list[str] = []
 
     def out_csv(table, header, rows):
-        with (OUT / f"{table}.csv").open("w", newline="", encoding="utf-8") as fh:
+        name = table_renames.get(table, table)
+        if name != table:
+            (OUT / f"{table}.csv").unlink(missing_ok=True)
+        with (OUT / f"{name}.csv").open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh, lineterminator="\n")
             w.writerow(header)
             w.writerows(rows)
-        unified_schema[table] = header
-        written_tables.append(table)
+        unified_schema[name] = header
+        written_tables.append(name)
 
     def remap_row(origin_db, table, header, row, is_A_self):
         """Réécrit une ligne d'origine COSOMIS."""
@@ -176,7 +183,7 @@ def main() -> None:
             ref = fk.get(("mis", table, c))
             if ref in A_TABLES and row[i] not in (NULL, ""):
                 row[i] = idmap.get(ref, {}).get(row[i], row[i])
-            cx = cross_remap.get((table, c))
+            cx = cross_remap.get((table.casefold(), c))
             if cx and row[i] not in (NULL, ""):
                 row[i] = idmap.get(cx, {}).get(row[i], row[i])
             if c in snap_cols.get(table, ()):
@@ -186,7 +193,7 @@ def main() -> None:
     for table, e in tables.items():
         strat = e.get("strategy")
 
-        if strat in (None, "rebuild", "skip", "TODO"):
+        if strat in (None, "rebuild", "skip", "TODO", "fold"):
             row_counts[table] = {"strategy": strat, "written": 0}
             continue
 
@@ -204,7 +211,7 @@ def main() -> None:
             # remap FK -> tables A + snapshots, sur ces lignes d'origine mis
             need = any(fk.get(("mis", table, c)) in A_TABLES for c in header) \
                 or table in snap_cols \
-                or any((table, c) in cross_remap for c in header)
+                or any((table.casefold(), c) in cross_remap for c in header)
             if need:
                 rows = [remap_row("mis", table, header, r, is_A_self=False)
                         for r in rows]
@@ -265,6 +272,54 @@ def main() -> None:
             continue
 
         row_counts[table] = {"strategy": strat, "written": 0}
+
+    # ---------- concepts pliés : null-fill du survivant depuis COSOMIS -----
+    for cc in (plan.get("cross_concept") or {}).values():
+        if not cc.get("fold_into_survivor"):
+            continue
+        surv, folded = cc["cdd_table"], cc["cosomis_table"]
+        (OUT / f"{folded}.csv").unlink(missing_ok=True)   # ex-sortie éventuelle
+        if surv not in unified_schema:
+            continue
+        try:
+            f_header, f_rows = read_rows("mis", folded)
+        except FileNotFoundError:
+            continue
+        with (OUT / f"{surv}.csv").open(encoding="utf-8", newline="") as fh:
+            rr = list(csv.reader(fh))
+        s_header = list(rr[0])
+        # colonnes propres à COSOMIS ajoutées au survivant (§4.3, null=True)
+        extra = [c for c in f_header if c not in s_header and c != "id"]
+        s_header += extra
+        s_rows = {}
+        for r in rr[1:]:
+            r = r + [NULL] * len(extra)
+            s_rows[r[0]] = r
+        si = {c: i for i, c in enumerate(s_header)}
+        fi = {c: i for i, c in enumerate(f_header)}
+        smap = idmap.get(surv, {})
+        filled = 0
+        for fr in f_rows:
+            tgt = s_rows.get(smap.get(fr[fi["id"]]))
+            if tgt is None:
+                continue
+            for c in s_header:
+                if c == "id" or c not in fi:
+                    continue
+                if tgt[si[c]] in (NULL, "") and fr[fi[c]] not in (NULL, ""):
+                    v = fr[fi[c]]
+                    if c == "parent_id":            # référence le même concept
+                        v = smap.get(v, v)
+                    tgt[si[c]] = v
+                    filled += 1
+        with (OUT / f"{surv}.csv").open("w", newline="", encoding="utf-8") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(s_header)
+            w.writerows(s_rows.values())
+        unified_schema[surv] = s_header
+        notes.append(f"Concept plié {folded} -> {surv} : colonnes ajoutées "
+                     f"{extra or 'aucune'} ; {filled} valeur(s) COSOMIS "
+                     "complétées sur le survivant (§4.3).")
 
     # ---------- tri topologique pour le dump SQL ----------
     uset = set(written_tables)

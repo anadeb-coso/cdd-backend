@@ -73,8 +73,10 @@ process_manager_periodwave_administrative_levels,non,oui,,70,,,,True,,C — coso
 process_manager_phase,oui,non,17,,process_manager/0001_initial,,True,,,C — cdd_only
 process_manager_phase_cycles,oui,non,17,,,,True,,,C — cdd_only
 process_manager_processaddorremoveadl,oui,non,533,,process_manager/0021_processaddorremoveadl,,True,,,C — cdd_only
-process_manager_project,oui,non,3,,process_manager/0001_initial,,True,,,C — cdd_only
+process_manager_project,oui,non,3,,process_manager/0001_initial,subprojects/0019_financier_project_subproject_financier_and_more,True,True,,"B (miroir, propriétaire=cdd)"
+process_manager_project_administrative_levels,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
 process_manager_project_facilitators,oui,non,388,,,,True,,,C — cdd_only
+process_manager_project_financiers,non,non,,,,,,True,,"orpheline (dans le code, absente des deux bases)"
 process_manager_project_users,oui,non,160,,,,True,,,C — cdd_only
 process_manager_task,oui,non,137,,process_manager/0001_initial,,True,,,C — cdd_only
 process_manager_task_cycles,oui,non,137,,,,True,,,C — cdd_only
@@ -90,9 +92,9 @@ subprojects_cycle_administrative_levels,non,oui,,2624,,,True,True,,"B (miroir, p
 subprojects_filecomment,non,oui,,16,,subprojects/0061_subprojectfile_facilitator_id_subprojectfile_user_and_more,,True,,C — cosomis_only
 subprojects_financier,non,oui,,1,,subprojects/0019_financier_project_subproject_financier_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
 subprojects_level,non,oui,,1065,,subprojects/0021_step_subprojectstep_level,,True,,C — cosomis_only
-subprojects_project,non,oui,,3,,subprojects/0019_financier_project_subproject_financier_and_more,True,True,,"B (miroir, propriétaire=cosomis)"
-subprojects_project_administrative_levels,non,oui,,2625,,,True,True,,"B (miroir, propriétaire=cosomis)"
-subprojects_project_financiers,non,oui,,2,,,True,True,,"B (miroir, propriétaire=cosomis)"
+subprojects_project,non,oui,,3,,,True,,,C — cosomis_only
+subprojects_project_administrative_levels,non,oui,,2625,,,True,,,C — cosomis_only
+subprojects_project_financiers,non,oui,,2,,,True,,,C — cosomis_only
 subprojects_step,non,oui,,20,,subprojects/0021_step_subprojectstep_level,,True,,C — cosomis_only
 subprojects_step_next_steps,non,oui,,44,,,,True,,C — cosomis_only
 subprojects_subproject,non,oui,,1541,,subprojects/0001_initial,True,True,,"B (miroir, propriétaire=cosomis)"

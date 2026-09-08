@@ -3,3 +3,5 @@ authentication_governmentworker,qualification §4.1,table déclarée dans le cod
 authentication_user,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
 authentication_user_groups,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
 authentication_user_user_permissions,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
+process_manager_project_administrative_levels,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques
+process_manager_project_financiers,qualification §4.1,table déclarée dans le code mais absente des deux bases physiques

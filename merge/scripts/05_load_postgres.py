@@ -149,6 +149,55 @@ def run_migrate(label, py, root, settings_mod, log):
     return res.returncode == 0
 
 
+_M2M_SCRIPT = r'''
+import django
+django.setup()
+from django.db import connection
+from django.apps import apps
+_KEEP = {"subprojects", "administrativelevels", "assignments", "financial",
+         "custom_file", "kobotoolbox", "process_manager", "usermanager"}
+existing = set(connection.introspection.table_names())
+made, skipped = [], []
+for m in apps.get_models(include_auto_created=True):
+    t = m._meta.db_table
+    if not (m._meta.auto_created and t not in existing
+            and m._meta.app_label in _KEEP):
+        continue
+    # toutes les tables référencées doivent exister
+    refs = [f.related_model._meta.db_table for f in m._meta.get_fields()
+            if getattr(f, "many_to_one", False) and f.related_model is not None]
+    if any(r not in existing for r in refs):
+        skipped.append(t)
+        continue
+    try:
+        with connection.schema_editor() as se:
+            se.create_model(m)
+        existing.add(t)
+        made.append(t)
+    except Exception as e:
+        skipped.append(t + "(" + type(e).__name__ + ")")
+print("M2M_CREATED:" + ",".join(made))
+print("M2M_SKIPPED:" + ",".join(skipped))
+'''
+
+
+def create_missing_m2m(label, py, root, settings_mod, log):
+    """syncdb saute un modèle dont la table existe déjà — donc aussi ses tables
+    M2M auto. On les crée ici (ex. subprojects_project_* quand Project est
+    replié sur process_manager_project)."""
+    env = dict(os.environ)
+    env.update(BASE_ENV)
+    env["PYTHONPATH"] = os.pathsep.join([str(OVERLAY), str(root)])
+    env["DJANGO_SETTINGS_MODULE"] = settings_mod
+    res = subprocess.run([str(py), "-c", _M2M_SCRIPT], cwd=root, env=env,
+                         capture_output=True, text=True, encoding="utf-8")
+    log.append(f"\n===== M2M manquantes {label} (rc={res.returncode}) =====\n"
+               + res.stdout[-3000:] + "\n" + res.stderr[-2000:])
+    line = next((l for l in res.stdout.splitlines()
+                 if l.startswith("M2M_CREATED:")), "")
+    print(f"[m2m:{label}] {line}")
+
+
 def pg_columns(cur, table):
     cur.execute("SELECT column_name, data_type, is_nullable FROM "
                 "information_schema.columns WHERE table_name=%s AND "
@@ -290,6 +339,8 @@ def main():
                                     "cdd_pg_settings", log)
         mig_ok["cosomis"] = run_migrate("cosomis", COSOMIS_PY, COSOMIS_ROOT,
                                         "cosomis_pg_settings", log)
+        create_missing_m2m("cosomis", COSOMIS_PY, COSOMIS_ROOT,
+                           "cosomis_pg_settings", log)
 
     ok, fail = {}, {}
     seq_fixed = 0

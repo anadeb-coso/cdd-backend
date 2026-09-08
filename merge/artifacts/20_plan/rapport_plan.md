@@ -1,14 +1,14 @@
 # Rapport — Étape 2 : Plan de fusion
 
-- Généré : 2026-09-03T18:47:06
+- Généré : 2026-09-04T08:14:18
 - Statut : **OK**
-- Plan : `merge/fusion_plan.yml` (117 tables)
+- Plan : `merge/fusion_plan.yml` (119 tables)
 
 ## Répartition
 - A : 8
-- B : 20
-- C : 77
-- orpheline : 4
+- B : 18
+- C : 79
+- orpheline : 6
 - reconstruite : 8
 
 ## Catégorie A — réconciliation
@@ -58,13 +58,11 @@
 - `administrativelevels_geographicalunit` — propriétaire **cosomis** ; retirer dans **cdd** : administrativelevels.GeographicalUnit
 - `assignments_assignadministrativeleveltofacilitator` — propriétaire **cosomis** ; retirer dans **cdd** : assignments.AssignAdministrativeLevelToFacilitator
 - `authentication_facilitator` — propriétaire **cdd** ; retirer dans **cosomis** : authentication.Facilitator
+- `process_manager_project` — propriétaire **cdd** ; retirer dans **cosomis** : subprojects.Project
 - `subprojects_component` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Component
 - `subprojects_cycle` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Cycle
 - `subprojects_cycle_administrative_levels` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Cycle_administrative_levels
 - `subprojects_financier` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Financier
-- `subprojects_project` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Project
-- `subprojects_project_administrative_levels` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Project_administrative_levels
-- `subprojects_project_financiers` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Project_financiers
 - `subprojects_subproject` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Subproject
 - `subprojects_subproject_projects` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Subproject_projects
 - `subprojects_typemain` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.TypeMain

@@ -57,12 +57,27 @@ NATURAL_KEYS: dict[str, dict] = {
 CROSS_CONCEPT = {
     "Project": {
         "cosomis_table": "subprojects_project",
-        "cdd_table": "process_manager_project",   # survivant
+        "cdd_table": "process_manager_project",   # survivant (§4.3)
         "key": ["name"],
-        # colonnes de lignes d'origine COSOMIS à réécrire vers l'ID CDD :
-        # uniquement celles dont la FK (schéma survivant) vise cdd_table.
+        # `subprojects_project` est fusionnée dans `process_manager_project`
+        # (1->4, 2->5, 3->6 par name) et n'est PAS chargée séparément.
+        "fold_into_survivor": True,
+        # TOUTE colonne pointant l'espace d'ID `subprojects_project` est
+        # réécrite vers l'espace `process_manager_project` (§4.4).
         "remap_columns": [
             ("mis", "process_manager_administrativelevelwave", "project_id"),
+            ("mis", "process_manager_periodwave", "project_id"),
+            ("mis", "assignments_assignadministrativeleveltofacilitator", "project_id"),
+            ("mis", "financial_administrativeLevel_allocation", "project_id"),
+            ("mis", "financial_annual_work_plan", "project_id"),
+            ("mis", "financial_disbursement_request", "project_id"),
+            ("mis", "financial_funding", "project_id"),
+            ("mis", "subprojects_category_ida", "project_id"),
+            ("mis", "subprojects_component", "project_id"),
+            ("mis", "subprojects_cycle", "project_id"),
+            ("mis", "subprojects_project_administrative_levels", "project_id"),
+            ("mis", "subprojects_project_financiers", "project_id"),
+            ("mis", "subprojects_subproject_projects", "project_id"),
         ],
     },
     # Cycle : clés naturelles définies mais espaces d'ID disjoints et AUCUNE
@@ -201,6 +216,8 @@ def main() -> None:
     tables_plan: dict[str, dict] = {}
 
     A_TABLES = {r["table"] for r in own if r["categorie"].startswith("A")}
+    FOLDED = {spec["cosomis_table"] for spec in CROSS_CONCEPT.values()
+             if spec.get("fold_into_survivor")}
 
     for r in own:
         t = r["categorie"]
@@ -211,6 +228,13 @@ def main() -> None:
         if table in DJANGO_REBUILT or table.startswith(DJANGO_REBUILT_PREFIX):
             entry.update(strategy="rebuild",
                          note="reconstruite par Django (§4.6) — non fusionnée")
+            tables_plan[table] = entry
+            continue
+
+        if table in FOLDED:
+            entry.update(strategy="fold",
+                         note="concept inter-tables : fusionnée dans la table "
+                              "survivante (voir cross_concept), non chargée")
             tables_plan[table] = entry
             continue
 
@@ -355,12 +379,20 @@ def main() -> None:
     # --- concepts partagés inter-tables (Project, Cycle) ------------------
     cross_concept = {}
     for concept, spec in CROSS_CONCEPT.items():
+        ct, dt = spec["cosomis_table"], spec["cdd_table"]
+        # tables M2M auto du concept plié : Django dérive leur nom du db_table
+        # du modèle source → renommées <cosomis>_x -> <cdd>_x au chargement.
+        renames = {t: dt + t[len(ct):]
+                   for (_, t, _) in spec["remap_columns"]
+                   if t.startswith(ct + "_")}
         cross_concept[concept] = {
             "concept": concept,
-            "cosomis_table": spec["cosomis_table"],
-            "cdd_table": spec["cdd_table"],
-            "survivor": spec["cdd_table"],
+            "cosomis_table": ct,
+            "cdd_table": dt,
+            "survivor": dt,
             "natural_key": spec["key"],
+            "fold_into_survivor": bool(spec.get("fold_into_survivor")),
+            "m2m_through_renames": renames,
             "remap_columns": [{"db": d, "table": t, "column": c}
                               for (d, t, c) in spec["remap_columns"]],
         }
@@ -446,6 +478,8 @@ def main() -> None:
         if not r["categorie"].startswith("B"):
             continue
         e = tables_plan[r["table"]]
+        if e.get("strategy") != "mirror":     # ex. fold (concept inter-tables)
+            continue
         ca = e["code_action"]
         rep.append(f"- `{r['table']}` — propriétaire **{e['schema_owner']}** ; "
                    f"retirer dans **{ca['project']}** : "

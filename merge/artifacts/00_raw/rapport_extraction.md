@@ -1,7 +1,7 @@
 # Rapport — Étape 0 : Extraction
 
 - Mode : APPLY (données écrites)
-- Généré : 2026-09-02T14:22:59
+- Généré : 2026-09-04T08:14:12
 - Convention CSV : séparateur `,`, fin de ligne `\n`, NULL = `\N`, encodage UTF-8. L'Étape 5 (COPY) devra utiliser `NULL E'\\N'`.
 
 ## cdd — `cdd` (MySQL/MariaDB 10.4.32-MariaDB)
