@@ -185,6 +185,8 @@ class TaskAdmin(admin.ModelAdmin):
         'activity',
         'name',
         'project',
+        'non_blocking',
+        'visibility_condition',
     )
     search_fields = (
         'id',
@@ -197,6 +199,7 @@ class TaskAdmin(admin.ModelAdmin):
         'project__name',
         'project__description',
     )
+    filter_horizontal = ('groups_collectors',)
 
 class EmailAddressesWhichSendEmailsAdmin(admin.ModelAdmin):
     fields = (
