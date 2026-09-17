@@ -1,0 +1,387 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="tfb-toolbar">
+        <button id="tfb-save" type="button" class="btn btn-primary btn-sm rounded-xl">
+            <i class="fa fa-save mr-1"></i> {% translate "SAVE" %}
+        </button>
+        <label class="tfb-share-mode-label mb-0" title="{% translate 'Sharing mode is set per field below. Pick a mode here and click Apply to set it on every field of this task at once.' %}">
+            <i class="fa fa-share-alt mr-1"></i> {% translate "Sharing" %}
+            <select id="tfb-share-mode" class="form-control form-control-sm d-inline-block" style="width:auto;">
+                <option value="none">{% translate "No sharing" %}</option>
+                <option value="fixed_canton">{% translate "Automatic — canton headquarters villages" %}</option>
+                <option value="facilitator_then_validator">{% translate "Facilitator, then validator" %}</option>
+                <option value="validator_only">{% translate "Validator only" %}</option>
+            </select>
+            <button id="tfb-share-mode-apply-all" type="button" class="btn btn-outline-secondary btn-sm"
+                    title="{% translate 'Apply this mode to all fields of the task' %}">
+                {% translate "Apply to all fields" %}
+            </button>
+        </label>
+        <a href="{% url 'dashboard:process_manager:tasks:task_form_builder_export' task.id %}"
+           class="btn btn-outline-secondary btn-sm rounded-xl">
+            <i class="fa fa-file-excel mr-1"></i> {% translate "Export XLSForm" %}
+        </a>
+        <label class="btn btn-outline-secondary btn-sm rounded-xl mb-0">
+            <i class="fa fa-file-import mr-1"></i> {% translate "Import XLSForm" %}
+            <input id="tfb-import" type="file" accept=".xlsx" hidden>
+        </label>
+        {% if user.is_superuser %}
+        <button type="button" class="btn btn-warning btn-sm rounded-xl" data-toggle="modal" data-target="#tfb-sync-modal">
+            <i class="fa fa-sync-alt mr-1"></i> {% translate "Sync this task" %}
+        </button>
+        {% endif %}
+        <a href="{% url 'dashboard:process_manager:tasks:task_list' %}"
+           class="btn btn-outline-secondary btn-sm rounded-xl">
+            <i class="fa fa-list mr-1"></i> {% translate "Tasks" %}
+        </a>
+    </div>
+
+    {% comment %}
+        Visibilité conditionnelle de LA TÂCHE ENTIÈRE (liste des tâches
+        mobile) selon la réponse d'un champ d'une AUTRE tâche du projet —
+        mirroir task-level de "Visibilité conditionnelle depuis une autre
+        tâche" (par champ, dans l'éditeur de champ). Conteneur vide, peuplé
+        entièrement par task_form_builder.js (contrôles dépendants les uns des
+        autres : la liste "Champ source" dépend de la "Tâche source" choisie,
+        chargée en AJAX) — même principe que #tfb-root.
+    {% endcomment %}
+    <div id="tfb-visibility-condition" class="tfb-toolbar"></div>
+
+    <div id="tfb-flash" style="display:none"></div>
+    <div id="tfb-root"></div>
+
+    {# ---------- Modale : synchroniser la tâche (sync_tasks en thread) — superuser ---------- #}
+    {% if user.is_superuser %}
+    <div class="modal fade" id="tfb-sync-modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa fa-sync-alt mr-1"></i> {% translate "Sync this task" %}
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        {% blocktranslate with name=task.name cycle=sync_cycle_name %}Task <strong>{{ name }}</strong> — cycle <strong>{{ cycle }}</strong>. The sync runs in the background (thread) and only targets this task.{% endblocktranslate %}
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="tfb-sync-develop">
+                                <label class="custom-control-label" for="tfb-sync-develop">{% translate "develop_mode" %}</label>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="tfb-sync-training">
+                                <label class="custom-control-label" for="tfb-sync-training">{% translate "training_mode" %}</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tfb-sync-dbs">{% translate "Facilitator CouchDB databases" %} <small class="text-muted">({% translate "empty = all facilitators of the project" %})</small></label>
+                        <select id="tfb-sync-dbs" class="form-control" multiple>
+                            {% for c in sync_facilitator_dbs %}
+                                <option value="{{ c.value }}">{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tfb-sync-adls">{% translate "Headquarters villages" %} <small class="text-muted">({% translate "empty = all" %})</small></label>
+                        <select id="tfb-sync-adls" class="form-control" multiple>
+                            {% for c in sync_headquarters_villages %}
+                                <option value="{{ c.value }}">{{ c.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="tfb-sync-feedback"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
+                    <button type="button" id="tfb-sync-run" class="btn btn-warning btn-sm">
+                        <i class="fa fa-play mr-1"></i> {% translate "Run the sync" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {{ task_form|json_script:"tfb-form-json" }}
+    {{ task.visibility_condition|json_script:"tfb-vc-json" }}
+    {{ task.attachments|json_script:"tfb-attachments-json" }}
+    <script id="tfb-config" type="application/json">
+    {
+        "formJson": __FORM_JSON__,
+        "shareMode": "{{ task.share_mode|default:'none' }}",
+        "csrfToken": "{{ csrf_token }}",
+        "urls": {
+            "save": "{% url 'dashboard:process_manager:tasks:task_form_builder_save' task.id %}",
+            "import": "{% url 'dashboard:process_manager:tasks:task_form_builder_import' task.id %}",
+            "export": "{% url 'dashboard:process_manager:tasks:task_form_builder_export' task.id %}",
+            "choices_import": "{% url 'dashboard:process_manager:tasks:task_form_builder_choices_import' task.id %}",
+            "choices_export": "{% url 'dashboard:process_manager:tasks:task_form_builder_choices_export' task.id %}",
+            "datasources": "{% url 'dashboard:process_manager:tasks:task_form_builder_datasources' task.id %}",
+            "other_tasks": "{% url 'dashboard:process_manager:tasks:task_form_builder_other_tasks' task.id %}",
+            "task_fields_tmpl": "{% url 'dashboard:process_manager:tasks:task_form_builder_task_fields' task.id 'other_task_id' %}",
+            "datasource_preview": "{% url 'dashboard:process_manager:tasks:task_form_builder_datasource_preview' task.id %}",
+            "dataset_sheet": "{% url 'dashboard:process_manager:tasks:task_form_builder_dataset_sheet' task.id %}",
+            "sync": "{% url 'dashboard:process_manager:tasks:task_form_builder_sync' task.id %}"
+        },
+        "i18n": {
+            "pages": "{% translate 'Pages' %}",
+            "page": "{% translate 'Page' %}",
+            "add_page": "{% translate 'Add a page' %}",
+            "fields": "{% translate 'Fields' %}",
+            "add_field": "{% translate 'Add field' %}",
+            "field": "{% translate 'field' %}",
+            "no_label": "{% translate 'no label' %}",
+            "select_field": "{% translate 'Select a field on the left.' %}",
+            "tab_field": "{% translate 'Field' %}",
+            "tab_rules": "{% translate 'Rules' %}",
+            "tab_calc": "{% translate 'Calculations' %}",
+            "tab_preview": "{% translate 'Preview' %}",
+            "type_text": "{% translate 'Text' %}",
+            "type_note": "{% translate 'Note / label' %}",
+            "type_integer": "{% translate 'Integer' %}",
+            "type_decimal": "{% translate 'Decimal' %}",
+            "type_select_one": "{% translate 'Single choice' %}",
+            "type_select_multiple": "{% translate 'Multiple choice (list)' %}",
+            "type_select_multiple_check": "{% translate 'Multiple choice (checkboxes)' %}",
+            "f_list_threshold": "{% translate 'Scrollable list threshold (item count)' %}",
+            "f_list_threshold_hint": "{% translate 'A search bar is always shown on this field. This number sets when checkboxes switch to a virtualised scrollable list (default 25). Set 0 to disable search on dropdowns.' %}",
+            "type_date": "{% translate 'Date' %}",
+            "type_datetime": "{% translate 'Date + time' %}",
+            "type_time": "{% translate 'Time' %}",
+            "type_geopoint": "{% translate 'GPS coordinates' %}",
+            "type_group": "{% translate 'Group' %}",
+            "type_repeat": "{% translate 'Repeating group' %}",
+            "f_gps_accuracy": "{% translate 'Required accuracy (metres)' %}",
+            "f_gps_hint": "{% translate 'The mobile app retries the capture until this accuracy is reached (getBestLocation), then returns the best fix after 30 s.' %}",
+            "f_type": "{% translate 'Type' %}",
+            "f_key": "{% translate 'Key (technical)' %}",
+            "f_label": "{% translate 'Label' %}",
+            "f_help": "{% translate 'Help / hint' %}",
+            "f_required": "{% translate 'Required' %}",
+            "f_datepicker": "{% translate 'Date picker (date mode)' %}",
+            "f_choices": "{% translate 'Choices (one value per line)' %}",
+            "add_choice": "{% translate 'Add a choice' %}",
+            "f_min": "{% translate 'Minimum' %}",
+            "f_max": "{% translate 'Maximum' %}",
+            "f_minlen": "{% translate 'Min length' %}",
+            "f_maxlen": "{% translate 'Max length' %}",
+            "f_pattern": "{% translate 'Regular expression' %}",
+            "f_minitems": "{% translate 'Min rows' %}",
+            "f_maxitems": "{% translate 'Max rows' %}",
+            "f_disableorder": "{% translate 'Disable row reordering' %}",
+            "f_messages": "{% translate 'Validation messages (optional)' %}",
+            "m_required": "{% translate 'Message: required' %}",
+            "m_range": "{% translate 'Message: out of range' %}",
+            "m_regex": "{% translate 'Message: invalid format' %}",
+            "rules_help": "{% translate 'Conditions between fields: show / hide / require a field based on another field value.' %}",
+            "r_action": "{% translate 'Action' %}",
+            "r_target": "{% translate 'Target field' %}",
+            "r_when": "{% translate 'When' %}",
+            "r_all": "{% translate 'all conditions' %}",
+            "r_any": "{% translate 'at least one condition' %}",
+            "act_show": "{% translate 'Show' %}",
+            "act_hide": "{% translate 'Hide' %}",
+            "act_require": "{% translate 'Make required' %}",
+            "act_optional": "{% translate 'Make optional' %}",
+            "act_enable": "{% translate 'Enable' %}",
+            "act_disable": "{% translate 'Disable' %}",
+            "op_in": "{% translate 'in list' %}",
+            "op_nin": "{% translate 'not in list' %}",
+            "op_contains": "{% translate 'contains' %}",
+            "op_empty": "{% translate 'is empty' %}",
+            "op_not_empty": "{% translate 'is filled' %}",
+            "add_cond": "{% translate 'Add a condition' %}",
+            "del_rule": "{% translate 'Delete rule' %}",
+            "add_rule": "{% translate 'Add a rule' %}",
+            "calc_help": "{% translate 'Calculated fields: operators + - * / ( ) and functions sum, min, max, round, abs.' %}",
+            "c_target": "{% translate 'Result field' %}",
+            "c_expr": "{% translate 'Expression' %}",
+            "del_calc": "{% translate 'Delete' %}",
+            "add_calc": "{% translate 'Add a calculation' %}",
+            "when": "{% translate 'when' %}",
+            "preview_err": "{% translate 'The form cannot be compiled as is.' %}",
+            "json_help": "{% translate 'You can paste an existing form here then Apply.' %}",
+            "json_apply": "{% translate 'Apply JSON' %}",
+            "errors_title": "{% translate 'The form was not saved:' %}",
+            "saved": "{% translate 'Form saved.' %}",
+            "save_failed": "{% translate 'Save failed.' %}",
+            "network_err": "{% translate 'Network error.' %}",
+            "compile_err": "{% translate 'Form not compilable (check field keys).' %}",
+            "min_one_page": "{% translate 'At least one page is required.' %}",
+            "add_row": "{% translate 'Add' %}",
+            "add_choice_row": "{% translate 'Add' %}",
+            "imported": "{% translate 'XLSForm imported — review then Save.' %}",
+            "import_warn": "{% translate 'Partial import — see errors.' %}",
+            "act_duplicate": "{% translate 'Duplicate' %}",
+            "act_indent": "{% translate 'Move into an adjacent group' %}",
+            "act_outdent": "{% translate 'Move out of the group' %}",
+            "f_move_to": "{% translate 'Move to' %}",
+            "f_move_to_ph": "{% translate 'Move to…' %}",
+            "move_root": "{% translate '— Page root —' %}",
+            "no_repeat_in_repeat": "{% translate 'A repeating group cannot contain another repeating group.' %}",
+            "no_group_sibling": "{% translate 'No adjacent group to place this field in.' %}",
+            "drag_hint": "{% translate 'Drag to reorder or drop into a group' %}",
+            "drop_into_group": "{% translate '… or drop a field here to add it to the group' %}",
+            "drop_into_page": "{% translate '… or drop a field here' %}",
+            "choices_import": "{% translate 'Import (Excel)' %}",
+            "choices_export": "{% translate 'Export (Excel)' %}",
+            "choices_import_done": "{% translate 'Choices imported: ' %}",
+            "choices_replace_confirm": "{% translate 'Replace the current choices with those from the file? (Cancel = append the new ones)' %}",
+            "choices_import_empty": "{% translate 'No choice value found in the file.' %}",
+            "f_source": "{% translate 'Choice source' %}",
+            "src_list": "{% translate 'Manual list' %}",
+            "src_db": "{% translate 'Database (PostgreSQL)' %}",
+            "src_excel": "{% translate 'Excel file' %}",
+            "src_admin": "{% translate 'Administrative levels' %}",
+            "f_ds_table": "{% translate 'Table' %}",
+            "f_ds_value": "{% translate 'Value column' %}",
+            "f_ds_label": "{% translate 'Label column' %}",
+            "f_ds_parent": "{% translate 'Parent column (cascade)' %}",
+            "f_ds_filters": "{% translate 'Constraints (filters)' %}",
+            "f_ds_order": "{% translate 'Order by' %}",
+            "f_ds_limit": "{% translate 'Limit' %}",
+            "f_admin_level": "{% translate 'Level' %}",
+            "f_cascade_from": "{% translate 'Parent field (cascade)' %}",
+            "cascade_none": "{% translate '— none (root level) —' %}",
+            "cascade_active": "{% translate 'cascade enabled' %}",
+            "add_filter": "{% translate 'Add a filter' %}",
+            "op_in_list": "{% translate 'in (a,b,c)' %}",
+            "op_isnull": "{% translate 'is empty (NULL)' %}",
+            "op_notnull": "{% translate 'is set' %}",
+            "ds_parent_eq_value": "{% translate 'The parent column must differ from the value column (typically parent_id), otherwise the cascade filters nothing.' %}",
+            "ds_load": "{% translate 'Load / refresh from database' %}",
+            "ds_need_value": "{% translate 'Choose the value column.' %}",
+            "rows_loaded": "{% translate 'rows loaded' %}",
+            "no_rows_loaded": "{% translate 'No data loaded.' %}",
+            "load_failed": "{% translate 'Loading failed.' %}",
+            "truncated_warn": "{% translate 'truncated — add filters' %}",
+            "excel_pick": "{% translate 'Choose an Excel file' %}",
+            "excel_apply": "{% translate 'Apply mapping' %}",
+            "admin_cascade_scaffold": "{% translate 'Generate the Region → Village cascade' %}",
+            "admin_cascade_hint": "{% translate 'Replaces this field with 5 chained fields (Region, Prefecture, Commune, Canton, Village).' %}",
+            "cascade_generated": "{% translate 'Cascade generated: ' %}",
+            "f_share": "{% translate 'Share with headquarters villages upon validation' %}",
+            "f_choices_from": "{% translate 'Dynamic options from another field' %}",
+            "f_choices_from_task": "{% translate 'Source task' %}",
+            "f_choices_from_field": "{% translate 'Source field' %}",
+            "f_choices_from_hint": "{% translate 'The options of this field will be exactly what the facilitator chose in the source field. Empty list until the source has an answer.' %}",
+            "choices_from_same_task": "{% translate '— same task —' %}",
+            "f_cross_task_visibility": "{% translate 'Conditional visibility from another task' %}",
+            "cross_task_visibility_none": "{% translate '— no condition —' %}",
+            "f_cross_task_visibility_default": "{% translate 'If the source task has no answer yet' %}",
+            "vis_default_hidden": "{% translate 'Hidden until the source task is answered' %}",
+            "vis_default_visible": "{% translate 'Visible until the source task is answered' %}",
+            "op_label": "{% translate 'Condition' %}",
+            "r_value": "{% translate 'Value' %}",
+            "vc_toolbar_title": "{% translate 'Task visibility' %}",
+            "vc_clear": "{% translate 'Clear condition' %}",
+            "calc_op_sum": "{% translate 'Sum (+)' %}",
+            "calc_op_diff": "{% translate 'Difference (−)' %}",
+            "calc_op_product": "{% translate 'Product (×)' %}",
+            "calc_op_quotient": "{% translate 'Quotient (÷)' %}",
+            "calc_op_percentage": "{% translate 'Percentage (%)' %}",
+            "f_calc_enabled": "{% translate 'This field is automatically calculated from other fields' %}",
+            "f_calc_disabled_hint": "{% translate 'This field will be shown disabled (read-only) on mobile — its value is recalculated automatically as the other fields are filled in.' %}",
+            "f_calc_custom_hint": "{% translate 'Custom expression (editable in the Calculations tab): ' %}",
+            "f_calc_op": "{% translate 'Operation' %}",
+            "f_calc_numerator": "{% translate 'Numerator' %}",
+            "f_calc_denominator": "{% translate 'Denominator' %}",
+            "f_calc_term": "{% translate 'Term' %}",
+            "f_calc_add_term": "{% translate 'Add a term' %}",
+            "f_required_disabled_calc": "{% translate 'Calculated field: cannot be marked Required (see below).' %}",
+            "tab_attachments": "{% translate 'Attachments' %}",
+            "attach_help": "{% translate 'Attachments expected for this task (photo, minutes, document…), to be filled in on mobile — same logic as kobocollect.' %}",
+            "attach_type_photos": "{% translate 'Photos' %}",
+            "attach_type_pv": "{% translate 'Minutes' %}",
+            "attach_type_other": "{% translate 'Other document' %}",
+            "f_attachment_name": "{% translate 'Name' %}",
+            "f_attachment_type": "{% translate 'Type' %}",
+            "f_attachment_optional_default": "{% translate 'Optional by default (if no “require/make optional” condition below)' %}",
+            "del_attachment": "{% translate 'Delete this attachment' %}",
+            "attach_add": "{% translate 'Add an attachment' %}",
+            "attach_add_condition": "{% translate 'Add a condition' %}",
+            "attach_cond_remove": "{% translate 'Delete this condition' %}",
+            "attach_scope": "{% translate 'Source' %}",
+            "attach_scope_same": "{% translate 'Field of this task' %}",
+            "attach_scope_cross": "{% translate 'Field of another task' %}"
+        }
+    }
+    </script>
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        (function () {
+            var cfgEl = document.getElementById("tfb-config");
+            cfgEl.textContent = cfgEl.textContent.replace(
+                "__FORM_JSON__",
+                document.getElementById("tfb-form-json").textContent
+            );
+        })();
+    </script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}"></script>
+
+    <script>
+        // --- Modale « Synchroniser la tâche » : POST vers sync_tasks (exécuté en thread côté serveur) ---
+        (function () {
+            if (!document.getElementById("tfb-sync-modal")) return; // non-superuser : modale absente
+            var CFG = JSON.parse(document.getElementById("tfb-config").textContent);
+            var $modal = $("#tfb-sync-modal");
+            var $dbs = $("#tfb-sync-dbs");
+            var $adls = $("#tfb-sync-adls");
+            var $run = $("#tfb-sync-run");
+            var $fb = $("#tfb-sync-feedback");
+
+            if ($.fn.select2) {
+                $dbs.select2({ dropdownParent: $modal, width: "100%", placeholder: "—", allowClear: true });
+                $adls.select2({ dropdownParent: $modal, width: "100%", placeholder: "—", allowClear: true });
+            }
+
+            $run.on("click", function () {
+                $run.prop("disabled", true);
+                $fb.html('<div class="text-muted">{% translate "Starting…" %}</div>');
+                fetch(CFG.urls.sync, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "X-CSRFToken": CFG.csrfToken },
+                    body: JSON.stringify({
+                        develop_mode: $("#tfb-sync-develop").is(":checked"),
+                        training_mode: $("#tfb-sync-training").is(":checked"),
+                        no_sql_dbs: $dbs.val() || [],
+                        administrativelevel_ids: $adls.val() || []
+                    })
+                })
+                    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                    .then(function (res) {
+                        $run.prop("disabled", false);
+                        if (res.j.ok) {
+                            $fb.html('<div class="alert alert-success mb-0">' + (res.j.message || "OK") + '</div>');
+                            setTimeout(function () { $modal.modal("hide"); $fb.empty(); }, 2500);
+                        } else {
+                            $fb.html('<div class="alert alert-danger mb-0">' + ((res.j.errors || []).join(" ") || "{% translate 'Sync failed.' %}") + '</div>');
+                        }
+                    })
+                    .catch(function () {
+                        $run.prop("disabled", false);
+                        $fb.html('<div class="alert alert-danger mb-0">{% translate "Network error." %}</div>');
+                    });
+            });
+        })();
+    </script>
+{% endblock javascript %}
+
+{% block select2 %}{% endblock select2 %}

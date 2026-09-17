@@ -1,0 +1,137 @@
+/* Form builder — Cycle d'investissement / Tâches */
+
+.tfb-wrap { display: flex; gap: 16px; align-items: flex-start; }
+.tfb-col-left { flex: 0 0 300px; min-width: 0; }
+.tfb-col-main { flex: 1 1 auto; min-width: 0; }
+/* `min-width: 0` : sans ça, un flex item ne rétrécit jamais sous la largeur
+   intrinsèque de son contenu — un long libellé sélectionné dans un select2
+   (cf. règle .select2-container ci-dessous) pousserait sinon toute la
+   colonne (et donc .tfb-wrap) plus large que son flex-basis fixe. */
+.tfb-col-right { flex: 0 0 380px; min-width: 0; }
+
+@media (max-width: 1200px) {
+  .tfb-wrap { flex-wrap: wrap; }
+  .tfb-col-left, .tfb-col-right { flex-basis: 100%; }
+}
+
+.tfb-card { background: #fff; border: 1px solid #e3e6ea; border-radius: 10px; margin-bottom: 14px; }
+.tfb-card > h6 { margin: 0; padding: 10px 14px; border-bottom: 1px solid #eef0f2; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .02em; color: #6b7280; }
+.tfb-card > .tfb-body { padding: 12px 14px; }
+
+.tfb-pages { list-style: none; margin: 0; padding: 0; }
+.tfb-pages li { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.tfb-pages li.active { background: #eaf6f1; color: #157a54; font-weight: 600; }
+.tfb-pages li .tfb-page-actions { margin-left: auto; display: flex; gap: 4px; }
+
+.tfb-tree { list-style: none; margin: 0; padding: 0; }
+.tfb-node { border: 1px solid #e3e6ea; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: #fbfcfd; }
+.tfb-node.selected { border-color: #24c38b; box-shadow: 0 0 0 2px rgba(36,195,139,.18); }
+.tfb-node-head { display: flex; align-items: center; gap: 8px; }
+.tfb-node-head .tfb-key { font-family: monospace; font-size: 12px; color: #6b7280; }
+.tfb-node-head .tfb-label { font-weight: 600; font-size: 13px; }
+.tfb-badge { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; background: #eef2ff; color: #4338ca; border-radius: 6px; padding: 1px 6px; }
+.tfb-badge.req { background: #fee2e2; color: #b91c1c; }
+.tfb-node-actions { margin-left: auto; display: flex; gap: 4px; }
+.tfb-node-actions .btn { padding: 1px 7px; font-size: 12px; }
+.tfb-children { list-style: none; margin: 8px 0 0 0; padding: 0 0 0 18px; border-left: 2px dashed #d7dbe0; }
+
+.tfb-field-row { margin-bottom: 10px; max-width: 100%; overflow: hidden; }
+.tfb-field-row label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 2px; display: block; }
+.tfb-field-row .form-control, .tfb-field-row select { font-size: 13px; }
+.tfb-inline { display: flex; gap: 8px; max-width: 100%; }
+.tfb-inline > * { flex: 1; min-width: 0; max-width: 100%; overflow: hidden; }
+
+/* select2 (autocomplete/filtre sur les <select>, cf. task_form_builder.js
+   `applySelect2()`) : `.select2-container` est en `display: inline-block`
+   SANS largeur propre — il se dimensionne par défaut sur le contenu
+   affiché (le libellé de l'option choisie), donc "grandit"/"rétrécit"
+   visiblement à chaque sélection selon la longueur du texte (particulièrement
+   visible sur le picker "Tâche source" de `choicesFrom`, dont les noms de
+   tâches peuvent être très longs). `width:"100%"` passé à l'init JS ne
+   suffit pas toujours à le fixer de façon fiable. Verrouillé ici en CSS sur
+   PLUSIEURS niveaux à la fois (conteneur + boîte de sélection interne +
+   `box-sizing`) pour empêcher toute croissance quel que soit le mécanisme en
+   cause, avec `overflow:hidden` sur les lignes/parents ci-dessus en dernier
+   recours (n'affecte pas le menu déroulant lui-même, qui s'ouvre hors de ces
+   conteneurs, attaché à <body> par défaut). Scopé à l'éditeur (#tfb-root) et
+   à la barre d'outils (#tfb-share-mode) pour ne pas affecter select2
+   ailleurs dans le dashboard. */
+#tfb-root .select2-container,
+.tfb-toolbar .select2-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+#tfb-root .select2-selection,
+.tfb-toolbar .select2-selection {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+#tfb-root .select2-selection__rendered,
+.tfb-toolbar .select2-selection__rendered {
+  max-width: 100%;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.tfb-tabs { display: flex; gap: 4px; border-bottom: 1px solid #eef0f2; padding: 6px 10px 0; }
+.tfb-tabs button { border: none; background: none; padding: 6px 10px; font-size: 12px; font-weight: 700; color: #9aa0a6; border-bottom: 2px solid transparent; cursor: pointer; text-transform: uppercase; }
+.tfb-tabs button.active { color: #157a54; border-bottom-color: #24c38b; }
+.tfb-tabpane { display: none; padding: 12px 14px; }
+.tfb-tabpane.active { display: block; }
+
+.tfb-choice-row, .tfb-cond-row { display: flex; gap: 6px; margin-bottom: 6px; max-width: 100%; }
+/* Même correctif que `.tfb-inline > *` (cf. plus haut) : sans `min-width: 0`,
+   un enfant flex ne rétrécit jamais sous la largeur intrinsèque de son
+   contenu — le select2 du champ d'une condition (onglet "Règles"), une fois
+   une option au libellé long sélectionnée (chemin de champ complet, parfois
+   préfixé `$<page>.`), élargissait toute la ligne `.tfb-cond-row` au-delà de
+   sa colonne. `overflow: hidden` en filet de sécurité supplémentaire, sans
+   `flex: 1` (contrairement à `.tfb-inline > *`) car `.tfb-cond-row` mélange
+   des contrôles hétérogènes (2 select, une valeur, un bouton ✕) qu'on ne veut
+   pas forcer à occuper une part égale de la ligne. */
+.tfb-choice-row > *, .tfb-cond-row > * { min-width: 0; max-width: 100%; overflow: hidden; }
+.tfb-choice-row .form-control { font-size: 13px; }
+.tfb-choice-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+
+.tfb-rule, .tfb-calc { border: 1px solid #e3e6ea; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: #fbfcfd; }
+
+.tfb-errors { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+.tfb-errors ul { margin: 6px 0 0; padding-left: 18px; }
+.tfb-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+
+.tfb-json { width: 100%; min-height: 340px; font-family: monospace; font-size: 12px; }
+.tfb-preview { font-size: 13px; }
+.tfb-preview .tfb-p-field { padding: 4px 0; border-bottom: 1px dashed #eef0f2; }
+.tfb-preview .tfb-p-rule { color: #6d28d9; font-size: 12px; margin-left: 12px; }
+.tfb-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; max-width: 100%; }
+/* Même correctif que `.tfb-inline`/`.tfb-cond-row` ci-dessus, ENCORE MANQUANT
+   ici : `flex-wrap: wrap` seul ne suffit pas — un item ISOLÉ (ex. le select2
+   "Tâche source"/"Champ source" du nouveau bloc #tfb-visibility-condition,
+   qui réutilise cette classe) reste plus large que sa ligne tant qu'il n'a
+   pas `min-width: 0`, même quand il passerait seul à la ligne suivante. Bug
+   réel signalé par l'utilisateur (capture d'écran : page entière décalée
+   horizontalement après sélection d'un champ au libellé long dans ce bloc). */
+.tfb-toolbar > * { min-width: 0; max-width: 100%; overflow: hidden; }
+/* `.tfb-share-mode-label` est elle-même un conteneur flex de plusieurs
+   contrôles (label + select + bouton) — même traitement à l'intérieur. */
+.tfb-share-mode-label { flex-wrap: wrap; max-width: 100%; }
+.tfb-share-mode-label > * { min-width: 0; max-width: 100%; overflow: hidden; }
+.tfb-share-mode-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; font-weight: 600; }
+.tfb-share-mode-label select { font-size: 12px; }
+.tfb-muted { color: #9aa0a6; font-size: 12px; }
+
+/* Glisser-déposer des champs */
+.tfb-node[draggable="true"] { cursor: grab; }
+.tfb-node.tfb-dragging { opacity: .4; }
+.tfb-node.tfb-drop-before { box-shadow: 0 -3px 0 0 #24c38b inset; }
+.tfb-node.tfb-drop-after { box-shadow: 0 3px 0 0 #24c38b inset; }
+.tfb-node.tfb-drop-into { outline: 2px dashed #24c38b; outline-offset: 2px; background: rgba(36,195,139,.06); }
+.tfb-children { min-height: 6px; }
+.tfb-dropzone.tfb-drop-into { outline: 2px dashed #24c38b; outline-offset: 2px; border-radius: 8px; background: rgba(36,195,139,.06); }
+.tfb-dropzone-hint { display: none; color: #9aa0a6; font-size: 11px; font-style: italic; }
+.tfb-drag-active .tfb-dropzone-hint { display: inline; }
+.tfb-drag-active .tfb-dropzone { outline: 1px dashed #cbd5e1; outline-offset: 2px; border-radius: 8px; }
+.tfb-node-actions .btn[title] { cursor: pointer; }
