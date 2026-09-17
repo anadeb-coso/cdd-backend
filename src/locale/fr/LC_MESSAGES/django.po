@@ -623,6 +623,22 @@ msgstr "Validée"
 msgid "Invalidated"
 msgstr "Non Validée"
 
+#: .\dashboard\facilitators\functions.py
+msgid "Marked in progress again"
+msgstr "Remise en cours"
+
+#: .\dashboard\facilitators\functions.py
+msgid "Updated"
+msgstr "Modifiée"
+
+#: .\dashboard\facilitators\functions.py
+msgid "Updated after invalidation"
+msgstr "Modifiée après invalidation"
+
+#: .\dashboard\facilitators\functions.py
+msgid "Data loaded from another task"
+msgstr "Données chargées depuis une autre tâche"
+
 #: .\dashboard\templates\facilitators\profile.html
 msgid "Choice"
 msgstr "Choisir"
@@ -662,6 +678,40 @@ msgstr "Lien"
 #: .\dashboard\templates\facilitators\task_list.html
 msgid "Download"
 msgstr "Télécharger"
+
+#: .\dashboard\templates\facilitators\_task_attachment.html
+msgid "View full size"
+msgstr "Voir en grand"
+
+#: .\dashboard\templates\facilitators\_task_attachment.html
+msgid "Open in a new tab"
+msgstr "Ouvrir dans un nouvel onglet"
+
+#: dashboard/templates/administrative_levels/documents/_attachment_card_content.html
+msgid "Convert to Word"
+msgstr "Convertir en Word"
+
+#: dashboard/templates/administrative_levels/documents/_attachment_card_content.html
+msgid "Convert to PDF"
+msgstr "Convertir en PDF"
+
+#: dashboard/templates/facilitators/task_list.html
+#: dashboard/templates/facilitators/old_profile/task_list.html
+#: dashboard/templates/administrative_levels/profile/components/_task_detail.html
+msgid "Independent task — does not have to be completed before the next one"
+msgstr "Tâche indépendante — ne doit pas forcément être achevée avant la suivante"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Download all"
+msgstr "Tout télécharger"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Download selection"
+msgstr "Télécharger la sélection"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Please select at least one file."
+msgstr "Veuillez sélectionner au moins un fichier."
 
 #: .\dashboard\templates\statistic\statistic.html
 msgid "Global"
@@ -2622,3 +2672,827 @@ msgstr "Situation du cycle CDD par CVD / village siège, par projet. Suit la zon
 #: dashboard/templates/reports/pages/priorities.html
 msgid "No project available."
 msgstr "Aucun projet disponible."
+
+
+# --- Task form builder (Cycle d'investissement) ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Export XLSForm"
+msgstr "Exporter (XLSForm)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Import XLSForm"
+msgstr "Importer (XLSForm)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Pages"
+msgstr "Pages"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Page"
+msgstr "Page"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a page"
+msgstr "Ajouter une page"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Fields"
+msgstr "Champs"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add field"
+msgstr "Ajouter le champ"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "field"
+msgstr "champ"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "no label"
+msgstr "sans libellé"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Select a field on the left."
+msgstr "Sélectionnez un champ à gauche."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Rules"
+msgstr "Règles"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Calculations"
+msgstr "Calculs"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Preview"
+msgstr "Aperçu"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Text"
+msgstr "Texte"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Note / label"
+msgstr "Note / libellé"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Integer"
+msgstr "Entier"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Decimal"
+msgstr "Décimal"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Single choice"
+msgstr "Choix unique"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Multiple choice"
+msgstr "Choix multiple"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Multiple choice (list)"
+msgstr "Choix multiple (liste)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Multiple choice (checkboxes)"
+msgstr "Choix multiple (cases à cocher)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Scrollable list threshold (item count)"
+msgstr "Seuil liste défilante (nb d'éléments)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid ""
+"A search bar is always shown on this field. This number sets when checkboxes "
+"switch to a virtualised scrollable list (default 25). Set 0 to disable search "
+"on dropdowns."
+msgstr ""
+"Une barre de recherche est toujours affichée sur ce champ. Ce nombre fixe le "
+"seuil au-delà duquel les cases à cocher passent en liste défilante "
+"virtualisée (défaut 25). Mettre 0 désactive la recherche des listes "
+"déroulantes."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Date + time"
+msgstr "Date + heure"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Time"
+msgstr "Heure"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Repeating group"
+msgstr "Groupe répétable"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Key (technical)"
+msgstr "Clé (technique)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Label"
+msgstr "Libellé"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Help / hint"
+msgstr "Aide / indication"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Required"
+msgstr "Obligatoire"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Date picker (date mode)"
+msgstr "Sélecteur de date (mode date)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Choices (one value per line)"
+msgstr "Choix (une valeur par ligne)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a choice"
+msgstr "Ajouter un choix"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Minimum"
+msgstr "Minimum"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Maximum"
+msgstr "Maximum"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Min length"
+msgstr "Longueur min"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Max length"
+msgstr "Longueur max"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Regular expression"
+msgstr "Expression régulière"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Min rows"
+msgstr "Nb min de lignes"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Max rows"
+msgstr "Nb max de lignes"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Disable row reordering"
+msgstr "Interdire le réordonnancement des lignes"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Validation messages (optional)"
+msgstr "Messages de validation (optionnels)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Message: required"
+msgstr "Message « obligatoire »"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Message: out of range"
+msgstr "Message « hors bornes »"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Message: invalid format"
+msgstr "Message « format invalide »"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Conditions between fields: show / hide / require a field based on another field value."
+msgstr "Conditions entre champs : afficher / masquer / rendre obligatoire un champ selon la valeur d'un autre."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Target field"
+msgstr "Champ cible"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "When"
+msgstr "Quand"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "all conditions"
+msgstr "toutes les conditions"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "at least one condition"
+msgstr "au moins une condition"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Show"
+msgstr "Afficher"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Hide"
+msgstr "Masquer"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Make required"
+msgstr "Rendre obligatoire"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Make optional"
+msgstr "Rendre facultatif"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Enable"
+msgstr "Activer"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Disable"
+msgstr "Désactiver"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "in list"
+msgstr "dans la liste"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "not in list"
+msgstr "hors liste"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "contains"
+msgstr "contient"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "is empty"
+msgstr "est vide"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "is filled"
+msgstr "est renseigné"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a condition"
+msgstr "Ajouter une condition"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Delete rule"
+msgstr "Supprimer la règle"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a rule"
+msgstr "Ajouter une règle"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Calculated fields: operators + - * / ( ) and functions sum, min, max, round, abs."
+msgstr "Champs calculés : opérateurs + - * / ( ) et fonctions sum, min, max, round, abs."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Result field"
+msgstr "Champ résultat"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Expression"
+msgstr "Expression"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Delete"
+msgstr "Supprimer"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a calculation"
+msgstr "Ajouter un calcul"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "when"
+msgstr "quand"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The form cannot be compiled as is."
+msgstr "Le formulaire n'est pas compilable en l'état."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "You can paste an existing form here then Apply."
+msgstr "Vous pouvez coller ici un formulaire existant puis « Appliquer »."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Apply JSON"
+msgstr "Appliquer le JSON"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The form was not saved:"
+msgstr "Le formulaire n'a pas été enregistré :"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Form saved."
+msgstr "Formulaire enregistré."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Save failed."
+msgstr "Échec de l'enregistrement."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Network error."
+msgstr "Erreur réseau."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Form not compilable (check field keys)."
+msgstr "Formulaire non compilable (vérifiez les clés des champs)."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "At least one page is required."
+msgstr "Au moins une page est requise."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add"
+msgstr "Ajouter"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "XLSForm imported — review then Save."
+msgstr "XLSForm importé — relisez puis Enregistrez."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Partial import — see errors."
+msgstr "Import partiel — voir les erreurs."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Form builder"
+msgstr "Générateur de formulaire"
+
+
+# --- Task form builder : déplacement / copie / glisser-déposer des champs ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Duplicate"
+msgstr "Dupliquer"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Move into an adjacent group"
+msgstr "Placer dans un groupe voisin"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Move out of the group"
+msgstr "Sortir du groupe"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Move to"
+msgstr "Déplacer vers"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Move to…"
+msgstr "Déplacer vers…"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "— Page root —"
+msgstr "— Racine de la page —"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "A repeating group cannot contain another repeating group."
+msgstr "Un groupe répétable ne peut pas en contenir un autre."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "No adjacent group to place this field in."
+msgstr "Aucun groupe voisin où placer ce champ."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Drag to reorder or drop into a group"
+msgstr "Glissez pour réordonner ou déposer dans un groupe"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "… or drop a field here to add it to the group"
+msgstr "… ou déposez un champ ici pour l'ajouter au groupe"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "… or drop a field here"
+msgstr "… ou déposez un champ ici"
+
+
+# --- Task form builder : choix (enum) import / export Excel ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Import (Excel)"
+msgstr "Importer (Excel)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Export (Excel)"
+msgstr "Exporter (Excel)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Choices imported: "
+msgstr "Choix importés : "
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Replace the current choices with those from the file? (Cancel = append the new ones)"
+msgstr "Remplacer les choix actuels par ceux du fichier ? (Annuler = ajouter à la suite)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "No choice value found in the file."
+msgstr "Aucune valeur de choix trouvée dans le fichier."
+
+
+# --- Task form builder : sources dynamiques (PostgreSQL / Excel / niveaux) + cascade ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Choice source"
+msgstr "Source des choix"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Manual list"
+msgstr "Liste manuelle"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Database (PostgreSQL)"
+msgstr "Base de données (PostgreSQL)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Excel file"
+msgstr "Fichier Excel"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Administrative levels"
+msgstr "Niveaux administratifs"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Table"
+msgstr "Table"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Value column"
+msgstr "Colonne valeur"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Label column"
+msgstr "Colonne libellé"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Parent column (cascade)"
+msgstr "Colonne parent (cascade)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Constraints (filters)"
+msgstr "Contraintes (filtres)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Order by"
+msgstr "Trier par"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Limit"
+msgstr "Limite"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Level"
+msgstr "Niveau"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Parent field (cascade)"
+msgstr "Champ parent (cascade)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "— none (root level) —"
+msgstr "— aucun (niveau racine) —"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "cascade enabled"
+msgstr "cascade activée"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a filter"
+msgstr "Ajouter un filtre"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "in (a,b,c)"
+msgstr "dans (a,b,c)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "is empty (NULL)"
+msgstr "est vide (NULL)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "is set"
+msgstr "est renseigné"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The parent column must differ from the value column (typically parent_id), otherwise the cascade filters nothing."
+msgstr "La colonne parent doit être différente de la colonne valeur (typiquement « parent_id »), sinon la cascade ne filtre rien."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Load / refresh from database"
+msgstr "Charger / rafraîchir depuis la base"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Choose the value column."
+msgstr "Choisissez la colonne valeur."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "rows loaded"
+msgstr "lignes chargées"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "No data loaded."
+msgstr "Aucune donnée chargée."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Loading failed."
+msgstr "Échec du chargement."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "truncated — add filters"
+msgstr "tronqué — ajoutez des filtres"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Choose an Excel file"
+msgstr "Choisir un fichier Excel"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Apply mapping"
+msgstr "Appliquer le mappage"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Generate the Region → Village cascade"
+msgstr "Générer la cascade Région → Village"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Replaces this field with 5 chained fields (Region, Prefecture, Commune, Canton, Village)."
+msgstr "Remplace ce champ par 5 champs chaînés (Région, Préfecture, Commune, Canton, Village)."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Cascade generated: "
+msgstr "Cascade générée : "
+
+
+# --- Task form builder : partage entre villages sièges (share_mode) ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Sharing"
+msgstr "Partage"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Copy the shared fields of this task to other headquarters villages when validated"
+msgstr "Copie les champs partagés de cette tâche vers les autres villages sièges à la validation"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "No sharing"
+msgstr "Aucun partage"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Automatic — canton headquarters villages"
+msgstr "Automatique — villages sièges du canton"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Facilitator, then validator"
+msgstr "Facilitateur puis validateur"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Validator only"
+msgstr "Validateur uniquement"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Sharing mode is set per field below. Pick a mode here and click Apply to set it on every field of this task at once."
+msgstr "Le mode de partage se règle par champ ci-dessous. Choisissez un mode ici puis cliquez sur Appliquer pour le mettre sur tous les champs de la tâche en une fois."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Apply this mode to all fields of the task"
+msgstr "Appliquer ce mode à tous les champs de la tâche"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Apply to all fields"
+msgstr "Appliquer à tous les champs"
+
+
+# --- Modal unique de détail de tâche : historique + sélecteur de cibles ---
+
+#: dashboard/templates/administrative_levels/profile/components/_task_detail.html
+msgid "Target headquarters villages / cantons for sharing"
+msgstr "Villages sièges / cantons cibles du partage"
+
+#: dashboard/templates/administrative_levels/profile/components/_task_detail.html
+msgid "Full history"
+msgstr "Historique complet"
+
+#: dashboard/templates/administrative_levels/profile/components/_task_detail.html
+msgid "Will be copied automatically to {{ counter }} headquarters village of the same canton when validated."
+msgid_plural "Will be copied automatically to {{ counter }} headquarters villages of the same canton when validated."
+msgstr[0] "Sera copié automatiquement vers {{ counter }} village siège du même canton à la validation."
+msgstr[1] "Sera copié automatiquement vers {{ counter }} villages sièges du même canton à la validation."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Share with headquarters villages upon validation"
+msgstr "Partager avec les villages sièges à la validation"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Dynamic options from another field"
+msgstr "Options dynamiques depuis un autre champ"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Source task"
+msgstr "Tâche source"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Source field"
+msgstr "Champ source"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The options of this field will be exactly what the facilitator chose in the source field. Empty list until the source has an answer."
+msgstr "Les options de ce champ seront exactement ce que le facilitateur a choisi dans le champ source. Liste vide tant que la source n'a pas encore de réponse."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "— same task —"
+msgstr "— même tâche —"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Conditional visibility from another task"
+msgstr "Visibilité conditionnelle depuis une autre tâche"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "— no condition —"
+msgstr "— aucune condition —"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "If the source task has no answer yet"
+msgstr "Si la tâche source n'a pas encore de réponse"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Hidden until the source task is answered"
+msgstr "Caché tant que la source n'est pas répondue"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Visible until the source task is answered"
+msgstr "Visible tant que la source n'est pas répondue"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Condition"
+msgstr "Condition"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Value"
+msgstr "Valeur"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Task visibility"
+msgstr "Visibilité de la tâche"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Clear condition"
+msgstr "Effacer la condition"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Sum (+)"
+msgstr "Somme (+)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Difference (−)"
+msgstr "Différence (−)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Product (×)"
+msgstr "Produit (×)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Quotient (÷)"
+msgstr "Quotient (÷)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Percentage (%)"
+msgstr "Pourcentage (%)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "This field is automatically calculated from other fields"
+msgstr "Ce champ est calculé automatiquement à partir d'autres champs"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "This field will be shown disabled (read-only) on mobile — its value is recalculated automatically as the other fields are filled in."
+msgstr "Ce champ sera affiché désactivé (lecture seule) sur mobile — sa valeur est recalculée automatiquement à chaque saisie."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Custom expression (editable in the Calculations tab): "
+msgstr "Expression personnalisée (modifiable dans l'onglet « Calculs ») : "
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Operation"
+msgstr "Opération"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Numerator"
+msgstr "Numérateur"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Denominator"
+msgstr "Dénominateur"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Term"
+msgstr "Terme"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add a term"
+msgstr "Ajouter un terme"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Calculated field: cannot be marked Required (see below)."
+msgstr "Champ calculé : ne peut pas être marqué « Obligatoire » (voir plus bas)."
+
+
+# --- Task form builder : onglet "Pièces jointes" (Task.attachments) ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Attachments expected for this task (photo, minutes, document…), to be filled in on mobile — same logic as kobocollect."
+msgstr "Pièces jointes attendues pour cette tâche (photo, procès-verbal, document…), à remplir sur mobile — même logique que kobocollect."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Photos"
+msgstr "Photos"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Minutes"
+msgstr "Procès-verbaux"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Other document"
+msgstr "Autre document"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Optional by default (if no “require/make optional” condition below)"
+msgstr "Facultatif par défaut (si aucune condition « rendre obligatoire/facultatif » ci-dessous)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Delete this attachment"
+msgstr "Supprimer cette pièce jointe"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Add an attachment"
+msgstr "Ajouter une pièce jointe"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Delete this condition"
+msgstr "Supprimer la condition"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Source"
+msgstr "Source"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Field of this task"
+msgstr "Champ de cette tâche"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Field of another task"
+msgstr "Champ d'une autre tâche"
+
+
+# --- Task form builder : sync_tasks modal ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Sync this task"
+msgstr "Synchroniser cette tâche"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "develop_mode"
+msgstr "develop_mode (mode développement)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "training_mode"
+msgstr "training_mode (mode formation)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Facilitator CouchDB databases"
+msgstr "Bases CouchDB des facilitateurs"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "empty = all facilitators of the project"
+msgstr "vide = tous les facilitateurs du projet"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Headquarters villages"
+msgstr "Villages sièges"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "empty = all"
+msgstr "vide = tous"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Cancel"
+msgstr "Annuler"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Run the sync"
+msgstr "Lancer la synchronisation"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Starting…"
+msgstr "Lancement…"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Sync failed."
+msgstr "Échec de la synchronisation."
+
+
+# --- Form builder : champ geopoint ---
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "GPS coordinates"
+msgstr "Coordonnées GPS"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "Required accuracy (metres)"
+msgstr "Précision requise (mètres)"
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The mobile app retries the capture until this accuracy is reached (getBestLocation), then returns the best fix after 30 s."
+msgstr "Le mobile retente la capture jusqu'à atteindre cette précision (getBestLocation), puis retourne le meilleur point après 30 s."
