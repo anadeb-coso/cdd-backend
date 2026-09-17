@@ -1,6 +1,6 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import Http404
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.shortcuts import get_object_or_404
 from urllib.parse import urlencode
@@ -15,6 +15,13 @@ from django.core.paginator import Paginator
 from django.db.models import Q, QuerySet
 import re as re_module
 from functools import reduce
+import io
+import os
+import zipfile
+import requests
+
+from cdd.my_librairies.download_file import display_filename_with_suffix
+from dashboard.templatetags.custom_tags import attachment_location_label
 
 from process_manager.models import Phase, Activity, Task, Project
 from authentication.models import Facilitator
@@ -292,5 +299,97 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                             # else:
                             #     attachments.append(i)
                             attachments.append(i)
-                            
+
         return sorted(attachments,  key=lambda obj: (str(obj["name"])+str(obj["headquarters_village"])))
+
+
+# Nombre max de fichiers zippés en une seule requête (synchrone, pas de job
+# d'arrière-plan fiable disponible dans ce projet — cf. mémoire des sessions
+# précédentes) : évite une requête HTTP qui traîne indéfiniment sur une trop
+# grosse sélection.
+MAX_ZIP_FILES = 200
+
+
+class DownloadAttachmentsZipView(PageMixin, LoginRequiredMixin, generic.View):
+    """« Télécharger tout » (GET, ré-exécute EXACTEMENT le même filtrage que
+    la page — AttachmentListView.get_queryset — pour garantir un zip complet
+    et cohérent avec les filtres actifs, canton compris, plutôt que de
+    dépendre d'une énumération côté client potentiellement incomplète) et
+    « Télécharger la sélection » (POST, uniquement les fichiers cochés,
+    identifiés par leur URL S3 — ces pièces jointes n'ont pas d'id stable,
+    cf. AttachmentListView.get_queryset)."""
+
+    def get(self, request, *args, **kwargs):
+        lister = AttachmentListView()
+        lister.request = request
+        attachments = lister.get_queryset()
+        items = [
+            (a["attachment"]["uri"], self._desired_name(a, a["attachment"]["uri"]))
+            for a in attachments
+            if a.get("attachment", {}).get("uri") and "file:///data" not in a["attachment"]["uri"]
+        ]
+        return self._build_zip_response(items)
+
+    def post(self, request, *args, **kwargs):
+        urls = [u for u in request.POST.getlist('urls') if u]
+        # Renommage "<intitulé> (<village/canton>)" (même règle que le
+        # téléchargement individuel, cf. _attachment_card_content.html) :
+        # les pièces jointes n'ont pas d'id/nom stable transmis par la case à
+        # cocher (juste l'URL), donc on ré-exécute le même filtrage que la
+        # page pour retrouver le nom + village/canton de chaque fichier
+        # sélectionné — même source de vérité que « Télécharger tout ».
+        lister = AttachmentListView()
+        lister.request = request
+        attachments = lister.get_queryset()
+        by_url = {
+            a["attachment"]["uri"]: a for a in attachments
+            if a.get("attachment", {}).get("uri")
+        }
+        items = [(u, self._desired_name(by_url.get(u), u)) for u in urls]
+        return self._build_zip_response(items)
+
+    @staticmethod
+    def _desired_name(attachment, url):
+        if not attachment:
+            return None
+        name = attachment.get("name")
+        if not name:
+            return None
+        location = attachment_location_label(attachment)
+        return display_filename_with_suffix(name, location, url)
+
+    def _build_zip_response(self, items):
+        # Déduplique par URL en préservant l'ordre (une même pièce jointe
+        # peut apparaître plusieurs fois si le filtre couvre plusieurs
+        # villages partageant le même document, ex. plan d'actions cantonal).
+        seen = {}
+        for url, desired_name in items:
+            if url and url not in seen:
+                seen[url] = desired_name
+        if not seen:
+            return HttpResponseBadRequest("Aucun fichier à télécharger.")
+        items = list(seen.items())[:MAX_ZIP_FILES]
+
+        buffer = io.BytesIO()
+        used_names = set()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for url, desired_name in items:
+                try:
+                    resp = requests.get(url.split("?")[0], stream=True, timeout=30)
+                    if resp.status_code != 200:
+                        continue
+                except Exception:
+                    continue
+                name = desired_name or (url.split("/")[-1].split("?")[0] or "fichier")
+                base, ext = os.path.splitext(name)
+                candidate, n = name, 1
+                while candidate in used_names:
+                    candidate = f"{base}_{n}{ext}"
+                    n += 1
+                used_names.add(candidate)
+                zf.writestr(candidate, resp.content)
+
+        buffer.seek(0)
+        response = HttpResponse(buffer.getvalue(), content_type="application/zip")
+        response['Content-Disposition'] = 'attachment; filename="documents.zip"'
+        return response

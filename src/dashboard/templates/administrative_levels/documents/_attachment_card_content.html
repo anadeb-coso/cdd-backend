@@ -1,0 +1,71 @@
+{% load i18n custom_tags %}
+{% comment %}
+    Contenu d'une carte de la galerie documents (/administrative-levels/documents/) :
+    AUCUN chargement du contenu réel du fichier tant que la page vient d'être ouverte —
+    PDF/Word affichent une icône générique (fa-file-pdf / fa-file-word), aucune requête
+    réseau vers le fichier lui-même avant un clic explicite ; les photos gardent une
+    vraie miniature mais en chargement paresseux natif (`loading="lazy"`, le navigateur
+    ne la récupère que si la carte devient visible à l'écran) plutôt que toutes chargées
+    d'un coup à l'arrivée sur la page.
+    Barre d'actions en icônes seules (étiquette = `title`, au survol) : Voir en grand
+    (visionneuse plein écran en place, cf. #docGalleryLightbox plus bas dans
+    attachments.html), Ouvrir dans un nouvel onglet (absent pour les photos — même
+    raison que facilitators/_task_attachment.html : passer par l'URL S3 brute pour une
+    navigation top-level peut déclencher un téléchargement forcé selon le Content-Type
+    renvoyé par la source), Télécharger, et Convertir (PDF -> Word / Word -> PDF).
+    Téléchargement : nom de fichier renommé "<intitulé> (<village/canton>)<extension>"
+    (filtre `attachmentDownloadFilename`, `?filename=` de `download_from_url` — même
+    règle que le téléchargement groupé, `views_doc.DownloadAttachmentsZipView`).
+    Contexte attendu : `attachment` (`attachment.attachment.uri`).
+{% endcomment %}
+{% with raw_url=attachment.attachment.uri|imgAWSS3Filter %}
+    {% if ".pdf" in attachment.attachment.uri %}
+        <div class="doc-card-actions mb-1">
+            <a href="javascript:void(0)" onclick="window.docGalleryOpenLightbox('{{ raw_url|escapejs }}', 'pdf')" title="{% translate 'View full size' %}">
+                <i class="fas fa-expand"></i>
+            </a>
+            <a href="{% url 'download_from_url' %}?url={{ raw_url }}&disposition=inline" target="_blank" title="{% translate 'Open in a new tab' %}">
+                <i class="fas fa-external-link-alt"></i>
+            </a>
+            <a href="{% url 'download_from_url' %}?url={{ raw_url }}&filename={{ attachment|attachmentDownloadFilename:raw_url|urlencode }}" target="_blank" title="{% translate 'Download' %}">
+                <i class="fas fa-download"></i>
+            </a>
+            <a href="{% url 'convert_pdf_to_word' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Convert to Word' %}">
+                <i class="fas fa-file-word"></i>
+            </a>
+        </div>
+        <div class="doc-card-placeholder">
+            <i class="fas fa-file-pdf fa-3x text-danger"></i>
+        </div>
+    {% elif ".docx" in attachment.attachment.uri or ".doc" in attachment.attachment.uri %}
+        <div class="doc-card-actions mb-1">
+            <a href="javascript:void(0)" onclick="window.docGalleryOpenLightbox('{{ raw_url|escapejs }}', 'office')" title="{% translate 'View full size' %}">
+                <i class="fas fa-expand"></i>
+            </a>
+            <a href="https://view.officeapps.live.com/op/embed.aspx?src={{ raw_url }}" target="_blank" title="{% translate 'Open in a new tab' %}">
+                <i class="fas fa-external-link-alt"></i>
+            </a>
+            <a href="{% url 'download_from_url' %}?url={{ raw_url }}&filename={{ attachment|attachmentDownloadFilename:raw_url|urlencode }}" target="_blank" title="{% translate 'Download' %}">
+                <i class="fas fa-download"></i>
+            </a>
+            <a href="{% url 'convert_word_to_pdf' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Convert to PDF' %}">
+                <i class="fas fa-file-pdf"></i>
+            </a>
+        </div>
+        <div class="doc-card-placeholder">
+            <i class="fas fa-file-word fa-3x text-primary"></i>
+        </div>
+    {% else %}
+        <div class="doc-card-actions mb-1">
+            <a href="javascript:void(0)" onclick="window.docGalleryOpenLightbox('{{ raw_url|escapejs }}', 'image')" title="{% translate 'View full size' %}">
+                <i class="fas fa-expand"></i>
+            </a>
+            <a href="{% url 'download_from_url' %}?url={{ raw_url }}&filename={{ attachment|attachmentDownloadFilename:raw_url|urlencode }}" target="_blank" title="{% translate 'Download' %}">
+                <i class="fas fa-download"></i>
+            </a>
+        </div>
+        <div class="doc-card-placeholder">
+            <img src="{{ raw_url }}" loading="lazy" class="doc-card-img second-target" alt="{{ attachment.task }}" />
+        </div>
+    {% endif %}
+{% endwith %}

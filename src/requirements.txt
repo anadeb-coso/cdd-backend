@@ -74,3 +74,9 @@ shortuuid==1.0.1
 Pillow
 django-cors-headers==3.10.0
 djangorestframework-simplejwt==4.8.0
+# Conversion PDF <-> Word (dashboard, bouton "Convertir" — cf. cdd/my_librairies/doc_convert.py).
+# pdf2docx tire PyMuPDF (fitz) en dépendance. La conversion Word -> PDF nécessite EN PLUS
+# LibreOffice (binaire `soffice`) installé sur le serveur — pas un paquet pip, cf. doc_convert.py.
+pdf2docx==0.5.13
+python-docx==1.2.0
+PyMuPDF==1.28.2

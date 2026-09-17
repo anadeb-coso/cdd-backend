@@ -1,15 +1,36 @@
 {% load static i18n humanize bootstrap4 custom_tags %}
 
-    <div class="babylongrid row"
-                    hx-trigger="revealed"
-                    hx-get="{% url 'dashboard:administrative_levels:documents' %}?page={{ page_obj.number|add:1 }}&type={{ request.GET.type }}&administrative_level={{ request.GET.administrative_level }}&phase={{ request.GET.phase }}&activity={{ request.GET.activity }}&task={{ request.GET.task }}"
-                    hx-swap="afterend"
-            >
+    {% comment %}
+        Retiré : `hx-trigger="revealed"` déclenchait un rechargement infini de
+        pagination jamais réellement implémenté côté vue (`AttachmentListView`
+        ne définit pas `page_obj`, et renvoie déjà TOUTE la liste sans
+        découpage — `__build_db_filter` crée un `Paginator` mais ignore son
+        résultat). En plus, `hx-get` pointait vers la vue de PAGE ENTIÈRE
+        (`documents/`, pas un partiel) : chaque déclenchement réinjectait donc
+        la page HTML complète (styles, tous les <script>), y compris ses
+        propres balises <script> réexécutées -> erreurs "identifier already
+        declared" / "custom element already defined" (jquery.inputmask,
+        htmx lui-même). Resté invisible tant que `static/js/htmx.min.js`
+        était en 404 (htmx ne se chargeait jamais) ; redevenu actif — et donc
+        bloquant — une fois ce fichier vendorisé. Cf. mémoire de session pour
+        le détail ; à réintroduire seulement avec une vraie pagination
+        serveur ET un gabarit renvoyant un partiel (`_grid.html` seul), pas
+        page complète.
+
+        `babylongrid` également retiré de cette div (classe seule, plus
+        appelée en JS) : son propre système de colonnes casse le contexte
+        flex Bootstrap dont dépendent les cartes `.col-3` ci-dessous (une
+        fois enveloppées par le plugin, elles ne sont plus enfants directs de
+        `.row` -> grille écroulée sur une colonne étroite au lieu d'un vrai
+        damier). La grille Bootstrap seule (`.row`/`.col-3`) suffit.
+    {% endcomment %}
+    <div class="row">
         {% for attachment in attachments %}
         {% if attachment.attachment.uri|not_local %}
         <div class="col-3">
             <article>
                 <div class="card mr-3">
+                    <input type="checkbox" class="checkbox" name="urls" value="{{ attachment.attachment.uri }}">
                     <div class="card-body">
                         <p class="card-title" style="height: 20px !important; font-size: 11px;">
                             <a href="{% url 'dashboard:administrative_levels:detail' attachment.no_sql_db_name %}?administrative_level={{ attachment.headquarters_village_id }}" target="_blank">
@@ -31,46 +52,13 @@
                         {% endif %}
                     </div>
                     {% if attachment.attachment.uri|is_pdf %}
-                        <div class="card second-target">
+                        <div class="card">
                             <div class="card-body attach-file">
                                 {% if attachment.attachment.uri %}
                                     {% if "file:///data" in attachment.attachment.uri %}
                                         <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
-                                    {% elif ".pdf" in attachment.attachment.uri %}
-                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            {% translate "Link" %}
-                                        </a><br />
-                                        <a href="{{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            <iframe src="{{ attachment.attachment.uri|imgAWSS3Filter }}" 
-                                            {% comment %} width="250" height="300" {% endcomment %}
-                                            width="100%"
-                                            ></iframe>
-                                        </a>
-                                    {% elif ".docx" in attachment.attachment.uri or ".doc" in attachment.attachment.uri %}
-                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            {% translate "Download" %}
-                                        </a><br />
-                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                            <iframe style="float: left;"
-                                                src='https://view.officeapps.live.com/op/embed.aspx?src={{ attachment.attachment.uri|imgAWSS3Filter }}'
-                                                {% comment %} width="250" height="300"  {% endcomment %}
-                                                width="100%"
-                                                frameborder='0'>
-                                                    This is an embedded
-                                                    <a target='_blank' href='http://office.com'>Microsoft Office</a>
-                                                    document, powered by
-                                                    <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
-                                            </iframe>
-                                        </a>
                                     {% else %}
-                                        <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank" >
-                                        <!-- class="btn btn-primary" data-toggle="modal"
-                                        data-target="#item-attach-{{ forloop.counter }}" -->
-                                            <img src="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" 
-                                            {% comment %} width="200" height="200"  {% endcomment %}
-                                            width="100%"
-                                            />
-                                        </a>
+                                        {% include 'administrative_levels/documents/_attachment_card_content.html' with attachment=attachment %}
                                     {% endif %}
                                 {% else %}
                                     <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
@@ -81,15 +69,8 @@
                             </div>
                             <div class="clearfix"></div>
                         </div>
-
-
-
-
-
                     {% else %}
-                    <a href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}" target="_blank">
-                        <img src="{{ attachment.attachment.uri|imgAWSS3Filter }}" class="card-img-top second-target" alt="{{ attachment.task }}">
-                    </a>
+                        {% include 'administrative_levels/documents/_attachment_card_content.html' with attachment=attachment %}
                     {% endif %}
                 </div>
             </article>

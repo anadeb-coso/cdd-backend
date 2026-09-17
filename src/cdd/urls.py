@@ -22,6 +22,7 @@ from django.http import HttpResponse
 
 from . import views
 from cdd.my_librairies.download_file import download_file_view, download_from_url
+from cdd.my_librairies.convert_file import convert_pdf_to_word, convert_word_to_pdf
 
 handler400 = 'dashboard.authentication.views.handler400'
 handler403 = 'dashboard.authentication.views.handler403'
@@ -47,6 +48,8 @@ urlpatterns = [
     path('api/', include('cdd.urls_api')),
     path('download-file-view/<str:path>/<str:content_type>/', download_file_view, name='download_file_view'),
     path('download-from-url/', download_from_url, name='download_from_url'),
+    path('convert-pdf-to-word/', convert_pdf_to_word, name='convert_pdf_to_word'),
+    path('convert-word-to-pdf/', convert_word_to_pdf, name='convert_word_to_pdf'),
 ]
 
 urlpatterns += i18n_patterns(

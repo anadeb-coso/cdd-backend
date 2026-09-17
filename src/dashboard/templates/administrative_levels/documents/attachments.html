@@ -160,32 +160,121 @@
             }
         }
 
-        .download-all {
+        .download-all, .download-all-link {
             background-color: #599cf7;
             outline: transparent;
             border-radius: 4px;
             padding: 5px 10px 3px 10px;
             border: 0;
+            display: inline-flex;
+            align-items: center;
         }
 
-        .download-all, .download-all:focus, .download-all:hover {
+        .download-all, .download-all:focus, .download-all:hover,
+        .download-all-link, .download-all-link:focus, .download-all-link:hover {
             color: white;
             text-transform: capitalize;
         }
 
-        .download-all:focus, .download-all:hover {
+        .download-all:focus, .download-all:hover,
+        .download-all-link:focus, .download-all-link:hover {
             opacity: 0.8;
         }
 
+        /* Carte de la galerie (cf. _attachment_card_content.html) : icônes
+           d'action en haut, aperçu/placeholder en dessous — AUCUN contenu de
+           fichier chargé au chargement de la page (icône générique pour
+           PDF/Word ; vraie miniature en chargement paresseux natif pour les
+           photos, cf. loading="lazy"). */
+        .doc-card-actions {
+            display: flex;
+            gap: 12px;
+            padding: 6px 8px 0;
+        }
+        .doc-card-actions a { color: #6c757d; }
+        .doc-card-actions a:hover { color: #333; }
+        .doc-card-placeholder {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f6f9fb;
+        }
+        .doc-card-img {
+            max-width: 100%;
+            max-height: 100px;
+            object-fit: contain;
+        }
+
+        /* Visionneuse plein écran ("Voir en grand") de cette page — même
+           pattern que #tdmLightbox (static/dashboard/js/task_detail_modal.js),
+           dupliqué ici en local (page sans rapport avec les profils
+           facilitateur) plutôt que partagé entre les deux. */
+        #docGalleryLightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.85);
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+        #docGalleryLightbox.doc-gallery-lightbox-open { display: flex; }
+        .doc-gallery-lightbox-close {
+            position: absolute;
+            top: 15px; right: 25px;
+            color: #fff;
+            font-size: 2rem;
+            line-height: 1;
+            background: none;
+            border: 0;
+            cursor: pointer;
+            z-index: 1;
+        }
+        #docGalleryLightboxContent {
+            max-width: 100%;
+            max-height: 100%;
+            text-align: center;
+        }
+        #docGalleryLightboxContent img {
+            max-width: 90vw;
+            max-height: 85vh;
+            object-fit: contain;
+        }
+        #docGalleryLightboxContent iframe {
+            width: 90vw;
+            height: 85vh;
+            border: 0;
+            background: #fff;
+        }
+
     </style>
-    <link rel="stylesheet" href="{% static 'plugins/babylon-grid/babylongrid-default.css' %}">
+    {% comment %}
+        babylon-grid retiré : son propre système de colonnes (wrapInner + ses
+        .column générés en JS) casse le contexte flex de Bootstrap dont
+        dépendent les cartes .col-3 de _grid.html (une fois enveloppées, elles
+        ne sont plus enfants directs de .row -> écroulées sur ~20% de large
+        au lieu d'un vrai damier 4 colonnes). Les deux systèmes de grille
+        n'étaient pas censés coexister ; comme le plugin n'a jamais été
+        chargé avant ce correctif (404 depuis toujours), ce conflit n'avait
+        jamais pu se produire/être vu. La grille Bootstrap seule (.row/.col-3,
+        déjà en place) suffit et fonctionne sans JS.
+    {% endcomment %}
 {% endblock %}
 
 {% block content %}
     {% csrf_token %}
     <div class="row">
 
-        <div class="col-12 p-0 d-flex justify-content-end">
+        <div class="col-12 p-0 d-flex justify-content-end align-items-center">
+            <a class="download-all-link mr-2" href="{% url 'dashboard:administrative_levels:documents_download_zip' %}?{{ query_strings_raw.urlencode }}"
+               title="{% translate 'Download all' %}">
+                <i class="fas fa-file-archive mr-1"></i>{% translate 'Download all' %}
+            </a>
+            <button type="button" class="download-all mr-2" title="{% translate 'Download selection' %}">
+                <i class="fas fa-check-square mr-1"></i>{% translate 'Download selection' %}
+            </button>
             <button class="attachment-filter" data-toggle="modal" data-target="#attachmentFilterModal">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                      class="bi bi-filter" viewBox="0 0 16 16">
@@ -196,9 +285,24 @@
 
         <div class="col-12">
             <p>{% translate "PAV and PAC from " %} {{ canton }}</p>
-            {% include 'administrative_levels/documents/_grid.html' with attachments=attachments %}
+            <form method="post" id="attachmentsForm" class="form-attachment"
+                  action="{% url 'dashboard:administrative_levels:documents_download_zip' %}">
+                {% csrf_token %}
+                {% include 'administrative_levels/documents/_grid.html' with attachments=attachments %}
+            </form>
 
         </div>
+    </div>
+
+    {% comment %}
+        Visionneuse plein écran ("Voir en grand") — un seul exemplaire pour toute la
+        page, piloté par window.docGalleryOpenLightbox()/docGalleryCloseLightbox()
+        (voir {% block javascript %} plus bas). Même pattern que #tdmLightbox
+        (task_detail_modal.js), local à cette page.
+    {% endcomment %}
+    <div id="docGalleryLightbox">
+        <button type="button" class="doc-gallery-lightbox-close" aria-label="Close" onclick="window.docGalleryCloseLightbox()">&times;</button>
+        <div id="docGalleryLightboxContent"></div>
     </div>
 {% endblock %}
 
@@ -343,12 +447,45 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script type="text/javascript" src="{% static 'plugins/babylon-grid/jquery.babylongrid.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/htmx.min.js' %}" defer></script>
+    {% comment %}
+        htmx retiré : ne servait qu'au trigger de pagination "infinie" de
+        _grid.html, lui-même retiré (jamais fonctionnel côté vue, cf.
+        commentaire dans _grid.html). Rien d'autre sur cette page ne
+        l'utilise — à réintroduire avec le script si une vraie fonctionnalité
+        htmx est ajoutée plus tard.
+    {% endcomment %}
     <script type="text/javascript" data-attachments="{{ attachments }}">
         var current_page = "{{ request.path }}";
         var csrf_token = "{{ csrf_token }}";
+
+        // Visionneuse plein écran ("Voir en grand") — cf. #docGalleryLightbox
+        // et facilitators/_task_attachment.html pour le même pattern côté
+        // modal de détail de tâche (window.tdmOpenLightbox).
+        window.docGalleryOpenLightbox = function (url, type) {
+            var $content = $('#docGalleryLightboxContent');
+            if (!$content.length) return;
+            if (type === 'pdf') {
+                $content.html($('<iframe>').attr('src', url));
+            } else if (type === 'office') {
+                var viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url);
+                $content.html($('<iframe>').attr({ src: viewerUrl, frameborder: '0' }));
+            } else {
+                $content.html($('<img>').attr('src', url));
+            }
+            $('#docGalleryLightbox').addClass('doc-gallery-lightbox-open');
+        };
+        window.docGalleryCloseLightbox = function () {
+            $('#docGalleryLightbox').removeClass('doc-gallery-lightbox-open');
+            $('#docGalleryLightboxContent').empty();
+        };
+
         $(document).ready(function () {
+            $(document).on('click', '#docGalleryLightbox', function (e) {
+                if (e.target === this) window.docGalleryCloseLightbox();
+            });
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape' || e.keyCode === 27) window.docGalleryCloseLightbox();
+            });
 
             $('input[type=checkbox]').click(function (event) {
                 if (event.stopPropagation) {
@@ -378,99 +515,31 @@
                 )
             });
 
-            $('.babylongrid').babylongrid({
-                scheme: [
-                    {
-                        minWidth: 1250,
-                        columns: 3
-                    },
-                    {
-                        minWidth: 960,
-                        columns: 3
-                    },
-                    {
-                        minWidth: 500,
-                        columns: 2
-                    },
-                    {
-                        minWidth: 0,
-                        columns: 1
-                    }
-                ]
-            });
-
-            $('.download-all').click(function (event) {
-                var formArray = $('.form-attachment').serializeArray();
-                let ids = '';
-                formArray.forEach((input, index) => {
-                    if (index != 0) {
-                        ids = ids + ','
-                    }
-                    ids = ids + input.value;
-                });
-                if (ids.length != 0) {
-                    window.location = current_page + 'download-zip/?ids=' + ids;
+            // « Télécharger la sélection » : soumet #attachmentsForm en POST
+            // (les cases NON cochées ne sont jamais incluses dans une
+            // soumission de formulaire -> pas besoin de sérialiser nous-mêmes
+            // la sélection, cf. DownloadAttachmentsZipView.post). « Télécharger
+            // tout » (.download-all-link) est un lien GET simple, sans JS.
+            $('.download-all').click(function () {
+                var checked = $('#attachmentsForm input[name="urls"]:checked');
+                if (!checked.length) {
+                    alert("{% translate 'Please select at least one file.' %}");
+                    return;
                 }
+                $('#attachmentsForm').trigger('submit');
             });
 
-            <!-- Script for carrousel -->
-            $('.attachment-link, .second-target').click(function () {
-                $("#attachmentModal .modal-body").html(`
-                <div class="clearfix" id="attachments">
-                        <div id="carouselIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
-                            <ol class="carousel-indicators">
-                                {% for attachment in attachments %}
-                                    <li data-target="#carouselIndicators" #selectorId{{ forloop.counter0 }}
-                                        data-slide-to="{{ forloop.counter0 }}"
-                                        {% if attachment.attachment.uri == selectedAttachmentUrl %}class="active"{% endif %}></li>
-                                {% endfor %}
-                            </ol>
-                            <div class="carousel-inner">
-                                {% for attachment in attachments %}
-                                    <div class="carousel-item text-center" #slideid{{ forloop.counter0 }}>
-                                        {% if attachment.type == 'Photo' %}
-                                            <a class="attachment-modal-link" target="_blank"
-                                               href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}">
-                                                <img class="img-fluid mx-auto d-block"
-                                                     src="{{ attachment.attachment.uri|imgAWSS3Filter }}"
-                                                     alt="{{ attachment.task }}" style="max-width: 100%; height: auto;">
-                                            </a>
-                                        {% else %}
-                                            <a class="align-items-center justify-content-center attachment-modal-link"
-                                               target="_blank" href="{% url 'download_from_url' %}?url={{ attachment.attachment.uri|imgAWSS3Filter }}">
-                                                <embed src="{{ attachment.attachment.uri|imgAWSS3Filter }}" type="application/pdf" height="100%">
-                                            </a>
-                                        {% endif %}
-
-                    {#<a target="_blank" class="download" href="{% url 'administrativelevels:attachment_download' adm_id=adm_id url=attachment.attachment.uri %}">#}
-
-                    {#    <img width="30px" height="auto" src="{% static 'images/download_icon.svg' %}" alt="download">#}
-                                       {#</a>#}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <a class="carousel-control-prev" href="#carouselIndicators" role="button"
-                               data-slide="prev">
-                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Previous</span>
-                            </a>
-                            <a class="carousel-control-next" href="#carouselIndicators" role="button"
-                               data-slide="next">
-                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                <span class="sr-only">Next</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="overlay" id="spin-attachments">
-                        <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                    </div>
-                  `);
-                let spin_attachments = $("#spin-attachments");
-                spin_attachments.show();
-                const count = $(this).data('count');
-                $('.carousel-item').eq(count).addClass('active');
-                $('.carousel-indicators li').eq(count).addClass('active');
-                spin_attachments.hide();
+            /* "Voir en grand" : clic sur la miniature elle-même (photos) ouvre la
+               même visionneuse que l'icône dédiée de chaque carte
+               (_attachment_card_content.html) — plus de carrousel plein-page
+               construit d'un coup pour TOUTES les pièces jointes au premier clic
+               (chargeait leur contenu en bloc ; remplacé par une visionneuse
+               mono-fichier, ouverte à la demande, cohérente avec le reste de la
+               page qui ne charge rien avant un clic explicite). */
+            $('.second-target').click(function (e) {
+                e.preventDefault();
+                var $img = $(this);
+                window.docGalleryOpenLightbox($img.attr('src'), 'image');
             });
 
             function change_filters_selects(select_input, select_to_fill, other_selects){
@@ -506,28 +575,5 @@
             };
         })
 
-        document.addEventListener('htmx:afterRequest', function(evt) {
-            $('.babylongrid').babylongrid({
-                scheme: [
-                    {
-                        minWidth: 1250,
-                        columns: 3
-                    },
-                    {
-                        minWidth: 960,
-                        columns: 3
-                    },
-                    {
-                        minWidth: 500,
-                        columns: 2
-                    },
-                    {
-                        minWidth: 0,
-                        columns: 1
-                    }
-                ]
-            });
-            $('.babylongrid').trigger('babylongrid:resize');
-        });
     </script>
 {% endblock %}
