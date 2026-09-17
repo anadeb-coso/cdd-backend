@@ -161,11 +161,32 @@ input {
         {{ tasks_status|json_script:"tasks-data-status" }}
     {% endif %}
 
+{% include "facilitators/components/task_modals.html" %}
 {% endblock content %}
 
 
 {% block javascript %}
     {{ block.super }}
+
+    {% comment %}
+        Modal unique de détail de tâche + validation/invalidation +
+        complétion/remise en cours + commentaires : une seule implémentation
+        JS pour tout le dashboard (static/dashboard/js/task_detail_modal.js),
+        cf. dashboard/templates/facilitators/components/task_modals.html.
+        Chargé UNE FOIS ici (pas dans task_list.html, ré-injecté à chaque
+        rechargement AJAX) -> plus de handlers dupliqués à chaque filtre/page.
+    {% endcomment %}
+    <script>
+        window.TFB_FACILITATOR_DB_NAME = "{{ facilitator_db_name }}";
+        window.TFB_URLS = {
+            validateInvalidate: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+            completeUncomplete: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
+            taskCommentsTmpl: "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}",
+            taskDetailModalTmpl: "{% url 'dashboard:facilitators:task_detail_modal' 'no_sql_db_name' %}"
+        };
+        window.TFB_RELOAD_PLANNING_CYCLE = (typeof reloadPlanningCycle === 'function') ? reloadPlanningCycle : null;
+    </script>
+    <script src="{% static 'dashboard/js/task_detail_modal.js' %}"></script>
 
     <script type="text/javascript">
         let spin = $('#spin');

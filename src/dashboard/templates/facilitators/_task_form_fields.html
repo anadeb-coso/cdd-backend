@@ -8,19 +8,41 @@
             </div>
         </fieldset></div>
     {% elif dicts.value|checkType:'list' %}
-        <div class="fieldset"><fieldset>
-            <legend>{{ dicts.name }}</legend>
-            <div class="content">
-                {% for item in dicts.value %}
-                    <div><fieldset>
-                        <legend>{{ forloop.counter }}</legend>
-                        <div class="content">
-                            {% include "facilitators/_task_form_fields.html" with fields=item %}
-                        </div>
-                    </fieldset></div>
-                {% endfor %}
+        {% with first_item=dicts.value|first %}
+        {% if first_item|checkType:'dict' %}
+            {# Groupe répétable (chaque élément = un sous-formulaire) : un sous-bloc numéroté par élément. #}
+            <div class="fieldset"><fieldset>
+                <legend>{{ dicts.name }}</legend>
+                <div class="content">
+                    {% for item in dicts.value %}
+                        <div><fieldset>
+                            <legend>{{ forloop.counter }}</legend>
+                            <div class="content">
+                                {% include "facilitators/_task_form_fields.html" with fields=item %}
+                            </div>
+                        </fieldset></div>
+                    {% endfor %}
+                </div>
+            </fieldset></div>
+        {% else %}
+            {# select_multiple / cases à cocher : liste de valeurs choisies, pas un sous-formulaire répété — sinon affiche juste le numéro (1, 2, 3…) de chaque choix au lieu de sa valeur. Une valeur par ligne, numérotée ("1 - valeur"). #}
+            <div class="form-group row">
+                <label class="col-sm-3 col-form-label">{{ dicts.name }}</label>
+                <div class="col-sm-9">
+                    {% if dicts.value %}
+                        <ul class="list-unstyled mb-0 pt-2">
+                            {% for choice in dicts.value %}
+                                <li>{{ forloop.counter }} - {{ choice }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <input type="text" readonly value="-" class="form-control" />
+                    {% endif %}
+                </div>
+                <div class="clearfix"></div>
             </div>
-        </fieldset></div>
+        {% endif %}
+        {% endwith %}
     {% else %}
         <div class="form-group row">
             <label class="col-sm-3 col-form-label">{{ dicts.name }}</label>

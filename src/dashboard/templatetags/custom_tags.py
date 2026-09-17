@@ -166,30 +166,111 @@ def _field_config(config, field):
 
 
 def _nested_config(sub_config):
-    # Dict-type fields describe their sub-fields under "fields";
-    # list-type fields describe each item's sub-fields under "item.fields".
+    # Dict-type fields describe their sub-fields under "fields" (+ leur ordre
+    # d'affichage sous "order") ; list-type fields (répétable) les décrivent
+    # sous "item.fields" (+ "item.order") — même convention que le form
+    # builder web / le moteur mobile (task_form_builder.js `orderedKeys`,
+    # cdd-form-logic.js `applyFieldOrder`) : `options.order` existe
+    # spécifiquement parce que le stockage JSON (jsonb Postgres / CouchDB) ne
+    # garantit pas de conserver l'ordre de saisie des clés d'un objet.
+    if not isinstance(sub_config, dict):
+        return {}, None
     nested = sub_config.get('fields')
-    if not nested:
-        nested = (sub_config.get('item') or {}).get('fields')
-    return nested
+    if nested:
+        return nested, sub_config.get('order')
+    item = sub_config.get('item') or {}
+    return item.get('fields') or {}, item.get('order')
 
 
-def _structure_value(value, config):
+def _ordered_keys(keys, order):
+    """`keys` (vue dict, ordre non garanti pertinent) réordonnées selon
+    `order` (liste de clés telle que configurée dans le Générateur de
+    formulaire) quand disponible ; les clés absentes de `order` (champ
+    ajouté au formulaire après une réponse déjà enregistrée, formulaire
+    legacy sans `order`, etc.) sont ajoutées à la suite, dans leur ordre
+    d'origine — jamais perdues."""
+    keys = list(keys)
+    if not order:
+        return keys
+    key_set = set(keys)
+    ordered = [k for k in order if k in key_set]
+    ordered_set = set(ordered)
+    ordered.extend(k for k in keys if k not in ordered_set)
+    return ordered
+
+
+def _sub_schema_props(prop):
+    """JSON-schema `properties` enfant d'un schéma object / array<object> —
+    mirroir de `dashboard.process_manager.tasks.form_design._sub_properties`,
+    dupliqué ici (6 lignes) plutôt qu'importé pour ne pas coupler ce module
+    d'affichage aux internes du form builder."""
+    if not isinstance(prop, dict):
+        return None
+    if prop.get('type') == 'object':
+        return prop.get('properties') or {}
+    if prop.get('type') == 'array':
+        items = prop.get('items') or {}
+        if isinstance(items, dict) and items.get('type') == 'object':
+            return items.get('properties') or {}
+    return None
+
+
+def _enum_label_map(prop):
+    """Mapping valeur -> libellé d'un champ select (`prop['enum']` pour
+    select_one, `prop['items']['enum']` pour select_multiple/check) SI c'est
+    un dict — cas d'une source dynamique db/excel/admin_levels (champ
+    "Modèle" type AdministrativeLevel/CVD : la valeur stockée est un
+    identifiant technique, pas le libellé humain, cf. `compileSelectSchema`
+    `isDynamicSource` côté `task_form_builder.js`). `None` pour une liste
+    statique (`enum` = liste, valeur == libellé, rien à résoudre) ou un champ
+    non-select — dans ces cas la valeur brute est déjà ce qu'il faut afficher."""
+    if not isinstance(prop, dict):
+        return None
+    target = prop
+    if prop.get('type') == 'array':
+        items = prop.get('items')
+        target = items if isinstance(items, dict) else {}
+    enum = target.get('enum') if isinstance(target, dict) else None
+    return enum if isinstance(enum, dict) else None
+
+
+def _resolve_display_value(value, prop):
+    """Remplace la/les valeur(s) stockée(s) d'un champ select par son/leurs
+    libellé(s) humain(s) quand connu (`_enum_label_map`) — sinon renvoie
+    `value` inchangée (comportement historique, y compris pour les groupes/
+    répétables, dont le schéma n'a jamais d'`enum`)."""
+    label_map = _enum_label_map(prop)
+    if not label_map:
+        return value
+    if isinstance(value, list):
+        return [label_map.get(str(v), v) for v in value]
+    return label_map.get(str(value), value)
+
+
+def _structure_value(value, config, order=None, schema_props=None):
     """Recursively re-shape a form_response value into {'name', 'value'} nodes,
-    resolving each field's label from the form's field configuration at every depth."""
+    resolving each field's label from the form's field configuration at every
+    depth, ordering keys per `order` (cf. `_ordered_keys`), and resolving
+    select values to their human label per `schema_props` (cf.
+    `_resolve_display_value`)."""
     config = config or {}
+    schema_props = schema_props if isinstance(schema_props, dict) else {}
     if type(value) == dict:
         result = {}
-        for field, sub_value in value.items():
+        for field in _ordered_keys(value.keys(), order):
+            sub_value = value[field]
             sub_config = _field_config(config, field)
             label = sub_config.get('label')
+            nested_fields, nested_order = _nested_config(sub_config)
+            prop = schema_props.get(field)
+            sub_value = _resolve_display_value(sub_value, prop)
             result[field] = {
                 'name': label if label else utils_structure_the_words(field),
-                'value': _structure_value(sub_value, _nested_config(sub_config)),
+                'value': _structure_value(sub_value, nested_fields, nested_order, _sub_schema_props(prop)),
             }
         return result
     if type(value) == list:
-        return [_structure_value(item, config) for item in value]
+        return [_structure_value(item, config, order, schema_props) for item in value]
     return value
 
 
@@ -199,19 +280,26 @@ def structure_the_fields_labels(task):
     if task.get("form_response"):
         form = task.get("form") or []
         for i, fields in enumerate(task.get("form_response")):
-            try:
-                fields_options = form[i].get('options').get('fields')
-            except Exception:
-                fields_options = {}
+            page = form[i] if i < len(form) and isinstance(form[i], dict) else {}
+            page_options = page.get('options') or {}
+            fields_options = page_options.get('fields') or {}
+            top_order = page_options.get('order')
+            schema_props = (page.get('page') or {}).get('properties') or {}
+            if not isinstance(schema_props, dict):
+                schema_props = {}
             dict_values = {}
-            for field, value in fields.items():
+            for field in _ordered_keys(fields.keys(), top_order):
+                value = fields[field]
+                prop = schema_props.get(field)
+                value = _resolve_display_value(value, prop)
                 sub_config = _field_config(fields_options, field)
                 label = sub_config.get('label')
                 if type(value) == dict:
                     value = order_dict(task.get('sql_id'), field, value)
+                nested_fields, nested_order = _nested_config(sub_config)
                 dict_values[field] = {
                     'name': label if label else utils_structure_the_words(field),
-                    'value': _structure_value(value, _nested_config(sub_config)),
+                    'value': _structure_value(value, nested_fields, nested_order, _sub_schema_props(prop)),
                 }
             fields_values.append(dict_values)
     return fields_values
@@ -238,6 +326,34 @@ def is_pdf(uri):
 @register.filter(name="not_local")
 def not_local(uri):
     return uri.split(":")[0] != 'file'
+
+@register.filter(name="attachmentLocationLabel")
+def attachment_location_label(attachment):
+    """Nom du canton si le libellé de la pièce jointe ("document du plan
+    d'actions cantonales finalisé", etc.) évoque un canton, sinon nom du
+    village siège — même règle que le titre de carte de la galerie
+    documents (`administrative_levels/documents/_grid.html`). Réutilisé pour
+    nommer le fichier au téléchargement (individuel et groupé)."""
+    if not attachment:
+        return ""
+    name = attachment.get("name") if hasattr(attachment, "get") else getattr(attachment, "name", "")
+    if "canton" in str(name or "").lower():
+        value = attachment.get("canton") if hasattr(attachment, "get") else getattr(attachment, "canton", "")
+    else:
+        value = attachment.get("headquarters_village") if hasattr(attachment, "get") else getattr(attachment, "headquarters_village", "")
+    return value or ""
+
+@register.filter(name="attachmentDownloadFilename")
+def attachment_download_filename(attachment, raw_url):
+    """``"<intitulé de la pièce jointe> (<village/canton>)<extension>"`` —
+    nom de fichier proposé au téléchargement (individuel, lien
+    `download_from_url?filename=...` ; groupé, `views_doc.
+    DownloadAttachmentsZipView`, même logique en Python côté serveur)."""
+    from cdd.my_librairies.download_file import display_filename_with_suffix
+    if not attachment:
+        return "fichier"
+    name = attachment.get("name") if hasattr(attachment, "get") else getattr(attachment, "name", "")
+    return display_filename_with_suffix(name or "fichier", attachment_location_label(attachment), raw_url)
 
 @register.filter(name="replace")
 def replace(v: str, s: str):

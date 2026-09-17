@@ -96,7 +96,12 @@
                                 <tbody>
                                 {% for object in objects %}
                                     <tr>
-                                        <td align="left">{{ object.name }}</td>
+                                        <td align="left">
+                                            {{ object.name }}
+                                            {% if class_object == 'Task' and object.non_blocking %}
+                                            <i class="fas fa-unlink text-muted ml-1" title="{% translate 'Independent task — does not have to be completed before the next one' %}"></i>
+                                            {% endif %}
+                                        </td>
 
                                         {% if class_object == 'Task' %}
                                         <td align="left">{{ object.activity.name }}</td>
@@ -135,12 +140,17 @@
                                         </td>
                                         {% elif class_object == 'Task' %}
                                         <td>
-                                            <a href="{% url 'dashboard:process_manager:tasks:task_update' object.pk %}" 
+                                            <a href="{% url 'dashboard:process_manager:tasks:task_update' object.pk %}"
                                                 class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                                 <span class="_web">{% translate 'Edit profile' %}</span>
                                                 <span class="_mobile"><i class="fa fa-edit"></i></span>
                                             </a>
-                                            <a href="{% url 'dashboard:process_manager:tasks:task_delete' object.pk %}" 
+                                            <a href="{% url 'dashboard:process_manager:tasks:task_form_builder' object.pk %}"
+                                                class="btn btn-success btn-xs" title="{% translate 'Form builder' %}">
+                                                <span class="_web">{% translate 'Form builder' %}</span>
+                                                <span class="_mobile"><i class="fa fa-wpforms"></i></span>
+                                            </a>
+                                            <a href="{% url 'dashboard:process_manager:tasks:task_delete' object.pk %}"
                                                 class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
                                                 <span class="_web">{% translate 'Delete' %}</span>
                                                 <span class="_mobile"><i class="fa fa-trash"></i></span>
