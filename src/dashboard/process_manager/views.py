@@ -10,6 +10,9 @@ from django.shortcuts import resolve_url
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 import itertools
+import logging
+
+logger = logging.getLogger(__name__)
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
@@ -167,6 +170,113 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
 
 
 class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
+    def _trigger_share_copy(self, request, task):
+        """Résout les cibles de partage — PAR MODE, un même formulaire pouvant
+        avoir des champs en modes différents (cf.
+        ``form_design.group_share_paths_by_mode``) — pour la tâche couch qui
+        vient d'être validée, et lance la copie en thread (une passe par mode
+        présent, chacune vers ses propres cibles). ``task`` est le document
+        CouchDB (dict-like) déjà mis à jour avec ``validated: True``. Aucun
+        effet si la tâche n'a aucun champ partageable."""
+        import json
+        import threading
+        from django.db import connections
+        from process_manager.models import Task as TaskModel, TaskShareRecord
+        from dashboard.utils import (
+            canton_headquarters_village_ids, copy_shared_task_data,
+            find_task_share_record, upsert_task_share_record,
+        )
+        from dashboard.process_manager.tasks.form_design import group_share_paths_by_mode
+
+        task_sql_id = task.get('sql_id')
+        source_adl = task.get('administrative_level_id')
+        if not task_sql_id or not source_adl:
+            return
+        try:
+            task_model = TaskModel.objects.get(id=task_sql_id)
+        except TaskModel.DoesNotExist:
+            return
+
+        modes_present = group_share_paths_by_mode(task_model.form)
+        if not modes_present:
+            return
+
+        project_id = request.session.get('project_id')
+        cycle_id = request.session.get('cycle_id')
+        # Identité du validateur — extraite ICI (pas dans `_worker`, qui
+        # tourne dans un thread après la fin de la requête) pour l'entrée
+        # `actions_by` de validation automatique quand toute la tâche est
+        # partagée (cf. copy_shared_task_data / all_fields_shared).
+        validated_by = {
+            'user_name': request.user.username, 'user_id': request.user.id,
+            'user_last_name': request.user.last_name, 'user_first_name': request.user.first_name,
+            'user_email': request.user.email,
+        }
+
+        # Cibles choisies explicitement par mode (sélecteur web, un <select>
+        # par mode présent) -> {"<mode>": ["<adl_id>", ...], ...}, envoyé en
+        # JSON par task_detail_modal.js. Repli par mode sinon.
+        explicit_by_mode = {}
+        raw_json = request.GET.get('share_targets_json')
+        if raw_json:
+            try:
+                parsed = json.loads(raw_json)
+                if isinstance(parsed, dict):
+                    explicit_by_mode = parsed
+            except (TypeError, ValueError):
+                explicit_by_mode = {}
+
+        source_record = find_task_share_record(
+            task_sql_id, project_id, source_adl, prefer_field='share_targets',
+        )
+        # share_targets du registre source : dict {mode: [ids]} désormais ;
+        # tolère l'ancienne forme (liste nue = choix du facilitateur en mode
+        # facilitator_then_validator, seul mode jamais alimenté par le mobile
+        # avant ce changement).
+        stored_targets = (source_record.share_targets if source_record else None) or {}
+        if isinstance(stored_targets, list):
+            stored_targets = {TaskModel.SHARE_MODE_FACILITATOR_THEN_VALIDATOR: stored_targets}
+
+        targets_by_mode = {}
+        for mode in modes_present:
+            explicit = explicit_by_mode.get(mode)
+            if isinstance(explicit, list) and explicit:
+                targets_by_mode[mode] = [t for t in explicit if t]
+                continue
+            if mode == TaskModel.SHARE_MODE_FIXED_CANTON:
+                targets_by_mode[mode] = canton_headquarters_village_ids(source_adl)
+            elif mode == TaskModel.SHARE_MODE_FACILITATOR_THEN_VALIDATOR:
+                # Repli sur le choix du facilitateur (envoyé via
+                # ReportTaskCompletion, mobile) quand le validateur n'a pas
+                # changé la sélection dans le sélecteur web.
+                targets_by_mode[mode] = list(stored_targets.get(mode) or [])
+            else:  # validator_only : rien sans sélection explicite du validateur
+                targets_by_mode[mode] = []
+
+        targets_by_mode = {m: t for m, t in targets_by_mode.items() if t}
+        if not targets_by_mode:
+            return
+
+        merged_stored = dict(stored_targets)
+        merged_stored.update(targets_by_mode)
+        source_defaults = {'status': TaskShareRecord.STATUS_VALIDATED, 'share_targets': merged_stored}
+        if cycle_id is not None:
+            source_defaults['cycle_id'] = cycle_id
+        upsert_task_share_record(task_sql_id, project_id, source_adl, defaults=source_defaults)
+
+        def _worker():
+            try:
+                for mode, targets in targets_by_mode.items():
+                    copy_shared_task_data(
+                        task_sql_id, source_adl, targets, project_id, cycle_id, mode,
+                        validated_by=validated_by,
+                    )
+            finally:
+                for conn in connections.all():
+                    conn.close()
+
+        threading.Thread(target=_worker, daemon=True).start()
+
     def get(self, request, *args, **kwargs):
         no_sql_db_name = request.GET.get('no_sql_db_name')
         task_id = request.GET.get('task_id')
@@ -231,8 +341,29 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
 
                 nsc.update_doc_uncontrolled(db, task['_id'], _data)
 
+                # Partage entre villages sièges (Task.share_mode) : copie
+                # UNIQUEMENT à la validation (pas à l'invalidation), en thread
+                # daemon pour ne pas bloquer cette requête ni les autres
+                # utilisateurs. Best-effort : une erreur ici ne doit jamais
+                # affecter le message de validation renvoyé ci-dessous.
+                if bool(action_code):
+                    try:
+                        self._trigger_share_copy(request, task)
+                    except Exception:
+                        logger.exception(
+                            "ValidateTaskView: échec best-effort du déclenchement de la copie "
+                            "de partage villages sièges (task_id=%s).", task_id,
+                        )
+
                 #Send Mail - SMS
+                # Best-effort, comme _trigger_share_copy ci-dessus : la tâche est déjà
+                # invalidée en base (nsc.update_doc_uncontrolled juste au-dessus) au
+                # moment où ce bloc s'exécute -> une erreur ici (doc facilitateur
+                # introuvable, envoi mail/SMS en échec, etc.) ne doit JAMAIS faire
+                # remonter "Une erreur s'est produite" côté utilisateur pour une
+                # invalidation qui, elle, a réellement réussi.
                 if not bool(action_code):
+                  try:
                     facilitator = db[db.get_query_result({"type": "facilitator"})[:][0]['_id']]
                     subject = f'{gettext_lazy("Task Invalided")} : {task.get("name")}'
                     administrative_region_name = get_administrative_region_name(task.get("administrative_level_id"))
@@ -336,9 +467,14 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                                 "url": f"{request.scheme}://{request.META['HTTP_HOST']}{reverse_lazy('dashboard:facilitators:detail', args=[no_sql_db_name])}"
                             },
                             list(set(
-                                [list(all_facilitators_worked_in_village.values_list('email', flat=True))] + 
+                                # Bug corrigé : englober values_list(...) dans une liste
+                                # ([ ... ] + ...) mettait une LISTE (non hachable) dans le
+                                # set() -> TypeError systématique ("unhashable type: 'list'"),
+                                # avalé par le except ci-dessous mais empêchant l'envoi du
+                                # mail à chaque invalidation.
+                                list(all_facilitators_worked_in_village.values_list('email', flat=True)) +
                                 ([facilitator_email, facilitator_object.email, request.user.email]
-                                if facilitator_email 
+                                if facilitator_email
                                 else [facilitator_object.email, request.user.email])
                             )),
                             project_name=task.get("project_name", self.request.session.get('project_name', 'COSO'))
@@ -367,6 +503,11 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                     except Exception as exc:
                         # print(exc)
                         sms_message = gettext_lazy("An error occurred while sending the sms")
+                  except Exception:
+                    logger.exception(
+                        "ValidateTaskView: échec best-effort de la notification "
+                        "mail/SMS d'invalidation (tâche déjà invalidée en base)."
+                    )
                 #End Send Mail - SMS
 
 
@@ -375,6 +516,10 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 message = gettext_lazy("The task isn't completed").__str__()
                 status = "error"
         except Exception as exc:
+            # Auparavant avalée sans trace -> aucun moyen de diagnostiquer un
+            # "Une erreur s'est produite" côté utilisateur. Journalisée pour de
+            # futurs diagnostics (le message renvoyé au navigateur ne change pas).
+            logger.exception("ValidateTaskView.get a échoué (task_id=%s, action_code=%s)", task_id, action_code)
             message = gettext_lazy("An error has occurred...").__str__()
             status = "error"
 

@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.db.models.signals import post_save, post_delete
 from django.db.models import Q
 
@@ -393,6 +393,31 @@ class Activity(BaseModel):
 #   "attachments": [],
 #   "form": []
 class Task(BaseModel):
+    # Partage des données entre villages sièges (form builder web) : voir
+    # `TaskShareRecord` + `dashboard.utils.copy_shared_task_data`.
+    #
+    # IMPORTANT : depuis la mise en place du mode PAR CHAMP, ce champ
+    # `share_mode` N'EST PLUS LA SOURCE DE VÉRITÉ pour savoir SI/COMMENT une
+    # tâche est partagée — chaque champ marqué "share" dans `Task.form[*]`
+    # porte désormais SON PROPRE mode (`{"path": ..., "mode": ...}`, cf.
+    # `dashboard.process_manager.tasks.form_design.group_share_paths_by_mode`) ;
+    # deux champs de la même tâche peuvent avoir des modes différents. Ce
+    # champ ne sert plus qu'à mémoriser le dernier mode choisi au toolbar du
+    # form builder, pour préremplir son sélecteur et son bouton "Appliquer à
+    # tous les champs" (raccourci écrivant ce même mode sur tous les champs
+    # d'un coup) — le backend ne le lit plus pour décider quoi que ce soit
+    # (tout passe par `group_share_paths_by_mode`/`has_share_fields`).
+    SHARE_MODE_NONE = "none"
+    SHARE_MODE_FIXED_CANTON = "fixed_canton"
+    SHARE_MODE_FACILITATOR_THEN_VALIDATOR = "facilitator_then_validator"
+    SHARE_MODE_VALIDATOR_ONLY = "validator_only"
+    SHARE_MODE_CHOICES = [
+        (SHARE_MODE_NONE, "Aucun partage"),
+        (SHARE_MODE_FIXED_CANTON, "Automatique — villages sièges du canton"),
+        (SHARE_MODE_FACILITATOR_THEN_VALIDATOR, "Facilitateur puis validateur"),
+        (SHARE_MODE_VALIDATOR_ONLY, "Validateur uniquement"),
+    ]
+
     name = models.CharField(max_length=255)
     name_normalized = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     description = models.TextField()
@@ -406,14 +431,67 @@ class Task(BaseModel):
     attachments = models.JSONField(null=True, blank=True)
     capacity_attachments = models.JSONField(null=True, blank=True)
     couch_id = models.CharField(max_length=255, blank=True)
-    
+    share_mode = models.CharField(
+        max_length=32, choices=SHARE_MODE_CHOICES, default=SHARE_MODE_NONE,
+    )
+
+    # Groupes (django.contrib.auth.Group, ex. "CommunityFacilitator",
+    # "TechnicalFacilitator" — cf. authentication.FACILITATORS_TYPES_WITH_GROUP_NAME)
+    # dont un membre doit faire partie pour que cette tâche lui soit affichée
+    # sur mobile (écran "Details activity" du cycle d'investissement,
+    # ActivityDetail.tsx + gating de complétion séquentielle dans
+    # TaskDetail.tsx). Vide/absent sur un doc couch = rétro-compatible,
+    # affiché à tout le monde (tâches synchronisées avant l'ajout de ce
+    # champ). Peuplé par défaut avec le groupe "CommunityFacilitator" à la
+    # création (cf. save()), pas en base de données (M2M ne supporte pas
+    # `default=` de façon fiable avant qu'une PK existe).
+    DEFAULT_GROUP_COLLECTOR_NAME = "CommunityFacilitator"
+    groups_collectors = models.ManyToManyField(
+        Group, blank=True, related_name="tasks_collectible",
+    )
+    # Si True, cette tâche est "indépendante" dans la chaîne de complétion
+    # séquentielle mobile (parmi les tâches concernant le même utilisateur,
+    # cf. task_order) : (1) elle peut être achevée MÊME SI sa propre
+    # précédente ne l'est pas, et (2) elle est transparente pour la tâche
+    # SUIVANTE — ni son propre état ni le fait qu'elle soit elle-même
+    # bloquée ne comptent ; la suivante remonte alors jusqu'au premier
+    # prédécesseur qui n'est PAS `non_blocking`. Cf. TaskDetail.tsx,
+    # `previous_ok` (recherche du "vrai" prédécesseur, `non_blocking` sautés).
+    # Défaut False = comportement historique inchangé (tâche bloquante tant
+    # qu'elle n'est pas achevée, et bloquée tant que sa propre précédente ne
+    # l'est pas).
+    non_blocking = models.BooleanField(default=False)
+
+    # Visibilité conditionnelle de LA TÂCHE ENTIÈRE (liste des tâches mobile,
+    # ActivityDetail.tsx), pilotée par la réponse d'un champ d'une AUTRE
+    # tâche du même projet — configuré dans le Générateur de formulaire
+    # (toolbar), jamais en Django admin. `None`/absent = toujours visible
+    # (comportement historique). Forme :
+    # {"sourceTaskId": int, "sourcePath": "$<pageIndex>.<chemin>",
+    #  "op": <CONDITION_OPERATORS>, "value": <any>, "action": "show"|"hide",
+    #  "defaultWhenUnknown": "hidden"|"visible"}
+    # cf. dashboard.process_manager.tasks.form_design.validate_visibility_condition
+    # (validation de forme) et le mirroir mobile `crossTaskVisibility.ts`
+    # (résolution — toujours côté écran, jamais dans le moteur `rules`
+    # synchrone du fork tcomb-form-native, qui ne peut pas faire de lecture
+    # CouchDB inter-tâches).
+    visibility_condition = models.JSONField(null=True, blank=True)
+
     objects = CustomQuerySet.as_manager()
 
     def __str__(self):
         return f"{self.phase.name} - {self.activity.name} - {self.name} ({self.project.name})"
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
         super().save(*args, **kwargs)
+        if is_new and not self.groups_collectors.exists():
+            # Groupe par défaut à la création (cf. commentaire du champ) — un
+            # M2M ne peut être peuplé qu'une fois la PK connue, donc APRÈS ce
+            # premier super().save(), et AVANT de lire self.groups_collectors
+            # plus bas pour construire le doc couch.
+            default_group, _ = Group.objects.get_or_create(name=self.DEFAULT_GROUP_COLLECTOR_NAME)
+            self.groups_collectors.add(default_group)
         form = []
         if self.form:
             form = self.form
@@ -445,7 +523,16 @@ class Task(BaseModel):
             "form": form,
             "form_response": [],
             "sql_id": self.id,
-            "cycles": [c.couch_id for c in self.cycles.all()]
+            "cycles": [c.couch_id for c in self.cycles.all()],
+            # Partage entre villages sièges (form builder web) : propagé aux
+            # docs de tâche des facilitateurs par create_task_all_facilitators.
+            "share_mode": self.share_mode,
+            # Visibilité mobile par groupe + gating de complétion séquentielle
+            # (ActivityDetail.tsx / TaskDetail.tsx) : propagés de la même
+            # façon que share_mode par create_task_all_facilitators.
+            "groups_collectors": list(self.groups_collectors.values_list("name", flat=True)),
+            "non_blocking": self.non_blocking,
+            "visibility_condition": self.visibility_condition,
         }
         nsc = NoSQLClient()
         nsc_database = nsc.get_db("process_design")
@@ -473,6 +560,10 @@ class Task(BaseModel):
                 new_document['capacity_attachments'] = capacity_attachments
                 new_document['form'] = form
                 new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
+                new_document['share_mode'] = self.share_mode
+                new_document['groups_collectors'] = list(self.groups_collectors.values_list("name", flat=True))
+                new_document['non_blocking'] = self.non_blocking
+                new_document['visibility_condition'] = self.visibility_condition
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
         #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)
 
@@ -603,6 +694,57 @@ class AggregatedStatusFacilitator(BaseModel):
     administrative_level_headquarters_villages_infos = models.JSONField(default=list)
 
     new_update_exists = models.BooleanField(default=True)
+
+
+class TaskShareRecord(BaseModel):
+    """Registre de suivi des instances de tâche "village siège" partageables
+    (``Task.share_mode != "none"``) : une ligne par (tâche, village, projet,
+    cycle), tenue à jour aux points de contact réels — achèvement côté mobile
+    (``ReportTaskCompletion``), validation côté dashboard (``ValidateTaskView``),
+    copie effective (``dashboard.utils.copy_shared_task_data``).
+
+    Évite de scanner CouchDB à la demande pour retrouver une tâche jumelle déjà
+    achevée (bouton mobile « Charger les données ») ou pour résoudre les cibles
+    d'une copie déclenchée à la validation.
+    """
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+    STATUS_VALIDATED = "validated"
+    STATUS_INVALIDATED = "invalidated"
+    STATUS_CHOICES = [
+        (STATUS_IN_PROGRESS, "En cours"),
+        (STATUS_COMPLETED, "Achevée"),
+        (STATUS_VALIDATED, "Validée"),
+        (STATUS_INVALIDATED, "Invalidée"),
+    ]
+
+    task = models.ForeignKey("Task", on_delete=models.CASCADE, related_name="share_records")
+    project = models.ForeignKey("Project", on_delete=models.SET_NULL, null=True, blank=True)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True, blank=True)
+    # Village siège concerné. Pas de FK : AdministrativeLevel vit dans la base
+    # "mis" (même convention que AggregatedStatus.administrative_level_id).
+    administrative_level_id = models.IntegerField()
+    facilitator = models.ForeignKey(Facilitator, on_delete=models.SET_NULL, null=True, blank=True)
+    # _id du document de tâche dans la base CouchDB de ce facilitateur.
+    couch_task_id = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS)
+    # Instantané {chemin_pointé: valeur} des champs marqués "share" dans
+    # Task.form au moment du dernier achèvement/validation.
+    share_values = models.JSONField(null=True, blank=True)
+    # administrative_level_id choisis comme cibles, PAR MODE : {mode: [ids]}
+    # (le mode est porté par champ désormais, une même tâche peut avoir
+    # plusieurs modes actifs en parallèle -> plusieurs jeux de cibles). Tolère
+    # en lecture l'ancienne forme (liste nue = ancienne unique cible
+    # facilitator_then_validator, avant l'introduction du mode par champ) —
+    # cf. ValidateTaskView._trigger_share_copy / build_task_detail_context.
+    share_targets = models.JSONField(default=list, blank=True)
+    last_synced = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("task", "project", "cycle", "administrative_level_id")
+
+    def __str__(self):
+        return f"{self.task_id} @ADL{self.administrative_level_id} ({self.status})"
 
 
 class Wave(BaseModel):

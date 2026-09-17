@@ -2,13 +2,16 @@ from datetime import datetime
 from operator import itemgetter
 import re
 import itertools
+import logging
+
+logger = logging.getLogger(__name__)
 
 from django.template.defaultfilters import date as _date
 from django.contrib.auth.hashers import make_password
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
 import grm_client
-from process_manager.models import Task, Phase, Activity, Project, AggregatedStatus, Cycle
+from process_manager.models import Task, Phase, Activity, Project, AggregatedStatus, Cycle, TaskShareRecord
 from cloudant.document import Document
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy
@@ -535,10 +538,16 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     # elif new_task.get("form"):
                     #     _fc_task['form'] = new_task.get("form")
                     _fc_task['form'] = new_task.get("form")
+                    _fc_task['share_mode'] = task_model.share_mode #Partage villages sièges (form builder web)
+                    # Visibilité mobile par groupe + gating de complétion séquentielle
+                    # (ActivityDetail.tsx / TaskDetail.tsx).
+                    _fc_task['groups_collectors'] = list(task_model.groups_collectors.values_list("name", flat=True))
+                    _fc_task['non_blocking'] = task_model.non_blocking
+                    _fc_task['visibility_condition'] = task_model.visibility_condition
 
                     _fc_task['attachments'] = new_task.get("attachments")
                     _fc_task['order'] = task_model.order
-                    _fc_task['sql_id'] = task_model.id #update doc by adding sql_id 
+                    _fc_task['sql_id'] = task_model.id #update doc by adding sql_id
                     _fc_task['support_attachments'] = new_task.get("support_attachments")
                     _fc_task['task_order'] = new_task.get("task_order") #Task order
                     
@@ -3610,3 +3619,387 @@ def get_facilitator_db_which_have_cvd_id(project_id, cycle_id, cvd_ids, develop_
                     break
     print()
     print("End", count_facilitator)
+
+
+# ---------------------------------------------------------------------------
+# Partage des données entre villages sièges (``Task.share_mode``) — copie
+# déclenchée UNIQUEMENT à la validation (``ValidateTaskView``), exécutée en
+# thread daemon (même pattern que
+# ``dashboard.process_manager.tasks.views._run_sync_tasks_in_thread``).
+# ---------------------------------------------------------------------------
+
+def find_task_share_record(task_id, project_id, administrative_level_id, prefer_field=None):
+    """Résout LE ``TaskShareRecord`` pertinent pour (tâche, projet, village),
+    en ignorant délibérément ``cycle`` dans la recherche — cf.
+    :func:`upsert_task_share_record` pour l'explication complète du bug que
+    ceci corrige (mobile n'envoie jamais de ``cycle_id``, le dashboard utilise
+    toujours celui de la session -> 2 lignes distinctes pour le même
+    (tâche, village) sans ce correctif, chacune invisible à l'autre point de
+    contact). ``prefer_field`` : parmi les candidats (doublons hérités
+    compris), préfère celui où ce champ est "vrai" (ex. ``share_values`` pour
+    lire les données à copier, ``share_targets``/``couch_task_id`` pour lire
+    les cibles/raccourcis déjà connus) plutôt que le plus récent."""
+    candidates = list(TaskShareRecord.objects.filter(
+        task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
+    ).order_by('-updated_date'))
+    if not candidates:
+        return None
+    if prefer_field:
+        preferred = [r for r in candidates if getattr(r, prefer_field, None)]
+        if preferred:
+            return preferred[0]
+    return candidates[0]
+
+
+def upsert_task_share_record(task_id, project_id, administrative_level_id, defaults):
+    """Équivalent tolérant de ``TaskShareRecord.objects.update_or_create(
+    task_id=..., project_id=..., administrative_level_id=..., defaults=defaults)``
+    MAIS QUI IGNORE ``cycle`` DANS L'IDENTITÉ DE LA LIGNE.
+
+    **Bug réel corrigé** : le modèle porte ``unique_together = ("task",
+    "project", "cycle", "administrative_level_id")`` et tous les appelants
+    filtraient jusqu'ici sur ``cycle_id`` en plus. Or le mobile
+    (``ReportTaskCompletion``, à l'achèvement) n'envoie JAMAIS de
+    ``cycle_id`` (limitation connue, cf. mémoire task-share-villages-sieges)
+    -> ses écritures créent une ligne avec ``cycle=None``. Le dashboard
+    (``ValidateTaskView._trigger_share_copy``, à la validation) utilise
+    TOUJOURS ``request.session.get('cycle_id')`` (une vraie valeur dès qu'un
+    cycle est sélectionné) -> ses écritures/lectures créent/cherchent une
+    AUTRE ligne. Résultat reproduit en direct sur la tâche 102 (FA-COSO,
+    village 1984) : la ligne du mobile portait les vraies ``share_values``
+    (le champ ``coords`` saisi), la ligne de la validation n'en avait AUCUNE
+    -> ``copy_shared_task_data`` ne trouvait "rien à copier" alors que la
+    donnée existait bel et bien, une ligne plus loin.
+
+    En pratique un village/tâche n'est actif que sur un seul cycle à la fois
+    (déjà noté dans le modèle) -> (task, project, adl) suffit à identifier
+    UNE instance réelle du registre. Fusionne au passage tout doublon hérité
+    (créé avant ce correctif) en une seule ligne, la plus complète possible,
+    avant d'appliquer ``defaults``."""
+    candidates = list(TaskShareRecord.objects.filter(
+        task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
+    ).order_by('id'))
+
+    if not candidates:
+        record = TaskShareRecord.objects.create(
+            task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
+            **defaults,
+        )
+        return record, True
+
+    survivor = candidates[0]
+    for dup in candidates[1:]:
+        if not survivor.share_values and dup.share_values:
+            survivor.share_values = dup.share_values
+        if isinstance(dup.share_targets, dict) and dup.share_targets:
+            merged = dict(survivor.share_targets) if isinstance(survivor.share_targets, dict) else {}
+            merged.update(dup.share_targets)
+            survivor.share_targets = merged
+        if not survivor.facilitator_id and dup.facilitator_id:
+            survivor.facilitator_id = dup.facilitator_id
+        if not survivor.couch_task_id and dup.couch_task_id:
+            survivor.couch_task_id = dup.couch_task_id
+        if not survivor.cycle_id and dup.cycle_id:
+            survivor.cycle_id = dup.cycle_id
+        dup.delete()
+
+    for key, value in defaults.items():
+        setattr(survivor, key, value)
+    survivor.save()
+    return survivor, False
+
+
+def canton_headquarters_village_ids(source_administrative_level_id):
+    """Ids des villages sièges (``CVD.headquarters_village``) du MÊME canton
+    que ``source_administrative_level_id`` (village siège lui-même), le
+    village source exclu. Règle canonique (pas l'heuristique AggregatedStatus
+    de ``_headquarters_village_choices``) : cf. plan de partage."""
+    try:
+        source_cvd = CVD.objects.using('mis').filter(
+            headquarters_village_id=int(source_administrative_level_id),
+        ).first()
+        canton = source_cvd.get_canton() if source_cvd else None
+        if not canton:
+            return []
+        return list(
+            CVD.objects.using('mis')
+            .filter(headquarters_village__parent_id=canton.id)
+            .exclude(headquarters_village_id=int(source_administrative_level_id))
+            .values_list('headquarters_village_id', flat=True)
+        )
+    except Exception:
+        logger.exception(
+            "canton_headquarters_village_ids: échec pour ADL %s", source_administrative_level_id,
+        )
+        return []
+
+
+def _find_facilitator_task_doc(nsc, project_id, task_sql_id, target_administrative_level_id, cycle_id=None):
+    """Cherche, en parcourant les facilitateurs du projet, celui qui détient
+    le document de tâche (déjà provisionné par ``sync_tasks``) pour
+    ``target_administrative_level_id``. Renvoie ``(facilitator, db, doc)`` ou
+    ``(None, None, None)``. Coûteux (parcourt les bases CouchDB des
+    facilitateurs) -> réservé au thread de copie, jamais à une requête HTTP.
+
+    ``administrative_level_id`` est stocké en CHAÎNE sur les docs CouchDB de
+    tâche (vérifié en direct sur des données réelles) alors que l'appelant
+    manipule des ids Postgres (int) -> filtre sur ``sql_id`` seul (fiable, même
+    type des deux côtés) puis compare en Python, tolérant int/chaîne des deux
+    côtés (une requête Mango ``administrative_level_id: <int>`` ne matcherait
+    jamais silencieusement, cf. incident de test).
+
+    IMPORTANT : le doc renvoyé est re-fetché via ``db[doc_id]`` (pas le dict
+    brut du résultat Mango) — ``no_sql_client.update_doc_uncontrolled`` fait
+    ensuite ``db.get(id)``, qui (SDK ``cloudant`` classique, ``CouchDatabase``
+    = sous-classe de ``dict``) ne renvoie que ce qui est DÉJÀ dans le cache
+    LOCAL de cet objet ``db`` ; sans ce passage par ``db[doc_id]`` ici pour
+    "chauffer" ce cache, l'update suivant échoue SILENCIEUSEMENT (bascule sur
+    la branche design-document de ``update_doc_uncontrolled``, avalée par son
+    ``except``) — bug réel découvert en testant ce chemin en direct (jamais
+    emprunté par les tests précédents, qui passaient tous par le raccourci
+    ``TaskShareRecord.couch_task_id`` + ``db[couch_task_id]``, lequel chauffe
+    déjà ce cache par construction).
+
+    IMPORTANT (2e bug réel trouvé en testant en direct) : exclut les
+    facilitateurs ``develop_mode``/``training_mode`` (même convention que le
+    reste du code, ex. ``all_facilitators_worked_in_village`` dans
+    ``ValidateTaskView``) — sans ça, un compte de formation/démo dont les
+    docs de tâche portent par coïncidence le même ``administrative_level_id``
+    que la VRAIE cible (données de démo copiées/génériques, pas une
+    affectation réelle) est trouvé EN PREMIER (ordre non garanti de la
+    requête) et reçoit la copie à la place du vrai facilitateur cible —
+    reproduit en direct : compte "Training1" (``training_mode=True``,
+    aucune village stabilisé) portait un doc ``sql_id=102`` avec
+    ``administrative_level_id='1986'`` copié depuis une démo, jamais nettoyé,
+    qui interceptait silencieusement toute copie destinée au vrai village
+    1986 (TIMANGA/CINKASSE, facilitateur réel 120)."""
+    query = {"type": "task", "sql_id": task_sql_id}
+    target = str(target_administrative_level_id)
+    for facilitator in Facilitator.objects.filter(
+        projects__in=[project_id], active=True, develop_mode=False, training_mode=False,
+    ):
+        try:
+            db = nsc.get_db(facilitator.no_sql_db_name)
+            found = db.get_query_result(query)[:]
+            for row in found:
+                if str(row.get("administrative_level_id")) == target:
+                    doc = db[row["_id"]]  # chauffe le cache local de `db` (cf. docstring)
+                    return facilitator, db, doc
+        except Exception:
+            continue
+    return None, None, None
+
+
+def copy_shared_task_data(task_id, source_administrative_level_id, target_administrative_level_ids,
+                           project_id, cycle_id, mode, share_values=None, validated_by=None):
+    """Copie les valeurs des champs marqués ``share`` **du mode ``mode``
+    uniquement** (form builder web — le mode de partage est porté PAR CHAMP,
+    cf. ``form_design.group_share_paths_by_mode`` ; une même tâche peut avoir
+    des champs en ``fixed_canton`` et d'autres en ``validator_only``, chacun
+    copié séparément vers son propre jeu de cibles) de la tâche ``task_id``
+    (source = ``source_administrative_level_id``) vers les tâches jumelles des
+    ``target_administrative_level_ids`` — potentiellement dans les bases
+    CouchDB d'AUTRES facilitateurs.
+
+    Deux cas, distingués via ``form_design.all_fields_shared(task.form,
+    mode=mode)`` (précisée à l'utilisateur) :
+    - **Champs spécifiques** (certains champs seulement partagés dans ce
+      mode) : n'écrit QUE ces champs ``share`` — le reste du
+      ``form_response`` de la tâche cible, ET son statut
+      ``completed``/``validated``, restent INCHANGÉS (elle reste à finaliser
+      par son propre facilitateur).
+    - **Toutes les données de la tâche** (100% des champs du formulaire
+      partagés dans ce mode -> une seule saisie qui vaut pour tout le
+      canton, ex. réunion cantonale) : en plus des valeurs, la tâche cible
+      est marquée ``completed``/``validated`` (avec entrées d'historique
+      dédiées, marquées ``auto_shared``) — il ne reste rien à finaliser
+      côté cible.
+
+    Dans LES DEUX CAS, une cible DÉJÀ ``completed``/``validated`` (par son
+    propre facilitateur ou par un partage précédent) reçoit quand même la
+    NOUVELLE valeur des champs partagés (jamais de garde sur l'état courant
+    de la cible avant fusion — cf. ``_copy_shared_task_data_to_target``).
+
+    ``validated_by`` (optionnel) : identité du validateur dashboard à
+    l'origine de cette copie (même forme que ``action_by`` dans
+    ``ValidateTaskView.get`` — ``user_name``/``user_id``/``user_last_name``/
+    ``user_first_name``/``user_email``), utilisée UNIQUEMENT pour l'entrée
+    ``actions_by`` de validation automatique dans le cas "toutes les
+    données". Best-effort par cible."""
+    from dashboard.process_manager.tasks.form_design import (
+        merge_share_values, group_share_paths_by_mode, all_fields_shared,
+    )
+
+    try:
+        task = Task.objects.get(id=task_id)
+    except Task.DoesNotExist:
+        logger.warning("copy_shared_task_data: tâche %s introuvable", task_id)
+        return
+
+    mode_paths = group_share_paths_by_mode(task.form).get(mode) or []
+    if not mode_paths:
+        return
+
+    full_task_share = all_fields_shared(task.form, mode=mode)
+
+    source_record = find_task_share_record(
+        task_id, project_id, source_administrative_level_id, prefer_field='share_values',
+    )
+    all_values = share_values or (source_record.share_values if source_record else None)
+    # `share_values` (paramètre ou snapshot TaskShareRecord) couvre TOUS les
+    # champs partageables de la tâche, tous modes confondus -> on restreint
+    # ici à ceux du mode traité par cet appel.
+    values = {p: all_values[p] for p in mode_paths if all_values and p in all_values}
+    if not values:
+        logger.info(
+            "copy_shared_task_data: rien à copier (task %s, ADL source %s, mode %s)",
+            task_id, source_administrative_level_id, mode,
+        )
+        return
+
+    source_facilitator = source_record.facilitator if source_record and source_record.facilitator_id else None
+    source_label = None
+    try:
+        source_label = AdministrativeLevel.objects.using('mis').filter(
+            id=source_administrative_level_id,
+        ).values_list('name', flat=True).first()
+    except Exception:
+        pass
+
+    nsc = NoSQLClient()
+    for target_id in target_administrative_level_ids or []:
+        try:
+            target_id = int(target_id)
+        except (TypeError, ValueError):
+            continue
+        if target_id == int(source_administrative_level_id):
+            continue
+        try:
+            _copy_shared_task_data_to_target(
+                nsc, task, target_id, project_id, cycle_id, values, merge_share_values,
+                source_administrative_level_id, source_label, source_facilitator,
+                action='copied_at_validation',
+                full_task_share=full_task_share, validated_by=validated_by,
+            )
+        except Exception:
+            logger.exception(
+                "copy_shared_task_data: échec pour la cible ADL %s (task %s)", target_id, task_id,
+            )
+
+
+def _share_history_entry(action, source_administrative_level_id, source_label, source_facilitator, fields):
+    """Entrée d'historique de provenance (« données chargées depuis une autre
+    tâche »), écrite sur le document CIBLE — cf. Task.share_mode /
+    dashboard.facilitators.functions.build_task_history."""
+    now = datetime.now()
+    return {
+        "date": f"{now.year}-{now.month}-{now.day} {now.hour}:{now.minute}:{now.second}",
+        "action": action,  # 'copied_at_validation' | 'pulled_by_facilitator'
+        "source_administrative_level_id": source_administrative_level_id,
+        "source_label": source_label,
+        "source_facilitator": (
+            {
+                "sql_id": source_facilitator.id, "name": source_facilitator.name,
+                "email": source_facilitator.email,
+            } if source_facilitator else None
+        ),
+        "fields": list(fields),
+    }
+
+
+def _copy_shared_task_data_to_target(nsc, task, target_administrative_level_id, project_id, cycle_id,
+                                      values, merge_share_values,
+                                      source_administrative_level_id=None, source_label=None,
+                                      source_facilitator=None, action='copied_at_validation',
+                                      full_task_share=False, validated_by=None):
+    record = find_task_share_record(
+        task.id, project_id, target_administrative_level_id, prefer_field='couch_task_id',
+    )
+
+    db = None
+    doc = None
+    facilitator = record.facilitator if record and record.facilitator_id else None
+    if facilitator and record.couch_task_id:
+        try:
+            db = nsc.get_db(facilitator.no_sql_db_name)
+            doc = db[record.couch_task_id]
+        except Exception:
+            db, doc = None, None
+
+    if doc is None:
+        # Repli : le facilitateur cible n'a encore jamais "reporté" cette
+        # tâche (aucun TaskShareRecord) -> on la retrouve parmi les
+        # facilitateurs du projet (doc déjà provisionné par sync_tasks).
+        facilitator, db, doc = _find_facilitator_task_doc(
+            nsc, project_id, task.id, target_administrative_level_id, cycle_id,
+        )
+        if doc is None:
+            logger.info(
+                "copy_shared_task_data: aucune tâche cible trouvée (task %s, ADL %s)",
+                task.id, target_administrative_level_id,
+            )
+            return
+
+    # Fusion des valeurs partageables : AUCUNE garde sur l'état courant de la
+    # cible — une tâche déjà `completed`/`validated` (par son propre
+    # facilitateur ou par un partage précédent) reçoit quand même la
+    # nouvelle valeur des champs partagés, comme demandé.
+    merged_response = merge_share_values(task.form, doc.get('form_response') or [], values)
+    updates = {"form_response": merged_response}
+    if source_administrative_level_id is not None:
+        history_entry = _share_history_entry(
+            action, source_administrative_level_id, source_label, source_facilitator, values.keys(),
+        )
+        updates["share_history"] = (doc.get('share_history') or []) + [history_entry]
+
+    # "Toutes les données de la tâche" (100% des champs partagés dans ce
+    # mode, cf. form_design.all_fields_shared) : rien ne reste à la
+    # discrétion du facilitateur cible -> la tâche est marquée
+    # completed/validated d'office, avec des entrées d'historique dédiées
+    # (marquées `auto_shared`) plutôt que d'attendre une action locale qui
+    # n'a plus lieu d'être. Sinon (champs spécifiques uniquement) : le statut
+    # de la cible n'est JAMAIS touché ici, quel qu'il soit.
+    target_status = None
+    if full_task_share:
+        now = datetime.now()
+        now_str = f"{now.year}-{now.month}-{now.day} {now.hour}:{now.minute}:{now.second}"
+        source_fac_info = (
+            {"sql_id": source_facilitator.id, "name": source_facilitator.name, "email": source_facilitator.email}
+            if source_facilitator else None
+        )
+        if not doc.get('completed'):
+            updates["completed"] = True
+            updates["completed_date"] = doc.get('completed_date') or now_str
+            completed_history = list(doc.get('completed_history') or [])
+            completed_history.insert(0, {
+                "type": "completed", "date": now_str, "facilitator": source_fac_info, "auto_shared": True,
+            })
+            updates["completed_history"] = completed_history
+        if not doc.get('validated'):
+            updates["validated"] = True
+            updates["date_validated"] = now_str
+            action_by = {
+                "type": "Validated", "auto_shared": True, "action_date": now_str,
+                "comment": (
+                    f"Validation automatique (partage intégral depuis {source_label or source_administrative_level_id})"
+                ),
+            }
+            if validated_by:
+                action_by.update(validated_by)
+            actions_by = list(doc.get('actions_by') or [])
+            actions_by.insert(0, action_by)
+            updates["actions_by"] = actions_by
+        target_status = TaskShareRecord.STATUS_VALIDATED
+
+    nsc.update_doc_uncontrolled(db, doc['_id'], updates)
+
+    target_defaults = {
+        "facilitator": facilitator,
+        "couch_task_id": doc['_id'],
+        "share_values": values,
+    }
+    if target_status:
+        target_defaults["status"] = target_status
+    if cycle_id is not None:
+        target_defaults["cycle_id"] = cycle_id
+    upsert_task_share_record(task.id, project_id, target_administrative_level_id, defaults=target_defaults)
