@@ -3,4 +3,4 @@ from .celery import app as celery_app
 
 __all__ = ('celery_app',)
 
-FORM_FIELDS_TO_EXCLUDE = ['create_by_user', 'update_by_user', 'users_involved']
+FORM_FIELDS_TO_EXCLUDE = ['create_by_user', 'update_by_user', 'users_involved', 'delete_by_user']

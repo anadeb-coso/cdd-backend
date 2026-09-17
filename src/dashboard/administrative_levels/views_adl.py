@@ -758,6 +758,7 @@ class AdministrativeLevelTaskDetailAjaxView(FacilitatorMixin, AJAXRequestMixin, 
         adl_id = self.request.GET.get('administrative_level')
         sql_id = self.request.GET.get('task')
         doc = None
+        found_db_name = self.facilitator_db_name
         if adl_id and sql_id and self.facilitator_db is not None:
             selector = {"type": "task", "administrative_level_id": str(adl_id)}
             try:
@@ -773,8 +774,34 @@ class AdministrativeLevelTaskDetailAjaxView(FacilitatorMixin, AJAXRequestMixin, 
                 doc = rows[0] if rows else None
             except Exception as exc:  # noqa: BLE001
                 print(f"[task_detail] CouchDB KO: {exc}")
-        context['task'] = doc
-        context['facilitator_db_name'] = self.facilitator_db_name
+
+            # Repli : le village peut avoir sa tâche (sql_id, administrative_level_id)
+            # provisionnée dans la base d'un AUTRE facilitateur que celui dont on
+            # visite le profil (réaffectation, facilitateur "stabilisé" différent,
+            # copie de partage villages sièges atterrie ailleurs — cf.
+            # [[task-share-villages-sieges]]) -> sans ce repli, "This task has no
+            # record for this village yet." s'affichait à tort alors que la donnée
+            # existait bel et bien, juste pas dans CETTE base précise. Bug réel
+            # rapporté par l'utilisateur. Parcourt les facilitateurs actifs
+            # (hors formation/démo) du projet — même helper que la copie de
+            # partage à la validation.
+            if doc is None:
+                from dashboard.utils import _find_facilitator_task_doc
+                try:
+                    task_sql_id = int(sql_id)
+                except (TypeError, ValueError):
+                    task_sql_id = sql_id
+                nsc = NoSQLClient()
+                other_facilitator, _other_db, other_doc = _find_facilitator_task_doc(
+                    nsc, self.request.session.get('project_id'), task_sql_id, adl_id,
+                    self.request.session.get('cycle_id'),
+                )
+                if other_doc is not None:
+                    doc = other_doc
+                    found_db_name = other_facilitator.no_sql_db_name
+
+        from dashboard.facilitators.functions import build_task_detail_context
+        context.update(build_task_detail_context(self.request, doc, found_db_name))
         return context
 
 

@@ -710,9 +710,17 @@ class FacilitatorDetailView(FacilitatorMixin, PageMixin, LoginRequiredMixin, gen
         context = super().get_context_data(**kwargs)
 
         context['facilitator'] = self.obj
+        # Lu par le bootstrap JS de facilitators/profile/profile.html
+        # (window.TFB_FACILITATOR_DB_NAME) pour valider/invalider une tâche —
+        # sans cette ligne, cette variable de contexte n'existait nulle part
+        # au niveau de la page (seulement imbriquée dans form.initial,
+        # invisible en tant que `{{ facilitator_db_name }}` du template) : le
+        # bootstrap rendait "" (chaîne vide), d'où l'échec CouchDB "Database
+        # does not exist" à l'invalidation (no_sql_db_name vide envoyé).
+        context['facilitator_db_name'] = self.facilitator_db_name
         context['form'] = FilterTaskForm(
             initial={
-                'facilitator_db_name': self.facilitator_db_name, 
+                'facilitator_db_name': self.facilitator_db_name,
                 'project_id': self.request.session.get('project_id'),
                 'cycle_id': self.request.session.get('cycle_id'),
                 'cvds': self.cvds
@@ -965,16 +973,29 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
         if is_rejected == 'true':
             selector["completed"] = True
             selector["validated"] = False
-            
+
         # return self.facilitator_db.get_query_result(selector)
         results = self.facilitator_db.get_query_result(selector, limit=1000000)[:]
-        
+        # Base d'origine de CHAQUE doc — indispensable ci-dessous : la liste
+        # mélange des tâches venant de PLUSIEURS bases facilitateur (la
+        # sienne + celles "stabilisées" reliées), mais le template n'avait
+        # jusqu'ici qu'UNE seule valeur `facilitator_db_name` (celle de la
+        # page) pour ouvrir le modal de détail sur CHAQUE ligne -> "This task
+        # has no record for this village yet." pour toute tâche venant en
+        # réalité d'une autre base (bug réel rapporté par l'utilisateur), cf.
+        # `task_list.html` (`data-no-sql-db-name`).
+        for r in results:
+            r['_source_db_name'] = self.facilitator_db_name
+
         nsc = NoSQLClient()
         for k_db_name, v in self.no_sql_dbs_names_with_village_ids.items():
             if not administrative_level_id:
                 selector["administrative_level_id"] = {"$in": v['ids']}
             _db = nsc.get_db(k_db_name)
-            results += _db.get_query_result(selector, limit=1000000)[:]
+            other_results = _db.get_query_result(selector, limit=1000000)[:]
+            for r in other_results:
+                r['_source_db_name'] = k_db_name
+            results += other_results
         return results
 
     def get_queryset(self):
@@ -1018,6 +1039,29 @@ class FacilitatorTaskListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredM
 
     def set_progress_data(self, dict_administrative_levels_with_infos, village_name, phase_name, completed):
         dict_administrative_levels_with_infos['villages'][village_name][phase_name] = completed
+
+
+class FacilitatorTaskDetailModalView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.TemplateView):
+    """Détail (lecture seule + actions) d'une tâche, résolue directement par
+    ``no_sql_db_name`` (URL) + ``task_id`` (query string) — alimente le MÊME
+    modal unique #taskModalLong que AdministrativeLevelTaskDetailAjaxView (une
+    seule modale de détail de tâche dans tout le dashboard, cf.
+    dashboard.facilitators.functions.build_task_detail_context)."""
+    template_name = 'administrative_levels/profile/components/_task_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        task_id = self.request.GET.get('task_id')
+        doc = None
+        if task_id and self.facilitator_db is not None:
+            try:
+                rows = self.facilitator_db.get_query_result({"type": "task", "_id": task_id})[:]
+                doc = rows[0] if rows else None
+            except Exception as exc:  # noqa: BLE001
+                print(f"[task_detail_modal] CouchDB KO: {exc}")
+        from dashboard.facilitators.functions import build_task_detail_context
+        context.update(build_task_detail_context(self.request, doc, self.facilitator_db_name))
+        return context
 
 
 class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.FormView):

@@ -560,39 +560,7 @@
             });
     </script>
 
-    <!-- Modale de détail d'une tâche du cycle de planification -->
-    <div class="modal fade" id="taskModalLong" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-            <div class="modal-content" id="modal-content">
-                <div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modale de saisie du commentaire de validation / invalidation -->
-    <div class="modal fade modal-confirmation" id="modal_comment">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <div class="text-primary text-center fs17 lh19 text-bold mb-4" style="padding: 0 45px 0 45px;">
-                        {% translate "Please enter a comment" %}
-                    </div>
-                    <div class="form-group">
-                        <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
-                            title="" required="" id="id_in_validation_comment" spellcheck="true"
-                            placeholder="{% translate 'Add Comment' %}"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button id="btn-send-comment" type="submit" class="btn btn-lg btn-primary text-right">
-                        {% translate "Send" %}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
+    {% include "facilitators/components/task_modals.html" %}
 
     <script>
 
@@ -863,27 +831,8 @@
 
 
 
-        
-        
-        function loadTaskComments(no_sql_db_name, task__id) {
-            $('#load-comments-spin-'+task__id).show();
-            try{
-                $('#task_comments_'+task__id).load(
-                    "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}"
-                    .replace('no_sql_db_name', no_sql_db_name)
-                    .replace('task__id', task__id), 
-                    function (response, status, xhr) {
-                    if (status === "error") {
-                        alert(error_server_message + "Error " + response.status);
-                    }
-                    $('#load-comments-spin-'+task__id).hide();
-                });
-            }catch(e){
-                $('#load-comments-spin-'+task__id).hide();
-            }
-        }
 
-        
+
     filterByVillage('{{ administrative_level_name }}', adminLevelId)
     </script>
 
@@ -903,221 +852,26 @@
         }catch(e){
             console.log(e);
         }
-    
-        $(document).ready(function () {
-            let facilitator_db_name = "{{ facilitator_db_name }}";
-    
-            //Valide invalide
-            let task__id = null;
-            let action_code = null;
-            let id_invalidate_elt = null;
-            $(document).on('click', '.invalidate_valide', function () {
-                task__id = this.id.split("_")[this.id.split("_").length - 1];
-                console.log(task__id)
-                id_invalidate_elt = $(('#id_invalidate_'+task__id));
-                for(var i = 0; i < this.classList.length; i++){
-                    if(this.classList[i].includes("action_code_")){
-                        action_code = this.classList[i].split("_")[2];
-                    }
-                }
-    
-                $('#card-item-task-'+task__id).modal('hide');
-                $('#taskModalLong').modal('hide');
-                $('#modal_comment').modal('show');
-            });
-    
-    
-            $(document).on('click', '#btn-send-comment', function () {
-                let btn_send_comment = $('#btn-send-comment');
-                let in_validation_comment = $('#id_in_validation_comment').val();
-                
-                if(["0", 0].includes(action_code) && (
-                        ["", null, undefined].includes(in_validation_comment) || (
-                            in_validation_comment && [""].includes(in_validation_comment.replace(/\s/g, ''))
-                        )
-                    )
-                    )
-                {
-                    alert("{% translate 'Please add a comment' %}");
-                }else if(task__id != null && action_code != null){
-                    btn_send_comment.prop("disabled", true);
-                    btn_send_comment.text("{% translate 'Sending...' %}");
-                    $.ajax({
-                        type: "GET",
-                        url: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
-                        data: {
-                            no_sql_db_name: facilitator_db_name,
-                            task_id: task__id,
-                            action_code: action_code,
-                            in_validation_comment: in_validation_comment
-                        },
-                        success: function (response) {
-                            if(response.status == "ok"){
-                                
-                                if(action_code == "1" || action_code == 1){
-    
-                                    let id_invalidate_valide_validation_action_task__id_elt = $(("#id_invalidate_valide_validation_action_"+task__id));
-                                    id_invalidate_valide_validation_action_task__id_elt.hide();
-                                    
-                                    $(".cls_invalidation_validation_inclusion").hide();
-    
-                                    /*id_invalidate_valide_validation_action_task__id_elt.removeClass(('action_code_'+action_code));
-                                    id_invalidate_valide_validation_action_task__id_elt.addClass('action_code_0');
-    
-                                    id_invalidate_valide_validation_action_task__id_elt.text(`{% translate 'Mark as invalidated' %}`);
-                                    id_invalidate_valide_validation_action_task__id_elt.removeClass("btn-primary");
-                                    id_invalidate_valide_validation_action_task__id_elt.addClass("btn-warning");*/
-    
-                                    $(('.text_'+task__id)).html(`
-                                        <div class="status__circle-icon success"><i class="fas fa-check-double"></i></div>
-                                    `);
-    
-    
-                                    $(('.modal_text_'+task__id)).html(`
-                                        <div class="status-badge success-color">
-                                            <i class="fas fa-check success-color"></i> {% translate 'Task validated' %}
-                                        </div>
-                                    `);
-                                }else{
-                                    /*let id_invalidate_valide_invalidation_action_task__id_elt = $(("#id_invalidate_valide_invalidation_action_"+task__id));
-                                    id_invalidate_valide_invalidation_action_task__id_elt.removeClass(('action_code_'+action_code));
-                                    id_invalidate_valide_invalidation_action_task__id_elt.addClass('action_code_1');
-    
-                                    id_invalidate_valide_invalidation_action_task__id_elt.text(`{% translate 'Mark as validated' %}`);
-                                    id_invalidate_valide_invalidation_action_task__id_elt.removeClass("btn-warning");
-                                    id_invalidate_valide_invalidation_action_task__id_elt.addClass("btn-primary");*/
-                                    
-                                    $(('.text_'+task__id)).html(`
-                                        <div class="status__circle-icon error"><i class="fas fa-times"></i></div>
-                                    `);
-                                    
-                                    $(('.modal_text_'+task__id)).html(`
-                                        <div class="status-badge warning-color">
-                                            <i class="fas fa-times warning-color"></i> {% translate 'Task not validated' %}
-                                        </div>
-                                    `);
-    
-                                    if(response.previous_status == true){
-                                        $('.cls_invalidation_validation').before(`<div style="width: 30%; margin: auto; float: left;" class="cls_invalidation_validation_inclusion">
-                                            <button type="button" name="invalidate_valide" 
-                                                class="btn btn-primary action_code_1 invalidate_valide" 
-                                                required id="id_invalidate_valide_validation_action_inclusion_${task__id}">
-                                                    {% translate 'Mark as validated' %}
-                                            </button>
-                                        </div>`);
-                                    }
-    
-                                }
-                                $('#modal_comment').modal('hide');
-                                {% comment %} $('#card-item-task-'+task__id).modal('show'); {% endcomment %}
-                                task__id = null;
-                                action_code = null;
-                                /*if(id_invalidate_elt){
-                                    id_invalidate_elt.hide();
-                                }*/
-                                $('#id_in_validation_comment').val("");
-                                reloadPlanningCycle();
-                            }else{
-                                alert(response.message);
-                            }
-                            btn_send_comment.prop("disabled", false);
-                            btn_send_comment.text("{% translate 'Send' %}");
-    
-                            if(response.mail_message && response.sms_message){
-                                alert(response.mail_message+"\n"+response.sms_message);
-                            }else if(response.mail_message){
-                                alert(response.mail_message);
-                            }else if(response.sms_message){
-                                alert(response.sms_message);
-                            }
-    
-                            loadTaskComments(facilitator_db_name, task__id);
-                        },
-                        error: function (data) {
-                            spin.hide();
-                            alert(error_server_message + "Error " + data.status);
-                            btn_send_comment.prop("disabled", false);
-                            btn_send_comment.text("{% translate 'Send' %}");
-                        }
-                    });
-                }
-                
-            });
-            //End valide invalide
-    
-    
-    
-    
-            //Complet Uncomplet
-            $(document).on('click', '.uncomplete_complete', function () {
-
-                //Completed Uncompleted
-                let task_completed__id = this.id.split("_")[this.id.split("_").length - 1];
-                let action_code_completed = $(('#action_code_completed_'+task_completed__id)).val();
-                let elt_task_number = $(('#task_number_'+task_completed__id));
-                
-                $.ajax({
-                    type: "GET",
-                    url: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
-                    data: {
-                        no_sql_db_name: facilitator_db_name,
-                        task_id: task_completed__id,
-                        action_code: action_code_completed
-                    },
-                    success: function (response) {
-                        if(response.status == "ok"){
-                            if(action_code_completed == "1" || action_code_completed == 1){
-                                $(('#action_code_completed_'+task_completed__id)).val(0);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as uncompleted' %}`);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-primary");
-                                $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-warning");
-                         
-                                $(('.text_'+task__id)).html(`
-                                    <div class="status__circle-icon success"><i class="fas fa-check"></i></div>
-                                `);
-                                $(('.modal_text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-completed">
-                                        {% translate 'Completed' %}
-                                    </div>
-                                `);
-                                elt_task_number.removeClass("badge-pending");
-                                elt_task_number.addClass("badge-completed");
-                            }else{
-                                $(('#action_code_completed_'+task_completed__id)).val(1);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).text(`{% translate 'Mark as completed' %}`);
-                                $(("#id_uncomplete_complete_"+task_completed__id)).removeClass("btn-warning");
-                                $(("#id_uncomplete_complete_"+task_completed__id)).addClass("btn-primary");
-                                $(('.text_'+task__id)).html(`
-                                    <div class="header__progress-icon"></div>
-                                `);
-                                $(('.modal_text_completed_'+task_completed__id)).html(`
-                                    <div class="status-badge badge-pending">
-                                        {% translate 'Pending' %}
-                                    </div>
-                                `);
-                                elt_task_number.removeClass("badge-completed");
-                                elt_task_number.addClass("badge-pending");
-                            }
-                        }else{
-                            alert(response.message);
-                        }
-
-                        loadTaskComments(facilitator_db_name, task_completed__id);
-                        reloadPlanningCycle();
-
-                    },
-                    error: function (data) {
-                        spin.hide();
-                        alert(error_server_message + "Error " + data.status);
-                    }
-                });
-
-            });
-            //End complet Uncomplet
-    
-        }); 
     </script>
 
+    {% comment %}
+        Modal unique de détail de tâche + validation/invalidation +
+        complétion/remise en cours + commentaires : une seule implémentation
+        JS pour tout le dashboard (static/dashboard/js/task_detail_modal.js),
+        cf. dashboard/templates/facilitators/components/task_modals.html.
+    {% endcomment %}
+    <script>
+        window.TFB_FACILITATOR_DB_NAME = "{{ facilitator_db_name }}";
+        window.TFB_URLS = {
+            validateInvalidate: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+            completeUncomplete: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
+            taskCommentsTmpl: "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}",
+            taskDetailModalTmpl: "{% url 'dashboard:facilitators:task_detail_modal' 'no_sql_db_name' %}"
+        };
+        window.TFB_RELOAD_PLANNING_CYCLE = (typeof reloadPlanningCycle === 'function') ? reloadPlanningCycle : null;
+    </script>
+    <script src="{% static 'dashboard/js/task_detail_modal.js' %}"></script>
 
-        
+    {% comment %} Ancienne implémentation dupliquée (validate/invalidate/complete)
+         remplacée par static/dashboard/js/task_detail_modal.js ci-dessus. {% endcomment %}
 {% endblock %}

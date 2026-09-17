@@ -1,0 +1,127 @@
+{% load i18n %}
+{% comment %}
+    Modal unique de détail de tâche (#taskModalLong, contenu chargé en AJAX
+    depuis administrative_levels/profile/components/_task_detail.html) +
+    modal de saisie du commentaire de validation/invalidation (#modal_comment).
+    Un SEUL exemplaire par page — inclus par administrative_levels/profile/profile.html,
+    facilitators/profile/profile.html et facilitators/old_profile/profile.html.
+    Piloté par static/dashboard/js/task_detail_modal.js (chargé une fois par
+    ces mêmes 3 pages) : c'est la SEULE implémentation JS de ce flux.
+{% endcomment %}
+
+<!-- Modale de détail d'une tâche -->
+<div class="modal fade" id="taskModalLong" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content" id="modal-content">
+            <div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale de saisie du commentaire de validation / invalidation -->
+<div class="modal fade modal-confirmation" id="modal_comment">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="text-primary text-center fs17 lh19 text-bold mb-4" style="padding: 0 45px 0 45px;">
+                    {% translate "Please enter a comment" %}
+                </div>
+                <div class="form-group">
+                    <textarea name="id_in_validation_comment" cols="40" rows="3" maxlength="65000" class="form-control"
+                        title="" required="" id="id_in_validation_comment" spellcheck="true"
+                        placeholder="{% translate 'Add Comment' %}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button id="btn-send-comment" type="submit" class="btn btn-lg btn-primary text-right">
+                    {% translate "Send" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %}
+    Visionneuse plein écran ("Voir en grand") pour une pièce jointe de tâche
+    (facilitators/_task_attachment.html) : un seul exemplaire par page, piloté par
+    window.tdmOpenLightbox()/tdmCloseLightbox() (static/dashboard/js/task_detail_modal.js).
+    Volontairement PAS une modale Bootstrap imbriquée dans #taskModalLong (empilement de
+    backdrops peu fiable) — un simple overlay CSS au-dessus de tout, y compris #taskModalLong.
+
+    Styles de mise en page des pièces jointes (facilitators/_task_attachment.html) définis
+    ici (un seul exemplaire par page) plutôt que dans ce partiel répété par pièce jointe :
+    boutons d'action en haut, fichier (aperçu) aligné à droite en dessous.
+{% endcomment %}
+<style>
+    /* Le thème CSS global du dashboard écrase `.text-muted` avec un gris
+       quasi invisible sur fond blanc (`color:#dedede !important` dans
+       static/css/cdd.css) — cassé partout où cette classe Bootstrap standard
+       est utilisée, mais corrigé ICI seulement (le modal de détail de tâche,
+       #taskModalLong, en fait un usage massif : description, date d'achève-
+       ment, historique complet, sélecteur de partage…) pour ne pas changer
+       l'apparence d'autres pages non concernées par cette demande. Reprend
+       la couleur Bootstrap d'origine, lisible sur fond blanc. */
+    #taskModalLong .text-muted,
+    #taskModalLong .tdm-history-meta {
+        color: #6c757d !important;
+    }
+
+    .tdm-attach {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    .tdm-attach-actions a {
+        /* neutralise .attach-file a { float: right !important; margin-right: 45px !important; }
+           (task_list.html) hérité par ce conteneur, qui inverserait l'ordre des icônes */
+        float: none !important;
+        margin-right: 0 !important;
+        margin-left: 12px;
+        color: #6c757d;
+    }
+    .tdm-attach-actions a:first-child { margin-left: 0; }
+    .tdm-attach-actions a:hover { color: #333; }
+
+    #tdmLightbox {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        z-index: 10000;
+        background: rgba(0, 0, 0, 0.85);
+        align-items: center;
+        justify-content: center;
+        padding: 30px;
+    }
+    #tdmLightbox.tdm-lightbox-open { display: flex; }
+    .tdm-lightbox-close {
+        position: absolute;
+        top: 15px; right: 25px;
+        color: #fff;
+        font-size: 2rem;
+        line-height: 1;
+        background: none;
+        border: 0;
+        cursor: pointer;
+        z-index: 1;
+    }
+    #tdmLightboxContent {
+        max-width: 100%;
+        max-height: 100%;
+        text-align: center;
+    }
+    #tdmLightboxContent img {
+        max-width: 90vw;
+        max-height: 85vh;
+        object-fit: contain;
+    }
+    #tdmLightboxContent iframe {
+        width: 90vw;
+        height: 85vh;
+        border: 0;
+        background: #fff;
+    }
+</style>
+<div id="tdmLightbox">
+    <button type="button" class="tdm-lightbox-close" aria-label="Close" onclick="window.tdmCloseLightbox()">&times;</button>
+    <div id="tdmLightboxContent"></div>
+</div>

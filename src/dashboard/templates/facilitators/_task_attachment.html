@@ -1,0 +1,104 @@
+{% load i18n custom_tags %}
+{% comment %}
+    Une pièce jointe de tâche (photo, PDF, Word, etc.) : boutons d'action EN HAUT
+    (icônes seules, étiquette = attribut `title` affichée au survol, pas de texte
+    visible en permanence), fichier (aperçu) aligné à DROITE en dessous
+    (.tdm-attach / .tdm-attach-actions, styles définis une fois dans
+    facilitators/components/task_modals.html) :
+      - « Voir en grand » (fa-expand) : visionneuse plein écran EN PLACE (overlay
+        #tdmLightbox, cf. facilitators/components/task_modals.html + task_detail_modal.js),
+        pas de navigation, jamais de téléchargement.
+      - « Ouvrir dans un nouvel onglet » (fa-external-link-alt) : affichage seul dans un
+        nouvel onglet. PAS proposée pour les photos (une image en pleine page se
+        télécharge trop souvent au lieu de s'afficher selon la façon dont le fichier est
+        servi — « Voir en grand » couvre déjà ce besoin sans ce risque). Pour PDF/Word,
+        passe par download_from_url?disposition=inline (PDF) ou la visionneuse Office Web
+        (Word), jamais l'URL S3 brute pour un PDF (même risque de téléchargement forcé
+        que pour les photos).
+      - « Télécharger » (fa-download) : téléchargement explicite (download_from_url,
+        comportement historique inchangé : Content-Disposition: attachment).
+      - « Convertir en Word »/« Convertir en PDF » (PDF/Word uniquement) : conversion à la
+        demande (cdd/my_librairies/doc_convert.py — pdf2docx pour PDF -> Word ; LibreOffice
+        headless côté serveur pour Word -> PDF, cf. ce module pour le détail).
+    Contexte attendu : `attach` (entrée de `task.attachments`).
+    Partagé par facilitators/task_form.html et facilitators/task_old_form.html.
+{% endcomment %}
+{% if attach.attachment.uri %}
+    {% if "file:///data" in attach.attachment.uri %}
+        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
+    {% elif ".pdf" in attach.attachment.uri %}
+        {% with raw_url=attach.attachment.uri|imgAWSS3Filter %}
+        <div class="tdm-attach">
+            <div class="tdm-attach-actions mb-1">
+                <a href="javascript:void(0)" onclick="window.tdmOpenLightbox('{{ raw_url|escapejs }}', 'pdf')"
+                   title="{% translate 'View full size' %}">
+                    <i class="fas fa-expand"></i>
+                </a>
+                <a href="{% url 'download_from_url' %}?url={{ raw_url }}&disposition=inline" target="_blank"
+                   title="{% translate 'Open in a new tab' %}">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                <a href="{% url 'download_from_url' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Download' %}">
+                    <i class="fas fa-download"></i>
+                </a>
+                <a href="{% url 'convert_pdf_to_word' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Convert to Word' %}">
+                    <i class="fas fa-file-word"></i>
+                </a>
+            </div>
+            <div class="tdm-attach-preview">
+                <iframe src="{{ raw_url }}" width="250" height="300"></iframe>
+            </div>
+        </div>
+        {% endwith %}
+    {% elif ".docx" in attach.attachment.uri or ".doc" in attach.attachment.uri %}
+        {% with raw_url=attach.attachment.uri|imgAWSS3Filter %}
+        <div class="tdm-attach">
+            <div class="tdm-attach-actions mb-1">
+                <a href="javascript:void(0)" onclick="window.tdmOpenLightbox('{{ raw_url|escapejs }}', 'office')"
+                   title="{% translate 'View full size' %}">
+                    <i class="fas fa-expand"></i>
+                </a>
+                <a href="https://view.officeapps.live.com/op/embed.aspx?src={{ raw_url }}" target="_blank"
+                   title="{% translate 'Open in a new tab' %}">
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                <a href="{% url 'download_from_url' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Download' %}">
+                    <i class="fas fa-download"></i>
+                </a>
+                <a href="{% url 'convert_word_to_pdf' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Convert to PDF' %}">
+                    <i class="fas fa-file-pdf"></i>
+                </a>
+            </div>
+            <div class="tdm-attach-preview">
+                <iframe
+                    src='https://view.officeapps.live.com/op/embed.aspx?src={{ raw_url }}'
+                    width="250" height="300" frameborder='0'>
+                        This is an embedded
+                        <a target='_blank' href='http://office.com'>Microsoft Office</a>
+                        document, powered by
+                        <a target='_blank' href='http://office.com/webapps'>Office Online</a>.
+                </iframe>
+            </div>
+        </div>
+        {% endwith %}
+    {% else %}
+        {% with raw_url=attach.attachment.uri|imgAWSS3Filter %}
+        <div class="tdm-attach">
+            <div class="tdm-attach-actions mb-1">
+                <a href="javascript:void(0)" onclick="window.tdmOpenLightbox('{{ raw_url|escapejs }}', 'image')"
+                   title="{% translate 'View full size' %}">
+                    <i class="fas fa-expand"></i>
+                </a>
+                <a href="{% url 'download_from_url' %}?url={{ raw_url }}" target="_blank" title="{% translate 'Download' %}">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
+            <div class="tdm-attach-preview">
+                <img src="{{ raw_url }}" width="200" height="200" />
+            </div>
+        </div>
+        {% endwith %}
+    {% endif %}
+{% else %}
+    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
+{% endif %}

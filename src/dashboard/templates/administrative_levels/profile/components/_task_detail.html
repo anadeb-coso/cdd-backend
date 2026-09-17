@@ -12,7 +12,11 @@
 {% with cid=task|get:'_id' %}
 <div class="modal-header">
     <h5 class="modal-title text-primary">
-        {{ task.name }}{% if task.administrative_level_name %} <small class="text-muted">(CVD : {{ task.administrative_level_name }})</small>{% endif %}
+        {{ task.name }}
+        {% if task.non_blocking %}
+        <i class="fas fa-unlink text-muted" title="{% translate 'Independent task — does not have to be completed before the next one' %}"></i>
+        {% endif %}
+        {% if task.administrative_level_name %} <small class="text-muted">(CVD : {{ task.administrative_level_name }})</small>{% endif %}
     </h5>
     <div class="ml-auto text-right mr-2">
         <div class="modal_text_completed_{{ cid }} d-inline-block">
@@ -49,6 +53,15 @@
 
     {% include "facilitators/task_form.html" %}
 
+    {% if task.old_forms and task.old_forms|length != 0 %}
+        <p style="width: 98% !important; margin: auto !important;">
+            <legend style="background-color: black;">{% translate "Data from the old form. The following data must not be counted during the validation of this task" %}</legend>
+        </p>
+        <div style="width: 90%; margin: auto !important;">
+            {% include "facilitators/task_old_form.html" %}
+        </div>
+    {% endif %}
+
     <hr>
     <h6 class="text-bold-family">{% translate "Comments and actions history" %}</h6>
     <div class="task_comments" id="task_comments_{{ cid }}">
@@ -61,6 +74,38 @@
         <i class="fas fa-2x fa-sync-alt fa-spin"></i>
     </div>
 </div>
+
+{% if task.completed and share_picker %}
+<div class="modal-body tdm-share-picker pt-0">
+    {% comment %}
+        Un groupe PAR MODE présent sur la tâche : le mode de partage est porté
+        par champ (form_design.group_share_paths_by_mode), pas par tâche —
+        certains champs peuvent être en fixed_canton (automatique, texte
+        informatif) pendant que d'autres sont en facilitator_then_validator /
+        validator_only (sélecteur, un par mode, data-share-mode identifie
+        lequel pour task_detail_modal.js).
+    {% endcomment %}
+    {% for group in share_picker.groups %}
+        {% if group.mode == 'fixed_canton' %}
+            <p class="small text-muted mb-2">
+                <i class="fas fa-share-alt mr-1"></i>
+                {% blocktranslate count counter=group.count %}Will be copied automatically to {{ counter }} headquarters village of the same canton when validated.{% plural %}Will be copied automatically to {{ counter }} headquarters villages of the same canton when validated.{% endblocktranslate %}
+            </p>
+        {% else %}
+            <label class="small text-muted mb-1 d-block" for="tdm_share_targets_{{ cid }}_{{ group.mode }}">
+                <i class="fas fa-share-alt mr-1"></i>{% translate "Target headquarters villages / cantons for sharing" %}
+                {% if group.mode == 'facilitator_then_validator' %}({% translate "Facilitator, then validator" %}){% else %}({% translate "Validator only" %}){% endif %}
+            </label>
+            <select multiple class="form-control form-control-sm tdm-share-targets mb-2"
+                    id="tdm_share_targets_{{ cid }}_{{ group.mode }}" data-share-mode="{{ group.mode }}">
+                {% for choice in group.choices %}
+                <option value="{{ choice.value }}" {% if choice.value in group.selected %}selected{% endif %}>{{ choice.label }}</option>
+                {% endfor %}
+            </select>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
 
 {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"Evaluator" %}
 <div class="modal-footer d-block">
@@ -87,6 +132,22 @@
 <div class="modal-footer d-block">
     {% include "facilitators/validation_invalidation.html" %}
     <div style="clear: both;"></div>
+</div>
+{% endif %}
+
+{% if history %}
+<div class="modal-body tdm-history pt-0">
+    <hr>
+    <h6 class="text-bold-family">{% translate "Full history" %}</h6>
+    <ul class="list-unstyled small tdm-history-list mb-0">
+        {% for h in history %}
+        <li class="mb-2">
+            <span class="badge badge-pill {{ h.badge_class }}">{{ h.label }}</span>
+            <strong>{{ h.facilitator_name|default:"—" }}</strong>
+            <span class="tdm-history-meta">— {{ h.date_display }}{% if h.comment %} · {{ h.comment }}{% endif %}</span>
+        </li>
+        {% endfor %}
+    </ul>
 </div>
 {% endif %}
 {% endwith %}

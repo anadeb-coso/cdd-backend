@@ -1,6 +1,8 @@
 import itertools
+from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import gettext_lazy
 
 from no_sql_client import NoSQLClient
 import grm_client
@@ -205,6 +207,185 @@ def get_db_task(no_sql_dbs_names_with_village_ids: dict, task__id: str):
         
     return None, []
 
+
+# ---------------------------------------------------------------------------
+# Modal unique de détail de tâche (administrative_levels/profile/components/
+# _task_detail.html) : historique fusionné + sélecteur de cibles pour le
+# partage entre villages sièges. Partagé par AdministrativeLevelTaskDetailAjaxView
+# et FacilitatorTaskDetailModalView.
+# ---------------------------------------------------------------------------
+
+_HISTORY_META = {
+    'completed': (gettext_lazy('Completed'), 'badge-success'),
+    'reopened': (gettext_lazy('Marked in progress again'), 'badge-secondary'),
+    'updated': (gettext_lazy('Updated'), 'badge-info'),
+    'updated_after_invalidation': (gettext_lazy('Updated after invalidation'), 'badge-warning'),
+    'validated': (gettext_lazy('Validated'), 'badge-success'),
+    'invalidated': (gettext_lazy('Invalidated'), 'badge-danger'),
+    'shared_data_loaded': (gettext_lazy('Data loaded from another task'), 'badge-primary'),
+}
+
+
+def _parse_history_date(value):
+    """Analyse une date d'historique dans l'un des formats rencontrés sur les
+    documents CouchDB de tâche : chaîne ``"Y-M-D H:M:S"`` non paddée
+    (complétion / validation / partage) ou date ``moment()`` sérialisée en
+    ISO-8601 (historiques mobiles ``date``). Renvoie un ``datetime`` naïf, ou
+    ``None`` si injanalysable."""
+    if not value:
+        return None
+    if isinstance(value, dict):
+        value = value.get('_i') or value.get('_d') or value.get('ISO')
+        if not value:
+            return None
+    value = str(value)
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _history_facilitator_name(fac):
+    if not isinstance(fac, dict):
+        return None
+    if fac.get('name'):
+        return fac['name']
+    parts = [fac.get('first_name'), fac.get('last_name')]
+    joined = ' '.join(p for p in parts if p)
+    return joined or fac.get('email')
+
+
+def build_task_history(task_doc):
+    """Fusionne tous les historiques présents sur un document de tâche
+    CouchDB (achèvement / remise en cours / modification / validation /
+    invalidation / données chargées depuis une autre tâche) en une liste
+    triée (plus récent d'abord) de
+    ``{type, date, date_display, label, badge_class, facilitator_name, comment}``,
+    prête à afficher dans le modal de détail (sous les boutons d'action)."""
+    if not task_doc:
+        return []
+    entries = []
+
+    def _add(entry_type, date_value, facilitator_name=None, comment=None):
+        dt = _parse_history_date(date_value)
+        label, badge_class = _HISTORY_META.get(entry_type, (entry_type, 'badge-light'))
+        entries.append({
+            'type': entry_type,
+            'date': dt,
+            'date_display': dt.strftime('%d/%m/%Y %H:%M') if dt else (str(date_value) if date_value else ''),
+            'label': label,
+            'badge_class': badge_class,
+            'facilitator_name': facilitator_name,
+            'comment': comment,
+        })
+
+    # Achèvement / remise en cours (mobile, `type` ajouté ; entrées legacy sans
+    # `type` -> traitées comme 'completed').
+    for h in (task_doc.get('completed_history') or []):
+        _add(h.get('type') or 'completed', h.get('date'), _history_facilitator_name(h.get('facilitator')))
+
+    # Modifications (mobile).
+    for h in (task_doc.get('updated_history') or []):
+        fac = h.get('facilitator') or {}
+        fields = fac.get('fields_updated') or []
+        _add('updated', h.get('date'), _history_facilitator_name(fac), ', '.join(fields) or None)
+
+    for h in (task_doc.get('updated_after_invalidation_history') or []):
+        fac = h.get('facilitator') or {}
+        fields = fac.get('fields_updated') or []
+        _add('updated_after_invalidation', h.get('date'), _history_facilitator_name(fac), ', '.join(fields) or None)
+
+    # Validation / invalidation (dashboard, ValidateTaskView).
+    for h in (task_doc.get('actions_by') or []):
+        entry_type = 'validated' if h.get('type') == 'Validated' else 'invalidated'
+        name = ' '.join(p for p in [h.get('user_first_name'), h.get('user_last_name')] if p) or h.get('user_name')
+        _add(entry_type, h.get('action_date'), name, h.get('comment'))
+
+    # Données chargées depuis une autre tâche (partage villages sièges).
+    for h in (task_doc.get('share_history') or []):
+        fac = h.get('source_facilitator') or {}
+        parts = []
+        if h.get('source_label'):
+            parts.append(str(h['source_label']))
+        if h.get('fields'):
+            parts.append(', '.join(h['fields']))
+        _add('shared_data_loaded', h.get('date'), fac.get('name'), ' — '.join(parts) or None)
+
+    entries.sort(key=lambda e: e['date'] or datetime.min, reverse=True)
+    return entries
+
+
+def build_task_detail_context(request, task_doc, no_sql_db_name):
+    """Contexte partagé pour le rendu de
+    ``administrative_levels/profile/components/_task_detail.html`` : historique
+    fusionné (:func:`build_task_history`) et, si la tâche a des champs
+    partageables, un GROUPE de sélecteur PAR MODE présent (le mode de partage
+    est porté par champ, cf. ``form_design.group_share_paths_by_mode`` — une
+    même tâche peut avoir des champs ``fixed_canton`` ET des champs
+    ``validator_only`` par exemple, chacun avec ses propres cibles). Utilisé
+    par ``AdministrativeLevelTaskDetailAjaxView`` et
+    ``FacilitatorTaskDetailModalView`` (une seule modale, un seul contexte,
+    pas de logique dupliquée)."""
+    from process_manager.models import Task
+    from dashboard.utils import canton_headquarters_village_ids, find_task_share_record
+    from dashboard.process_manager.tasks.form_design import group_share_paths_by_mode
+
+    context = {
+        'task': task_doc,
+        'facilitator_db_name': no_sql_db_name,
+        'history': build_task_history(task_doc),
+        'share_picker': None,
+    }
+    if not task_doc:
+        return context
+
+    sql_id = task_doc.get('sql_id')
+    source_adl = task_doc.get('administrative_level_id')
+    if not (sql_id and source_adl):
+        return context
+
+    task_model = Task.objects.filter(id=sql_id).first()
+    if not task_model:
+        return context
+    modes_present = group_share_paths_by_mode(task_model.form)
+    if not modes_present:
+        return context
+
+    target_ids = canton_headquarters_village_ids(source_adl)
+    adls = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id__in=target_ids)
+    choices = [
+        {'value': str(a.id), 'label': f"{a.name} ({a.parent.name if a.parent else '—'})"}
+        for a in adls
+    ]
+
+    record = find_task_share_record(
+        sql_id, request.session.get('project_id'), source_adl, prefer_field='share_targets',
+    )
+    stored_targets = (record.share_targets if record else None) or {}
+    if isinstance(stored_targets, list):
+        # Ancienne forme (liste nue) : n'a jamais existé que pour ce mode.
+        stored_targets = {Task.SHARE_MODE_FACILITATOR_THEN_VALIDATOR: stored_targets}
+
+    groups = []
+    # Ordre d'affichage stable, indépendant de l'ordre (non garanti) du dict.
+    for mode in (Task.SHARE_MODE_FIXED_CANTON, Task.SHARE_MODE_FACILITATOR_THEN_VALIDATOR, Task.SHARE_MODE_VALIDATOR_ONLY):
+        if mode not in modes_present:
+            continue
+        if mode == Task.SHARE_MODE_FIXED_CANTON:
+            groups.append({'mode': mode, 'count': len(target_ids), 'choices': [], 'selected': []})
+            continue
+        selected = []
+        if mode == Task.SHARE_MODE_FACILITATOR_THEN_VALIDATOR:
+            selected = [str(x) for x in (stored_targets.get(mode) or [])]
+        groups.append({'mode': mode, 'count': len(choices), 'choices': choices, 'selected': selected})
+
+    context['share_picker'] = {'groups': groups}
+    return context
 
 
 def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_cycle_id, cdd_project_couch_id, project_mis):
