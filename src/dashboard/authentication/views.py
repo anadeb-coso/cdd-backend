@@ -2,10 +2,12 @@ from django.shortcuts import render, redirect
 from rest_framework import status
 from django.utils.translation import gettext_lazy
 from django.views import generic
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from dashboard.mixins import PageMixin
 from authentication.permissions import AdminPermissionRequiredMixin
+from authentication.middleware import FACILITATOR_GROUP_NAMES
 from dashboard.authentication.forms import CreateUserForm, UpdateUserForm
 from django.contrib.auth.models import User, Group, Permission
 from django.forms.models import model_to_dict
@@ -56,6 +58,19 @@ def handler500(request):
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content_type='text/html'
     )
+
+
+class FacilitatorAwareLoginView(auth_views.LoginView):
+    """Identique à `auth_views.LoginView`, sauf la page d'atterrissage post-connexion : un
+    Facilitator (groupe CommunityFacilitator/TechnicalFacilitator) est envoyé directement sur
+    Rapports plutôt que sur `LOGIN_REDIRECT_URL` (Diagnostics, hors de ses 8 menus autorisés —
+    cf. authentication/middleware.py `FacilitatorMenuAccessMiddleware`, qui bloquerait sinon
+    cette toute première page atteinte après connexion)."""
+
+    def get_success_url(self):
+        if self.request.user.groups.filter(name__in=FACILITATOR_GROUP_NAMES).exists():
+            return reverse("dashboard:reports:reports:index")
+        return super().get_success_url()
 
 
 

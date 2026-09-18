@@ -6,7 +6,7 @@ from dashboard.authentication import views, views_supervisors
 
 app_name = 'authentication'
 urlpatterns = [
-    path('', auth_views.LoginView.as_view(
+    path('', views.FacilitatorAwareLoginView.as_view(
         authentication_form=EmailAuthenticationForm,
         template_name='authentication/login.html',
         redirect_authenticated_user=True), name='login'),

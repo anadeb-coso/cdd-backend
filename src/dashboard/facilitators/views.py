@@ -36,7 +36,7 @@ from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from cdd.functions import datetime_complet_str, exists_id_in_a_dict, exists_id_in_a_dict_by_project_and_cycle, is_datetime_in_past_or_now
 from cdd.call_objects_from_other_db import mis_objects_call
-from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs
+from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs, ensure_facilitator_user, sync_facilitator_user_projects
 from dashboard.tasks import sync_celery_tasks_re
 from .repository.db_facilitator_repository import FacilitatorRepository
 from .repository.facilitator_criteria import FacilitatorCriteria
@@ -1135,9 +1135,16 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
                     except Exception as exc:
                         print(exc)
         #End Assign ADL
+
+        # Connexion Web DCC : crée/relie le `User` de ce facilitator AVANT de
+        # construire `doc` ci-dessous, pour que `doc["email"]` parte avec
+        # l'email éventuellement corrigé (collision avec un `User` existant)
+        # plutôt que la valeur brute soumise dans le formulaire.
+        ensure_facilitator_user(facilitator)
+
         doc = {
             "name": data['name'],
-            "email": data['email'],
+            "email": facilitator.email,
             "phone": data['phone'],
             "sex": data['sex'],
             "facilitator_type": data['facilitator_type'],
@@ -1194,23 +1201,18 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         #     administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
         # ) #Sync the tasks for the new villages
         
-        try:
-            user = User.objects.get(email=facilitator.email)
-            user.password = facilitator.password
-            user.username = facilitator.username
-            user.last_name = facilitator.name.split(' ')[0]
-            user.first_name = ' '.join(facilitator.name.split(' ')[1:])
-            user.is_active = facilitator.active
-            user.save()
-        except:
-            pass
-        
         if 'projects' in data and data['projects']:
             for p in data['projects']:
                 p.facilitators.add(facilitator)
                 p.save()
 
-                
+        # Donne au User web de ce facilitator accès aux mêmes projets (Project.users),
+        # une fois Project.facilitators à jour ci-dessus (ensure_facilitator_user a
+        # tourné plus haut, AVANT cette boucle, donc trop tôt pour le faire lui-même).
+        sync_facilitator_user_projects(facilitator)
+
+        if 'projects' in data and data['projects']:
+            for p in data['projects']:
                 try:
                     nsc_database = nsc.get_db("process_design")
                     project = nsc_database.get_query_result({"_id": p.couch_id})[0]
@@ -1316,7 +1318,6 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
     def form_valid(self, form):
         data = form.cleaned_data
-        facilitator_email = self.facilitator.email
         facilitator = form.save(commit=False)
         facilitator.name = data['name']
         facilitator.email = data['email']
@@ -1393,9 +1394,16 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                         print(exc)
         #End Unassign ADL
 
+        # Connexion Web DCC : crée/relie (ou met à jour, y compris le groupe
+        # Django si `facilitator_type` a changé) le `User` de ce facilitator
+        # AVANT de construire `doc` ci-dessous — même raison que dans
+        # CreateFacilitatorView. Contrairement à la création, cette vue ne
+        # synchronisait JUSQU'ICI aucun `User` du tout.
+        ensure_facilitator_user(facilitator)
+
         doc = {
             "phone": data['phone'],
-            "email": data['email'],
+            "email": facilitator.email,
             "name": data['name'],
             "sex": data['sex'],
             "facilitator_type": data['facilitator_type'],
@@ -1464,23 +1472,18 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         #     administrativelevel_ids=[d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
         # ) #Sync the tasks for the new villages
 
-        try:
-            user = User.objects.get(email=facilitator_email)
-            user.password = facilitator.password
-            user.username = facilitator.username
-            user.last_name = facilitator.name.split(' ')[0]
-            user.first_name = ' '.join(facilitator.name.split(' ')[1:])
-            user.is_active = facilitator.active
-            user.save()
-        except:
-            pass
         
         
         if 'projects' in data and data['projects']:
             for p in data['projects']:
                 p.facilitators.add(facilitator)
                 p.save()
-    
+
+        # Donne au User web de ce facilitator accès aux mêmes projets (Project.users),
+        # une fois Project.facilitators à jour ci-dessus (même raison que dans
+        # CreateFacilitatorView.form_valid).
+        sync_facilitator_user_projects(facilitator)
+
         return redirect('dashboard:facilitators:list')
 
 class FacilitatorDetailForListView(FacilitatorMixin, AJAXRequestMixin, LoginRequiredMixin, generic.ListView):

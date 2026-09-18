@@ -91,6 +91,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Restreint un Facilitator connecté au Web DCC aux 8 menus autorisés (cf.
+    # authentication/middleware.py) — doit suivre AuthenticationMiddleware (request.user).
+    'authentication.middleware.FacilitatorMenuAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

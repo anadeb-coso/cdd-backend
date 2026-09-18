@@ -35,6 +35,19 @@ class Facilitator(BaseModel):
     
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
+    # Compte Django permettant à ce Facilitator de se connecter au Web DCC
+    # (accès limité à quelques menus, cf. sidebar.html + PROFESSIONAL_GROUPS
+    # "CommunityFacilitator"/"TechnicalFacilitator"). Nullable : les
+    # Facilitators déjà en base n'ont pas encore de User associé tant que la
+    # commande `link_facilitators_to_users` n'a pas tourné, et un
+    # rattachement peut être perdu (`SET_NULL`) sans supprimer le Facilitator
+    # si son User est supprimé côté admin Django. Peuplé/maintenu par
+    # `authentication.functions.ensure_facilitator_user`, appelée à la
+    # création et à la modification d'un Facilitator (dashboard/facilitators/views.py).
+    user = models.OneToOneField(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name="facilitator",
+    )
+
     name = models.CharField(max_length=200, null=True, blank=True, verbose_name=_('name'))
     email = models.CharField(max_length=100, null=True, blank=True, verbose_name=_('email'))
     phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('phone'))

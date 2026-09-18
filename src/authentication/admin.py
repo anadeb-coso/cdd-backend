@@ -39,6 +39,7 @@ class FacilitatorAdmin(admin.ModelAdmin):
         'username',
         'code',
         'active',
+        'user',
     ]
 
 

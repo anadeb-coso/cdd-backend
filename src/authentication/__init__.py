@@ -15,6 +15,11 @@ FACILITATORS_TYPES_WITH_GROUP_NAME = {
     'TechnicalFacilitator': 'technical_facilitator'
 }
 
+# Sens inverse (facilitator_type -> nom du Group Django), utilisé pour
+# attribuer le groupe web d'un Facilitator selon son type
+# (cf. authentication.functions.ensure_facilitator_user).
+FACILITATOR_TYPE_TO_GROUP_NAME = {v: k for k, v in FACILITATORS_TYPES_WITH_GROUP_NAME.items()}
+
 PROFESSIONAL_GROUPS = [
     'Minister', 'Advisor', 'GeneralManager', 'NationalCoordinator', 'RegionalCoordinator', 'Director', 
     'Evaluator', 'Financial', 'ProcurementSpecialist', 'KnowledgeManager', 'CDDSpecialist', 'Accountant', 'Infra', 'YouthProgramSpecialist', 'LocalEconomicDevelopmentSpecialist', 'CommunicationSpecialist', 'FullStack',
