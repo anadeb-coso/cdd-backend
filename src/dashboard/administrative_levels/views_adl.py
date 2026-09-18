@@ -644,6 +644,59 @@ def _rollup_planning_status(statuses):
     return "pending"
 
 
+# Classification fine (7 catégories), mêmes libellés/règles que
+# `classifyTaskStatus` côté mobile (utils/functions.js) — plus détaillée que
+# `_derive_planning_task_status` (4 états, réservé au style du stepper/accordéon
+# du cycle de planification, INCHANGÉ). Ajoutée UNIQUEMENT pour les compteurs
+# détaillés (menu "Tâches (cycle DCC)", cf. écran mobile InvestmentCycleDiagnostic) :
+# les clés existantes (status/done/total/percent) ne changent pas de sens, ceci
+# n'ajoute que de nouvelles clés (`detailed_status` par tâche, `detailed` par
+# activité/phase/overview) — zéro impact sur administrative_levels/profile.html.
+_DETAILED_STATUS_KEYS = (
+    "not_started", "in_progress", "invalidated_resubmitting",
+    "completed_pending_validation", "invalidated_unreviewed", "invalidated_updated", "validated",
+)
+
+
+def _classify_task_detailed(doc):
+    if not doc:
+        return "not_started"
+    has_response = bool(doc.get("has_form_response")) or any(doc.get("form_response") or [])
+    if not doc.get("completed"):
+        if has_response:
+            return "invalidated_resubmitting" if doc.get("validated") is False else "in_progress"
+        return "not_started"
+    validated = doc.get("validated")
+    if validated is True:
+        return "validated"
+    if validated is False:
+        return "invalidated_updated" if doc.get("updated_after_invalidation") else "invalidated_unreviewed"
+    return "completed_pending_validation"
+
+
+def _empty_detailed_counts():
+    counts = {k: 0 for k in _DETAILED_STATUS_KEYS}
+    counts["total"] = 0
+    counts["completed_total"] = 0
+    counts["invalidated_total"] = 0
+    return counts
+
+
+def _add_detailed(counts, detailed_status):
+    counts[detailed_status] = counts.get(detailed_status, 0) + 1
+    counts["total"] += 1
+    if detailed_status in ("validated", "invalidated_unreviewed", "invalidated_updated", "completed_pending_validation"):
+        counts["completed_total"] += 1
+    if detailed_status in ("invalidated_unreviewed", "invalidated_updated"):
+        counts["invalidated_total"] += 1
+
+
+def _merge_detailed(target, source):
+    for k, v in source.items():
+        target[k] = target.get(k, 0) + v
+    return target
+
+
 def build_admin_level_planning_cycle(request, facilitator_db, administrative_level_id):
     """Renvoie (phases, overview) pour un village. `phases` est une liste de
     dicts imbriques {..., activities: [{..., tasks: [{..., status}]}]} prete a
@@ -691,12 +744,14 @@ def build_admin_level_planning_cycle(request, facilitator_db, administrative_lev
         activity_node["tasks"].append({
             "id": task.id, "order": task.order, "name": task.name,
             "status": _derive_planning_task_status(_doc),
+            "detailed_status": _classify_task_detailed(_doc),
             "couch_id": (_doc or {}).get("_id") or "",
         })
 
     overview = {
         "validated": 0, "completed": 0, "rejected": 0, "pending": 0, "total": 0,
         "phases_total": 0, "phases_done": 0, "activities_total": 0, "activities_done": 0,
+        "detailed": _empty_detailed_counts(),
     }
     phases = []
     for phase_node in sorted(phases_map.values(), key=lambda p: p["order"]):
@@ -706,6 +761,9 @@ def build_admin_level_planning_cycle(request, facilitator_db, administrative_lev
             activity_node["done"] = sum(1 for t in activity_node["tasks"] if t["status"] == "validated")
             activity_node["total"] = len(activity_node["tasks"])
             activity_node["percent"] = round(activity_node["done"] * 100 / activity_node["total"]) if activity_node["total"] else 0
+            activity_node["detailed"] = _empty_detailed_counts()
+            for t in activity_node["tasks"]:
+                _add_detailed(activity_node["detailed"], t["detailed_status"])
             activities.append(activity_node)
             overview["activities_total"] += 1
             if activity_node["status"] == "validated":
@@ -718,11 +776,15 @@ def build_admin_level_planning_cycle(request, facilitator_db, administrative_lev
         phase_node["done"] = sum(a["done"] for a in activities)
         phase_node["task_total"] = sum(a["total"] for a in activities)
         phase_node["percent"] = round(phase_node["done"] * 100 / phase_node["task_total"]) if phase_node["task_total"] else 0
+        phase_node["detailed"] = _empty_detailed_counts()
+        for a in activities:
+            _merge_detailed(phase_node["detailed"], a["detailed"])
         phase_node.pop("_activities", None)
         phases.append(phase_node)
         overview["phases_total"] += 1
         if phase_node["status"] == "validated":
             overview["phases_done"] += 1
+        _merge_detailed(overview["detailed"], phase_node["detailed"])
 
     done = overview["validated"] + overview["completed"]
     overview["percent"] = round(done * 100 / overview["total"]) if overview["total"] else 0
@@ -743,6 +805,10 @@ class AdministrativeLevelPlanningCycleAjaxView(FacilitatorMixin, AJAXRequestMixi
         context['planning_cycle'] = phases
         context['planning_overview'] = overview
         context['administrative_level_id'] = adl_id
+        # Bouton "Remplir" (menu "Tâches (cycle DCC)", task_cycle_fill_form.js) —
+        # opt-in via ?fill=1, pour ne rien changer sur administrative_levels/
+        # profile.html (même vue/URL, appelée sans ce paramètre par cette page).
+        context['enable_fill_form'] = self.request.GET.get('fill') == '1'
         return context
 
 

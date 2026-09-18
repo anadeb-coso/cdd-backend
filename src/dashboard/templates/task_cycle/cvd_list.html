@@ -1,0 +1,560 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block content %}
+<style>
+    .tc-toolbar {
+        display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+        margin-bottom: 1.25rem;
+    }
+    .tc-toolbar input[type="search"] {
+        flex: 1 1 260px; max-width: 380px;
+    }
+    .tc-cvd-card {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        height: 100%;
+        cursor: pointer;
+    }
+    .tc-cvd-card .card {
+        transition: box-shadow .15s ease, transform .1s ease, border-color .15s ease, border-radius .15s ease;
+        border: 1px solid #eef1f3;
+        border-radius: 12px;
+    }
+    .tc-cvd-card:hover .card {
+        box-shadow: 0 10px 24px rgba(0,0,0,.08);
+        transform: translateY(-2px);
+    }
+
+    /* ---------- 2 rangées horizontales scrollables (propres / stabilisation)
+       -- évite qu'une longue liste de CVD ne pousse le détail phases/
+       activités/tâches trop bas sur la page (au lieu d'une grille qui
+       s'enroule sur autant de lignes que nécessaire). ---------- */
+    .tc-cvd-scope { margin-bottom: 1.5rem; }
+    .tc-cvd-scope-head {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: .5rem;
+    }
+    .tc-cvd-scope-title {
+        margin: 0; font-weight: 700; font-size: .88rem; color: #36424b;
+        text-transform: uppercase; letter-spacing: .4px;
+    }
+    .tc-cvd-scope-count { font-weight: 500; color: #5f6b73; text-transform: none; letter-spacing: 0; }
+    .tc-cvd-arrows { display: flex; gap: .35rem; flex: 0 0 auto; }
+    .tc-cvd-arrow {
+        width: 30px; height: 30px; padding: 0; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid #dfe4e8; background: #fff; color: #495057;
+    }
+    .tc-cvd-arrow:hover { background: #f1f3f5; }
+    .tc-cvd-arrow:disabled { opacity: .35; cursor: default; }
+    .tc-cvd-arrow:disabled:hover { background: #fff; }
+
+    .tc-cvd-row {
+        display: flex; flex-wrap: nowrap; gap: .9rem;
+        overflow-x: auto; scroll-behavior: smooth;
+        padding: .15rem .15rem .9rem;
+        scrollbar-width: thin;
+    }
+    /* Largeur de carte = même proportion qu'avant (grille Bootstrap
+       col-md-4/col-12 : 3 cartes par "ligne" visible à partir de md, 1 sur
+       mobile) -- calc() plutôt qu'un simple 33.33% pour compenser le `gap`
+       du flex row (sans ça, 3 cartes à 33.33% + 2 gaps dépasseraient 100%
+       et une 3e carte serait partiellement coupée au lieu de bien remplir
+       la largeur visible). Au-delà de 3, les CVD suivantes se découvrent
+       via les flèches/le défilement horizontal, pas en s'enroulant. */
+    .tc-cvd-col {
+        flex: 0 0 100%; max-width: 100%;
+    }
+    @media (min-width: 768px) {
+        .tc-cvd-col { flex-basis: calc((100% - 1.8rem) / 3); max-width: calc((100% - 1.8rem) / 3); }
+    }
+    .tc-cvd-row-empty {
+        flex: 1 1 auto; padding: 1.5rem 1rem; text-align: center; color: #5f6b73; font-size: .85rem;
+    }
+    /* CVD actuellement sélectionnée (dont le détail est affiché plus bas) :
+       bordure carrée nette, pour qu'on identifie tout de suite la carte
+       concernée — pas d'ombre/décalage (cf. demande précédente). */
+    .tc-cvd-card.is-selected .card {
+        border: 2px solid #4f46e5;
+        border-radius: 0;
+    }
+    .tc-cvd-title { font-weight: 700; font-size: 1rem; color: #36424b; }
+    .tc-cvd-sub { font-size: .8rem; color: #5f6b73; }
+    .tc-progress { height: 7px; border-radius: 7px; background: #f1f3f5; overflow: hidden; margin: .5rem 0; }
+    .tc-progress > i { display: block; height: 100%; background: #4f46e5; border-radius: 7px; }
+    .tc-open-link { font-size: .72rem; color: #4f46e5; }
+    .tc-open-link:hover { text-decoration: underline; }
+
+    /* Bootstrap .text-muted manque de contraste sur cette page (texte trop
+       clair) -- assombri, scopé à cette page (pas une surcharge globale). */
+    .card-body .text-muted { color: #495057 !important; }
+
+    #tc-cvd-detail { margin-top: 1.75rem; }
+    #tc-cvd-detail-head {
+        display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem;
+        padding-bottom: .75rem; border-bottom: 1px solid #eef1f3;
+    }
+    #tc-cvd-detail-head h4 { margin: 0; font-weight: 700; color: #36424b; }
+    #tc-cvd-detail-empty { text-align: center; padding: 3rem 1rem; color: #5f6b73; }
+    #tc-cvd-detail-empty i { font-size: 2.5rem; margin-bottom: .75rem; color: #c7d2fe; }
+
+    /* ---------- Compteurs détaillés (_detailed_task_counts.html) ----------
+       Dupliqué depuis administrative_levels/profile/components/planning_cycle.html :
+       ce partiel est utilisé ICI directement sur les cartes CVD (rendu tout de
+       suite) ET, après un clic, réinjecté via AJAX par planning_cycle.html lui-même.
+       Sans ce doublon, les pastilles des cartes CVD restaient sans style tant
+       qu'aucune CVD n'avait été cliquée (le <style> de planning_cycle.html
+       n'étant chargé qu'à ce moment-là) — elles changeaient donc d'apparence
+       au premier clic au lieu d'être stylées dès le départ. */
+    .tcb-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .65rem; }
+    .tcb-chip {
+        display: flex; flex-direction: column; align-items: flex-start;
+        background: #fff; border: 1px solid #eef1f3; border-radius: 10px;
+        padding: .35rem .6rem; min-width: 68px;
+    }
+    .tcb-chip b { font-size: 1rem; line-height: 1.15; padding-bottom: 2px; }
+    .tcb-chip span { font-size: .62rem; color: #495057; line-height: 1.15; max-width: 130px; }
+    .tcb-sm.tcb-row { gap: .3rem; margin-top: .5rem; }
+    .tcb-sm .tcb-chip { padding: .22rem .45rem; min-width: 52px; }
+    .tcb-sm .tcb-chip b { font-size: .8rem; }
+    .tcb-sm .tcb-chip span { font-size: .56rem; max-width: 100px; }
+    .tcb-red b { color: #dc3545; border-bottom: 2px solid #dc3545; }
+    .tcb-gray b { color: #5f6b73; border-bottom: 2px solid #5f6b73; }
+    .tcb-gray-d b { color: #495057; border-bottom: 2px solid #495057; }
+    .tcb-blue b { color: #4f46e5; border-bottom: 2px solid #4f46e5; }
+    .tcb-purple b { color: #9b59b6; border-bottom: 2px solid #9b59b6; }
+    .tcb-orange b { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+    .tcb-green b { color: #22c55e; border-bottom: 2px solid #22c55e; }
+    .tcb-plain b { color: #2b343b; border-bottom: 2px solid #2b343b; }
+</style>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title mb-4">{% translate "Tasks (DCC cycle)" %}</h3>
+
+        <div class="tc-toolbar">
+            <input type="search" id="tc-cvd-search" class="form-control" placeholder="{% translate 'Search a CVD, unit or headquarters village…' %}">
+            <select id="tc-cvd-scope-filter" class="form-control" style="max-width:220px;">
+                <option value="all">{% translate "All CVD" %}</option>
+                <option value="own">{% translate "Own CVD" %}</option>
+                <option value="stabilized">{% translate "Stabilization CVD" %}</option>
+            </select>
+            <span class="text-muted small" id="tc-cvd-count"></span>
+        </div>
+
+        {% if not cvds %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-stream fa-3x mb-3 d-block" style="color:#c7d2fe;"></i>
+            {% translate "No CVD found for the current project/cycle." %}
+        </div>
+        {% else %}
+        <div class="tc-cvd-scope" id="tc-cvd-scope-own">
+            <div class="tc-cvd-scope-head">
+                <h6 class="tc-cvd-scope-title">{% translate "Own CVD" %} <span class="tc-cvd-scope-count" id="tc-cvd-count-own"></span></h6>
+                <div class="tc-cvd-arrows">
+                    <button type="button" class="tc-cvd-arrow" data-row="tc-cvd-row-own" data-dir="-1" aria-label="{% translate 'Scroll left' %}"><i class="fas fa-chevron-left"></i></button>
+                    <button type="button" class="tc-cvd-arrow" data-row="tc-cvd-row-own" data-dir="1" aria-label="{% translate 'Scroll right' %}"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="tc-cvd-row" id="tc-cvd-row-own">
+                {% for entry in cvds_own %}
+                {% include "task_cycle/components/_cvd_card.html" %}
+                {% empty %}
+                <div class="tc-cvd-row-empty">{% translate "No own CVD." %}</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="tc-cvd-scope" id="tc-cvd-scope-stabilized">
+            <div class="tc-cvd-scope-head">
+                <h6 class="tc-cvd-scope-title">{% translate "Stabilization CVD" %} <span class="tc-cvd-scope-count" id="tc-cvd-count-stabilized"></span></h6>
+                <div class="tc-cvd-arrows">
+                    <button type="button" class="tc-cvd-arrow" data-row="tc-cvd-row-stabilized" data-dir="-1" aria-label="{% translate 'Scroll left' %}"><i class="fas fa-chevron-left"></i></button>
+                    <button type="button" class="tc-cvd-arrow" data-row="tc-cvd-row-stabilized" data-dir="1" aria-label="{% translate 'Scroll right' %}"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="tc-cvd-row" id="tc-cvd-row-stabilized">
+                {% for entry in cvds_stabilized %}
+                {% include "task_cycle/components/_cvd_card.html" %}
+                {% empty %}
+                <div class="tc-cvd-row-empty">{% translate "No stabilization CVD." %}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div id="tc-cvd-detail">
+            <div id="tc-cvd-detail-head" style="display:none;">
+                <h4 id="tc-cvd-detail-title"></h4>
+                <span class="badge badge-light" id="tc-cvd-detail-sub"></span>
+            </div>
+            <div id="tc-cvd-detail-body">
+                <div id="tc-cvd-detail-empty">
+                    <i class="fas fa-hand-pointer"></i>
+                    <div>{% translate "Select a CVD above to see its phases, activities and tasks." %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "facilitators/components/task_modals.html" %}
+{% include "task_cycle/components/task_fill_modal.html" %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        window.TFB_FACILITATOR_DB_NAME = "";
+        window.TFB_URLS = {
+            validateInvalidate: "{% url 'dashboard:process_manager:validate_invalidate_task' %}",
+            completeUncomplete: "{% url 'dashboard:process_manager:complete_uncomplete_task' %}",
+            taskCommentsTmpl: "{% url 'dashboard:facilitators:task_comments' 'no_sql_db_name' 'task__id' %}",
+            taskDetailModalTmpl: "{% url 'dashboard:facilitators:task_detail_modal' 'no_sql_db_name' %}"
+        };
+
+        (function () {
+            var PLANNING_CYCLE_TMPL = "{% url 'dashboard:administrative_levels:planning_cycle' 'DBNAME_PLACEHOLDER' %}";
+            var TASK_DETAIL_BY_VILLAGE_TMPL = "{% url 'dashboard:administrative_levels:task_detail_by_village' 'DBNAME_PLACEHOLDER' %}";
+            var FORM_FETCH_TMPL = "{% url 'dashboard:task_cycle:form_fetch' 'DBNAME_PLACEHOLDER' %}";
+            var FORM_SAVE_TMPL = "{% url 'dashboard:task_cycle:form_save' 'DBNAME_PLACEHOLDER' %}";
+            var ATTACHMENT_UPLOAD_TMPL = "{% url 'dashboard:task_cycle:attachment_upload' 'DBNAME_PLACEHOLDER' %}";
+            var CSRF_TOKEN = "{{ csrf_token }}";
+            var TCF_I18N = {
+                alreadyValidated: "{% translate 'This task has already been validated — it can no longer be filled in.' %}",
+                loadError: "{% translate 'Could not load this task.' %}",
+                saveError: "{% translate 'Could not save — please try again.' %}",
+                saved: "{% translate 'Saved.' %}",
+                statusPending: "{% translate 'Pending' %}",
+                statusCompleted: "{% translate 'Completed' %}",
+                statusValidated: "{% translate 'Task validated' %}",
+                statusRejected: "{% translate 'Task not validated' %}",
+                // Libellés exacts demandés par l'utilisateur, alignés sur le
+                // texte mobile (tr('task_detail.set_task_completed_button')/
+                // set_task_in_progress_button, core.json) plutôt que sur le
+                // msgid "Mark as completed" déjà utilisé ailleurs dans le
+                // dashboard (-> "Marquer comme achevée", un autre libellé) —
+                // évite une collision de msgid qui changerait aussi CET autre
+                // usage. Français en dur, cohérent avec DEFAULT_I18N
+                // (task_cycle_fill_form.js), déjà non traduit pour ce menu.
+                markCompleted: "Marquer comme terminée",
+                markInProgress: "Marquer en cours",
+                completeError: "{% translate 'Could not update the task status — please try again.' %}",
+                loadingTitle: "{% translate 'Loading…' %}"
+            };
+
+            var currentDbName = null;
+            var currentVillageId = null;
+
+            function loadCvdDetail($card) {
+                var dbName = $card.data('db-name');
+                var villageId = $card.data('village-id');
+                var cvdName = $card.data('cvd-name');
+                if (!dbName || !villageId) { return; }
+
+                currentDbName = dbName;
+                currentVillageId = villageId;
+                window.TFB_FACILITATOR_DB_NAME = dbName;
+
+                $('.js-tc-cvd').removeClass('is-selected');
+                $card.addClass('is-selected');
+
+                $('#tc-cvd-detail-head').show();
+                $('#tc-cvd-detail-title').text(cvdName);
+                $('#tc-cvd-detail-sub').text(dbName);
+                $('#tc-cvd-detail-body').html('<div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>');
+
+                $.ajax({
+                    type: "GET",
+                    url: PLANNING_CYCLE_TMPL.replace('DBNAME_PLACEHOLDER', dbName),
+                    data: { administrative_level: villageId, fill: 1 },
+                    success: function (response) {
+                        $('#tc-cvd-detail-body').html(response);
+                    },
+                    error: function (x) {
+                        $('#tc-cvd-detail-body').html(
+                            '<div class="text-center text-danger p-4">' + (window.error_server_message || '') + ' ' + (x ? x.status : '') + '</div>'
+                        );
+                    }
+                });
+            }
+
+            $(document).on('click', '.js-tc-cvd', function () {
+                loadCvdDetail($(this));
+            });
+
+            // Rafraîchissement sans reload après une action valider/invalider/
+            // achever dans le modal (même contrat que administrative_levels/profile.html).
+            window.TFB_RELOAD_PLANNING_CYCLE = function () {
+                if (!currentDbName || !currentVillageId) { return; }
+                $.ajax({
+                    type: "GET",
+                    url: PLANNING_CYCLE_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),
+                    data: { administrative_level: currentVillageId, fill: 1 },
+                    success: function (response) { $('#tc-cvd-detail-body').html(response); }
+                });
+            };
+
+            // --- En-tête du modal de remplissage (nom, statut, CVD, description)
+            // + bascule "Marquer comme terminée/en cours" (mêmes libellés et même
+            // bascule à 2 états que mobile, TaskDetail.tsx L2722-2739 ; endpoint
+            // RÉUTILISÉ tel quel, dashboard:process_manager:complete_uncomplete_task,
+            // déjà câblé ailleurs pour le même usage — cf. task_detail_modal.js).
+            // Construit via des noeuds jQuery + .text() (jamais de concaténation
+            // HTML brute) pour les valeurs venant de la base (nom/CVD/description).
+            function statusBadge(resp) {
+                var label = TCF_I18N.statusPending, cls = 'badge-secondary';
+                if (resp.task_status === 'validated') { label = TCF_I18N.statusValidated; cls = 'badge-success'; }
+                else if (resp.task_status === 'rejected') { label = TCF_I18N.statusRejected; cls = 'badge-warning'; }
+                else if (resp.task_status === 'completed') { label = TCF_I18N.statusCompleted; cls = 'badge-info'; }
+                return $('<span class="badge badge-pill tcf-status-badge"></span>').addClass(cls).text(label);
+            }
+
+            function toggleTaskCompletion(foundDbName, docId, currentlyCompleted, $btn, onDone) {
+                $btn.prop('disabled', true);
+                $.ajax({
+                    type: "GET",
+                    url: TFB_URLS.completeUncomplete,
+                    data: { no_sql_db_name: foundDbName, task_id: docId, action_code: currentlyCompleted ? 0 : 1 },
+                    success: function (response) {
+                        $btn.prop('disabled', false);
+                        if (response && response.status === 'ok') {
+                            onDone(!currentlyCompleted);
+                            window.TFB_RELOAD_PLANNING_CYCLE();
+                        } else {
+                            alert((response && response.message) || TCF_I18N.completeError);
+                        }
+                    },
+                    error: function () {
+                        $btn.prop('disabled', false);
+                        alert(TCF_I18N.completeError);
+                    }
+                });
+            }
+
+            function renderFillModalHeader(resp, foundDbName) {
+                // Le nom de la tâche est déjà affiché dans la barre de titre du
+                // modal (#tcfModalTitle, mis à jour par openFillModal) — pas
+                // répété ici, pour éviter la redondance visuelle.
+                var $head = $('<div class="tcf-modal-header-info mb-3 pb-2 border-bottom"></div>');
+                var $titleRow = $('<div class="d-flex justify-content-between align-items-start flex-wrap" style="gap:.5rem;"></div>');
+                var $titleBlock = $('<div></div>');
+                if (resp.cvd_name) {
+                    $titleBlock.append($('<div class="tcf-cvd-name"></div>').text('CVD : ' + resp.cvd_name));
+                }
+                $titleRow.append($titleBlock);
+
+                var $actions = $('<div class="text-right"></div>');
+                var $badge = statusBadge(resp);
+                $actions.append($badge);
+
+                if (resp.doc_id) {
+                    var completed = !!resp.task_completed;
+                    var $toggleBtn = $('<button type="button" class="btn btn-sm ml-2 tcf-toggle-complete"></button>');
+                    function applyState(isCompleted) {
+                        completed = isCompleted;
+                        $toggleBtn
+                            .removeClass('btn-primary btn-warning')
+                            .addClass(completed ? 'btn-warning' : 'btn-primary')
+                            .text(completed ? TCF_I18N.markInProgress : TCF_I18N.markCompleted);
+                    }
+                    applyState(completed);
+                    $toggleBtn.on('click', function () {
+                        toggleTaskCompletion(foundDbName, resp.doc_id, completed, $toggleBtn, function (isCompleted) {
+                            applyState(isCompleted);
+                            $badge.replaceWith(statusBadge($.extend({}, resp, {
+                                task_status: isCompleted ? 'completed' : 'pending', task_completed: isCompleted
+                            })));
+                            $badge = $head.find('.tcf-status-badge');
+                        });
+                    });
+                    $actions.append($toggleBtn);
+                }
+                $titleRow.append($actions);
+                $head.append($titleRow);
+
+                if (resp.task_description) {
+                    $head.append($('<p class="tcf-task-description mb-0"></p>').text(resp.task_description));
+                }
+                return $head;
+            }
+
+            // --- Remplissage d'une tâche (E1/E2/E3/E6/E7, TCFormLogic/TCFillForm) --
+            function openFillModal(taskId) {
+                if (!currentDbName || !currentVillageId) { return; }
+                $('#tcfModalTitle').text(TCF_I18N.loadingTitle);
+                $('#tcf-modal-body').html('<div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>');
+                $('#taskFillModal').modal('show');
+                $.ajax({
+                    type: "GET",
+                    url: FORM_FETCH_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),
+                    data: { administrative_level: currentVillageId, task: taskId },
+                    success: function (resp) {
+                        if (!resp || !resp.ok) {
+                            $('#tcf-modal-body').html('<div class="p-4 text-danger">' + TCF_I18N.loadError + '</div>');
+                            return;
+                        }
+                        $('#tcfModalTitle').text(resp.task_name || '');
+                        if (resp.validated) {
+                            $('#tcf-modal-body').html('<div class="p-4 text-warning">' + TCF_I18N.alreadyValidated + '</div>');
+                            return;
+                        }
+                        var foundDbName = resp.found_db_name || currentDbName;
+                        var $container = $('<div></div>');
+                        $('#tcf-modal-body').empty().append(renderFillModalHeader(resp, foundDbName)).append($container);
+                        new window.TCFillForm.FillFormController($container, {
+                            form: resp.form || [],
+                            initialResponses: resp.form_response || [],
+                            attachments: resp.attachments || [],
+                            existingAttachments: resp.existing_attachments || [],
+                            onSubmit: function (allValues, allAttachments) {
+                                saveFillForm(foundDbName, taskId, allValues, allAttachments, $container);
+                            },
+                            fetchExternalTask: function (sourceTaskId, cb) {
+                                // E4 : résout choicesFrom/crossTaskVisibility référençant une
+                                // AUTRE tâche — même village (currentVillageId), même endpoint
+                                // que la tâche courante (TaskFormFetchView renvoie déjà
+                                // {form, form_response} pour n'importe quel sql_id du village).
+                                $.ajax({
+                                    type: "GET",
+                                    url: FORM_FETCH_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),
+                                    data: { administrative_level: currentVillageId, task: sourceTaskId },
+                                    success: function (r) { cb(r && r.ok ? r : null); },
+                                    error: function () { cb(null); }
+                                });
+                            },
+                            uploadFile: function (file, cb) {
+                                // E5 : upload S3 (dashboard.task_cycle.views.TaskAttachmentUploadView),
+                                // sous la base de la CVD actuellement sélectionnée.
+                                var fd = new FormData();
+                                fd.append('file', file);
+                                $.ajax({
+                                    type: "POST",
+                                    url: ATTACHMENT_UPLOAD_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),
+                                    headers: { "X-CSRFToken": CSRF_TOKEN },
+                                    data: fd, processData: false, contentType: false,
+                                    success: function (r) { cb(r && r.ok ? r.url : null, r && r.name); },
+                                    error: function () { cb(null, null); }
+                                });
+                            }
+                        });
+                    },
+                    error: function () {
+                        $('#tcf-modal-body').html('<div class="p-4 text-danger">' + TCF_I18N.loadError + '</div>');
+                    }
+                });
+            }
+
+            function saveFillForm(foundDbName, taskId, values, attachments, $container) {
+                $.ajax({
+                    type: "POST",
+                    url: FORM_SAVE_TMPL.replace('DBNAME_PLACEHOLDER', foundDbName),
+                    contentType: "application/json",
+                    headers: { "X-CSRFToken": CSRF_TOKEN },
+                    data: JSON.stringify({ administrative_level: currentVillageId, task: taskId, values: values, attachments: attachments }),
+                    success: function (resp) {
+                        if (resp && resp.ok) {
+                            $('#taskFillModal').modal('hide');
+                            if (typeof window.tdmShowToast === "function") { window.tdmShowToast(TCF_I18N.saved); }
+                            window.TFB_RELOAD_PLANNING_CYCLE();
+                        } else {
+                            alert((resp && resp.message) || TCF_I18N.saveError);
+                        }
+                    },
+                    error: function () { alert(TCF_I18N.saveError); }
+                });
+            }
+
+            $(document).on('click', '.tcf-open-fill', function (e) {
+                e.stopPropagation();
+                openFillModal($(this).data('task-id'));
+            });
+
+            // Détail (lecture seule) d'une tâche du cycle de planification affiché
+            // ci-dessus : même résolution (village + sql_id, repli cross-facilitateur
+            // inclus) que administrative_levels/profile.html, paramétrée par la CVD
+            // actuellement sélectionnée plutôt qu'un facilitateur fixe de page.
+            $('#taskModalLong').on('show.bs.modal', function (e) {
+                var pk = e.relatedTarget ? e.relatedTarget.id.split('-')[3] : null;
+                $('#modal-content').html('<div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>');
+                if (!pk || !currentDbName || !currentVillageId) { return; }
+                $.ajax({
+                    type: "GET",
+                    url: TASK_DETAIL_BY_VILLAGE_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),
+                    data: { administrative_level: currentVillageId, task: pk },
+                    success: function (response) { $('#modal-content').html(response); },
+                    error: function (x) {
+                        $('#modal-content').html(
+                            '<div class="modal-body text-center text-danger p-4">'
+                            + (window.error_server_message || '') + ' ' + (x ? x.status : '') + '</div>'
+                        );
+                    }
+                });
+            });
+            $('#taskModalLong').on('hidden.bs.modal', function () { $('#modal-content').empty(); });
+
+            // --- Filtre CVD (recherche texte + périmètre propre/stabilisation) -----
+            // Le périmètre (dropdown) montre/masque maintenant une RANGÉE entière
+            // (#tc-cvd-scope-own/-stabilized), plutôt qu'un attribut par carte
+            // comme avant la mise en rangées horizontales scrollables.
+            function applyCvdFilter() {
+                var q = ($('#tc-cvd-search').val() || '').toLowerCase().trim();
+                var scope = $('#tc-cvd-scope-filter').val();
+                var totalVisible = 0;
+
+                [['own', $('#tc-cvd-scope-own')], ['stabilized', $('#tc-cvd-scope-stabilized')]].forEach(function (pair) {
+                    var key = pair[0], $section = pair[1];
+                    if (!$section.length) { return; }
+                    var sectionAllowed = (scope === 'all' || scope === key);
+                    $section.toggle(sectionAllowed);
+                    var visibleInSection = 0;
+                    if (sectionAllowed) {
+                        $section.find('.tc-cvd-col').each(function () {
+                            var $col = $(this);
+                            var matches = !q || ($col.data('search') || '').toString().toLowerCase().indexOf(q) !== -1;
+                            $col.toggle(matches);
+                            if (matches) { visibleInSection++; }
+                        });
+                    }
+                    $section.find('.tc-cvd-scope-count').text(visibleInSection ? '(' + visibleInSection + ')' : '');
+                    totalVisible += visibleInSection;
+                });
+                $('#tc-cvd-count').text(totalVisible + ' {% translate "CVD" %}');
+            }
+            $('#tc-cvd-search').on('keyup input', applyCvdFilter);
+            $('#tc-cvd-scope-filter').on('change', applyCvdFilter);
+            applyCvdFilter();
+
+            // --- Flèches gauche/droite pour parcourir une rangée de CVD sans
+            // avoir à faire défiler toute la page (demande explicite : éviter
+            // qu'une longue liste ne pousse le détail phases/activités/tâches
+            // trop bas). Défilement par "page" (largeur visible de la rangée),
+            // pas par carte, pour aller plus vite avec beaucoup de CVD.
+            function updateArrowState($row) {
+                var max = $row[0].scrollWidth - $row[0].clientWidth;
+                $row.closest('.tc-cvd-scope').find('.tc-cvd-arrow[data-dir="-1"]').prop('disabled', $row.scrollLeft() <= 1);
+                $row.closest('.tc-cvd-scope').find('.tc-cvd-arrow[data-dir="1"]').prop('disabled', $row.scrollLeft() >= max - 1);
+            }
+            $('.tc-cvd-arrow').on('click', function () {
+                var $row = $('#' + $(this).data('row'));
+                var dir = parseInt($(this).data('dir'), 10);
+                $row.scrollLeft($row.scrollLeft() + dir * $row.width() * 0.9);
+            });
+            $('.tc-cvd-row').each(function () {
+                var $row = $(this);
+                updateArrowState($row);
+                $row.on('scroll', function () { updateArrowState($row); });
+            });
+            $(window).on('resize', function () {
+                $('.tc-cvd-row').each(function () { updateArrowState($(this)); });
+            });
+        })();
+    </script>
+    <script src="{% static 'dashboard/js/task_detail_modal.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}"></script>
+{% endblock %}

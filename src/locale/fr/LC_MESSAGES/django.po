@@ -3496,3 +3496,137 @@ msgstr "Précision requise (mètres)"
 #: dashboard/templates/process_manager/tasks/form_builder.html
 msgid "The mobile app retries the capture until this accuracy is reached (getBestLocation), then returns the best fix after 30 s."
 msgstr "Le mobile retente la capture jusqu'à atteindre cette précision (getBestLocation), puis retourne le meilleur point après 30 s."
+
+
+# --- Page 404 Facilitator (accès Web DCC restreint aux 8 menus autorisés) ---
+
+#: dashboard/templates/common/facilitator_access_denied.html
+msgid "Go back"
+msgstr "Retour"
+
+#: dashboard/templates/common/facilitator_access_denied.html
+msgid "Go to home page"
+msgstr "Page d'accueil"
+
+
+# --- Menu "Tâches (cycle DCC)" (dashboard/task_cycle) ---
+
+#: dashboard/templates/layouts/sidebar.html dashboard/templates/task_cycle/cvd_list.html
+#: dashboard/templates/task_cycle/empty.html
+msgid "Tasks (DCC cycle)"
+msgstr "Tâches (cycle DCC)"
+
+#: dashboard/templates/task_cycle/empty.html
+msgid "No task cycle available"
+msgstr "Aucun cycle de tâches disponible"
+
+#: dashboard/templates/task_cycle/empty.html
+msgid "No facilitator account is linked to your user, or no task cycle is currently assigned to you."
+msgstr "Aucun compte animateur n'est lié à votre utilisateur, ou aucun cycle de tâches ne vous est actuellement assigné."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Search a CVD, unit or headquarters village…"
+msgstr "Rechercher une CVD, une unité ou un village siège…"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "All CVD"
+msgstr "Toutes les CVD"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Own CVD"
+msgstr "CVD propres"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Stabilization CVD"
+msgstr "CVD de stabilisation"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "CVD"
+msgstr "CVD"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Open full page"
+msgstr "Ouvrir la page complète"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Select a CVD above to see its phases, activities and tasks."
+msgstr "Sélectionnez une CVD ci-dessus pour voir ses phases, activités et tâches."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "No CVD found for the current project/cycle."
+msgstr "Aucune CVD trouvée pour le projet/cycle courant."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "No own CVD."
+msgstr "Aucune CVD propre."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "No stabilization CVD."
+msgstr "Aucune CVD de stabilisation."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Scroll left"
+msgstr "Défiler vers la gauche"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Scroll right"
+msgstr "Défiler vers la droite"
+
+
+# --- Compteurs détaillés par tâche (7 catégories), cf.
+# administrative_levels/profile/components/_detailed_task_counts.html ---
+
+#: dashboard/templates/administrative_levels/profile/components/_detailed_task_counts.html
+msgid "Invalidated, unreviewed"
+msgstr "Invalidées non revues"
+
+#: dashboard/templates/administrative_levels/profile/components/_detailed_task_counts.html
+msgid "Invalidated (back in progress)"
+msgstr "Invalidées (remise en cours)"
+
+#: dashboard/templates/administrative_levels/profile/components/_detailed_task_counts.html
+msgid "Invalidated, updated (awaiting validation)"
+msgstr "Invalidées, mise à jour après invalidation (en attente de validation)"
+
+#: dashboard/templates/administrative_levels/profile/components/_detailed_task_counts.html
+msgid "Completed (awaiting validation)"
+msgstr "Achevées (en attente de validation)"
+
+#: dashboard/templates/administrative_levels/profile/components/_detailed_task_counts.html
+msgid "Number of tasks"
+msgstr "Nombre de tâches"
+
+
+# --- Remplissage web d'une tâche (E7, task_cycle_fill_form.js) ---
+
+#: dashboard/templates/administrative_levels/profile/components/planning_cycle.html
+msgid "Fill in"
+msgstr "Remplir"
+
+#: dashboard/templates/task_cycle/components/task_fill_modal.html
+msgid "Fill in the task"
+msgstr "Remplir la tâche"
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "This task has already been validated — it can no longer be filled in."
+msgstr "Cette tâche a déjà été validée — elle ne peut plus être remplie."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Could not load this task."
+msgstr "Impossible de charger cette tâche."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Could not save — please try again."
+msgstr "Impossible d'enregistrer — merci de réessayer."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Saved."
+msgstr "Enregistré."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Could not update the task status — please try again."
+msgstr "Impossible de mettre à jour le statut de la tâche — merci de réessayer."
+
+#: dashboard/templates/task_cycle/cvd_list.html
+msgid "Loading…"
+msgstr "Chargement…"

@@ -1,0 +1,27 @@
+{% load i18n %}
+{% comment %}
+    Carte d'une CVD (utilisée 2x par cvd_list.html : rangée "propres" et
+    rangée "stabilisation") -- factorisée pour éviter la duplication de
+    markup entre les 2 rangées horizontales scrollables.
+{% endcomment %}
+<div class="tc-cvd-col" data-search="{{ entry.cvd.cvd_name|default:'' }} {{ entry.cvd.unit|default:'' }} {{ entry.cvd.village.name|default:'' }}">
+    <div class="tc-cvd-card js-tc-cvd" data-db-name="{{ entry.db_name }}" data-village-id="{{ entry.village_id }}" data-cvd-name="{{ entry.cvd.cvd_name }}">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span class="tc-cvd-title">{{ entry.cvd.cvd_name }}</span>
+                    {% if entry.cvd.stabilized %}
+                    <span class="badge badge-warning">{% translate "Stabilization" %}</span>
+                    {% endif %}
+                </div>
+                <p class="tc-cvd-sub mb-1">{{ entry.cvd.unit }} — {{ entry.cvd.village.name }}</p>
+                <div class="tc-progress"><i style="width: {{ entry.overview.percent }}%;"></i></div>
+                <div class="text-right mb-2"><b>{{ entry.overview.percent }}%</b></div>
+                {% include "administrative_levels/profile/components/_detailed_task_counts.html" with detailed=entry.overview.detailed size="sm" %}
+                <a href="{% url 'dashboard:administrative_levels:detail' entry.db_name %}?administrative_level={{ entry.village_id }}" class="tc-open-link" target="_blank" onclick="event.stopPropagation();">
+                    <i class="fas fa-external-link-alt"></i> {% translate "Open full page" %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

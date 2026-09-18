@@ -36,6 +36,10 @@
         --cdd-line: #e6e9ec;
         color: #3a4750;
     }
+    /* Bootstrap .text-muted (#6c757d par défaut) manque de contraste sur fond
+       blanc pour ce widget (texte trop clair, peu lisible) -- assombri,
+       scopé à ce composant seulement (pas une surcharge globale du dashboard). */
+    .cdd-cycle .text-muted { color: #495057 !important; }
 
     /* ---------- Bandeau de synthèse ---------- */
     .cdd-overview {
@@ -74,7 +78,7 @@
         box-shadow: inset 0 0 0 1px rgba(0,0,0,.03);
     }
     .cdd-ring-pct { font-size: 1.65rem; font-weight: 700; line-height: 1; color: var(--cdd-done-darker); }
-    .cdd-ring-cap { font-size: .62rem; text-transform: uppercase; letter-spacing: .8px; color: #8a97a0; margin-top: 3px; }
+    .cdd-ring-cap { font-size: .62rem; text-transform: uppercase; letter-spacing: .8px; color: #5f6b73; margin-top: 3px; }
 
     .cdd-overview-body { flex: 1 1 320px; min-width: 260px; }
     .cdd-overview-title { font-weight: 700; font-size: 1.05rem; color: var(--cdd-done-darker); margin: 0 0 .9rem; }
@@ -99,11 +103,11 @@
     .cdd-stat-ic.validated { background: linear-gradient(135deg,#22c55e,#16a34a); }
     .cdd-stat-ic.pending { background: linear-gradient(135deg,#f59e0b,#d97706); }
     .cdd-stat-val { font-size: 1.1rem; font-weight: 700; color: #2b343b; line-height: 1.1; }
-    .cdd-stat-val small { font-weight: 500; color: #9aa5ac; font-size: .8rem; }
-    .cdd-stat-lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: #8a97a0; }
+    .cdd-stat-val small { font-weight: 500; color: #5f6b73; font-size: .8rem; }
+    .cdd-stat-lbl { font-size: .72rem; text-transform: uppercase; letter-spacing: .5px; color: #5f6b73; }
 
     /* ---------- Légende ---------- */
-    .cdd-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1.25rem; font-size: .78rem; color: #6c757d; }
+    .cdd-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0 0 1.25rem; font-size: .78rem; color: #495057; }
     .cdd-legend span { display: inline-flex; align-items: center; gap: .4rem; }
     .cdd-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
     .cdd-dot.validated { background: var(--cdd-done); }
@@ -154,7 +158,7 @@
         background: #fff;
         border: 3px solid var(--cdd-line);
         display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 1rem; color: #97a2aa;
+        font-weight: 700; font-size: 1rem; color: #5f6b73;
         transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
     .cdd-step.is-validated .cdd-step-dot { border-color: var(--cdd-done); background: var(--cdd-done); color: #fff; }
@@ -173,7 +177,7 @@
         line-height: 1.25;
     }
     .cdd-step.is-active .cdd-step-name { color: var(--cdd-done-darker); }
-    .cdd-step-meta { display: block; font-size: .7rem; color: #9aa5ac; margin-top: .15rem; }
+    .cdd-step-meta { display: block; font-size: .7rem; color: #5f6b73; margin-top: .15rem; }
     .cdd-step-bar { display: block; height: 4px; border-radius: 4px; background: var(--cdd-line); margin: .55rem .9rem 0; overflow: hidden; }
     .cdd-step-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--cdd-done); transition: width .5s ease; }
 
@@ -240,11 +244,11 @@
 
     .cdd-activity-title { flex: 1 1 auto; min-width: 0; }
     .cdd-activity-title b { display: block; font-size: .92rem; font-weight: 600; color: #36424b; }
-    .cdd-activity-title .cdd-sub { font-size: .74rem; color: #9aa5ac; }
+    .cdd-activity-title .cdd-sub { font-size: .74rem; color: #5f6b73; }
     .cdd-mini-bar { width: 86px; height: 5px; border-radius: 5px; background: var(--cdd-idle-soft); overflow: hidden; flex: 0 0 auto; }
     .cdd-mini-bar > i { display: block; height: 100%; background: var(--cdd-done); border-radius: 5px; }
     .cdd-count-pill {
-        flex: 0 0 auto; font-size: .72rem; font-weight: 600; color: #6c757d;
+        flex: 0 0 auto; font-size: .72rem; font-weight: 600; color: #495057;
         background: #f1f3f5; border-radius: 20px; padding: .15rem .6rem;
     }
     .cdd-chevron { flex: 0 0 auto; color: #b4bdc4; transition: transform .25s ease; }
@@ -266,7 +270,7 @@
     .cdd-task .cdd-status-ic { width: 26px; height: 26px; font-size: .72rem; }
     .cdd-task .cdd-chevron { margin-left: .1rem; font-size: .7rem; }
     .cdd-task-name { flex: 1 1 auto; font-size: .85rem; color: #46525b; }
-    .cdd-task.is-pending .cdd-task-name { color: #9aa5ac; }
+    .cdd-task.is-pending .cdd-task-name { color: #5f6b73; }
     .cdd-task-state {
         flex: 0 0 auto; font-size: .68rem; text-transform: uppercase; letter-spacing: .4px;
         font-weight: 600; padding: .12rem .5rem; border-radius: 20px;
@@ -274,7 +278,7 @@
     .cdd-task.is-validated .cdd-task-state { background: var(--cdd-done-soft); color: var(--cdd-done); }
     .cdd-task.is-completed .cdd-task-state { background: var(--cdd-progress-soft); color: #b5750a; }
     .cdd-task.is-rejected .cdd-task-state { background: var(--cdd-error-soft); color: var(--cdd-error); }
-    .cdd-task.is-pending .cdd-task-state { background: var(--cdd-idle-soft); color: #8a97a0; }
+    .cdd-task.is-pending .cdd-task-state { background: var(--cdd-idle-soft); color: #5f6b73; }
 
     /* ---------- Filtre par statut (barre « Filtrer par ») ---------- */
     .cdd-cycle.cdd-filter-pending   .cdd-task:not(.is-pending),
@@ -282,7 +286,7 @@
     .cdd-cycle.cdd-filter-rejected  .cdd-task:not(.is-rejected),
     .cdd-cycle.cdd-filter-validated .cdd-task:not(.is-validated) { display: none; }
 
-    .cdd-empty { text-align: center; padding: 3rem 1rem; color: #9aa5ac; }
+    .cdd-empty { text-align: center; padding: 3rem 1rem; color: #5f6b73; }
     .cdd-empty i { font-size: 2.5rem; margin-bottom: .75rem; color: #c7d2fe; }
 
     @media (max-width: 575.98px) {
@@ -290,6 +294,30 @@
         .cdd-tasks { padding-left: 0; }
         .cdd-mini-bar, .cdd-step-meta { display: none; }
     }
+
+    /* ---------- Compteurs détaillés (7 catégories + totaux), cf.
+       _detailed_task_counts.html — additifs, indépendants du reste ---------- */
+    .tcb-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .65rem; }
+    .tcb-chip {
+        display: flex; flex-direction: column; align-items: flex-start;
+        background: #fff; border: 1px solid #eef1f3; border-radius: 10px;
+        padding: .35rem .6rem; min-width: 68px;
+    }
+    .tcb-chip b { font-size: 1rem; line-height: 1.15; padding-bottom: 2px; }
+    .tcb-chip span { font-size: .62rem; color: #495057; line-height: 1.15; max-width: 130px; }
+    .tcb-sm.tcb-row { gap: .3rem; margin-top: .5rem; }
+    .tcb-sm .tcb-chip { padding: .22rem .45rem; min-width: 52px; }
+    .tcb-sm .tcb-chip b { font-size: .8rem; }
+    .tcb-sm .tcb-chip span { font-size: .56rem; max-width: 100px; }
+    .tcb-red b { color: #dc3545; border-bottom: 2px solid #dc3545; }
+    .tcb-gray b { color: #5f6b73; border-bottom: 2px solid #5f6b73; }
+    .tcb-gray-d b { color: #495057; border-bottom: 2px solid #495057; }
+    .tcb-blue b { color: #4f46e5; border-bottom: 2px solid #4f46e5; }
+    .tcb-purple b { color: #9b59b6; border-bottom: 2px solid #9b59b6; }
+    .tcb-orange b { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+    .tcb-green b { color: #22c55e; border-bottom: 2px solid #22c55e; }
+    .tcb-plain b { color: #2b343b; border-bottom: 2px solid #2b343b; }
+    .cdd-panel-head .tcb-chip { background: rgba(255,255,255,.94); }
 </style>
 
 <div class="cdd-cycle" id="cdd-cycle">
@@ -337,6 +365,8 @@
         </div>
     </div>
 
+    {% include "administrative_levels/profile/components/_detailed_task_counts.html" with detailed=planning_overview.detailed %}
+
     <!-- Légende -->
     <div class="cdd-legend">
         <span><i class="cdd-dot validated"></i>{% translate "Validated" %}</span>
@@ -372,6 +402,9 @@
             <h5>{{ phase.order }}. {{ phase.name }}</h5>
             <span class="cdd-panel-badge">{{ phase.done }} / {{ phase.task_total }} {% translate "tasks validated" %} · {{ phase.percent }}%</span>
             <span class="cdd-panel-bar"><i style="width: {{ phase.percent }}%;"></i></span>
+            <div style="flex: 1 1 100%;">
+                {% include "administrative_levels/profile/components/_detailed_task_counts.html" with detailed=phase.detailed size="sm" %}
+            </div>
         </div>
         <div class="cdd-activities">
             {% for activity in phase.activities %}
@@ -392,27 +425,36 @@
                     <i class="fas fa-chevron-right cdd-chevron"></i>
                 </button>
                 <div class="cdd-activity-body">
+                    {% include "administrative_levels/profile/components/_detailed_task_counts.html" with detailed=activity.detailed size="sm" %}
                     <div class="cdd-tasks">
                         {% for task in activity.tasks %}
-                        <button type="button"
-                                class="cdd-task is-{{ task.status }}"
-                                id="v-pills-task-{{ task.id }}-tab"
-                                data-toggle="modal" data-target="#taskModalLong">
-                            <span class="cdd-status-ic">
-                                {% if task.status == 'validated' %}<i class="fas fa-check"></i>
-                                {% elif task.status == 'completed' %}<i class="fas fa-hourglass-half"></i>
-                                {% elif task.status == 'rejected' %}<i class="fas fa-exclamation"></i>
-                                {% else %}<i class="far fa-circle"></i>{% endif %}
-                            </span>
-                            <span class="cdd-task-name">{{ task.order }}. {{ task.name }}</span>
-                            <span class="cdd-task-state">
-                                {% if task.status == 'validated' %}{% translate "Validated" %}
-                                {% elif task.status == 'completed' %}{% translate "En validation" %}
-                                {% elif task.status == 'rejected' %}{% translate "Rejected" %}
-                                {% else %}{% translate "To do" %}{% endif %}
-                            </span>
-                            <i class="fas fa-chevron-right cdd-chevron"></i>
-                        </button>
+                        <div class="d-flex align-items-center" style="gap:.4rem;">
+                            <button type="button"
+                                    class="cdd-task is-{{ task.status }} flex-grow-1"
+                                    id="v-pills-task-{{ task.id }}-tab"
+                                    data-toggle="modal" data-target="#taskModalLong">
+                                <span class="cdd-status-ic">
+                                    {% if task.status == 'validated' %}<i class="fas fa-check"></i>
+                                    {% elif task.status == 'completed' %}<i class="fas fa-hourglass-half"></i>
+                                    {% elif task.status == 'rejected' %}<i class="fas fa-exclamation"></i>
+                                    {% else %}<i class="far fa-circle"></i>{% endif %}
+                                </span>
+                                <span class="cdd-task-name">{{ task.order }}. {{ task.name }}</span>
+                                <span class="cdd-task-state">
+                                    {% if task.status == 'validated' %}{% translate "Validated" %}
+                                    {% elif task.status == 'completed' %}{% translate "En validation" %}
+                                    {% elif task.status == 'rejected' %}{% translate "Rejected" %}
+                                    {% else %}{% translate "To do" %}{% endif %}
+                                </span>
+                                <i class="fas fa-chevron-right cdd-chevron"></i>
+                            </button>
+                            {% if enable_fill_form and task.status != 'validated' %}
+                            <button type="button" class="btn btn-sm btn-outline-success tcf-open-fill"
+                                    data-task-id="{{ task.id }}" title="{% translate 'Fill in' %}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% endif %}
+                        </div>
                         {% empty %}
                         <p class="text-muted mb-0" style="font-size:.82rem;">{% translate "No tasks recorded for this activity." %}</p>
                         {% endfor %}
@@ -429,7 +471,7 @@
     {% else %}
     <div class="cdd-empty">
         <div><i class="fas fa-stream"></i></div>
-        <h5 class="mb-1" style="color:#6c757d;">{% translate "No planning cycle yet" %}</h5>
+        <h5 class="mb-1" style="color:#495057;">{% translate "No planning cycle yet" %}</h5>
         <p class="mb-0">{% translate "Select a village to review their respective phases" %}</p>
     </div>
     {% endif %}

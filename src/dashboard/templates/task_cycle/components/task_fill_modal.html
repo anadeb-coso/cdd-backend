@@ -1,0 +1,38 @@
+{% load i18n %}
+{% comment %}
+    Modal de remplissage d'une tâche (E1/E2/E3/E6/E7, task_cycle_fill_form.js +
+    task_cycle_form_logic.js). Distincte de #taskModalLong (lecture seule,
+    facilitators/components/task_modals.html) — un seul exemplaire par page,
+    inclus par task_cycle/cvd_list.html.
+{% endcomment %}
+<style>
+    /* Bootstrap ne stylise .is-invalid que sur .form-control/.custom-select —
+       le widget "cases à cocher" (select_multiple_check) est un <div>, sans
+       ce complément il resterait sans bordure rouge malgré la classe posée. */
+    .tcf-checklist.is-invalid { border: 1px solid #dc3545; border-radius: .25rem; padding: .4rem; }
+    .tcf-repeat-row.is-invalid-row { border-color: #dc3545 !important; }
+
+    /* Bootstrap .text-muted (#6c757d) manque de contraste dans ce modal (aide
+       de champ, statut GPS, "aucun fichier"...) -- assombri, scopé au modal. */
+    #taskFillModal .text-muted { color: #495057 !important; }
+
+    /* En-tête du modal (nom/statut/CVD/description) ajouté par cvd_list.html. */
+    #tcf-modal-body .tcf-cvd-name { font-size: .85rem; color: #495057; }
+    #tcf-modal-body .tcf-task-description { font-size: .85rem; color: #495057; margin-top: .4rem; }
+    #tcf-modal-body .tcf-status-badge { vertical-align: middle; }
+</style>
+<div class="modal fade" id="taskFillModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tcfModalTitle">{% translate "Fill in the task" %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="tcf-modal-body">
+                <div class="text-center p-5"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+            </div>
+        </div>
+    </div>
+</div>

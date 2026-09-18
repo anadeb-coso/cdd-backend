@@ -17,6 +17,18 @@
 <script src="{% static 'AdminLTE/plugins/datatables-responsive/js/responsive.bootstrap4.min.js' %}"></script>
 <!-- daterangepicker -->
 <script src="{% static 'AdminLTE/plugins/moment/moment.min.js' %}"></script>
+{% get_current_language as LANGUAGE_CODE %}
+{% if LANGUAGE_CODE != 'en' %}
+<script src="{% static 'AdminLTE/plugins/moment/locale/'|add:LANGUAGE_CODE|add:'.js' %}"></script>
+{% endif %}
+<script>
+    /* moment.min.js n'embarque QUE la locale anglaise -- les widgets basés
+       sur moment (daterangepicker notamment, cf. task_cycle_fill_form.js)
+       lisent cette locale GLOBALE par défaut pour les noms de mois/jours du
+       calendrier qu'ils affichent -- doit suivre la langue Django active de
+       la page (pas figée sur l'anglais), un seul point de réglage ici. */
+    if (window.moment) { moment.locale("{{ LANGUAGE_CODE }}"); }
+</script>
 <script src="{% static 'AdminLTE/plugins/daterangepicker/daterangepicker.js' %}"></script>
 <!-- Tempusdominus Bootstrap 4 -->
 <script src="{% static 'AdminLTE/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>

@@ -26,6 +26,7 @@
 
         <!-- Sidebar Menu -->
         
+        {% if not user|has_group:"CommunityFacilitator" and not user|has_group:"TechnicalFacilitator" %}
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -37,6 +38,7 @@
                 </li>
             </ul>
         </nav>
+        {% endif %}
         
         {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
@@ -49,6 +51,7 @@
                 </li>
             </ul>
         </nav> {% endcomment %}
+        {% if not user|has_group:"CommunityFacilitator" and not user|has_group:"TechnicalFacilitator" %}
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column"
                 data-widget="treeview"
@@ -56,7 +59,7 @@
                 data-accordion="false">
 
                 <li class="nav-item has-treeview {% if active_level1 == 'facilitators' %}menu-open{% endif %}">
-                    
+
                     <a href="#" class="nav-link {% if active_level1 == 'facilitators' %}active{% endif %}">
                         <i class="nav-icon fa fa-user-friends"></i>
                         <p>
@@ -91,6 +94,7 @@
 
             </ul>
         </nav>
+        {% endif %}
 
 
         <nav class="mt-2">
@@ -137,6 +141,21 @@
             </li>
         </ul>
 
+        {% if user|has_collectible_tasks:request %}
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:task_cycle:home' %}"
+                       class="nav-link {% if active_level1 == 'task_cycle' %}active{% endif %}">
+                        <i class="nav-icon fa fa-route"></i>
+                        <p>{% translate "Tasks (DCC cycle)" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% if not user|has_group:"CommunityFacilitator" and not user|has_group:"TechnicalFacilitator" %}
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -148,6 +167,7 @@
                 </li>
             </ul>
         </nav>
+        {% endif %}
 
         {% comment %} <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
@@ -173,6 +193,7 @@
             </ul>
         </nav>
 
+        {% if not user|has_group:"CommunityFacilitator" and not user|has_group:"TechnicalFacilitator" %}
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
@@ -184,6 +205,7 @@
                 </li>
             </ul>
         </nav>
+        {% endif %}
 
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">

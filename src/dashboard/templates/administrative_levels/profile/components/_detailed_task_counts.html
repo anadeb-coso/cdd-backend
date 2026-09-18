@@ -1,0 +1,23 @@
+{% load custom_tags i18n %}
+{% comment %}
+    Compteurs détaillés par tâche (7 catégories + 2 totaux dérivés), même
+    classification que l'écran mobile InvestmentCycleDiagnostic
+    (classifyTaskStatus, utils/functions.js) — calculée côté serveur par
+    dashboard.administrative_levels.views_adl._classify_task_detailed /
+    build_admin_level_planning_cycle (clé "detailed", additive, ne change rien
+    à "status"/"done"/"total"/"percent" déjà utilisés ailleurs).
+
+    Paramètres : `detailed` (dict), `size` ("sm" pour un affichage compact
+    phase/activité, sinon taille normale pour la bannière de synthèse).
+{% endcomment %}
+<div class="tcb-row {% if size == 'sm' %}tcb-sm{% endif %}">
+    <div class="tcb-chip tcb-red"><b>{{ detailed|get:'invalidated_unreviewed'|default:0 }}</b><span>{% translate "Invalidated, unreviewed" %}</span></div>
+    <div class="tcb-chip tcb-gray"><b>{{ detailed|get:'not_started'|default:0 }}</b><span>{% translate "Not started" %}</span></div>
+    <div class="tcb-chip tcb-gray-d"><b>{{ detailed|get:'invalidated_resubmitting'|default:0 }}</b><span>{% translate "Invalidated (back in progress)" %}</span></div>
+    <div class="tcb-chip tcb-blue"><b>{{ detailed|get:'in_progress'|default:0 }}</b><span>{% translate "In progress" %}</span></div>
+    <div class="tcb-chip tcb-purple"><b>{{ detailed|get:'invalidated_updated'|default:0 }}</b><span>{% translate "Invalidated, updated (awaiting validation)" %}</span></div>
+    <div class="tcb-chip tcb-orange"><b>{{ detailed|get:'completed_pending_validation'|default:0 }}</b><span>{% translate "Completed (awaiting validation)" %}</span></div>
+    <div class="tcb-chip tcb-plain"><b>{{ detailed|get:'total'|default:0 }}</b><span>{% translate "Number of tasks" %}</span></div>
+    <div class="tcb-chip tcb-orange"><b>{{ detailed|get:'completed_total'|default:0 }}</b><span>{% translate "Completed" %}</span></div>
+    <div class="tcb-chip tcb-green"><b>{{ detailed|get:'validated'|default:0 }}</b><span>{% translate "Validated" %}</span></div>
+</div>

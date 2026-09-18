@@ -6,7 +6,7 @@ from django.contrib.auth.models import Group
 
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
-from process_manager.models import AggregatedStatus
+from process_manager.models import AggregatedStatus, Task
 from cdd.functions import get_validation_code
 
 from dashboard.utils import structure_the_words as utils_structure_the_words
@@ -378,9 +378,24 @@ def get_item(dictionary, key):
     except ValueError:
         return dictionary.get(key)
 
-@register.filter(name='has_group') 
+@register.filter(name='has_group')
 def has_group(user, group_name):
-    return user.groups.filter(name=group_name).exists() 
+    return user.groups.filter(name=group_name).exists()
+
+@register.filter(name='has_collectible_tasks')
+def has_collectible_tasks(user, request=None):
+    """Menu "Taches (cycle DCC)" : visible si un groupe de l'utilisateur est
+    present dans groups_collectors d'au moins une Task du projet/cycle
+    courant (session), pas une verification globale - sinon le menu
+    apparaitrait meme si le projet/cycle actuel n'a aucune tache concernee."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.groups.filter(name="CommunityFacilitator").exists():
+        return True
+    qs = Task.objects.filter(groups_collectors__in=user.groups.all())
+    if request is not None and request.session.get('project_id'):
+        qs = qs.get_objects_by_general_filtre(request=request, attrs=None)
+    return qs.exists()
 
 @register.filter(name='has_perm') 
 def has_perm(user, perm_name):
