@@ -133,7 +133,9 @@
   "updated_date",
   "users_involved",
   "additional_administrative_ids",
-  "stabilization_administrative_ids"
+  "stabilization_administrative_ids",
+  "delete_by_user",
+  "user_id"
  ],
  "authtoken_token": [
   "key",
@@ -465,7 +467,8 @@
   "description",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "news_news": [
   "id",
@@ -513,7 +516,8 @@
   "publication_date",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "news_news_tags": [
   "id",
@@ -535,7 +539,8 @@
   "username",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "news_subscription": [
   "id",
@@ -546,7 +551,8 @@
   "user_id",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "news_tag": [
   "id",
@@ -555,7 +561,8 @@
   "name",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "planning_activity": [
   "id",
@@ -598,7 +605,8 @@
   "total_people_present_under_35",
   "total_women_present_over_35",
   "total_women_present_under_35",
-  "work_environment"
+  "work_environment",
+  "delete_by_user"
  ],
  "planning_activitycomment": [
   "id",
@@ -612,7 +620,8 @@
   "comment_read",
   "activity_id",
   "facilitator_id",
-  "user_id"
+  "user_id",
+  "delete_by_user"
  ],
  "planning_activitydeadline": [
   "id",
@@ -624,7 +633,8 @@
   "name",
   "day",
   "hour",
-  "project_id"
+  "project_id",
+  "delete_by_user"
  ],
  "planning_activitydeadline_activities_deadline_groups": [
   "id",
@@ -646,7 +656,8 @@
   "file_type",
   "username",
   "user_email",
-  "activity_id"
+  "activity_id",
+  "delete_by_user"
  ],
  "planning_activitygeolocation": [
   "id",
@@ -664,7 +675,8 @@
   "longitude_start",
   "taking_datetime_end",
   "taking_datetime_start",
-  "planning_date"
+  "planning_date",
+  "delete_by_user"
  ],
  "planning_activityvalidate": [
   "id",
@@ -678,7 +690,8 @@
   "activity_id",
   "facilitator_id",
   "user_id",
-  "comment_read"
+  "comment_read",
+  "delete_by_user"
  ],
  "planning_validationgroupsprocess": [
   "id",
@@ -688,7 +701,8 @@
   "update_by_user",
   "users_involved",
   "name",
-  "project_id"
+  "project_id",
+  "delete_by_user"
  ],
  "planning_validationgroupsprocess_planners_groups": [
   "id",
@@ -715,7 +729,8 @@
   "update_by_user",
   "updated_date",
   "users_involved",
-  "name_normalized"
+  "name_normalized",
+  "delete_by_user"
  ],
  "process_manager_activity_cycles": [
   "id",
@@ -763,7 +778,8 @@
   "total_tasks_invalidated_unreview_completed",
   "total_tasks_invalidated_unreview_in_pending",
   "its_adl_has_sub_project",
-  "task_needs_subproject"
+  "task_needs_subproject",
+  "delete_by_user"
  ],
  "process_manager_aggregatedstatusfacilitator": [
   "id",
@@ -821,7 +837,8 @@
   "total_tasks_invalidated_review_completed_current_project",
   "total_tasks_invalidated_review_in_pending_current_project",
   "total_tasks_invalidated_unreview_completed_current_project",
-  "total_tasks_invalidated_unreview_in_pending_current_project"
+  "total_tasks_invalidated_unreview_in_pending_current_project",
+  "delete_by_user"
  ],
  "process_manager_cycle": [
   "id",
@@ -835,7 +852,8 @@
   "couch_id",
   "order",
   "capacity_attachments",
-  "project_id"
+  "project_id",
+  "delete_by_user"
  ],
  "process_manager_deployment": [
   "id",
@@ -845,7 +863,8 @@
   "description",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "process_manager_emailaddresseswhichsendemails": [
   "id",
@@ -856,7 +875,8 @@
   "update_by_user",
   "updated_date",
   "users_involved",
-  "project_id"
+  "project_id",
+  "delete_by_user"
  ],
  "process_manager_facilitatordeployment": [
   "id",
@@ -870,7 +890,8 @@
   "end",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "process_manager_facilitatorwave": [
   "id",
@@ -885,7 +906,8 @@
   "create_by_user",
   "update_by_user",
   "users_involved",
-  "cycle_id"
+  "cycle_id",
+  "delete_by_user"
  ],
  "process_manager_periodwave": [
   "id",
@@ -920,7 +942,8 @@
   "update_by_user",
   "updated_date",
   "users_involved",
-  "name_normalized"
+  "name_normalized",
+  "delete_by_user"
  ],
  "process_manager_phase_cycles": [
   "id",
@@ -939,7 +962,8 @@
   "created_date",
   "update_by_user",
   "updated_date",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "process_manager_project": [
   "id",
@@ -952,14 +976,24 @@
   "update_by_user",
   "updated_date",
   "users_involved",
-  "status",
+  "delete_by_user",
   "external_id",
-  "delete_by_user"
+  "status"
+ ],
+ "process_manager_project_administrative_levels": [
+  "id",
+  "project_id",
+  "administrativelevel_id"
  ],
  "process_manager_project_facilitators": [
   "id",
   "project_id",
   "facilitator_id"
+ ],
+ "process_manager_project_financiers": [
+  "id",
+  "project_id",
+  "financier_id"
  ],
  "process_manager_project_users": [
   "id",
@@ -984,12 +1018,40 @@
   "update_by_user",
   "updated_date",
   "users_involved",
-  "name_normalized"
+  "name_normalized",
+  "delete_by_user",
+  "share_mode",
+  "non_blocking",
+  "visibility_condition"
  ],
  "process_manager_task_cycles": [
   "id",
   "task_id",
   "cycle_id"
+ ],
+ "process_manager_task_groups_collectors": [
+  "id",
+  "task_id",
+  "group_id"
+ ],
+ "process_manager_tasksharerecord": [
+  "id",
+  "created_date",
+  "updated_date",
+  "create_by_user",
+  "update_by_user",
+  "delete_by_user",
+  "users_involved",
+  "administrative_level_id",
+  "couch_task_id",
+  "status",
+  "share_values",
+  "share_targets",
+  "last_synced",
+  "cycle_id",
+  "facilitator_id",
+  "project_id",
+  "task_id"
  ],
  "process_manager_wave": [
   "id",
@@ -1028,7 +1090,8 @@
   "villages_names",
   "cvd_existence",
   "is_full_staff",
-  "meeting_date"
+  "meeting_date",
+  "delete_by_user"
  ],
  "storeapp_storeapp": [
   "id",
@@ -1043,7 +1106,8 @@
   "updated_date",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "storeapp_storeproject": [
   "id",
@@ -1056,7 +1120,8 @@
   "playstore_url",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "subprojects_category_ida": [
   "id",
@@ -1156,16 +1221,6 @@
   "users_involved",
   "delete_by_user"
  ],
- "process_manager_project_administrative_levels": [
-  "id",
-  "project_id",
-  "administrativelevel_id"
- ],
- "process_manager_project_financiers": [
-  "id",
-  "project_id",
-  "financier_id"
- ],
  "subprojects_step": [
   "id",
   "created_date",
@@ -1198,7 +1253,7 @@
   "component_id",
   "latitude",
   "longitude",
-  "amount_of_the_care_and_maintenance_fund_expected_to_be_mobilized",
+  "amount_of_the_care_and_maintenance_fund_expected_to_be_mobilize",
   "amount_of_the_contract_for_construction_supervisors",
   "amount_of_the_controllers_contract_in_SES",
   "amount_of_the_facilitator_contract",
@@ -1483,7 +1538,8 @@
   "subject_id",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "supportmaterial_subject": [
   "id",
@@ -1496,7 +1552,8 @@
   "parent_id",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "supportmaterial_supportingmaterial": [
   "id",
@@ -1511,7 +1568,8 @@
   "subject_id",
   "create_by_user",
   "update_by_user",
-  "users_involved"
+  "users_involved",
+  "delete_by_user"
  ],
  "usermanager_usertoken": [
   "id",
@@ -1539,6 +1597,7 @@
   "asking_datetime",
   "validation_code_ending_datetime",
   "motif",
-  "already_use"
+  "already_use",
+  "delete_by_user"
  ]
 }

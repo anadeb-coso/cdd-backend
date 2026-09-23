@@ -25,9 +25,9 @@
 | GroupResult | django_celery_results | `django_celery_results_groupresult` | django_celery_results | `django_celery_results_groupresult` | True | True | oui | oui |
 | LogEntry | admin | `django_admin_log` | admin | `django_admin_log` | True | True | oui | oui |
 | Permission | auth | `auth_permission` | auth | `auth_permission` | True | True | oui | oui |
-| Project | subprojects | `subprojects_project` | subprojects | `process_manager_project` | True | True | — | oui |
-| Project_administrative_levels | subprojects | `subprojects_project_administrative_levels` | subprojects | `process_manager_project_administrative_levels` | True | True | — | — |
-| Project_financiers | subprojects | `subprojects_project_financiers` | subprojects | `process_manager_project_financiers` | True | True | — | — |
+| Project | subprojects | `process_manager_project` | subprojects | `process_manager_project` | True | True | — | oui |
+| Project_administrative_levels | subprojects | `process_manager_project_administrative_levels` | subprojects | `process_manager_project_administrative_levels` | True | True | — | — |
+| Project_financiers | subprojects | `process_manager_project_financiers` | subprojects | `process_manager_project_financiers` | True | True | — | — |
 | Session | sessions | `django_session` | sessions | `django_session` | True | True | oui | oui |
 | Subproject | subprojects | `subprojects_subproject` | subprojects | `subprojects_subproject` | True | True | — | oui |
 | Subproject_projects | subprojects | `subprojects_subproject_projects` | subprojects | `subprojects_subproject_projects` | True | True | — | — |
@@ -46,7 +46,7 @@
 | VulnerableGroup | subprojects | `subprojects_vulnerablegroup` | subprojects | `subprojects_vulnerablegroup` | True | True | — | oui |
 | Wave | process_manager | `process_manager_wave` | process_manager | `process_manager_wave` | True | True | oui | oui |
 
-## 2. Tables de même nom (33)
+## 2. Tables de même nom (35)
 
 | Table | modèle(s) CDD | modèle(s) COSOMIS | catégorie probable |
 |---|---|---|---|
@@ -69,7 +69,9 @@
 | `django_content_type` | contenttypes.ContentType | contenttypes.ContentType | reconstruite (§4.6) |
 | `django_session` | sessions.Session | sessions.Session | reconstruite (§4.6) |
 | `process_manager_administrativelevelwave` | process_manager.AdministrativeLevelWave | process_manager.AdministrativeLevelWave | à_arbitrer (A probable : CreateModel des deux côtés) |
-| `process_manager_project` | process_manager.Project | subprojects.Project | à_arbitrer (A probable : CreateModel des deux côtés) |
+| `process_manager_project` | process_manager.Project, subprojects.Project | subprojects.Project | à_arbitrer (A probable : CreateModel des deux côtés) |
+| `process_manager_project_administrative_levels` | subprojects.Project_administrative_levels | subprojects.Project_administrative_levels | à_arbitrer (aucun CreateModel trouvé) |
+| `process_manager_project_financiers` | subprojects.Project_financiers | subprojects.Project_financiers | à_arbitrer (aucun CreateModel trouvé) |
 | `process_manager_wave` | process_manager.Wave | process_manager.Wave | à_arbitrer (A probable : CreateModel des deux côtés) |
 | `subprojects_component` | subprojects.Component | subprojects.Component | à_arbitrer (B probable : schéma possédé par cosomis) |
 | `subprojects_cycle` | subprojects.Cycle | subprojects.Cycle | à_arbitrer (B probable : schéma possédé par cosomis) |
@@ -107,7 +109,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
 
 ### `authentication_facilitator`
 - **authentication.Facilitator** vs **authentication.Facilitator**
-- champs seulement CDD : create_by_user, created_date, delete_by_user, no_sql_dbs_names, update_by_user, updated_date, users_involved
+- champs seulement CDD : create_by_user, created_date, delete_by_user, no_sql_dbs_names, update_by_user, updated_date, user, users_involved
 - types divergents : code (CDD CharField/100 vs COSOMIS CharField/6)
 
 ### `process_manager_administrativelevelwave`
@@ -144,6 +146,8 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
 | cdd | process_manager.Activity | `couch_id` | CharField | False |
 | cdd | process_manager.Task | `couch_id` | CharField | False |
 | cdd | process_manager.AggregatedStatus | `administrative_level_id` | IntegerField | True |
+| cdd | process_manager.TaskShareRecord | `administrative_level_id` | IntegerField | False |
+| cdd | process_manager.TaskShareRecord | `couch_task_id` | CharField | False |
 | cdd | process_manager.AdministrativeLevelWave | `administrative_level_id` | IntegerField | False |
 | cdd | administrativelevels.AdministrativeLevel | `no_sql_db_id` | CharField | True |
 | cdd | assignments.AssignAdministrativeLevelToFacilitator | `administrative_level_id` | IntegerField | False |
@@ -208,7 +212,10 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
 | cdd | process_manager.Task | `form` |
 | cdd | process_manager.Task | `attachments` |
 | cdd | process_manager.Task | `capacity_attachments` |
+| cdd | process_manager.Task | `visibility_condition` |
 | cdd | process_manager.AggregatedStatusFacilitator | `administrative_level_headquarters_villages_infos` |
+| cdd | process_manager.TaskShareRecord | `share_values` |
+| cdd | process_manager.TaskShareRecord | `share_targets` |
 | cdd | process_manager.EmailAddressesWhichSendEmails | `email_addresses` |
 | cdd | process_manager.ProcessAddOrRemoveADL | `administrative_levels` |
 | cdd | news.News | `administrative_levels` |
@@ -226,7 +233,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
 
 
 ### projet cdd
-- `.using(` : 192 occurrence(s)
+- `.using(` : 200 occurrence(s)
   - grm_client.py:145
   - grm_client.py:174
   - grm_client.py:178
@@ -245,34 +252,34 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - administrativelevels/functions.py:34
   - administrativelevels/functions.py:35
   - administrativelevels/views.py:22
-  - authentication/models.py:508
-  - authentication/models.py:523
-  - authentication/models.py:531
+  - authentication/models.py:521
+  - authentication/models.py:536
   - authentication/models.py:544
+  - authentication/models.py:557
   - cdd/call_objects_from_other_db.py:11
   - cdd/call_objects_from_other_db.py:14
   - cdd/call_objects_from_other_db.py:17
   - cdd/call_objects_from_other_db.py:20
   - cdd/merge_routers.py:5
-  - cdd/settings.py:130
+  - cdd/settings.py:133
   - cdd/utils.py:17
   - dashboard/tasks.py:132
-  - dashboard/utils.py:147
-  - dashboard/utils.py:151
-  - dashboard/utils.py:358
-  - dashboard/utils.py:1088
-  - dashboard/utils.py:1202
-  - dashboard/utils.py:1472
-  - dashboard/utils.py:2389
-  - dashboard/utils.py:2460
-  - dashboard/utils.py:2675
-  - dashboard/utils.py:2692
-  - … (+152)
+  - dashboard/utils.py:150
+  - dashboard/utils.py:154
+  - dashboard/utils.py:361
+  - dashboard/utils.py:1097
+  - dashboard/utils.py:1211
+  - dashboard/utils.py:1481
+  - dashboard/utils.py:2398
+  - dashboard/utils.py:2469
+  - dashboard/utils.py:2684
+  - dashboard/utils.py:2701
+  - … (+160)
 - `mis_objects_call` : 229 occurrence(s)
   - authentication/functions.py:5
   - authentication/functions.py:10
   - authentication/functions.py:16
-  - authentication/models.py:442
+  - authentication/models.py:455
   - authentication/api/facilitators/update_adl.py:16
   - authentication/api/facilitators/update_adl.py:42
   - authentication/api/facilitators/update_adl.py:47
@@ -286,29 +293,29 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - dashboard/tasks.py:216
   - dashboard/tasks.py:224
   - dashboard/tasks.py:286
-  - dashboard/tasks.py:472
-  - dashboard/tasks.py:474
-  - dashboard/tasks.py:490
-  - dashboard/tasks.py:491
-  - dashboard/tasks.py:632
-  - dashboard/utils.py:20
-  - dashboard/utils.py:120
-  - dashboard/utils.py:120
-  - dashboard/utils.py:122
-  - dashboard/utils.py:136
-  - dashboard/utils.py:191
-  - dashboard/utils.py:191
-  - dashboard/utils.py:195
-  - dashboard/utils.py:195
-  - dashboard/utils.py:1795
-  - dashboard/utils.py:1798
-  - dashboard/utils.py:2440
-  - dashboard/utils.py:2501
-  - dashboard/utils.py:2528
-  - dashboard/utils.py:2648
-  - dashboard/utils.py:2843
-  - dashboard/utils.py:3009
-  - dashboard/utils.py:3515
+  - dashboard/tasks.py:468
+  - dashboard/tasks.py:470
+  - dashboard/tasks.py:486
+  - dashboard/tasks.py:487
+  - dashboard/tasks.py:628
+  - dashboard/utils.py:23
+  - dashboard/utils.py:123
+  - dashboard/utils.py:123
+  - dashboard/utils.py:125
+  - dashboard/utils.py:139
+  - dashboard/utils.py:194
+  - dashboard/utils.py:194
+  - dashboard/utils.py:198
+  - dashboard/utils.py:198
+  - dashboard/utils.py:1804
+  - dashboard/utils.py:1807
+  - dashboard/utils.py:2449
+  - dashboard/utils.py:2510
+  - dashboard/utils.py:2537
+  - dashboard/utils.py:2657
+  - dashboard/utils.py:2852
+  - dashboard/utils.py:3018
+  - dashboard/utils.py:3524
   - … (+189)
 - `cdd_objects_call` : 18 occurrence(s)
   - cdd/call_objects_from_other_db.py:32

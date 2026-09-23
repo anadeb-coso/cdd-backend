@@ -2064,35 +2064,58 @@
   }
 
   /* --------------------------------------------------------------- preview */
+  // Aperçu RÉEL et COMPLET (pas un résumé texte) : réutilise tel quel le
+  // moteur de remplissage du menu web "Tâches (cycle DCC)"
+  // (TCFillForm.FillFormController, static/dashboard/js/task_cycle_fill_form.js
+  // + ses 3 dépendances) -- même rendu HTML, mêmes règles show/hide/require,
+  // mêmes calculs, mêmes cascades/choicesFrom, mêmes répétables, que ce que le
+  // facilitateur voit réellement sur mobile/web. Bout en bout : TOUTES les
+  // pages du formulaire compilé, avec la pagination Suivant/Précédent propre
+  // au contrôleur (pas limité à la page actuellement sélectionnée dans
+  // l'éditeur à gauche).
   function renderPreview() {
     var form = safeCompile();
     var box = el("div", { class: "tfb-preview" });
     if (!form) { box.appendChild(el("div", { class: "tfb-errors", text: t("preview_err", "Le formulaire n'est pas compilable en l'état.") })); return box; }
-    var pg = form[state.active];
-    Object.keys(pg.page.properties).forEach(function (k) {
-      var p = pg.page.properties[k], o = pg.options.fields[k] || {};
-      var req = (pg.page.required || []).indexOf(k) !== -1;
-      box.appendChild(el("div", { class: "tfb-p-field", text: (o.label || k) + (req ? " *" : "") + "  —  " + previewType(p, o) }));
-    });
-    (pg.rules || []).forEach(function (r) {
-      box.appendChild(el("div", { class: "tfb-p-rule", text: "⟹ " + r.then[0].action + " " + r.then[0].target + "  " + t("when", "quand") + "  " + JSON.stringify(r.when) }));
-    });
-    (pg.calculate || []).forEach(function (c) { box.appendChild(el("div", { class: "tfb-p-rule", text: "ƒ " + c.target + " = " + c.expr })); });
-    return box;
-  }
-  function enumLabels(e) {
-    return (Array.isArray(e) ? e : Object.keys(e || {}).map(function (k) { return e[k]; })).slice(0, 8).join(", ");
-  }
-  function previewType(p, o) {
-    if (p.type === "geopoint") return "GPS (lat/long/précision" + ((o && o.accuracyThreshold) ? " ≤ " + o.accuracyThreshold + " m" : "") + ")";
-    if (p.enum) return "choix: " + enumLabels(p.enum);
-    if (p.type === "array" && p.items && p.items.enum) {
-      return (o && o.mode === "checklist" ? "cases à cocher: " : "choix multiple: ") + enumLabels(p.items.enum);
+    if (!window.TCFillForm) {
+      box.appendChild(el("div", { class: "tfb-errors", text: t("preview_engine_missing", "Le moteur d'aperçu n'a pas pu être chargé.") }));
+      return box;
     }
-    if (p.type === "array") return "répétable";
-    if (p.type === "object") return "groupe";
-    if (p.format) return p.format;
-    return p.type + (p.minimum != null || p.maximum != null ? " [" + (p.minimum != null ? p.minimum : "") + "…" + (p.maximum != null ? p.maximum : "") + "]" : "");
+    var $container = $("<div></div>");
+    box.appendChild($container[0]);
+    new window.TCFillForm.FillFormController($container, {
+      form: form,
+      initialResponses: [],
+      attachments: state.attachments || [],
+      existingAttachments: [],
+      // Aucune tâche/village réel derrière cet aperçu -> pas de vrai upload
+      // S3 : simule juste un fichier "choisi" via une URL objet locale au
+      // navigateur (voir le comportement du champ, sans écrire nulle part).
+      uploadFile: function (file, cb) {
+        try { cb(URL.createObjectURL(file), file.name); } catch (e) { cb(null, null); }
+      },
+      // choicesFrom/crossTaskVisibility inter-tâches : pas de `fetchExternalTask`
+      // fourni ici (aucune vraie tâche source consultable depuis un aperçu
+      // isolé) -> ces champs restent "pas encore de réponse" (repli déjà
+      // testé du moteur), le reste de l'aperçu (même tâche, toutes les autres
+      // règles/calculs/cascades) fonctionne normalement.
+      // Pas de vraie tâche/village derrière cet écran de CONCEPTION du
+      // formulaire (choix confirmé avec l'utilisateur) : jusqu'au bout, on
+      // peut saisir TOUS les champs de TOUTES les pages, mais rien n'est
+      // envoyé/enregistré au serveur -- juste réaffiché en lecture seule ici,
+      // pour confirmer visuellement que la saisie complète s'est bien passée.
+      onSubmit: function (values) {
+        if (box.querySelector(".tfb-preview-done")) return;
+        box.appendChild(el("div", {
+          class: "tfb-preview-done alert alert-success mt-2",
+          text: t("preview_done", "Fin de l'aperçu — toutes les pages ont été remplies jusqu'au bout (rien n'est enregistré)."),
+        }));
+        var pre = el("pre", { class: "tfb-preview-values" });
+        pre.textContent = JSON.stringify(values, null, 2);
+        box.appendChild(pre);
+      },
+    });
+    return box;
   }
 
   /* ------------------------------------------------------------- json editor */

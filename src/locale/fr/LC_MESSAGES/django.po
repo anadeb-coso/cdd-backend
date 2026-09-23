@@ -2968,6 +2968,14 @@ msgid "The form cannot be compiled as is."
 msgstr "Le formulaire n'est pas compilable en l'état."
 
 #: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "The preview engine could not be loaded."
+msgstr "Le moteur d'aperçu n'a pas pu être chargé."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
+msgid "End of preview — every page was filled in to the end (nothing is saved)."
+msgstr "Fin de l'aperçu — toutes les pages ont été remplies jusqu'au bout (rien n'est enregistré)."
+
+#: dashboard/templates/process_manager/tasks/form_builder.html
 msgid "You can paste an existing form here then Apply."
 msgstr "Vous pouvez coller ici un formulaire existant puis « Appliquer »."
 

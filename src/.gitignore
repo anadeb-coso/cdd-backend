@@ -8,3 +8,22 @@
 # CLAUDE AI
 CLAUDE.md
 ../context/
+
+
+# --- Fusion cdd + cosomis (branche merge/cdd-cosomis) ---
+# Dumps et extractions volumineux : non versionnés (CLAUDE.md §7).
+# On versionne les rapports, plans, id_map.csv, fusion_plan.yml, empreintes SHA-256.
+../merge/artifacts/00_raw/cdd/
+../merge/artifacts/00_raw/mis/
+../merge/artifacts/00_raw/cosomis/
+../merge/artifacts/40_unified/*.csv
+../merge/artifacts/40_unified/*.sql
+../merge/artifacts/50_postgres/*.sql
+../merge/artifacts/50_postgres/overlay/
+../merge/artifacts/50_postgres/migrate.log
+../merge/artifacts/**/schema_inventory.json
+../merge/artifacts/70_checks/avant/
+../merge/artifacts/70_checks/apres/
+../merge/conflicts.csv
+!../merge/artifacts/**/*.md
+!../merge/artifacts/**/*.sha256

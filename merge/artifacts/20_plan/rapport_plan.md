@@ -1,14 +1,14 @@
 # Rapport — Étape 2 : Plan de fusion
 
-- Généré : 2026-09-04T08:14:18
+- Généré : 2026-09-22T17:40:19
 - Statut : **OK**
-- Plan : `merge/fusion_plan.yml` (119 tables)
+- Plan : `merge/fusion_plan.yml` (118 tables)
 
 ## Répartition
-- A : 8
-- B : 18
-- C : 79
-- orpheline : 6
+- A : 9
+- B : 19
+- C : 78
+- orpheline : 4
 - reconstruite : 8
 
 ## Catégorie A — réconciliation
@@ -41,15 +41,18 @@
 ### `process_manager_administrativelevelwave`
 - clé naturelle : ['project_id', 'wave.number', 'administrative_level_id']
 - unicité : {'cdd': 'unique', 'mis': 'unique'}
-- champs ajoutés de COSOMIS (null=True) : delete_by_user
 - conflit type `administrative_level_id` : CDD int(11) / COSOMIS bigint(20) → retenu bigint(20)
 - champs CDD seuls conservés : cycle_id
 - FK entrantes à remapper (côté mis) : process_manager_periodwave_administrative_levels.administrativelevelwave_id
 
+### `process_manager_project`
+- clé naturelle : None
+- champs CDD seuls conservés : couch_id
+- FK entrantes à remapper (côté mis) : assignments_assignadministrativeleveltofacilitator.project_id, financial_administrativelevel_allocation.project_id, financial_annual_work_plan.project_id, financial_disbursement_request.project_id, financial_funding.project_id, process_manager_administrativelevelwave.project_id, process_manager_periodwave.project_id, process_manager_project.parent_id, process_manager_project_administrative_levels.project_id, process_manager_project_financiers.project_id, subprojects_category_ida.project_id, subprojects_component.project_id, subprojects_cycle.project_id, subprojects_subproject_projects.project_id
+
 ### `process_manager_wave`
 - clé naturelle : ['number']
 - unicité : {'cdd': 'unique', 'mis': 'unique'}
-- champs ajoutés de COSOMIS (null=True) : delete_by_user
 - FK entrantes à remapper (côté mis) : process_manager_administrativelevelwave.wave_id, process_manager_periodwave.wave_id
 
 ## Catégorie B — miroirs (déclaration en double à retirer)
@@ -58,7 +61,8 @@
 - `administrativelevels_geographicalunit` — propriétaire **cosomis** ; retirer dans **cdd** : administrativelevels.GeographicalUnit
 - `assignments_assignadministrativeleveltofacilitator` — propriétaire **cosomis** ; retirer dans **cdd** : assignments.AssignAdministrativeLevelToFacilitator
 - `authentication_facilitator` — propriétaire **cdd** ; retirer dans **cosomis** : authentication.Facilitator
-- `process_manager_project` — propriétaire **cdd** ; retirer dans **cosomis** : subprojects.Project
+- `process_manager_project_administrative_levels` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Project_administrative_levels
+- `process_manager_project_financiers` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Project_financiers
 - `subprojects_component` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Component
 - `subprojects_cycle` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Cycle
 - `subprojects_cycle_administrative_levels` — propriétaire **cosomis** ; retirer dans **cdd** : subprojects.Cycle_administrative_levels

@@ -52,8 +52,15 @@ FIELD_TO_TABLE = {
     "administrative_level_id": "administrativelevels_administrativelevel",
     "administrative_id": "administrativelevels_administrativelevel",
     "parent_id": "administrativelevels_administrativelevel",
-    "project_id": "subprojects_project",
-    "cycle_id": "subprojects_cycle",
+    # `03_build_id_map.py` écrit toujours les lignes du concept plié Project/
+    # Cycle sous le nom de la table CDD survivante (`dt` = cdd_table), jamais
+    # sous l'ancien nom COSOMIS — même avant le renommage de
+    # subprojects_project en process_manager_project (02/2026-09-22), ces
+    # deux clés pointaient déjà sur des noms de table absents de id_map.csv,
+    # rendant ce lookup silencieusement vide (0 candidat project_id/cycle_id
+    # trouvé, quel que soit le contenu réel de CouchDB).
+    "project_id": "process_manager_project",
+    "cycle_id": "process_manager_cycle",
 }
 DB_PREFIXES = ("facilitator_", "administrative_levels", "eadls", "adb",
                "process_design")

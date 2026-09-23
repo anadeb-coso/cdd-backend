@@ -1,6 +1,6 @@
 # Rapport — Étape 1 : Inventaire (volet code)
 
-- Projet CDD : `D:\COSO\PROJECTS\CDD\backend\deploy\cdd-backend\src` (Django 4.0.4, 76 modèles)
+- Projet CDD : `D:\COSO\PROJECTS\CDD\backend\deploy\cdd-backend\src` (Django 4.0.4, 78 modèles)
 - Projet COSOMIS : `D:\COSO\PROJECTS\MIS\cosomis\cosomis` (Django 4.2.30, 77 modèles)
 - Alias base CDD : ['default', 'mis', 'grm']
 - Alias base COSOMIS : ['default', 'cdd']
@@ -9,24 +9,24 @@
 
 ## Chiffres clés
 - Modèles de même `object_name` : **38**
-- Tables (db_table) de même nom : **33**
-- Tables vues dans le code ou les bases : **119**
+- Tables (db_table) de même nom : **35**
+- Tables vues dans le code ou les bases : **118**
 
 ## Étape 0 : intégrée
-- Bases physiques lues : `cdd` (57 tables), `mis` (72 tables).
+- Bases physiques lues : `cdd` (59 tables), `mis` (72 tables).
 - `ownership.csv` : colonnes `existe_dans_*` / `lignes_*` renseignées, `categorie` **ferme** (§4.1).
 
 ### Répartition des catégories
-- `A` : 8
-- `B` : 18
-- `C` : 79
-- `orpheline` : 6
+- `A` : 9
+- `B` : 19
+- `C` : 78
+- `orpheline` : 4
 - `reconstruite` : 8
 
 ### Constats saillants
-- **Catégorie A (vrais doublons à fusionner) : 8 tables** — `auth_group`, `auth_group_permissions`, `auth_user`, `auth_user_groups`, `auth_user_user_permissions`, `authtoken_token`, `process_manager_administrativelevelwave`, `process_manager_wave`
-- **Catégorie B (miroirs — supprimer la déclaration en double, aucune fusion) : 18** — `administrativelevels_administrativelevel`, `administrativelevels_cvd`, `administrativelevels_geographicalunit`, `assignments_assignadministrativeleveltofacilitator`, `authentication_facilitator`, `process_manager_project`, `subprojects_component`, `subprojects_cycle`, `subprojects_cycle_administrative_levels`, `subprojects_financier`, `subprojects_subproject`, `subprojects_subproject_projects`, `subprojects_typemain`, `subprojects_villagegoal`, `subprojects_villagemeeting`, `subprojects_villageobstacle`, `subprojects_villagepriority`, `subprojects_vulnerablegroup`
-- **Orphelines (déclarées dans le code, aucune table) : 6** — `authentication_governmentworker`, `authentication_user`, `authentication_user_groups`, `authentication_user_user_permissions`, `process_manager_project_administrative_levels`, `process_manager_project_financiers`. À traiter à l'Étape 6 (déclarations mortes), pas de données concernées.
+- **Catégorie A (vrais doublons à fusionner) : 9 tables** — `auth_group`, `auth_group_permissions`, `auth_user`, `auth_user_groups`, `auth_user_user_permissions`, `authtoken_token`, `process_manager_administrativelevelwave`, `process_manager_project`, `process_manager_wave`
+- **Catégorie B (miroirs — supprimer la déclaration en double, aucune fusion) : 19** — `administrativelevels_administrativelevel`, `administrativelevels_cvd`, `administrativelevels_geographicalunit`, `assignments_assignadministrativeleveltofacilitator`, `authentication_facilitator`, `process_manager_project_administrative_levels`, `process_manager_project_financiers`, `subprojects_component`, `subprojects_cycle`, `subprojects_cycle_administrative_levels`, `subprojects_financier`, `subprojects_subproject`, `subprojects_subproject_projects`, `subprojects_typemain`, `subprojects_villagegoal`, `subprojects_villagemeeting`, `subprojects_villageobstacle`, `subprojects_villagepriority`, `subprojects_vulnerablegroup`
+- **Orphelines (déclarées dans le code, aucune table) : 4** — `authentication_governmentworker`, `authentication_user`, `authentication_user_groups`, `authentication_user_user_permissions`. À traiter à l'Étape 6 (déclarations mortes), pas de données concernées.
 - `auth_user` porte les utilisateurs **des deux côtés** (cdd + mis) ; le modèle COSOMIS `authentication.User` (`authentication_user`) n'a **pas de table** → la fusion des comptes se fait sur `auth_user`, clé `username`.
 
 ✅ Aucune ligne `à_arbitrer` : Étape 2 débloquée côté qualification.

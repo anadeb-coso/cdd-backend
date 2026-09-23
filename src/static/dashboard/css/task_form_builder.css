@@ -103,9 +103,23 @@
 .tfb-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
 
 .tfb-json { width: 100%; min-height: 340px; font-family: monospace; font-size: 12px; }
-.tfb-preview { font-size: 13px; }
-.tfb-preview .tfb-p-field { padding: 4px 0; border-bottom: 1px dashed #eef0f2; }
-.tfb-preview .tfb-p-rule { color: #6d28d9; font-size: 12px; margin-left: 12px; }
+
+/* Aperçu RÉEL (TCFillForm.FillFormController, cf. renderPreview) : ce
+   contrôleur est normalement utilisé dans #taskFillModal (task_fill_modal.html)
+   dont le <style> scope certaines règles nécessaires (bordure rouge d'une
+   checklist/ligne de répétable invalide, contraste de .text-muted) à
+   #taskFillModal -- absent de cette page, donc reposé ici pour #tfb-root
+   .tfb-preview, sinon un champ obligatoire manquant dans l'aperçu ne se
+   distinguerait visuellement pas d'un champ valide. */
+.tfb-preview { font-size: 14px; }
+.tfb-preview .text-muted { color: #495057 !important; }
+.tfb-preview .tcf-checklist.is-invalid { border: 1px solid #dc3545; border-radius: .25rem; padding: .4rem; }
+.tfb-preview .tcf-repeat-row.is-invalid-row { border-color: #dc3545 !important; }
+.tfb-preview-done { font-size: 13px; }
+.tfb-preview-values {
+    background: #f8f9fa; border: 1px solid #e3e6ea; border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; max-height: 320px; overflow: auto;
+}
 .tfb-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; max-width: 100%; }
 /* Même correctif que `.tfb-inline`/`.tfb-cond-row` ci-dessus, ENCORE MANQUANT
    ici : `flex-wrap: wrap` seul ne suffit pas — un item ISOLÉ (ex. le select2

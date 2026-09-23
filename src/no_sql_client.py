@@ -3,15 +3,23 @@ from django.conf import settings
 
 class NoSQLClient:
 
-    def __init__(self, username=settings.NO_SQL_USER, password=settings.NO_SQL_PASS, url=settings.NO_SQL_URL):
+    def __init__(self, username=settings.NO_SQL_USER, password=settings.NO_SQL_PASS, url=settings.NO_SQL_URL, timeout=None):
         self.username = username
         self.password = password
         self.url = url
+        # None (défaut) = comportement historique inchangé (aucun timeout, requêtes potentiellement
+        # bloquantes indéfiniment). À renseigner explicitement pour tout code qui interroge de
+        # nombreuses bases CouchDB en parallèle (ex. `dashboard/reports/excel_csv/fc_situation.py`) :
+        # sans borne, une seule base injoignable/lente suffit à bloquer tout le lot.
+        self.timeout = timeout
         self.client = self.get_client()
 
     def get_client(self):
         from cloudant.client import CouchDB
-        return CouchDB(self.username, self.password, url=self.url, connect=True, auto_renew=True)
+        return CouchDB(
+            self.username, self.password, url=self.url, connect=True, auto_renew=True,
+            timeout=self.timeout,
+        )
 
     def get_dbs(self):
         return self.client.all_dbs()

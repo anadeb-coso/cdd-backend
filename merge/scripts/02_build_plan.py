@@ -56,14 +56,27 @@ NATURAL_KEYS: dict[str, dict] = {
 # pointent l'espace d'ID COSOMIS vers l'espace CDD.
 CROSS_CONCEPT = {
     "Project": {
-        "cosomis_table": "subprojects_project",
+        # COSOMIS a renommé sa table `subprojects_project` en
+        # `process_manager_project` (même nom que côté CDD) entre l'extraction
+        # du 4 et celle du 22 septembre 2026 — contraintes MySQL encore
+        # nommées `subprojects_project_*` dans le DDL extrait, preuve du
+        # RENAME (pas une recréation). Les 3 lignes (COSO/PURS/FA-COSO) sont
+        # identiques des deux côtés. Le nom source doit suivre ce renommage,
+        # sous peine de FileNotFoundError silencieux à l'Étape 3 (`except
+        # FileNotFoundError: continue`) qui vide PROJ_MAP et laisse tous les
+        # `project_id` côté COSOMIS non remappés (constaté : 6633 FK
+        # orphelines le 2026-09-22).
+        "cosomis_table": "process_manager_project",
         "cdd_table": "process_manager_project",   # survivant (§4.3)
         "key": ["name"],
-        # `subprojects_project` est fusionnée dans `process_manager_project`
-        # (1->4, 2->5, 3->6 par name) et n'est PAS chargée séparément.
+        # `process_manager_project` (mis) est fusionnée dans
+        # `process_manager_project` (cdd, survivant) (1->4, 2->5, 3->6 par
+        # name) et n'est PAS chargée séparément — voir garde FOLDED plus bas
+        # (cosomis_table == cdd_table : ne pas la traiter comme un doublon de
+        # nom à sauter, elle n'a qu'UNE seule ligne dans ownership.csv).
         "fold_into_survivor": True,
-        # TOUTE colonne pointant l'espace d'ID `subprojects_project` est
-        # réécrite vers l'espace `process_manager_project` (§4.4).
+        # TOUTE colonne pointant l'espace d'ID `process_manager_project` côté
+        # COSOMIS est réécrite vers l'espace CDD (§4.4).
         "remap_columns": [
             ("mis", "process_manager_administrativelevelwave", "project_id"),
             ("mis", "process_manager_periodwave", "project_id"),
@@ -75,8 +88,8 @@ CROSS_CONCEPT = {
             ("mis", "subprojects_category_ida", "project_id"),
             ("mis", "subprojects_component", "project_id"),
             ("mis", "subprojects_cycle", "project_id"),
-            ("mis", "subprojects_project_administrative_levels", "project_id"),
-            ("mis", "subprojects_project_financiers", "project_id"),
+            ("mis", "process_manager_project_administrative_levels", "project_id"),
+            ("mis", "process_manager_project_financiers", "project_id"),
             ("mis", "subprojects_subproject_projects", "project_id"),
         ],
     },
@@ -216,8 +229,16 @@ def main() -> None:
     tables_plan: dict[str, dict] = {}
 
     A_TABLES = {r["table"] for r in own if r["categorie"].startswith("A")}
+    # Ne « replier » (strategy=fold, ligne sautée à l'Étape 4) que les
+    # concepts où la table source COSOMIS porte un nom DIFFÉRENT du
+    # survivant CDD : `ownership.csv` n'a alors qu'UNE ligne physique pour
+    # ce nom (ex. process_manager_project, présent des deux côtés sous le
+    # même nom depuis le renommage COSOMIS) — la classifier "fold" la ferait
+    # sauter entièrement à l'Étape 4 au lieu de la fusionner (strategy=merge,
+    # catégorie A normale).
     FOLDED = {spec["cosomis_table"] for spec in CROSS_CONCEPT.values()
-             if spec.get("fold_into_survivor")}
+             if spec.get("fold_into_survivor")
+             and spec["cosomis_table"] != spec["cdd_table"]}
 
     for r in own:
         t = r["categorie"]

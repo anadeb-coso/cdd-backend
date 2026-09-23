@@ -214,6 +214,8 @@
             "add_calc": "{% translate 'Add a calculation' %}",
             "when": "{% translate 'when' %}",
             "preview_err": "{% translate 'The form cannot be compiled as is.' %}",
+            "preview_engine_missing": "{% translate 'The preview engine could not be loaded.' %}",
+            "preview_done": "{% translate 'End of preview — every page was filled in to the end (nothing is saved).' %}",
             "json_help": "{% translate 'You can paste an existing form here then Apply.' %}",
             "json_apply": "{% translate 'Apply JSON' %}",
             "errors_title": "{% translate 'The form was not saved:' %}",
@@ -335,6 +337,15 @@
         })();
     </script>
     <script src="{% static 'dashboard/js/task_form_builder.js' %}"></script>
+    {% comment %}
+        Moteur de remplissage réel (menu web "Tâches (cycle DCC)"), réutilisé
+        tel quel pour l'onglet "Aperçu" ci-dessus (renderPreview) -- même
+        rendu qu'un facilitateur verrait réellement, pas un résumé texte.
+    {% endcomment %}
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}"></script>
 
     <script>
         // --- Modale « Synchroniser la tâche » : POST vers sync_tasks (exécuté en thread côté serveur) ---

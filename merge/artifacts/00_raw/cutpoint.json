@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-04T08:14:12",
+ "generated_at": "2026-09-22T17:40:13",
  "sources": {
   "cdd": {
    "authentication_facilitator": {
@@ -31,8 +31,8 @@
     ]
    },
    "auth_permission": {
-    "count": 244,
-    "max_id": 244,
+    "count": 248,
+    "max_id": 248,
     "pk": [
      "id"
     ]
@@ -59,8 +59,8 @@
     ]
    },
    "django_admin_log": {
-    "count": 1107,
-    "max_id": 1107,
+    "count": 1110,
+    "max_id": 1110,
     "pk": [
      "id"
     ]
@@ -87,21 +87,21 @@
     ]
    },
    "django_content_type": {
-    "count": 61,
-    "max_id": 61,
+    "count": 62,
+    "max_id": 62,
     "pk": [
      "id"
     ]
    },
    "django_migrations": {
-    "count": 152,
-    "max_id": 152,
+    "count": 165,
+    "max_id": 165,
     "pk": [
      "id"
     ]
    },
    "django_session": {
-    "count": 1113,
+    "count": 1235,
     "max_id": null,
     "pk": [
      "session_key"
@@ -150,8 +150,8 @@
     ]
    },
    "planning_activity": {
-    "count": 14890,
-    "max_id": 16307,
+    "count": 15196,
+    "max_id": 16622,
     "pk": [
      "id"
     ]
@@ -178,22 +178,22 @@
     ]
    },
    "planning_activityfile": {
-    "count": 7239,
-    "max_id": 7395,
+    "count": 7273,
+    "max_id": 7429,
     "pk": [
      "id"
     ]
    },
    "planning_activitygeolocation": {
-    "count": 3336,
-    "max_id": 3356,
+    "count": 3341,
+    "max_id": 3361,
     "pk": [
      "id"
     ]
    },
    "planning_activityvalidate": {
-    "count": 12214,
-    "max_id": 12214,
+    "count": 12339,
+    "max_id": 12339,
     "pk": [
      "id"
     ]
@@ -242,14 +242,14 @@
    },
    "process_manager_aggregatedstatus": {
     "count": 99812,
-    "max_id": 386962,
+    "max_id": 486774,
     "pk": [
      "id"
     ]
    },
    "process_manager_aggregatedstatusfacilitator": {
     "count": 298,
-    "max_id": 1102,
+    "max_id": 1400,
     "pk": [
      "id"
     ]
@@ -338,9 +338,23 @@
      "id"
     ]
    },
+   "process_manager_tasksharerecord": {
+    "count": 0,
+    "max_id": null,
+    "pk": [
+     "id"
+    ]
+   },
    "process_manager_task_cycles": {
     "count": 137,
     "max_id": 137,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_task_groups_collectors": {
+    "count": 0,
+    "max_id": null,
     "pk": [
      "id"
     ]
@@ -360,8 +374,8 @@
     ]
    },
    "storeapp_storeapp": {
-    "count": 31,
-    "max_id": 36,
+    "count": 33,
+    "max_id": 38,
     "pk": [
      "id"
     ]
@@ -395,8 +409,8 @@
     ]
    },
    "usermanager_validationcode": {
-    "count": 698,
-    "max_id": 698,
+    "count": 821,
+    "max_id": 821,
     "pk": [
      "id"
     ]
@@ -523,14 +537,14 @@
     ]
    },
    "django_migrations": {
-    "count": 180,
-    "max_id": 180,
+    "count": 181,
+    "max_id": 181,
     "pk": [
      "id"
     ]
    },
    "django_session": {
-    "count": 351,
+    "count": 359,
     "max_id": null,
     "pk": [
      "session_key"
@@ -690,6 +704,27 @@
      "id"
     ]
    },
+   "process_manager_project": {
+    "count": 3,
+    "max_id": 3,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_project_administrative_levels": {
+    "count": 2625,
+    "max_id": 5403,
+    "pk": [
+     "id"
+    ]
+   },
+   "process_manager_project_financiers": {
+    "count": 2,
+    "max_id": 2,
+    "pk": [
+     "id"
+    ]
+   },
    "process_manager_wave": {
     "count": 6,
     "max_id": 6,
@@ -705,8 +740,8 @@
     ]
    },
    "subprojects_component": {
-    "count": 10,
-    "max_id": 10,
+    "count": 20,
+    "max_id": 30,
     "pk": [
      "id"
     ]
@@ -747,29 +782,8 @@
     ]
    },
    "subprojects_level": {
-    "count": 1065,
-    "max_id": 1441,
-    "pk": [
-     "id"
-    ]
-   },
-   "subprojects_project": {
-    "count": 3,
-    "max_id": 3,
-    "pk": [
-     "id"
-    ]
-   },
-   "subprojects_project_administrative_levels": {
-    "count": 2625,
-    "max_id": 5403,
-    "pk": [
-     "id"
-    ]
-   },
-   "subprojects_project_financiers": {
-    "count": 2,
-    "max_id": 2,
+    "count": 1121,
+    "max_id": 1497,
     "pk": [
      "id"
     ]
@@ -796,8 +810,8 @@
     ]
    },
    "subprojects_subprojectfile": {
-    "count": 6530,
-    "max_id": 7144,
+    "count": 7828,
+    "max_id": 8516,
     "pk": [
      "id"
     ]
@@ -810,8 +824,8 @@
     ]
    },
    "subprojects_subprojectstep": {
-    "count": 12652,
-    "max_id": 20679,
+    "count": 12842,
+    "max_id": 20869,
     "pk": [
      "id"
     ]
@@ -831,7 +845,7 @@
     ]
    },
    "subprojects_subproject_list_of_beneficiary_villages": {
-    "count": 11138,
+    "count": 11054,
     "max_id": 21156,
     "pk": [
      "id"

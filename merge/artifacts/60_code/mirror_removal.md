@@ -3,7 +3,7 @@
 Décision §9.2 : le modèle reste chez son propriétaire ; le projet non-propriétaire garde une déclaration de lecture mais **`managed = False`** et ne migre jamais la table (routeur ci-dessus).
 
 
-## Projet `cdd` — 16 tables
+## Projet `cdd` — 18 tables
 
 - `administrativelevels_administrativelevel` (propriétaire **cosomis**) : administrativelevels.AdministrativeLevel  — modules : administrativelevels.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
@@ -12,6 +12,10 @@ Décision §9.2 : le modèle reste chez son propriétaire ; le projet non-propri
 - `administrativelevels_geographicalunit` (propriétaire **cosomis**) : administrativelevels.GeographicalUnit  — modules : administrativelevels.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
 - `assignments_assignadministrativeleveltofacilitator` (propriétaire **cosomis**) : assignments.AssignAdministrativeLevelToFacilitator  — modules : assignments.models
+  - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
+- `process_manager_project_administrative_levels` (propriétaire **cosomis**) : subprojects.Project_administrative_levels  — modules : subprojects.models
+  - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
+- `process_manager_project_financiers` (propriétaire **cosomis**) : subprojects.Project_financiers  — modules : subprojects.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
 - `subprojects_component` (propriétaire **cosomis**) : subprojects.Component  — modules : subprojects.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
@@ -38,9 +42,7 @@ Décision §9.2 : le modèle reste chez son propriétaire ; le projet non-propri
 - `subprojects_vulnerablegroup` (propriétaire **cosomis**) : subprojects.VulnerableGroup  — modules : subprojects.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cdd l'utilise en lecture via l'ORM / `.using()`).
 
-## Projet `cosomis` — 2 tables
+## Projet `cosomis` — 1 tables
 
 - `authentication_facilitator` (propriétaire **cdd**) : authentication.Facilitator  — modules : authentication.models
-  - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cosomis l'utilise en lecture via l'ORM / `.using()`).
-- `process_manager_project` (propriétaire **cdd**) : subprojects.Project  — modules : subprojects.models
   - action : `class Meta: managed = False` ; ne pas supprimer la classe (le code cosomis l'utilise en lecture via l'ORM / `.using()`).

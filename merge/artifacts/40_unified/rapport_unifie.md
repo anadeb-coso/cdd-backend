@@ -1,9 +1,8 @@
 # Rapport — Étape 4 : Jeu de données unifié
 
-- Généré : 2026-09-04T08:14:32
-- Tables écrites : 104 (`merge/artifacts/40_unified/`)
-- Dump archive : `dump_mysql_unifie.sql` (105409 Kio)
-- ⚠ Concept plié subprojects_project -> process_manager_project : colonnes ajoutées ['status', 'external_id', 'delete_by_user'] ; 3 valeur(s) COSOMIS complétées sur le survivant (§4.3).
+- Généré : 2026-09-22T17:40:40
+- Tables écrites : 106 (`merge/artifacts/40_unified/`)
+- Dump archive : `dump_mysql_unifie.sql` (113081 Kio)
 - ⚠ 3 table(s) dans un cycle de FK (administrativelevels_administrativelevel, administrativelevels_cvd, administrativelevels_geographicalunit) — arêtes retour cassées pour l'ordre ([('administrativelevels_cvd', 'administrativelevels_administrativelevel'), ('administrativelevels_geographicalunit', 'administrativelevels_administrativelevel')]). Le dump SQL est encadré par SET FOREIGN_KEY_CHECKS=0 ; l'Étape 5 charge avec contraintes différées.
 
 ## Catégorie A
@@ -14,6 +13,7 @@
 - `auth_user_user_permissions` : CDD 0 + COSOMIS fusionnées 0 + nouvelles 0 → **0**
 - `authtoken_token` : CDD 0 + COSOMIS fusionnées 0 + nouvelles 0 → **0**
 - `process_manager_administrativelevelwave` : CDD 35 + COSOMIS fusionnées 35 + nouvelles 24 → **59**
+- `process_manager_project` : CDD 3 + COSOMIS fusionnées 3 + nouvelles 0 → **3**
 - `process_manager_wave` : CDD 5 + COSOMIS fusionnées 5 + nouvelles 1 → **6**
 
 ## Contrôle de comptage (§6.1)
@@ -24,6 +24,7 @@
 - `auth_user_user_permissions` : cdd+mis-appariées = 0 ; unifiée = 0 → OK
 - `authtoken_token` : cdd+mis-appariées = 0 ; unifiée = 0 → OK
 - `process_manager_administrativelevelwave` : cdd+mis-appariées = 59 ; unifiée = 59 → OK
+- `process_manager_project` : cdd+mis-appariées = 3 ; unifiée = 3 → OK
 - `process_manager_wave` : cdd+mis-appariées = 6 ; unifiée = 6 → OK
 
 ## Suite

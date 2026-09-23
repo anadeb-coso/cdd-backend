@@ -309,12 +309,19 @@ def _iter_scope_task_docs(db, project_couch_ids, cycle_couch_id_by_project, all_
 # de génération sans jamais écrire dans CouchDB.
 _FC_SCAN_MAX_WORKERS = 16
 
+# `NoSQLClient` ne fixe aucun timeout par défaut (comportement historique) : une seule base
+# CouchDB de FC injoignable ou qui traîne bloquerait alors son thread indéfiniment, et
+# `as_completed()` (plus bas) attend la fin de TOUS les threads avant de continuer -> tout
+# l'export reste bloqué ("tourne indéfiniment" côté navigateur, cf. bouton "Situation des FC").
+# On borne donc explicitement chaque connexion/requête FC ici.
+_FC_COUCHDB_TIMEOUT = 30
+
 
 def _fetch_facilitator_task_docs(facilitator, project_couch_ids, cycle_couch_id_by_project, all_sql_ids):
     """Exécuté dans un thread du pool : sa propre connexion CouchDB (le client `cloudant`
     n'est pas garanti thread-safe), donc jamais le `nsc`/`db` du thread appelant."""
     try:
-        db = NoSQLClient().get_db(facilitator.no_sql_db_name)
+        db = NoSQLClient(timeout=_FC_COUCHDB_TIMEOUT).get_db(facilitator.no_sql_db_name)
     except Exception as exc:  # noqa: BLE001
         print(f"[fc_situation] db KO {facilitator.name}: {exc}")
         return []
@@ -349,38 +356,50 @@ def _dedup_task_status_by_project(task_docs_by_project):
     return status
 
 
-def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name, task_status_by_project):
+def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name, task_status_by_project,
+                               include_stabilization=True):
+    """Feuille « une ligne par FC ».
+
+    `include_stabilization=True` (feuille FC_SITUATION) : périmètre = CVD initialement affectés
+    + CVD de stabilisation, comme `export_fc_situation_to_excel`.
+    `include_stabilization=False` (feuille FC_SITUATION_V_INIT) : périmètre restreint aux seuls
+    CVD initialement affectés (villages sièges d'affectation), stabilisation exclue.
+    """
     hq_ids_by_project = _headquarters_village_ids_by_project(project_names)
     all_hq_ids = set().union(*hq_ids_by_project.values()) if hq_ids_by_project else set()
 
-    columns = ["FC", "CVD initialement affectés", "CVD de Stabilisation", "Total CVD"]
+    columns = ["FC", "CVD initialement affectés"]
+    if include_stabilization:
+        columns += ["CVD de Stabilisation", "Total CVD"]
     for name in project_names:
         columns += [f"{label} {name}" for label in FC_METRIC_LABELS]
     columns += list(FC_METRIC_LABELS)
 
     rows = []
     for facilitator in facilitators:
-        ads_for_fc = {
-            name: list(
-                (
-                    {
-                        int(ad["id"])
-                        for ad in (facilitator.administrative_levels or [])
-                        if ad.get("project_name") == name and str(ad.get("id")).isdigit()
-                    }
-                    | set(facilitator.stabilization_administrative_ids or [])
-                )
-                & hq_ids
-            )
+        initial_ids_by_project = {
+            name: {
+                int(ad["id"])
+                for ad in (facilitator.administrative_levels or [])
+                if ad.get("project_name") == name and str(ad.get("id")).isdigit()
+            } & hq_ids
             for name, hq_ids in hq_ids_by_project.items()
         }
+        if include_stabilization:
+            stab_ids = set(facilitator.stabilization_administrative_ids or [])
+            ads_for_fc = {
+                name: list(ids | (stab_ids & hq_ids_by_project[name]))
+                for name, ids in initial_ids_by_project.items()
+            }
+        else:
+            ads_for_fc = {name: list(ids) for name, ids in initial_ids_by_project.items()}
 
-        row = [
-            facilitator.name,
-            len(set(facilitator.administrative_levels_ids or []) & all_hq_ids),
-            len(set(facilitator.stabilization_administrative_ids or []) & all_hq_ids),
-            len({v for values in ads_for_fc.values() for v in values}),
-        ]
+        row = [facilitator.name, len(set(facilitator.administrative_levels_ids or []) & all_hq_ids)]
+        if include_stabilization:
+            row += [
+                len(set(facilitator.stabilization_administrative_ids or []) & all_hq_ids),
+                len({v for values in ads_for_fc.values() for v in values}),
+            ]
 
         g_completed = g_validated = g_total = 0
         for name in project_names:
@@ -617,7 +636,7 @@ def build_fc_situation_workbook(params):
         ids_phase, ids_activity, ids_task,
         cdd_project_names (optionnel), three_priorities_rule (optionnel, auto sinon).
     """
-    nsc = NoSQLClient()
+    nsc = NoSQLClient(timeout=_FC_COUCHDB_TIMEOUT)
 
     projects = _resolve_cdd_projects(params)
     if not projects:
@@ -675,9 +694,15 @@ def build_fc_situation_workbook(params):
         print(f"[fc_situation] backup_db KO: {exc}")
 
     # 2) Feuille FC_SITUATION (une ligne par FC), comptée sur le pool global
+    dedup_task_status = _dedup_task_status_by_project(task_docs_by_project)
     fc_situation_df = _build_fc_situation_sheet(
-        fc_situation_facilitators, project_names, scope_by_project_name,
-        _dedup_task_status_by_project(task_docs_by_project),
+        fc_situation_facilitators, project_names, scope_by_project_name, dedup_task_status,
+    )
+    # 2bis) Feuille FC_SITUATION_V_INIT : même chose, mais restreinte aux seuls CVD initialement
+    # affectés (villages sièges d'affectation), stabilisation exclue.
+    fc_situation_v_init_df = _build_fc_situation_sheet(
+        fc_situation_facilitators, project_names, scope_by_project_name, dedup_task_status,
+        include_stabilization=False,
     )
 
     cvd_status = _collect_cvd_status(task_docs_by_project, three_priorities_rule)
@@ -704,6 +729,7 @@ def build_fc_situation_workbook(params):
     )
     with pd.ExcelWriter("media/" + file_path) as writer:
         fc_situation_df.to_excel(writer, sheet_name="FC_SITUATION", index=False)
+        fc_situation_v_init_df.to_excel(writer, sheet_name="FC_SITUATION_V_INIT", index=False)
         for name, df in invalid_sheets.items():
             df.to_excel(writer, sheet_name=name[:31], index=False)
         for name, df in not3_sheets.items():

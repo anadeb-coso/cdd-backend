@@ -278,6 +278,16 @@ def main() -> None:
         if not cc.get("fold_into_survivor"):
             continue
         surv, folded = cc["cdd_table"], cc["cosomis_table"]
+        if folded == surv:
+            # Table COSOMIS et survivant CDD partagent désormais le même nom
+            # physique (ex. process_manager_project, renommée côté COSOMIS) :
+            # la boucle "strategy: merge" ci-dessus a déjà tout fait (fusion
+            # par id_map, harmonisation d'en-tête, NULL-fill). Ce bloc de
+            # null-fill séparé est réservé au cas où la table source COSOMIS
+            # porte un nom DIFFÉRENT du survivant ; ici `folded.csv` et
+            # `surv.csv` désignent le même fichier — le supprimer effacerait
+            # la sortie qu'on vient d'écrire.
+            continue
         (OUT / f"{folded}.csv").unlink(missing_ok=True)   # ex-sortie éventuelle
         if surv not in unified_schema:
             continue

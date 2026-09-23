@@ -242,6 +242,21 @@ def main() -> None:
                 continue
             for c, gv in zip(cmp_cols, got):
                 uv = r[h.index(c)]
+                # psycopg2 décode json/jsonb en dict/list Python : comparer
+                # en JSON canonique des deux côtés, pas str(dict) (donnerait
+                # "{'a': None}" contre la source "{"a":null}" — faux positif).
+                if isinstance(gv, (dict, list)):
+                    gs = json.dumps(gv, ensure_ascii=False,
+                                     separators=(",", ":"), sort_keys=True)
+                    try:
+                        us = json.dumps(json.loads(uv), ensure_ascii=False,
+                                         separators=(",", ":"), sort_keys=True)
+                    except (ValueError, TypeError):
+                        us = uv
+                    if gs == us:
+                        continue
+                    mism += 1
+                    break
                 gs = NULL if gv is None else str(gv)
                 if gs == uv or (uv == NULL and gv is None):
                     continue

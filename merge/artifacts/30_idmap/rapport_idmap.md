@@ -1,12 +1,12 @@
 # Rapport — Étape 3 : Correspondance des ID
 
-- Généré : 2026-09-04T08:14:19
+- Généré : 2026-09-22T17:40:26
 - `merge/id_map.csv` : 261 lignes
 - `merge/conflicts.csv` : 290 lignes
 
 | table | cdd | mis | matched | new_alloc | doublons |
 |---|--:|--:|--:|--:|--:|
-| `Project (subprojects_project→process_manager_project)` | 3 | 3 | 3 | 0 | 0 |
+| `Project (process_manager_project→process_manager_project)` | 3 | 3 | 3 | 0 | 0 |
 | `Cycle (subprojects_cycle→process_manager_cycle)` | 3 | 3 | 3 | 0 | 0 |
 | `auth_group` | 31 | 31 | 31 | 0 | 0 |
 | `auth_user` | 82 | 79 | 78 | 1 | 0 |

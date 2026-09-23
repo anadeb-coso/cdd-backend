@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-04T08:36:40
+- Généré : 2026-09-22T17:41:44
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Reste avant bascule : produire les exports `views_docx` / tableau de bord financier avant/après (comme fc_situation) ; `migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run (aucune écriture CouchDB).
@@ -43,13 +43,13 @@
 - ✅ `news_newsfile` [cdd_only] attendu 398, PG 398
 - ✅ `news_subscription` [cdd_only] attendu 158, PG 158
 - ✅ `news_tag` [cdd_only] attendu 28, PG 28
-- ✅ `planning_activity` [cdd_only] attendu 14890, PG 14890
+- ✅ `planning_activity` [cdd_only] attendu 15196, PG 15196
 - ✅ `planning_activitycomment` [cdd_only] attendu 42, PG 42
 - ✅ `planning_activitydeadline` [cdd_only] attendu 0, PG 0
 - ✅ `planning_activitydeadline_activities_deadline_groups` [cdd_only] attendu 0, PG 0
-- ✅ `planning_activityfile` [cdd_only] attendu 7239, PG 7239
-- ✅ `planning_activitygeolocation` [cdd_only] attendu 3336, PG 3336
-- ✅ `planning_activityvalidate` [cdd_only] attendu 12214, PG 12214
+- ✅ `planning_activityfile` [cdd_only] attendu 7273, PG 7273
+- ✅ `planning_activitygeolocation` [cdd_only] attendu 3341, PG 3341
+- ✅ `planning_activityvalidate` [cdd_only] attendu 12339, PG 12339
 - ✅ `planning_validationgroupsprocess` [cdd_only] attendu 4, PG 4
 - ✅ `planning_validationgroupsprocess_planners_groups` [cdd_only] attendu 16, PG 16
 - ✅ `planning_validationgroupsprocess_validators_groups` [cdd_only] attendu 8, PG 8
@@ -66,16 +66,16 @@
 - ✅ `process_manager_periodwave` [mis_only] attendu 10, PG 10
 - ✅ `process_manager_periodwave_administrative_levels` [mis_only] attendu 70, PG 70
 - ✅ `process_manager_phase` [cdd_only] attendu 17, PG 17
-- … (+42 lignes)
+- … (+46 lignes)
 
 ## 2. Identité des ID (§6.2) — ✅
-- ✅ ensembles d'`id` identiques (unifié ↔ PG) sur 103 tables
+- ✅ ensembles d'`id` identiques (unifié ↔ PG) sur 105 tables
 
 ## 3. Intégrité référentielle (§6.3) — ✅
-- ✅ 0 FK orpheline sur 186 contraintes
+- ✅ 0 FK orpheline sur 193 contraintes
 
 ## 4. Séquences (§6.4) — ✅
-- ✅ 55 séquences : last_value ≥ MAX(id)
+- ✅ 57 séquences : last_value ≥ MAX(id)
 
 ## 5. Échantillon (§6.5) — ✅
 - ✅ `administrativelevels_administrativelevel` : 0/20 lignes divergentes (colonnes ['id', 'name', 'type', 'latitude']…)
@@ -88,8 +88,10 @@
 - ✅ `authentication_facilitator` : 0/20 lignes divergentes (colonnes ['id', 'no_sql_user', 'no_sql_pass', 'no_sql_db_name']…)
 - ✅ `process_manager_administrativelevelwave` : 0/20 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'administrative_level_id']…)
 - ✅ `process_manager_project` : 0/3 lignes divergentes (colonnes ['id', 'name', 'couch_id', 'description']…)
+- ✅ `process_manager_project_administrative_levels` : 0/20 lignes divergentes (colonnes ['id', 'project_id', 'administrativelevel_id']…)
+- ✅ `process_manager_project_financiers` : 0/2 lignes divergentes (colonnes ['id', 'project_id', 'financier_id']…)
 - ✅ `process_manager_wave` : 0/6 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'number']…)
-- ✅ `subprojects_component` : 0/10 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'name']…)
+- ✅ `subprojects_component` : 0/20 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'name']…)
 - ✅ `subprojects_cycle` : 0/3 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'create_by_user']…)
 - ✅ `subprojects_cycle_administrative_levels` : 0/20 lignes divergentes (colonnes ['id', 'cycle_id', 'administrativelevel_id']…)
 - ✅ `subprojects_financier` : 0/1 lignes divergentes (colonnes ['id', 'created_date', 'updated_date', 'name']…)
@@ -101,7 +103,7 @@
 - ✅ KPI `financial_bank_transfer.amount_transferred` : Σ=4383561471.4 (identique)
 - ✅ KPI `financial_supporting_document_activity.allocated_amount` : Σ=0 (identique)
 - ✅ KPI `financial_activity.budget_previsionnel` : Σ=0 (identique)
-- ✅ 94 tables B+C : COUNT + Σ des colonnes de mesure (toutes, matching tronqué 63 c.) identiques source ↔ PostgreSQL — couvre l'assiette du **tableau de bord financier** et de l'**export DOCX sous-projets** (tables sources en catégorie B/C, transportées telles quelles). Le rendu HTTP de ces vues dépend de S3/Kobo (réseau) — hors périmètre d'un contrôle local.
+- ✅ 97 tables B+C : COUNT + Σ des colonnes de mesure (toutes, matching tronqué 63 c.) identiques source ↔ PostgreSQL — couvre l'assiette du **tableau de bord financier** et de l'**export DOCX sous-projets** (tables sources en catégorie B/C, transportées telles quelles). Le rendu HTTP de ces vues dépend de S3/Kobo (réseau) — hors périmètre d'un contrôle local.
 
 ## 6. Code (§6.6) — ✅ (Étape 6 appliquée aux dépôts)
 - CDD (`src/cdd/merge_routers.py` + `DATABASE_ROUTERS`) : `manage.py check` → 0 issue ; `makemigrations --check` → *No changes detected* (MySQL et PG).

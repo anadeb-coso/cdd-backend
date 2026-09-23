@@ -1,12 +1,12 @@
 # Rapport — Étape 5 : Chargement PostgreSQL
 
 - Base : `cdd_cosomis_unified` (PostgreSQL 18)
-- Généré : 2026-09-04T08:15:36
+- Généré : 2026-09-22T17:41:27
 - migrate CDD : True ; migrate COSOMIS : True
-- COPY : **104 tables OK**, 0 en échec
-- Séquences recalées : 102
+- COPY : **106 tables OK**, 0 en échec
+- Séquences recalées : 104
 
-## Chargées (104 tables, 199561 lignes)
+## Chargées (106 tables, 201626 lignes)
 
 ## Suite
 Étape 7 (`07_remap_couchdb.py`, dry-run) puis contrôles d'acceptation (`merge/scripts/checks/`).

@@ -929,7 +929,16 @@ def form_design_to_xlsform(form, form_title="form"):
 
     choice_lists = {}
 
-    for page in form:
+    # Chaque page du formulaire (form[i]) est encadrée par un groupe XLSForm
+    # dédié (`begin group page_N ... end group`, appearance="field-list") --
+    # convention standard ODK/Enketo pour dire "tous ces champs sur UN SEUL
+    # écran", donc l'équivalent le plus proche d'une "page" en XLSForm (qui
+    # n'a pas de notion de page native). C'est un marqueur SANS AMBIGUÏTÉ
+    # possible avec un vrai groupe de champs de CETTE app : un groupe normal
+    # (`type:"object"` dans le schéma) n'a jamais cette appearance, seule une
+    # page en porte une (cf. `_emit_survey_row`, groupes réels -> appearance
+    # toujours vide). Reconnu à l'import par `xlsform_to_form_design`.
+    for page_index, page in enumerate(form):
         schema = page.get("page", {})
         properties = schema.get("properties", {})
         required = set(schema.get("required", []) or [])
@@ -938,6 +947,8 @@ def form_design_to_xlsform(form, form_title="form"):
         rules_by_target = _rules_by_target(page.get("rules", []) or [])
         calc_by_target = {c["target"]: c["expr"] for c in page.get("calculate", []) or []}
 
+        page_name = f"page_{page_index + 1}"
+        survey.append(["begin group", page_name, f"Page {page_index + 1}", "", "", "", "", "", "field-list"])
         for name in _normalize_order(page_opts.get("order"), properties):
             prop = properties[name]
             _emit_survey_row(
@@ -945,6 +956,7 @@ def form_design_to_xlsform(form, form_title="form"):
                 fields.get(name, {}), name in required,
                 rules_by_target.get(name), calc_by_target.get(name),
             )
+        survey.append(["end group", page_name, "", "", "", "", "", "", ""])
 
     return _workbook_bytes(wb)
 
@@ -1092,11 +1104,19 @@ def _condition_to_xpath(cond):
 
 
 def xlsform_to_form_design(file_obj):
-    """Parse un .xlsx XLSForm en design de formulaire (une seule page).
+    """Parse un .xlsx XLSForm en design de formulaire (une ou plusieurs pages).
 
     Portée volontairement restreinte : ``survey`` + ``choices`` + groupes /
     repeats + ``required`` / ``relevant`` (``field = 'valeur'`` et combinaisons
     ``and`` / ``or``) / ``constraint`` simples / ``calculation``.
+
+    Pages : reconnaît le marqueur émis par ``form_design_to_xlsform``
+    (groupe de premier niveau, ``appearance = "field-list"``) comme une
+    frontière de page plutôt qu'un groupe de champs imbriqué -- SANS
+    ambiguïté possible avec un vrai groupe de cette app (jamais cette
+    appearance côté export). Un fichier XLSForm sans un tel marqueur (fichier
+    plat/externe classique) retombe sur l'ancien comportement : tout en une
+    seule page.
     """
     from openpyxl import load_workbook
 
@@ -1110,8 +1130,13 @@ def xlsform_to_form_design(file_obj):
             row.get("label") or row.get("name")
         )
 
-    properties, options_fields, required, rules, calculate = {}, {}, [], [], []
-    stack = [(properties, options_fields, required)]  # (props, opts, required-list)
+    def new_page_state():
+        return {"properties": {}, "options_fields": {}, "required": [], "rules": [], "calculate": []}
+
+    pages_state = [new_page_state()]
+    cur = pages_state[-1]
+    stack = [(cur["properties"], cur["options_fields"], cur["required"])]  # (props, opts, required-list)
+    open_kinds = []  # parallèle conceptuel de `stack`, mais une entrée "page" ne pousse rien dessus
 
     for row in survey:
         raw_type = (row.get("type") or "").strip()
@@ -1123,39 +1148,57 @@ def xlsform_to_form_design(file_obj):
         if head in ("begin", "end"):
             kind = raw_type.split()[1] if len(raw_type.split()) > 1 else ""
             if head == "begin":
-                sub_props, sub_opts, sub_req = {}, {}, []
-                container = {
-                    "props": sub_props, "opts": sub_opts, "req": sub_req,
-                    "name": name, "kind": kind,
-                    "parent": stack[-1],
-                    "label": row.get("label") or name,
-                    "relevant": row.get("relevant"),
-                }
-                stack.append((sub_props, sub_opts, sub_req, container))
-            else:
-                top = stack.pop()
-                container = top[3]
-                parent_props, parent_opts, parent_req = container["parent"][:3]
-                inner = {"type": "object", "properties": container["props"]}
-                if container["req"]:
-                    inner["required"] = container["req"]
-                if container["kind"] == "repeat":
-                    parent_props[container["name"]] = {"type": "array", "items": inner}
+                is_page_marker = (
+                    kind == "group" and len(stack) == 1
+                    and (row.get("appearance") or "").strip().lower() == "field-list"
+                )
+                if is_page_marker:
+                    if cur["properties"] or cur["required"] or cur["rules"] or cur["calculate"]:
+                        cur = new_page_state()
+                        pages_state.append(cur)
+                        stack = [(cur["properties"], cur["options_fields"], cur["required"])]
+                    # sinon : page initiale encore vide -> réutilisée pour CE
+                    # premier groupe-page plutôt que de créer une page vide en tête.
+                    open_kinds.append("page")
                 else:
-                    parent_props[container["name"]] = inner
-                parent_opts[container["name"]] = {
-                    "label": container["label"], "fields": container["opts"],
-                    "order": list(container["props"].keys()),
-                }
-                if container["relevant"]:
-                    _relevant_to_rule(container["relevant"], container["name"], rules)
+                    sub_props, sub_opts, sub_req = {}, {}, []
+                    container = {
+                        "props": sub_props, "opts": sub_opts, "req": sub_req,
+                        "name": name, "kind": kind,
+                        "parent": stack[-1],
+                        "label": row.get("label") or name,
+                        "relevant": row.get("relevant"),
+                    }
+                    stack.append((sub_props, sub_opts, sub_req, container))
+                    open_kinds.append("group")
+            else:
+                last_kind = open_kinds.pop() if open_kinds else None
+                if last_kind == "page":
+                    pass  # la page reste "courante" jusqu'au prochain marqueur de page (ou la fin)
+                else:
+                    top = stack.pop()
+                    container = top[3]
+                    parent_props, parent_opts, parent_req = container["parent"][:3]
+                    inner = {"type": "object", "properties": container["props"]}
+                    if container["req"]:
+                        inner["required"] = container["req"]
+                    if container["kind"] == "repeat":
+                        parent_props[container["name"]] = {"type": "array", "items": inner}
+                    else:
+                        parent_props[container["name"]] = inner
+                    parent_opts[container["name"]] = {
+                        "label": container["label"], "fields": container["opts"],
+                        "order": list(container["props"].keys()),
+                    }
+                    if container["relevant"]:
+                        _relevant_to_rule(container["relevant"], container["name"], cur["rules"])
             continue
 
         prop, opt = _xls_row_to_prop(row, head, raw_type, choice_map)
         cur_props, cur_opts, cur_req = stack[-1][0], stack[-1][1], stack[-1][2]
         if head == "calculate" or row.get("calculation"):
             if row.get("calculation"):
-                calculate.append({
+                cur["calculate"].append({
                     "target": name,
                     "expr": _xpath_calc_to_expr(row["calculation"]),
                 })
@@ -1166,17 +1209,20 @@ def xlsform_to_form_design(file_obj):
         if (row.get("required") or "").strip().lower() in ("yes", "true", "1"):
             cur_req.append(name)
         if row.get("relevant"):
-            _relevant_to_rule(row["relevant"], name, rules)
+            _relevant_to_rule(row["relevant"], name, cur["rules"])
 
-    page = {
-        "options": {"fields": options_fields, "order": list(properties.keys())},
-        "page": {"type": "object", "properties": properties, "required": required},
-    }
-    if rules:
-        page["rules"] = rules
-    if calculate:
-        page["calculate"] = calculate
-    return [page]
+    pages = []
+    for ps in pages_state:
+        page = {
+            "options": {"fields": ps["options_fields"], "order": list(ps["properties"].keys())},
+            "page": {"type": "object", "properties": ps["properties"], "required": ps["required"]},
+        }
+        if ps["rules"]:
+            page["rules"] = ps["rules"]
+        if ps["calculate"]:
+            page["calculate"] = ps["calculate"]
+        pages.append(page)
+    return pages
 
 
 def _xls_row_to_prop(row, head, raw_type, choice_map):
