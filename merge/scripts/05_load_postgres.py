@@ -9,14 +9,19 @@
    (§5 : les ID sont transportés, pas régénérés), FK différées le temps du
    chargement, session en UTC (datetime naïfs), dates `0000-00-00` -> NULL.
 4. Recalage des séquences : `setval(pg_get_serial_sequence(t,'id'), MAX(id))`.
+5. `fake` — COSOMIS : `migrate --fake` avec les VRAIS settings du dépôt (pas
+   l'overlay). Le schéma COSOMIS ayant été créé par syncdb, `django_migrations`
+   n'a aucune ligne pour ses apps ; sans cette étape un `manage.py migrate`
+   ultérieur rejoue `0001_initial` et échoue (DuplicateTable). Ne touche que
+   `django_migrations`. Vérifié ensuite par `migrate --check` (rc 0 attendu).
 
 Sorties : merge/artifacts/50_postgres/{overlay/,rapport_postgres.md}
 
 Cible : postgres://postgres:root@127.0.0.1/cdd_cosomis_unified  (PG 18)
 
 Usage :
-    python merge/scripts/05_load_postgres.py --step provision,migrate,load,seq
-    python merge/scripts/05_load_postgres.py            # tout
+    python merge/scripts/05_load_postgres.py --step provision,migrate,load,seq,fake
+    python merge/scripts/05_load_postgres.py            # tout (fake inclus)
 """
 from __future__ import annotations
 
@@ -198,6 +203,33 @@ def create_missing_m2m(label, py, root, settings_mod, log):
     print(f"[m2m:{label}] {line}")
 
 
+def fake_cosomis_migrations(log):
+    """`migrate --fake` COSOMIS avec ses vrais settings, puis `migrate --check`.
+
+    Retourne True si `--check` sort à 0 (aucune migration en attente)."""
+    env = dict(os.environ)
+    env.update(BASE_ENV)
+    env["PYTHONPATH"] = str(COSOMIS_ROOT)     # pas d'overlay : vrais settings
+    env["DJANGO_SETTINGS_MODULE"] = "cosomis.settings"
+    ok = True
+    for args in (["--fake"], ["--check"]):
+        # --skip-checks : subprojects/vars.py requête la base à l'import de
+        # l'URLconf (cf. run_migrate).
+        cmd = [str(COSOMIS_PY), "manage.py", "migrate", "--noinput",
+               "--skip-checks", *args]
+        res = subprocess.run(cmd, cwd=COSOMIS_ROOT, env=env,
+                             capture_output=True, text=True, encoding="utf-8")
+        log.append(f"\n===== migrate {' '.join(args)} cosomis "
+                   f"(rc={res.returncode}) =====\n"
+                   + res.stdout[-3000:] + "\n--- stderr ---\n"
+                   + res.stderr[-2000:])
+        print(f"[fake:cosomis] migrate {' '.join(args)} rc={res.returncode}")
+        if res.returncode != 0:
+            ok = False
+            break
+    return ok
+
+
 def pg_columns(cur, table):
     cur.execute("SELECT column_name, data_type, is_nullable FROM "
                 "information_schema.columns WHERE table_name=%s AND "
@@ -323,7 +355,7 @@ def reseq(cur, ok):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", default="provision,migrate,load,seq")
+    ap.add_argument("--step", default="provision,migrate,load,seq,fake")
     args = ap.parse_args()
     steps = set(args.step.split(","))
     OUT.mkdir(parents=True, exist_ok=True)
@@ -356,6 +388,10 @@ def main():
             conn.commit()
         conn.close()
 
+    fake_ok = None
+    if "fake" in steps:
+        fake_ok = fake_cosomis_migrations(log)
+
     (OUT / "migrate.log").write_text("\n".join(log), "utf-8")
 
     rep = ["# Rapport — Étape 5 : Chargement PostgreSQL\n",
@@ -364,6 +400,7 @@ def main():
            f"- migrate CDD : {mig_ok['cdd']} ; migrate COSOMIS : {mig_ok['cosomis']}",
            f"- COPY : **{len(ok)} tables OK**, {len(fail)} en échec",
            f"- Séquences recalées : {seq_fixed}",
+           f"- migrate --fake COSOMIS + --check : {fake_ok}",
            ""]
     if ok:
         tot = sum(v["rows"] for v in ok.values())
