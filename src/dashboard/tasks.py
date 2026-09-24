@@ -20,13 +20,19 @@ from cdd.constants import PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION
 
 BATCH_SIZE = 500
 def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[], batch_size=BATCH_SIZE):
+    # verify model is AggregatedStatus
+    if model is not None and model.__name__ == 'AggregatedStatus':
+        manager = getattr(model, 'all_objects', model.objects)
+    else:
+        manager = model.objects
+
     for i in range(0, len(objects), batch_size):
         batch = objects[i:i + batch_size]
         with transaction.atomic():
             if type_bulk == "create":
-                model.objects.bulk_create(batch)
+                manager.bulk_create(batch)
             else:
-                model.objects.bulk_update(
+                manager.bulk_update(
                     batch,
                     fields
                 )
@@ -486,6 +492,122 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     administrativelevels_dict = {str(ad.id): str(ad.cvd.id) for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])}
     cvds_dict_with_villages = {str(_cvd.id): [str(v.id) for v in _cvd.get_villages()] for _cvd in mis_objects_call.filter_objects(CVD)}
 
+
+    
+    #Backup
+    backup_db = nsc.get_db("backup_db_facilitators_docs")
+    backup_db_docs = backup_db.all_docs(include_docs=True)['rows']
+    backup_db_docs = [doc for doc in backup_db_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
+    for _task in backup_db_docs:
+        _task = _task.get('doc')
+        if _task.get('type') == 'task' and _task.get('sql_id') and _task.get('administrative_level_id'):
+
+            _administrative_level_id = administrativelevels_dict.get(str(_task.get('administrative_level_id')))
+            _villages_ids = cvds_dict_with_villages.get(_administrative_level_id, []) if _administrative_level_id else []
+            
+            # _adl = None
+            # _adls = mis_objects_call.filter_objects(AdministrativeLevel, id=int(_task['administrative_level_id']))
+            # if _adls:
+            #     _adl = _adls.first()
+            # else:
+            #     print("ADL doesn't exists : ", _task['administrative_level_id'], _task['administrative_level_name'], "Canton ID : ", _task['canton_sql_id'])
+
+            # if _adl and _adl.cvd:
+                # for adl_o in _adl.cvd.get_villages():
+                # adl_o.id
+            for ad_id in _villages_ids:
+                    task_action = "update"
+                    a = AggregatedStatus.all_objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
+                    if not a:
+                        a = AggregatedStatus()
+                        a.administrative_level_id = int(ad_id)
+                        a.project_id = project_id
+                        a.cycle_id = cycle_id
+                        a.task_id = int(_task["sql_id"])
+                        if _task["phase_name"] in PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION:
+                            a.task_needs_subproject = False
+                        else:
+                            a.task_needs_subproject = True
+                        task_action = "create"
+                            
+                    a.total_tasks_completed = 1 if _task['completed'] else 0
+                    a.total_tasks = 1
+
+                    # Validation status
+                    a.total_tasks_validated = 1 if _task.get("validated") else 0
+                    a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
+
+                    a.total_tasks_invalidated_review_completed = 0
+                    a.total_tasks_invalidated_review_in_pending = 0
+                    a.total_tasks_invalidated_unreview_completed = 0
+                    a.total_tasks_invalidated_unreview_in_pending = 0
+
+                    if villages_ids_have_subproject:
+                        if int(ad_id) in villages_ids_have_subproject:
+                            a.its_adl_has_sub_project = True
+                        else:
+                            a.its_adl_has_sub_project = False
+                    else:
+                        a.its_adl_has_sub_project = None
+                    
+                    if _task.get("validated") == False:
+                        a.total_tasks_invalidated = 1
+
+                        updated_after_invalidation = _task.get("updated_after_invalidation")
+                        # if not updated_after_invalidation:
+                        #     action_by = _task.get("action_by", {})
+                        #     if type(action_by) is list:
+                        #         if action_by:
+                        #             action_by = action_by[0] or {}
+                        #         else:
+                        #             action_by = {}
+                        #     action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
+                        #     if action_by_action_date and _task.get("last_updated"):
+                        #         action_by_action_date = datetime_complet_str(action_by_action_date)
+                        #         action_last_updated = datetime_complet_str(_task.get("last_updated"))
+                        #         if action_last_updated and action_by_action_date < action_last_updated:
+                        #             updated_after_invalidation = True
+                        if updated_after_invalidation:
+                            a.total_tasks_invalidated_review = 1
+                            a.total_tasks_invalidated_unreview = 0
+                            if _task['completed']:
+                                a.total_tasks_invalidated_review_completed = 1
+                            else:
+                                a.total_tasks_invalidated_review_in_pending = 1
+                        else:
+                            a.total_tasks_invalidated_unreview = 1
+                            a.total_tasks_invalidated_review = 0
+                            if _task['completed']:
+                                a.total_tasks_invalidated_unreview_completed = 1
+                            else:
+                                a.total_tasks_invalidated_unreview_in_pending = 1
+
+                    else:
+                        a.total_tasks_invalidated = 0
+                    # End - Validation status
+
+                    _l_act = datetime_complet_str(_task.get('last_updated'))
+                    a_last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else parse_datetime(_l_act) #datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
+                    if a_last_activity is not None:
+                        a_last_activity = a_last_activity.replace(tzinfo=pytz.UTC)
+                    a.last_activity = a_last_activity
+                    a.updated_date = now
+
+                    # a.save()
+                    if task_action == "create":
+                        tasks_bucket_create.append(a)
+                    else:
+                        tasks_bucket_update.append(a)
+    
+    if tasks_bucket_create:
+        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
+    if tasks_bucket_update:
+        bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'its_adl_has_sub_project', 'updated_date'])
+
+    tasks_bucket_create = []
+    tasks_bucket_update = []
+
+
     for f in facilitators.order_by('id'):
         print()
         # print()
@@ -612,121 +734,15 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
                         else:
                             tasks_bucket_update.append(a)
 
-    
-    #Backup
-    backup_db = nsc.get_db("backup_db_facilitators_docs")
-    backup_db_docs = backup_db.all_docs(include_docs=True)['rows']
-    backup_db_docs = [doc for doc in backup_db_docs if doc.get('doc') and doc.get('doc').get('cycle_id') == cycle.couch_id and doc.get('doc').get('project_id') == project.couch_id and doc.get('doc').get('type') == 'task']
-    for _task in backup_db_docs:
-        _task = _task.get('doc')
-        if _task.get('type') == 'task' and _task.get('sql_id') and _task.get('administrative_level_id'):
-
-            _administrative_level_id = administrativelevels_dict.get(str(_task.get('administrative_level_id')))
-            _villages_ids = cvds_dict_with_villages.get(_administrative_level_id, []) if _administrative_level_id else []
-            
-            # _adl = None
-            # _adls = mis_objects_call.filter_objects(AdministrativeLevel, id=int(_task['administrative_level_id']))
-            # if _adls:
-            #     _adl = _adls.first()
-            # else:
-            #     print("ADL doesn't exists : ", _task['administrative_level_id'], _task['administrative_level_name'], "Canton ID : ", _task['canton_sql_id'])
-
-            # if _adl and _adl.cvd:
-                # for adl_o in _adl.cvd.get_villages():
-                # adl_o.id
-            for ad_id in _villages_ids:
-                    task_action = "update"
-                    a = AggregatedStatus.all_objects.filter(administrative_level_id=int(ad_id), task_id=int(_task["sql_id"]), project_id=project_id, cycle_id=cycle_id, facilitator=None).first()
-                    if not a:
-                        a = AggregatedStatus()
-                        a.administrative_level_id = int(ad_id)
-                        a.project_id = project_id
-                        a.cycle_id = cycle_id
-                        a.task_id = int(_task["sql_id"])
-                        if _task["phase_name"] in PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION:
-                            a.task_needs_subproject = False
-                        else:
-                            a.task_needs_subproject = True
-                        task_action = "create"
-                            
-                    a.total_tasks_completed = 1 if _task['completed'] else 0
-                    a.total_tasks = 1
-
-                    # Validation status
-                    a.total_tasks_validated = 1 if _task.get("validated") else 0
-                    a.total_tasks_waiting_validation = 1 if _task.get("completed") and _task.get("validated") == None else 0
-
-                    a.total_tasks_invalidated_review_completed = 0
-                    a.total_tasks_invalidated_review_in_pending = 0
-                    a.total_tasks_invalidated_unreview_completed = 0
-                    a.total_tasks_invalidated_unreview_in_pending = 0
-
-                    if villages_ids_have_subproject:
-                        if int(ad_id) in villages_ids_have_subproject:
-                            a.its_adl_has_sub_project = True
-                        else:
-                            a.its_adl_has_sub_project = False
-                    else:
-                        a.its_adl_has_sub_project = None
-                    
-                    if _task.get("validated") == False:
-                        a.total_tasks_invalidated = 1
-
-                        updated_after_invalidation = _task.get("updated_after_invalidation")
-                        # if not updated_after_invalidation:
-                        #     action_by = _task.get("action_by", {})
-                        #     if type(action_by) is list:
-                        #         if action_by:
-                        #             action_by = action_by[0] or {}
-                        #         else:
-                        #             action_by = {}
-                        #     action_by_action_date = action_by.get('action_date') if action_by.get("type") == "Invalidated" else None
-                        #     if action_by_action_date and _task.get("last_updated"):
-                        #         action_by_action_date = datetime_complet_str(action_by_action_date)
-                        #         action_last_updated = datetime_complet_str(_task.get("last_updated"))
-                        #         if action_last_updated and action_by_action_date < action_last_updated:
-                        #             updated_after_invalidation = True
-                        if updated_after_invalidation:
-                            a.total_tasks_invalidated_review = 1
-                            a.total_tasks_invalidated_unreview = 0
-                            if _task['completed']:
-                                a.total_tasks_invalidated_review_completed = 1
-                            else:
-                                a.total_tasks_invalidated_review_in_pending = 1
-                        else:
-                            a.total_tasks_invalidated_unreview = 1
-                            a.total_tasks_invalidated_review = 0
-                            if _task['completed']:
-                                a.total_tasks_invalidated_unreview_completed = 1
-                            else:
-                                a.total_tasks_invalidated_unreview_in_pending = 1
-
-                    else:
-                        a.total_tasks_invalidated = 0
-                    # End - Validation status
-
-                    _l_act = datetime_complet_str(_task.get('last_updated'))
-                    a_last_activity = None if _l_act in (None, "0000-00-00 00:00:00") else parse_datetime(_l_act) #datetime.strptime(_l_act, '%Y-%m-%d %H:%M:%S')
-                    if a_last_activity is not None:
-                        a_last_activity = a_last_activity.replace(tzinfo=pytz.UTC)
-                    a.last_activity = a_last_activity
-                    a.updated_date = now
-
-                    # a.save()
-                    if task_action == "create":
-                        tasks_bucket_create.append(a)
-                    else:
-                        tasks_bucket_update.append(a)
-    
-    # sync_aggregated_status_on_adl(project_id)
-    
-    # AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
-
     if tasks_bucket_create:
         bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_create, type_bulk="create")
     if tasks_bucket_update:
         bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview', 'last_activity', 'its_adl_has_sub_project', 'updated_date'])
 
-
+    
+    # sync_aggregated_status_on_adl(project_id)
+    
+    # AggregatedStatusFacilitator.objects.filter(project_id=project_id, cycle_id=cycle_id).update(new_update_exists=True)
+    
 
     print("End")
