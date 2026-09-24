@@ -1,6 +1,6 @@
 # Rapport — Contrôles d'acceptation (§6)
 
-- Généré : 2026-09-22T17:41:44
+- Généré : 2026-09-23T23:50:07
 - Base : cdd_cosomis_unified (PostgreSQL 18)
 - Contrôles 1-5 automatisés : ✅ tous passés
 - Reste avant bascule : produire les exports `views_docx` / tableau de bord financier avant/après (comme fc_situation) ; `migrate --fake` COSOMIS en production ; Étape 7 reste en dry-run (aucune écriture CouchDB).
@@ -47,9 +47,9 @@
 - ✅ `planning_activitycomment` [cdd_only] attendu 42, PG 42
 - ✅ `planning_activitydeadline` [cdd_only] attendu 0, PG 0
 - ✅ `planning_activitydeadline_activities_deadline_groups` [cdd_only] attendu 0, PG 0
-- ✅ `planning_activityfile` [cdd_only] attendu 7273, PG 7273
+- ✅ `planning_activityfile` [cdd_only] attendu 7277, PG 7277
 - ✅ `planning_activitygeolocation` [cdd_only] attendu 3341, PG 3341
-- ✅ `planning_activityvalidate` [cdd_only] attendu 12339, PG 12339
+- ✅ `planning_activityvalidate` [cdd_only] attendu 12350, PG 12350
 - ✅ `planning_validationgroupsprocess` [cdd_only] attendu 4, PG 4
 - ✅ `planning_validationgroupsprocess_planners_groups` [cdd_only] attendu 16, PG 16
 - ✅ `planning_validationgroupsprocess_validators_groups` [cdd_only] attendu 8, PG 8

@@ -1,11 +1,11 @@
 # Rapport — Étape 0 : Extraction
 
 - Mode : APPLY (données écrites)
-- Généré : 2026-09-22T17:40:13
+- Généré : 2026-09-23T23:48:32
 - Convention CSV : séparateur `,`, fin de ligne `\n`, NULL = `\N`, encodage UTF-8. L'Étape 5 (COPY) devra utiliser `NULL E'\\N'`.
 
 ## cdd — `cdd` (MySQL/MariaDB 10.4.32-MariaDB)
-- 59 tables, 154671 lignes au total
+- 59 tables, 154690 lignes au total
 
 | table | lignes | max(id) |
 |---|---:|---:|
@@ -23,7 +23,7 @@
 | `django_celery_results_taskresult` | 0 |  |
 | `django_content_type` | 62 | 62 |
 | `django_migrations` | 165 | 165 |
-| `django_session` | 1235 |  |
+| `django_session` | 1239 |  |
 | `news_category` | 10 | 10 |
 | `news_news` | 107 | 167 |
 | `news_news_tags` | 228 | 305 |
@@ -34,9 +34,9 @@
 | `planning_activitycomment` | 42 | 47 |
 | `planning_activitydeadline` | 0 |  |
 | `planning_activitydeadline_activities_deadline_groups` | 0 |  |
-| `planning_activityfile` | 7273 | 7429 |
+| `planning_activityfile` | 7277 | 7433 |
 | `planning_activitygeolocation` | 3341 | 3361 |
-| `planning_activityvalidate` | 12339 | 12339 |
+| `planning_activityvalidate` | 12350 | 12350 |
 | `planning_validationgroupsprocess` | 4 | 4 |
 | `planning_validationgroupsprocess_planners_groups` | 16 | 20 |
 | `planning_validationgroupsprocess_validators_groups` | 8 | 21 |
@@ -70,7 +70,7 @@
 | `usermanager_validationcode` | 821 | 821 |
 
 ## mis — `mis` (MySQL/MariaDB 10.4.32-MariaDB)
-- 72 tables, 51497 lignes au total
+- 72 tables, 51612 lignes au total
 
 | table | lignes | max(id) |
 |---|---:|---:|
@@ -92,7 +92,7 @@
 | `django_celery_results_taskresult` | 0 |  |
 | `django_content_type` | 57 | 57 |
 | `django_migrations` | 181 | 181 |
-| `django_session` | 359 |  |
+| `django_session` | 360 |  |
 | `financial_account` | 154 | 154 |
 | `financial_activity` | 0 |  |
 | `financial_activity_funding` | 0 |  |
@@ -126,7 +126,7 @@
 | `subprojects_cycle_administrative_levels` | 2624 | 5616 |
 | `subprojects_filecomment` | 16 | 30 |
 | `subprojects_financier` | 1 | 1 |
-| `subprojects_level` | 1121 | 1497 |
+| `subprojects_level` | 1130 | 1506 |
 | `subprojects_step` | 20 | 20 |
 | `subprojects_step_next_steps` | 44 | 44 |
 | `subprojects_subproject` | 1541 | 2129 |
@@ -135,9 +135,9 @@
 | `subprojects_subproject_list_of_villages_crossed_by_the_trackfee7` | 16 | 25 |
 | `subprojects_subproject_priorities` | 0 |  |
 | `subprojects_subproject_projects` | 1541 | 6417 |
-| `subprojects_subprojectfile` | 7828 | 8516 |
+| `subprojects_subprojectfile` | 7926 | 8614 |
 | `subprojects_subprojectsector` | 0 |  |
-| `subprojects_subprojectstep` | 12842 | 20869 |
+| `subprojects_subprojectstep` | 12849 | 20876 |
 | `subprojects_subprojecttype` | 0 |  |
 | `subprojects_typemain` | 0 |  |
 | `subprojects_villagegoal` | 0 |  |

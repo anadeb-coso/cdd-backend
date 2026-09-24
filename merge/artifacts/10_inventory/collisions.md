@@ -263,7 +263,7 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - cdd/merge_routers.py:5
   - cdd/settings.py:133
   - cdd/utils.py:17
-  - dashboard/tasks.py:132
+  - dashboard/tasks.py:138
   - dashboard/utils.py:150
   - dashboard/utils.py:154
   - dashboard/utils.py:361
@@ -289,15 +289,15 @@ Pour chaque table présente des deux côtés dans le code : champs seulement CDD
   - dashboard/functions.py:1
   - dashboard/functions.py:33
   - dashboard/tasks.py:17
-  - dashboard/tasks.py:214
-  - dashboard/tasks.py:216
-  - dashboard/tasks.py:224
-  - dashboard/tasks.py:286
-  - dashboard/tasks.py:468
-  - dashboard/tasks.py:470
-  - dashboard/tasks.py:486
-  - dashboard/tasks.py:487
-  - dashboard/tasks.py:628
+  - dashboard/tasks.py:220
+  - dashboard/tasks.py:222
+  - dashboard/tasks.py:230
+  - dashboard/tasks.py:292
+  - dashboard/tasks.py:474
+  - dashboard/tasks.py:476
+  - dashboard/tasks.py:492
+  - dashboard/tasks.py:493
+  - dashboard/tasks.py:509
   - dashboard/utils.py:23
   - dashboard/utils.py:123
   - dashboard/utils.py:123
