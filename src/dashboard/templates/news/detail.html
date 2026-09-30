@@ -263,7 +263,7 @@
 
 {% if user.is_superuser or user|has_group:"Admin" %}
 <script src="{% static 'js/axios.min.js' %}"></script>
-<script src="{% static 'js/csrfSafeMethodAjax.js' %}"></script>
+<script src="{% static 'js/csrfSafeMethodAjax.js' %}?v=2"></script>
 <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
 {% endif %}
 

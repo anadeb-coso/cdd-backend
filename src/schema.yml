@@ -83,4 +83,4 @@ components:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: sessionid
+      name: cdd_sessionid

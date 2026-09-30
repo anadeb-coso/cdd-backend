@@ -95,6 +95,9 @@ MIDDLEWARE = [
     # authentication/middleware.py) — doit suivre AuthenticationMiddleware (request.user).
     'authentication.middleware.FacilitatorMenuAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    # Déconnecte un superviseur dont la zone a changé pendant qu'il était connecté (cf.
+    # authentication/middleware.py) — doit suivre AuthenticationMiddleware et MessageMiddleware.
+    'authentication.middleware.ZoneChangeLogoutMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -221,6 +224,14 @@ LOGIN_REDIRECT_URL = 'dashboard:diagnostics:diagnostics' #'dashboard:process_man
 
 LOGOUT_REDIRECT_URL = '/'
 
+# Cookies propres à CDD. CDD et COSOMIS (SIG) peuvent tourner sur le même hôte (ports
+# différents en local) : un navigateur ne distingue pas les cookies par port. Avec les
+# noms par défaut (`sessionid`/`csrftoken`), la connexion sur l'une des applications
+# écrasait le cookie de session de l'autre (SECRET_KEY différentes → session illisible
+# → déconnexion). Garder ces noms distincts de ceux de COSOMIS et de GRM.
+SESSION_COOKIE_NAME = 'cdd_sessionid'
+CSRF_COOKIE_NAME = 'cdd_csrftoken'
+
 
 # CouchDB
 
@@ -253,7 +264,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=3650),  # 10 ans aussi si besoin
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
-    'UPDATE_LAST_LOGIN': False,
+    'UPDATE_LAST_LOGIN': True,
 }
 
 TOKEN_ALLOWED_TO_ACCESS_API = [token.strip() for token in str(env('TOKEN_ALLOWED_TO_ACCESS_API', default='')).split(',') if token.strip()]
