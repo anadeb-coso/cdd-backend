@@ -7,6 +7,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from django.template.defaultfilters import date as _date
+from django.db.models import CharField
+from django.db.models.functions import Cast
 from django.contrib.auth.hashers import make_password
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
@@ -1795,6 +1797,7 @@ def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=F
     #         villages_ids = list(itertools.chain(*[[int(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']]))
 
     for facilitator in facilitators:
+        no_sql_dbs_names = None
         if facilitator.stabilization_administrative_ids or facilitator.additional_administrative_ids:
             print(facilitator.name, facilitator.email)
 
@@ -1806,7 +1809,10 @@ def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=F
                     AssignAdministrativeLevelToFacilitator,
                     administrative_level_id__in=villages_ids, project_id__in=[_p.id for _p in mis_objects_call.filter_objects(ProjectMis, name__in=[p.name for p in projects])], activated=True
                 )
-                .exclude(facilitator_id=facilitator.id)
+                # `facilitator_id` est un IntegerField dans le modèle mais une colonne texte dans la base
+                # unifiée (schéma COSOMIS) : comparer en texte, sinon PostgreSQL refuse (varchar = integer).
+                .annotate(_facilitator_id=Cast('facilitator_id', output_field=CharField()))
+                .exclude(_facilitator_id=str(facilitator.id))
                 .values_list('facilitator_id', flat=True)
             )
             if facilitators_ids:
@@ -1824,7 +1830,7 @@ def search_facilitators_db_with_villages_stabilized(project_name, develop_mode=F
             #                         break
             
 
-            if facilitator and facilitator.no_sql_dbs_names != no_sql_dbs_names:
+            if no_sql_dbs_names is not None and facilitator and facilitator.no_sql_dbs_names != no_sql_dbs_names:
                     
                 print(f"Old {facilitator.no_sql_dbs_names} ; New : {no_sql_dbs_names}")
 
