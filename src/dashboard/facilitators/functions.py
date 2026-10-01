@@ -1,16 +1,14 @@
-import itertools
 from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy
 
 from no_sql_client import NoSQLClient
-import grm_client
 from administrativelevels import models as administrativelevels_models
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.models import Facilitator
 from assignments.models import AssignAdministrativeLevelToFacilitator
-from process_manager.models import Project, AggregatedStatusFacilitator, AggregatedStatus
+from process_manager.models import Project, AggregatedStatusFacilitator, AggregatedStatus, Task
 from subprojects.models import Project as ProjectMis
 
 
@@ -26,6 +24,49 @@ def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[],
                     batch,
                     fields
                 )
+
+
+# Villages de stabilisation/additionnels des facilitateurs lus dans CDD plutôt que via l'API GRM :
+# le GRM les transmet à CDD à chaque modification d'un EADL (`update-user-adls/` ->
+# `Facilitator.stabilization_administrative_ids` = `Adl.smallest_administrative_level_ids`,
+# `Facilitator.additional_administrative_ids` = `Adl.additional_smallest_administrative_level_ids`).
+
+def get_stabilized_villages_by_email():
+    """Équivalent local du dictionnaire construit depuis `grm_client.get_all_facilitators()` +
+    `attach_administrative_regions_objects` : {email: ids (str) des villages de stabilisation ET
+    additionnels} par facilitateur. Mêmes règles : seuls les niveaux de type Village sont retenus,
+    sans doublon, et un facilitateur sans village n'a pas d'entrée."""
+    copies = [
+        (email, {int(_id) for _id in (stabilization or []) + (additional or []) if _id is not None})
+        for email, stabilization, additional in Facilitator.objects.exclude(email__isnull=True).exclude(email='')
+        .order_by('id').values_list('email', 'stabilization_administrative_ids', 'additional_administrative_ids')
+        if stabilization or additional
+    ]
+    villages = set(mis_objects_call.filter_objects(
+        administrativelevels_models.AdministrativeLevel,
+        id__in={_id for _, ids in copies for _id in ids}, type="Village",
+    ).values_list('id', flat=True))
+    stabilized_villages_by_email = {}
+    for email, ids in copies:
+        stabilized = [str(_id) for _id in sorted(ids) if _id in villages]
+        if stabilized:
+            stabilized_villages_by_email.setdefault(email, stabilized)
+    return stabilized_villages_by_email
+
+
+def get_stabilizing_facilitators_emails_by_village(village_ids):
+    """Équivalent local, réduit aux emails des facilitateurs, de `grm_client.get_villages_with_facilitators`
+    / `get_facilitator_by_village` : {id du village (str): emails des facilitateurs qui stabilisent ce
+    village}. Comme ces appels GRM, les villages additionnels ne sont pas pris en compte."""
+    wanted = {int(_id) for _id in village_ids if str(_id).isdigit()}
+    emails_by_village = {str(_id): set() for _id in wanted}
+    stabilizations = Facilitator.objects.exclude(email__isnull=True).exclude(email='')\
+        .exclude(stabilization_administrative_ids__isnull=True)\
+        .values_list('email', 'stabilization_administrative_ids')
+    for email, stabilization in stabilizations:
+        for _id in wanted.intersection(int(v) for v in (stabilization or []) if v is not None):
+            emails_by_village[str(_id)].add(email)
+    return emails_by_village
 
 def get_cvds(project_couch_id, cycle_couch_id, facilitator, ald_ids: list = [], administratives_stabilized: list = []):
     administrative_levels_project = [_ for _ in facilitator['administrative_levels'] if (not cycle_couch_id or _.get('cycle_id') == cycle_couch_id) and (not project_couch_id or _.get('project_id') == project_couch_id)]
@@ -391,8 +432,9 @@ def build_task_detail_context(request, task_doc, no_sql_db_name):
 def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_cycle_id, cdd_project_couch_id, project_mis):
     now = timezone.now()
     _facilitators = []
-    agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=cdd_project_id, cycle_id=cdd_cycle_id)
-    dict_agg_s_fs = {str(ag.facilitator.id): ag for ag in agg_s_fs}
+    agg_s_fs = AggregatedStatusFacilitator.objects.filter(facilitator__in=facilitators, project_id=cdd_project_id, cycle_id=cdd_cycle_id)\
+        .select_related('last_task_done_current_project', 'last_task_done_stabilized', 'last_task_done')
+    dict_agg_s_fs = {str(ag.facilitator_id): ag for ag in agg_s_fs}
     havent_update = False if (facilitators and (not agg_s_fs.exists() or (agg_s_fs.exists() and agg_s_fs.filter(new_update_exists=True).exists()))) else True
     if havent_update:
         for f in facilitators:
@@ -454,19 +496,24 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
         ag_f_bucket_create = []
         ag_f_bucket_update = []
 
-        docs_eadls = [grm_client.attach_administrative_regions_objects(doc) for doc in grm_client.get_all_facilitators()]
-        docs_eadls_dict = {doc.get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']])) for doc in docs_eadls if doc.get('type') == 'adl' and doc.get('representative') and doc.get('administrative_regions_objects')}
+        # Villages de stabilisation + additionnels par email, lus dans CDD (copie envoyée par le GRM).
+        docs_eadls_dict = get_stabilized_villages_by_email()
 
-        adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
+        # `select_related('cvd')` + `headquarters_village_id` : une requête au lieu de deux par village.
+        adls = (project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()).select_related('cvd')
 
         adls_with_names = {str(adl.id): adl.name for adl in adls}
 
-        adl_headquarters_villages = set(adl.cvd.headquarters_village.id for adl in adls if adl.cvd and adl.cvd.headquarters_village)
+        adl_headquarters_villages = set(adl.cvd.headquarters_village_id for adl in adls if adl.cvd and adl.cvd.headquarters_village_id)
         adl_villages_ids = set(adl.id for adl in adls if adl.cvd)
 
 
         aggregs = AggregatedStatus.objects.filter(administrative_level_id__in=adl_headquarters_villages, project_id=cdd_project_id, cycle_id=cdd_cycle_id, facilitator=None, task__isnull=False)
-        
+        # Tâches des agrégats chargées une seule fois : passer par `agg.task` chargeait un Task complet
+        # (JSON `form` compris, ~18 Ko) et faisait une requête pour chaque AggregatedStatus, soit
+        # ~750 Mo sur un projet comme COSO (~42 000 agrégats).
+        tasks_by_id = {task.id: task for task in Task.objects.filter(id__in=aggregs.values('task_id')).select_related('phase', 'activity')}
+
         # Parcours des facilitateurs
         for f in facilitators:
             ag_f_action = "update"
@@ -515,9 +562,9 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             aggreg_last_activity_stabilized = max(valid_aggregs_stabilized, key=lambda x: x.last_activity, default=None) if valid_aggregs_stabilized else None
             aggreg_last_activity = max(valid_aggregs, key=lambda x: x.last_activity, default=None) if valid_aggregs else None
 
-            aggreg_last_task_done_current_project = max([ag for ag in valid_aggregs_current_project if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_current_project else None
-            aggreg_last_task_done_stabilized = max([ag for ag in valid_aggregs_stabilized if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs_stabilized else None
-            aggreg_last_task_done = max([ag for ag in valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if valid_aggregs else None
+            aggreg_last_task_done_current_project = max([ag for ag in valid_aggregs_current_project if ag.total_tasks_completed], key=lambda x: tasks_by_id[x.task_id].task_order, default=None) if valid_aggregs_current_project else None
+            aggreg_last_task_done_stabilized = max([ag for ag in valid_aggregs_stabilized if ag.total_tasks_completed], key=lambda x: tasks_by_id[x.task_id].task_order, default=None) if valid_aggregs_stabilized else None
+            aggreg_last_task_done = max([ag for ag in valid_aggregs if ag.total_tasks_completed], key=lambda x: tasks_by_id[x.task_id].task_order, default=None) if valid_aggregs else None
 
 
             # Assigner la dernière activité et les totaux des tâches
@@ -596,9 +643,9 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
             ag_f.total_tasks_invalidated_unreview_in_pending = f.total_tasks_invalidated_unreview_in_pending
             ag_f.total_tasks_waiting_validation = f.total_tasks_waiting_validation
 
-            f.last_task_done_current_project = aggreg_last_task_done_current_project.task if aggreg_last_task_done_current_project else None
-            f.last_task_done_stabilized = aggreg_last_task_done_stabilized.task if aggreg_last_task_done_stabilized else None
-            f.last_task_done = aggreg_last_task_done.task if aggreg_last_task_done else None
+            f.last_task_done_current_project = tasks_by_id[aggreg_last_task_done_current_project.task_id] if aggreg_last_task_done_current_project else None
+            f.last_task_done_stabilized = tasks_by_id[aggreg_last_task_done_stabilized.task_id] if aggreg_last_task_done_stabilized else None
+            f.last_task_done = tasks_by_id[aggreg_last_task_done.task_id] if aggreg_last_task_done else None
             ag_f.last_task_done_current_project = f.last_task_done_current_project
             ag_f.last_task_done_stabilized = f.last_task_done_stabilized
             ag_f.last_task_done = f.last_task_done
@@ -616,7 +663,7 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
 
                     # Calculer la dernière activité si possible
                     _aggreg_last_activity = max(_valid_aggregs, key=lambda x: x.last_activity, default=None) if _valid_aggregs else None
-                    _aggreg_last_task_done = max([ag for ag in _valid_aggregs if ag.total_tasks_completed], key=lambda x: x.task.task_order, default=None) if _valid_aggregs else None
+                    _aggreg_last_task_done = max([ag for ag in _valid_aggregs if ag.total_tasks_completed], key=lambda x: tasks_by_id[x.task_id].task_order, default=None) if _valid_aggregs else None
                     
                     # Assigner la dernière activité et les totaux des tâches
                     _last_activity = _aggreg_last_activity.last_activity if _aggreg_last_activity else None
@@ -631,14 +678,15 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
                     _total_tasks_invalidated_unreview_completed = sum(agg.total_tasks_invalidated_unreview_completed for agg in _children_aggs)
                     _total_tasks_invalidated_unreview_in_pending = sum(agg.total_tasks_invalidated_unreview_in_pending for agg in _children_aggs)
                     _total_tasks_waiting_validation = sum(agg.total_tasks_waiting_validation for agg in _children_aggs)
+                    _task = tasks_by_id[_aggreg_last_task_done.task_id] if _aggreg_last_task_done else None
                     _last_task_done = {
-                        'id': _aggreg_last_task_done.task.id,
-                        'name': _aggreg_last_task_done.task.name,
-                        'phase_name': _aggreg_last_task_done.task.phase.name,
-                        'activity_name': _aggreg_last_task_done.task.activity.name,
-                        'order': _aggreg_last_task_done.task.order,
-                        'task_order': _aggreg_last_task_done.task.task_order,
-                    } if _aggreg_last_task_done and _aggreg_last_task_done.task else None
+                        'id': _task.id,
+                        'name': _task.name,
+                        'phase_name': _task.phase.name,
+                        'activity_name': _task.activity.name,
+                        'order': _task.order,
+                        'task_order': _task.task_order,
+                    } if _task else None
                     _type = k
                     
                     adl_headquarters_villages_infos.append({

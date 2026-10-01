@@ -19,8 +19,8 @@ def get_administrative_level_under_json(administrative_level):
         return {
             "administrative_id": str(administrative_level.id),
             "name": str(administrative_level.name),
-            "id": administrative_level.id, 
-            "parent": administrative_level.parent.id if administrative_level.parent else None, 
+            "id": administrative_level.id,
+            "parent": administrative_level.parent_id,
             "type": administrative_level.type 
         }
         
@@ -137,6 +137,9 @@ def get_cascade_administrative_levels_by_administrative_level_id(_id):
     admin_levels = administrativelevels_models.AdministrativeLevel.objects.using('mis')\
         .select_related('parent')\
         .prefetch_related('administrativelevel_set')
+    # Listes complètes d'un type : leurs enfants ne sont pas utilisés, inutile de les précharger
+    # (~2 200 objets pour tous les villages). `select_related('parent')` conservé : même ordre de lignes.
+    levels_of_type = administrativelevels_models.AdministrativeLevel.objects.using('mis').select_related('parent')
 
     # Si un ID est fourni, on récupère l'objet correspondant
     ad_obj = None
@@ -164,32 +167,32 @@ def get_cascade_administrative_levels_by_administrative_level_id(_id):
             levels["Village"] = {o for v in levels["Canton"] for o in v.administrativelevel_set.all()}
 
         elif _type == "Prefecture":
-            levels["Prefecture"] = admin_levels.filter(type="Prefecture")
+            levels["Prefecture"] = levels_of_type.filter(type="Prefecture")
             levels["Commune"] = children
             levels["Canton"] = {o for c in children for o in c.administrativelevel_set.all()}
             levels["Village"] = {o for v in levels["Canton"] for o in v.administrativelevel_set.all()}
 
         elif _type == "Commune":
-            levels["Prefecture"] = admin_levels.filter(type="Prefecture")
-            levels["Commune"] = admin_levels.filter(type="Commune")
+            levels["Prefecture"] = levels_of_type.filter(type="Prefecture")
+            levels["Commune"] = levels_of_type.filter(type="Commune")
             levels["Canton"] = children
             levels["Village"] = {o for v in children for o in v.administrativelevel_set.all()}
 
         elif _type == "Canton":
-            levels["Prefecture"] = admin_levels.filter(type="Prefecture")
-            levels["Commune"] = admin_levels.filter(type="Commune")
-            levels["Canton"] = admin_levels.filter(type="Canton")
+            levels["Prefecture"] = levels_of_type.filter(type="Prefecture")
+            levels["Commune"] = levels_of_type.filter(type="Commune")
+            levels["Canton"] = levels_of_type.filter(type="Canton")
             levels["Village"] = children
 
         elif _type == "Village":
-            levels["Prefecture"] = admin_levels.filter(type="Prefecture")
-            levels["Commune"] = admin_levels.filter(type="Commune")
-            levels["Canton"] = admin_levels.filter(type="Canton")
+            levels["Prefecture"] = levels_of_type.filter(type="Prefecture")
+            levels["Commune"] = levels_of_type.filter(type="Commune")
+            levels["Canton"] = levels_of_type.filter(type="Canton")
             levels["Village"] = {ad_obj.parent} if ad_obj.parent else set()
     else:
         # Cas où aucun ID n'est fourni
         for level in level_types:
-            levels[level] = admin_levels.filter(type=level)
+            levels[level] = levels_of_type.filter(type=level)
 
     # Conversion en JSON
     for key, value in levels.items():

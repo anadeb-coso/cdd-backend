@@ -6,7 +6,7 @@ from datetime import datetime
 
 from authentication.models import Facilitator
 from no_sql_client import NoSQLClient
-import grm_client
+from dashboard.facilitators.functions import get_stabilizing_facilitators_emails_by_village
 from cdd.call_objects_from_other_db import mis_objects_call
 from administrativelevels.models import AdministrativeLevel
 from assignments.models import AssignAdministrativeLevelToFacilitator
@@ -62,7 +62,8 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
     
     nsc = NoSQLClient()
 
-    all_villages_ids_with_facilitators = grm_client.get_villages_with_facilitators(list(set(sum([
+    # {village: emails des facilitateurs qui le stabilisent}, lu dans CDD (copie envoyée par le GRM).
+    all_villages_ids_with_facilitators = get_stabilizing_facilitators_emails_by_village(list(set(sum([
         list(set((facilitator.administrative_levels_ids or []) + (facilitator.stabilization_administrative_ids or []))) 
         for facilitator in facilitators
     ], []))))
@@ -108,7 +109,7 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
 
                     _facilitators = Facilitator.objects.filter(
                         Q(id__in=([facilitator.id]+[a_f.facilitator_id for a_f in assign_facilitators])) |
-                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]),
+                        Q(email__in=_f_s),
                         active=True
                     )
 
@@ -174,7 +175,7 @@ def villages_level(project_id, cycle_id, develop_mode=False, training_mode=False
 
                     _facilitators = Facilitator.objects.filter(
                         Q(id__in=([a_f.facilitator_id for a_f in assign_facilitators])) |
-                        Q(email__in=[doc.get('representative').get('email') for doc in _f_s if doc.get('representative')]),
+                        Q(email__in=_f_s),
                         active=True
                     )
 

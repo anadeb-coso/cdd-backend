@@ -20,6 +20,7 @@ import itertools
 
 from authentication.models import Facilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.functions import get_stabilizing_facilitators_emails_by_village
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from no_sql_client import NoSQLClient
 import grm_client
@@ -232,12 +233,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         #END AREA
         
         def get_facilitators_emails(villages_ids):
-            facilitators_stabilized = grm_client.get_facilitator_by_village([int(v) for v in villages_ids])
-            
-            return list(set([
-                elt['representative']['email'] for elt in facilitators_stabilized if elt and elt.get('representative', {}).get('email')
-            ]))
-        
+            # Emails des facilitateurs qui stabilisent ces villages, lus dans CDD (copie envoyée par le GRM).
+            return list(set().union(*get_stabilizing_facilitators_emails_by_village(villages_ids).values()))
+
         if current_week and current_week != 'null':
             current_week = current_week
             current_monday_date_object = datetime.strptime(current_monday_date, "%Y/%m/%d").date()

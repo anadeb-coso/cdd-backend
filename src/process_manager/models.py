@@ -622,8 +622,16 @@ class AggregatedStatus(BaseModel, SoftAggregatedStatusConsiderationMixin):
 
     task_needs_subproject = models.BooleanField(default=False)
     its_adl_has_sub_project = models.BooleanField(null=True, blank=True)
-    
+
     # objects = CustomQuerySet.as_manager()
+
+    class Meta:
+        # Filtres usuels (diagnostics, entonnoir, synchronisation) : projet + cycle + village,
+        # et « dernière mise à jour » du projet/cycle. Sans eux, parcours complet de la table.
+        indexes = [
+            models.Index(fields=['project', 'cycle', 'administrative_level_id'], name='aggstatus_proj_cycle_adl_idx'),
+            models.Index(fields=['project', 'cycle', '-updated_date'], name='aggstatus_proj_cycle_upd_idx'),
+        ]
 
 
     def administrative_level(self):

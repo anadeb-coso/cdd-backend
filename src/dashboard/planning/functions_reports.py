@@ -17,6 +17,7 @@ from process_manager.models import Project
 from cdd.call_objects_from_other_db import mis_objects_call
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
+from dashboard.facilitators.functions import get_stabilizing_facilitators_emails_by_village
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from planning.models import Activity, ValidationGroupsProcess
 from cdd.functions import get_dates_between
@@ -120,12 +121,8 @@ def planning_csv(request):
     
     #END AREA
     def get_facilitators_emails(villages_ids):
-        
-        facilitators_stabilized = grm_client.get_facilitator_by_village([int(v) for v in villages_ids])
-        
-        return list(set([
-            elt['representative']['email'] for elt in facilitators_stabilized if elt and elt.get('representative', {}).get('email')
-        ]))
+        # Emails des facilitateurs qui stabilisent ces villages, lus dans CDD (copie envoyée par le GRM).
+        return list(set().union(*get_stabilizing_facilitators_emails_by_village(villages_ids).values()))
 
 
     if date_start_selected and date_start_selected != 'null':

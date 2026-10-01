@@ -3,15 +3,13 @@ import os
 from sys import platform
 from datetime import datetime
 import pandas as pd
-import itertools
 import json
 from django.conf import settings
 
 from no_sql_client import NoSQLClient
-import grm_client
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from authentication.models import Facilitator
-from dashboard.facilitators.functions import get_cvds
+from dashboard.facilitators.functions import get_cvds, get_stabilized_villages_by_email
 from cdd.functions import datetime_complet_str
 from administrativelevels import models as administrativelevels_models
 from dashboard.reports.constants import IGNORES
@@ -696,8 +694,8 @@ def get_facilitator_status_excel_csv_under_file_excel_or_csv(request=None, facil
 
             _facilitators.append(f)
     else:
-        docs_eadls = [grm_client.attach_administrative_regions_objects(doc) for doc in grm_client.get_all_facilitators()]
-        docs_eadls_dict = {doc.get('representative').get('email'): list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in doc['administrative_regions_objects']])) for doc in docs_eadls if doc.get('type') == 'adl' and doc.get('representative') and doc.get('administrative_regions_objects')}
+        # Villages de stabilisation + additionnels par email, lus dans CDD (copie envoyée par le GRM).
+        docs_eadls_dict = get_stabilized_villages_by_email()
 
         # adls = project_mis.administrative_levels.filter(id__in=[ad.id for ad in mis_objects_call.filter_objects(administrativelevels_models.AdministrativeLevel, id__in=liste_villages)]) if liste_villages else project_mis.administrative_levels.all()
         adls = project_mis.administrative_levels.filter(id__in=liste_villages) if liste_villages else project_mis.administrative_levels.all()
