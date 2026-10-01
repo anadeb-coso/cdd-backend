@@ -2,12 +2,15 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Q
-from django.http import Http404
+from datetime import date
+
+from django.db.models import F, Func, IntegerField, Q
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.utils.translation import gettext_lazy
+from django.utils.html import escape, format_html
+from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 
 import grm_client
@@ -206,71 +209,215 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
             messages.success(self.request, gettext_lazy("Localities saved."))
 
 
-class LocalitiesHistoryView(PageMixin, LoginRequiredMixin, generic.TemplateView):
-    """Trajets : changements de localités des facilitateurs (et des utilisateurs pour qui peut attribuer
-    leurs localités d'intervention), filtrables par personne, section, localité et période. Avec une
-    localité : périodes de présence de chacun dans cette localité (arrivée, départ)."""
-    template_name = 'facilitators/localities_history.html'
-    title = gettext_lazy('Localities history')
-    active_level1 = 'facilitators'
-    active_level2 = 'localities_history'
-    breadcrumb = [{'url': '', 'title': gettext_lazy('Localities history')}]
-    max_rows = 500
+class LocalitiesHistoryMixin:
+    """Filtres communs à la page « Trajets » et à ses données paginées : plusieurs choix possibles par filtre
+    (personnes, types, sections, localités) et une période."""
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not can_view_localities_history(request.user):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        tree = AdministrativeTree()
+    @property
+    def tree(self):
+        if not hasattr(self, '_tree'):
+            self._tree = AdministrativeTree()
+        return self._tree
+
+    def filters(self):
         params = self.request.GET
-        q = (params.get('q') or '').strip()
-        kind = params.get('kind') or ''
-        section = params.get('section') or ''
-        locality = params.get('locality') or ''
-        date_from, date_to = params.get('date_from') or '', params.get('date_to') or ''
+
+        def iso_date(value):
+            try:
+                return date.fromisoformat(value).isoformat() if value else ''
+            except ValueError:
+                return ''
+
+        return {
+            'persons': [v for v in params.getlist('person') if v[:2] in ('f-', 'u-') and v[2:].isdigit()],
+            'kinds': [v for v in params.getlist('kind') if v in ('facilitator', 'user')],
+            'sections': [v for v in params.getlist('section') if v in dict(LocalityHistory.SECTIONS)],
+            'localities': [int(v) for v in params.getlist('locality') if str(v).isdigit() and int(v) in self.tree.levels],
+            'date_from': iso_date(params.get('date_from')),
+            'date_to': iso_date(params.get('date_to')),
+        }
+
+    def visible_events(self):
+        events = LocalityHistory.objects.all()
+        if not can_assign_user_localities(self.request.user):
+            events = events.filter(facilitator__isnull=False)  # superviseurs : les facilitateurs seulement
+        return events
+
+    def person_filtered(self, filters):
+        """Filtres personnes, types et sections (ni la période, ni la localité)."""
+        events = self.visible_events()
+        if filters['persons']:
+            events = events.filter(
+                Q(facilitator_id__in=[int(v[2:]) for v in filters['persons'] if v.startswith('f-')])
+                | Q(user_id__in=[int(v[2:]) for v in filters['persons'] if v.startswith('u-')])
+            )
+        if len(filters['kinds']) == 1:
+            events = events.filter(facilitator__isnull=filters['kinds'] == ['user'])
+        if filters['sections']:
+            events = events.filter(section__in=filters['sections'])
+        return events
+
+    def locality_villages(self, filters):
+        return sorted({v for locality in filters['localities'] for v in self.tree.villages([locality])})
+
+    @staticmethod
+    def _contains_any(column):
+        """Condition SQL : la liste JSON `column` contient l'un des villages passés en paramètre (PostgreSQL)."""
+        table = LocalityHistory._meta.db_table
+        return (f'EXISTS (SELECT 1 FROM jsonb_array_elements_text(COALESCE("{table}"."{column}", \'[]\'::jsonb)) AS e(v) '
+                f'WHERE e.v = ANY(%s))')
+
+    def filtered_events(self, filters):
+        """Lignes du tableau : changements qui font arriver ou partir un village des localités choisies."""
+        events = self.person_filtered(filters)
+        if filters['date_from']:
+            events = events.filter(changed_at__date__gte=filters['date_from'])
+        if filters['date_to']:
+            events = events.filter(changed_at__date__lte=filters['date_to'])
+        if filters['localities']:
+            villages = [str(v) for v in self.locality_villages(filters)]
+            if not villages:
+                return events.none()
+            table = LocalityHistory._meta.db_table
+            events = events.extra(
+                where=[f'({self._contains_any("added")} OR {self._contains_any("removed")} '
+                       f'OR ("{table}"."villages_before" IS NULL AND {self._contains_any("villages_after")}))'],
+                params=[villages, villages, villages],
+            )
+        return events
+
+    def presence_events(self, filters):
+        """Chronologie utile aux périodes de présence : changements dont l'état avant ou après touche les localités."""
+        villages = [str(v) for v in self.locality_villages(filters)]
+        if not villages:
+            return []
+        return list(self.person_filtered(filters).extra(
+            where=[f'({self._contains_any("villages_before")} OR {self._contains_any("villages_after")})'],
+            params=[villages, villages],
+        ))
+
+
+class LocalitiesHistoryView(LocalitiesHistoryMixin, PageMixin, LoginRequiredMixin, generic.TemplateView):
+    """Trajets : changements de localités des facilitateurs (et des utilisateurs pour qui peut attribuer
+    leurs localités d'intervention), filtrables par personnes, types, sections, localités et période. Avec des
+    localités : périodes de présence de chacun (arrivée, départ). Le tableau des changements est chargé page par
+    page (LocalitiesHistoryDataView)."""
+    template_name = 'facilitators/localities_history.html'
+    title = gettext_lazy('Localities history')
+    active_level1 = 'facilitators'
+    active_level2 = 'localities_history'
+    breadcrumb = [{'url': '', 'title': gettext_lazy('Localities history')}]
+
+    def get_context_data(self, **kwargs):
+        from django.contrib.auth.models import User
+
+        context = super().get_context_data(**kwargs)
+        filters = self.filters()
         can_see_users = can_assign_user_localities(self.request.user)
 
-        events = LocalityHistory.objects.select_related('changed_by')
-        if not can_see_users or kind == 'facilitator':
-            events = events.filter(facilitator__isnull=False)
-        elif kind == 'user':
-            events = events.filter(facilitator__isnull=True)
-        if q:
-            events = events.filter(Q(name__icontains=q) | Q(email__icontains=q))
-        if section:
-            events = events.filter(section=section)
+        persons = [(f"f-{pk}", f"{name or email} — {email}" if email else (name or str(pk)))
+                   for pk, name, email in Facilitator.objects.filter(localities_history__isnull=False).distinct()
+                   .values_list('id', 'name', 'email')]
+        if can_see_users:
+            persons += [(f"u-{pk}", f"{(last + ' ' + first).strip() or username} — {email}" if email else (last + ' ' + first).strip() or username)
+                        for pk, last, first, username, email in User.objects.filter(localities_history__isnull=False).distinct()
+                        .values_list('id', 'last_name', 'first_name', 'username', 'email')]
 
-        periods, locality_label = None, None
-        if locality.isdigit() and int(locality) in tree.levels:
-            village_ids = set(tree.villages([int(locality)]))
-            locality_label = tree.label(int(locality))
-            # présences : toute la chronologie des personnes filtrées (sans la période)
-            periods = presence_periods(list(events), village_ids)
-            events = [
-                e for e in events
-                if village_ids & (set(e.added or []) | set(e.removed or []))
-                or (e.villages_before is None and village_ids & set(e.villages_after or []))
-            ]
-        else:
-            events = list(events)
-        if date_from:
-            events = [e for e in events if e.changed_at.date().isoformat() >= date_from]
-        if date_to:
-            events = [e for e in events if e.changed_at.date().isoformat() <= date_to]
+        periods = None
+        if filters['localities']:
+            periods = presence_periods(self.presence_events(filters), set(self.locality_villages(filters)))
 
         context.update({
-            'filters': {'q': q, 'kind': kind, 'section': section, 'locality': locality, 'date_from': date_from, 'date_to': date_to},
+            'filters': filters,
             'can_see_users': can_see_users,
-            'can_edit_localities': can_edit_localities(self.request.user),
+            'persons_options': sorted(persons, key=lambda p: p[1].lower()),
             'sections': LocalityHistory.SECTIONS if can_see_users else LocalityHistory.SECTIONS[:3],
-            'localities_options': tree.options(),
-            'locality_label': locality_label,
+            'localities_options': self.tree.options(),
+            'locality_label': ", ".join(self.tree.label(l) for l in filters['localities']),
             'periods': periods,
-            'total': len(events),
-            'history': event_rows(tree, events[:self.max_rows]),
-            'max_rows': self.max_rows,
+            'data_url': f"{reverse('dashboard:facilitators:localities_history_data')}?{self.request.GET.urlencode()}",
+            'page_sizes': HISTORY_PAGE_SIZES,
         })
         return context
+
+
+HISTORY_PAGE_SIZES = [10, 20, 50, 100, 500, 1000]
+
+
+class LocalitiesHistoryDataView(LocalitiesHistoryMixin, LoginRequiredMixin, generic.View):
+    """Données du tableau des changements de la page « Trajets », au format DataTables côté serveur : page
+    demandée (`start`, `length`, -1 = tout), tri sur une colonne (par défaut la date, la plus récente d'abord)."""
+    ORDER_FIELDS = ['changed_at', 'name', 'section', 'main_after', 'added_count', 'removed_count', 'changed_by_label']
+
+    def get(self, request, *args, **kwargs):
+        def number(name, default):
+            try:
+                return int(request.GET.get(name, default))
+            except (TypeError, ValueError):
+                return default
+
+        filters = self.filters()
+        events = self.filtered_events(filters)
+        column = number('order[0][column]', 0)
+        field = self.ORDER_FIELDS[column] if 0 <= column < len(self.ORDER_FIELDS) else 'changed_at'
+        prefix = '' if request.GET.get('order[0][dir]') == 'asc' else '-'
+        events = events.annotate(
+            added_count=Func(F('added'), function='jsonb_array_length', output_field=IntegerField()),
+            removed_count=Func(F('removed'), function='jsonb_array_length', output_field=IntegerField()),
+        ).order_by(f'{prefix}{field}', f'{prefix}id').select_related('changed_by')
+
+        start, length = max(number('start', 0), 0), number('length', HISTORY_PAGE_SIZES[1])
+        page = events[start:] if length == -1 else events[start:start + max(length, 1)]
+        can_edit = can_edit_localities(request.user)
+        can_see_users = can_assign_user_localities(request.user)
+        data = [history_cells(row, can_edit, can_see_users) for row in event_rows(self.tree, list(page))]
+        return JsonResponse({
+            'draw': number('draw', 0),
+            'recordsTotal': self.visible_events().count(),
+            'recordsFiltered': events.count(),
+            'data': data,
+        })
+
+
+def history_cells(row, can_edit, can_see_users):
+    """Cellules HTML d'une ligne du tableau des changements (mêmes informations que le trajet d'une personne)."""
+    event = row['event']
+    changed_at, created_at = timezone.localtime(event.changed_at), timezone.localtime(event.created_at)
+    note = lambda text: format_html('<br><span class="localities-note">{}</span>', text)
+
+    date_cell = format_html('{}{}', '≈ ' if event.approximate_date else '', changed_at.strftime('%d/%m/%Y'))
+    if changed_at.date() == created_at.date():
+        date_cell = format_html('{} {}', date_cell, changed_at.strftime('%H:%M'))
+    else:
+        date_cell = format_html('{}{}', date_cell, note(f"{gettext('recorded on')} {created_at.strftime('%d/%m/%Y %H:%M')}"))
+
+    name = event.name or event.email or '-'
+    if event.facilitator_id and can_edit:
+        person = format_html('<a href="{}#localities-history" target="_blank">{}</a>',
+                             reverse('dashboard:facilitators:localities', args=[event.facilitator_id]), name)
+    elif event.user_id and can_see_users:
+        person = format_html('<a href="{}#localities-history" target="_blank">{}</a>',
+                             reverse('dashboard:authentication:user_localities', args=[event.user_id]), name)
+    else:
+        person = escape(name)
+    person = format_html('{}{}', person, note(gettext('CDD facilitator') if event.facilitator_id else gettext('Dashboard user')))
+
+    section = format_html('{}{}', event.get_section_display(), note(f"{row['after_count']} {gettext('village(s)')}"))
+    main = format_html('{} → <b>{}</b>', row['main_before'], row['main_after']) if row['main_changed'] else escape(row['main_after'])
+
+    added = format_html('<span class="badge badge-light border">{}</span> ', gettext('Initial state')) if row['first_definition'] else ''
+    if row['whole_country']:
+        added = format_html('{}{}', added, gettext('Whole country (TOGO)'))
+    elif row['added_count']:
+        added = format_html('{}+{} : {}', added, row['added_count'], row['added'])
+    else:
+        added = format_html('{}-', added)
+    added = format_html('<span class="preview-added">{}</span>', added)
+    removed = format_html('<span class="preview-removed">-{} : {}</span>', row['removed_count'], row['removed']) if row['removed_count'] else '-'
+    by = format_html('{}{}', event.changed_by_label or '-', note(event.get_source_display()))
+    return [str(date_cell), str(person), str(section), str(main), str(added), str(removed), str(by)]

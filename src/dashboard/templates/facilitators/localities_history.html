@@ -15,31 +15,30 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
-                        <label>{% translate "Person (name or email)" %}</label>
-                        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm">
+                        <label>{% translate "Persons" %}</label>
+                        <select name="person" id="filter-person" class="form-control form-control-sm" multiple>
+                            {% for value, label in persons_options %}<option value="{{ value }}" {% if value in filters.persons %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
                     </div>
                     {% if can_see_users %}
                     <div class="col-md-2">
                         <label>{% translate "Type" %}</label>
-                        <select name="kind" class="form-control form-control-sm">
-                            <option value="">{% translate "All" %}</option>
-                            <option value="facilitator" {% if filters.kind == "facilitator" %}selected{% endif %}>{% translate "Facilitators (CF and TF)" %}</option>
-                            <option value="user" {% if filters.kind == "user" %}selected{% endif %}>{% translate "Users" %}</option>
+                        <select name="kind" id="filter-kind" class="form-control form-control-sm" multiple>
+                            <option value="facilitator" {% if "facilitator" in filters.kinds %}selected{% endif %}>{% translate "Facilitators (CF and TF)" %}</option>
+                            <option value="user" {% if "user" in filters.kinds %}selected{% endif %}>{% translate "Users" %}</option>
                         </select>
                     </div>
                     {% endif %}
                     <div class="col-md-2">
                         <label>{% translate "Localities" %}</label>
-                        <select name="section" class="form-control form-control-sm">
-                            <option value="">{% translate "All" %}</option>
-                            {% for value, label in sections %}<option value="{{ value }}" {% if filters.section == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        <select name="section" id="filter-section" class="form-control form-control-sm" multiple>
+                            {% for value, label in sections %}<option value="{{ value }}" {% if value in filters.sections %}selected{% endif %}>{{ label }}</option>{% endfor %}
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label>{% translate "Locality" %}</label>
-                        <select name="locality" id="locality" class="form-control form-control-sm">
-                            <option value=""></option>
-                            {% for value, label in localities_options %}<option value="{{ value }}" {% if filters.locality == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        <select name="locality" id="filter-locality" class="form-control form-control-sm" multiple>
+                            {% for value, label in localities_options %}<option value="{{ value }}" {% if value in filters.localities %}selected{% endif %}>{{ label }}</option>{% endfor %}
                         </select>
                     </div>
                     <div class="col-md-1">
@@ -101,15 +100,11 @@
 
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">
-                    <b>{% translate "Changes" %}</b>
-                    <span class="localities-note ml-2">{{ total }}{% if total > max_rows %} — {% blocktranslate %}the {{ max_rows }} most recent are displayed{% endblocktranslate %}{% endif %}</span>
-                </h3>
+                <h3 class="card-title"><b>{% translate "Changes" %}</b></h3>
             </div>
-            <div class="card-body p-0">
-                {% if history %}
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm table-striped mb-0 history-table">
+                    <table id="history-table" class="table table-sm table-bordered table-striped w-100 history-table">
                         <thead>
                             <tr>
                                 <th width="9%">{% translate "Date" %}</th>
@@ -121,37 +116,8 @@
                                 <th width="12%">{% translate "By" %}</th>
                             </tr>
                         </thead>
-                        <tbody>
-                        {% for row in history %}
-                            <tr>
-                                <td>{% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y" }}
-                                {% if row.event.changed_at|date:"Ymd" == row.event.created_at|date:"Ymd" %}{{ row.event.changed_at|date:"H:i" }}{% else %}<br><span class="localities-note">{% translate "recorded on" %} {{ row.event.created_at|date:"d/m/Y H:i" }}</span>{% endif %}</td>
-                                <td>
-                                    {% if row.event.facilitator_id and can_edit_localities %}
-                                        <a href="{% url 'dashboard:facilitators:localities' row.event.facilitator_id %}#localities-history" target="_blank">{{ row.event.name|default:row.event.email }}</a>
-                                    {% elif row.event.user_id and can_see_users %}
-                                        <a href="{% url 'dashboard:authentication:user_localities' row.event.user_id %}#localities-history" target="_blank">{{ row.event.name|default:row.event.email }}</a>
-                                    {% else %}
-                                        {{ row.event.name|default:row.event.email }}
-                                    {% endif %}
-                                    <br><span class="localities-note">{% if row.event.facilitator_id %}{% translate "CDD facilitator" %}{% else %}{% translate "Dashboard user" %}{% endif %}</span>
-                                </td>
-                                <td>{{ row.event.get_section_display }}<br><span class="localities-note">{{ row.after_count }} {% translate "village(s)" %}</span></td>
-                                <td>{% if row.main_changed %}{{ row.main_before }} → <b>{{ row.main_after }}</b>{% else %}{{ row.main_after }}{% endif %}</td>
-                                <td class="preview-added">
-                                    {% if row.first_definition %}<span class="badge badge-light border">{% translate "Initial state" %}</span> {% endif %}
-                                    {% if row.whole_country %}{% translate "Whole country (TOGO)" %}{% elif row.added_count %}+{{ row.added_count }} : {{ row.added }}{% else %}-{% endif %}
-                                </td>
-                                <td class="preview-removed">{% if row.removed_count %}-{{ row.removed_count }} : {{ row.removed }}{% else %}-{% endif %}</td>
-                                <td>{{ row.event.changed_by_label|default:"-" }}<br><span class="localities-note">{{ row.event.get_source_display }}</span></td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
                     </table>
                 </div>
-                {% else %}
-                    <p class="localities-note p-3 mb-0">{% translate "No change recorded yet." %}</p>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -159,7 +125,24 @@
 {% endblock content %}
 
 {% block select2 %}
+    {% get_current_language as lang %}
     <script type="text/javascript">
-        $('#locality').select2({placeholder: "{% translate 'Click to select location' %}", allowClear: true, width: '100%'});
+        const multiSelect = {placeholder: "{% translate 'All' %}", allowClear: true, width: '100%'};
+        $('#filter-person, #filter-kind, #filter-section').select2(multiSelect);
+        $('#filter-locality').select2(Object.assign({}, multiSelect, {placeholder: "{% translate 'Click to select location' %}"}));
+
+        // Changements : chargés page par page côté serveur ; tri par colonne (date la plus récente par défaut).
+        $('#history-table').DataTable({
+            serverSide: true,
+            processing: true,
+            searching: false,
+            ajax: {url: "{{ data_url|escapejs }}"},
+            order: [[0, 'desc']],
+            pageLength: 20,
+            lengthMenu: [[{{ page_sizes|join:', ' }}, -1], [{{ page_sizes|join:', ' }}, "{% translate 'All' %}"]],
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+        });
     </script>
 {% endblock select2 %}

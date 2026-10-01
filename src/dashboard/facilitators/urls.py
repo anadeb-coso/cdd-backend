@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:pk>/update/', views.UpdateFacilitatorView.as_view(), name='update'),
     path('<int:pk>/localities/', views_localities.FacilitatorLocalitiesView.as_view(), name='localities'),
     path('localities-history/', views_localities.LocalitiesHistoryView.as_view(), name='localities_history'),
+    path('localities-history/data/', views_localities.LocalitiesHistoryDataView.as_view(), name='localities_history_data'),
     path('<slug:id>/detail/', views.FacilitatorDetailView.as_view(), name='detail'),
     path('task-list/<slug:id>/', views.FacilitatorTaskListView.as_view(), name='task_list'),
     path('task-detail/<slug:id>/', views.FacilitatorTaskDetailModalView.as_view(), name='task_detail_modal'),
