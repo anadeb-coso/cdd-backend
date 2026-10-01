@@ -5,6 +5,35 @@
         font-size: 1.5rem;
         cursor: pointer;
     }
+    /* bascules projet -> cantons -> villages : classe distincte de .expand-icon (bascule du superviseur) */
+    .drill-icon {
+        font-size: 1.3rem;
+        cursor: pointer;
+    }
+    /* barre des tableaux projets / cantons / villages : export à gauche, lignes par page et recherche à droite */
+    .drill-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .5rem 1rem;
+        margin-bottom: .5rem;
+    }
+    .drill-toolbar .dt-buttons {
+        flex: 0 1 auto;
+        width: auto;
+        max-width: none;
+        margin-right: auto;
+    }
+    /* nombre de villages sièges d'un canton : lisible */
+    .drill-count {
+        font-size: 12px;
+        font-weight: 600;
+        padding: .3em .6em;
+    }
+    .drill-toolbar .dataTables_length label,
+    .drill-toolbar .dataTables_filter label {
+        margin-bottom: 0;
+    }
 </style>
 
 <div class="card">
@@ -59,12 +88,15 @@
                     <td>{{ supervisor|get:"decision_percent" }} %</td>
                     
                     <td class=" pointer-event ">
-                        <i class=" expand-icon fas fa-chevron-circle-right text-primary" id="supervisor_{{ supervisor|get:'user_object_cdd_id' }}"></i>
+                        <i class=" expand-icon fas fa-chevron-circle-right text-primary" id="supervisor_{{ supervisor|get:'user_object_cdd_id' }}" data-name="{{ supervisor.user_object_cdd_full_name }}"></i>
                         {% with supervisor|get:"invalidation_notifications_id" as invalidation_notifications_id %}
                             {{ supervisor|get:"invalidation_notifications"|json_script:invalidation_notifications_id }}
                         {% endwith %}
                         {% with supervisor|get:"cantons_names_id" as cantons_names_id %}
                             {{ supervisor|get:"cantons_names"|json_script:cantons_names_id }}
+                        {% endwith %}
+                        {% with supervisor|get:"cantons_details_id" as cantons_details_id %}
+                            {{ supervisor|get:"cantons_details"|json_script:cantons_details_id }}
                         {% endwith %}
                     </td>
 
@@ -91,6 +123,131 @@
 
 
 
+
+    // Déroulé d'un projet (cantons de la zone du superviseur) puis d'un canton (ses villages sièges), comme
+    // /diagnostics/adl-tasks : bascule en fin de ligne ; « Voir » mène aux tâches du village siège chez le
+    // facilitateur qui lui est affecté, seulement dans le projet de la session. Projets, cantons et villages sont
+    // chacun un tableau avec export, recherche, tri par colonne et nombre de lignes.
+    // var (pas const) : ce script est réinjecté à chaque rechargement de la liste (filtres) ; un const redéclaré
+    // y lèverait une erreur et le tableau ne s'initialiserait plus.
+    {% get_current_language as lang %}
+    var CURRENT_PROJECT = "{{ PROJECT_NAME|default:''|escapejs }}";
+    var DRILL_LANGUAGE_URL = '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}');
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
+    }
+
+    // Options communes : boutons d'export à gauche (sans la colonne des bascules / liens), nombre de lignes et
+    // recherche à droite (comme le tableau des superviseurs), tri sur les colonnes.
+    function drillTableOptions(title) {
+        const exportOptions = {
+            columns: ':visible:not(.no-export)',
+            format: {
+                body: (data, row, column, node) => (node && node.dataset.export !== undefined)
+                    ? node.dataset.export
+                    : $('<div>').html(data).text().replace(/\s+/g, ' ').trim(),
+            },
+        };
+        return {
+            language: {url: DRILL_LANGUAGE_URL},
+            dom: "<'drill-toolbar'Blf>" +
+                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            buttons: [
+                {extend: 'copy', title: title, exportOptions: exportOptions},
+                {extend: 'excel', title: title, exportOptions: exportOptions},
+                {extend: 'pdf', title: title, exportOptions: exportOptions, orientation: 'landscape'},
+                {extend: 'colvis', columns: ':not(.no-export)'},
+            ],
+            lengthMenu: [[5, 10, 20, 30, 50, 100, -1], [5, 10, 20, 30, 50, 100, "{% translate 'All rows' %}"]],
+            pageLength: 10,
+            order: [],
+            autoWidth: false,
+            columnDefs: [
+                {type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7, 8, 9]},
+                {targets: 'no-sort', orderable: false, searchable: false},
+            ],
+        };
+    }
+
+    function supervisorStatsCells(v) {
+        return `
+            <td>${v.total_tasks ?? 0}</td>
+            <td>${v.total_tasks_completed ?? 0}</td>
+            <td style="${v.total_tasks_validated ? 'color:green' : ''}">${v.total_tasks_validated ?? 0}</td>
+            <td>${v.total_tasks_invalidated ?? 0}</td>
+            <td style="${v.total_tasks_waiting_validation ? 'color:red' : ''}">${v.total_tasks_waiting_validation ?? 0}</td>
+            <td style="${v.total_tasks_invalidated_review_completed ? 'color:red' : ''}">${v.total_tasks_invalidated_review_completed ?? 0}</td>
+            <td style="${v.total_tasks_invalidated_review_in_pending ? 'color:red' : ''}">${v.total_tasks_invalidated_review_in_pending ?? 0}</td>
+            <td>${v.validation_percent ?? 0} %</td>
+            <td>${v.decision_percent ?? 0} %</td>`;
+    }
+
+    function supervisorDrillTable(kind, firstHeader, rows) {
+        return `
+            <div class="p-2">
+                <table class="table table-sm table-bordered mb-1 w-100 ${kind}" style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th>${firstHeader}</th>
+                            <th>{% translate 'Total' %}</th>
+                            <th>{% translate 'Completed' %}</th>
+                            <th>{% translate 'Validated' %}</th>
+                            <th>{% translate 'Invalidated' %}</th>
+                            <th>{% translate 'Completed (Awaiting validation)' %}</th>
+                            <th>{% translate 'Invalidated tasks reviewed by the facilitator (Pending validation)' %}</th>
+                            <th>{% translate 'Invalidated tasks reviewed by the facilitator (No Completed)' %}</th>
+                            <th>{% translate "Percentage of completed tasks validated" %}</th>
+                            <th>{% translate "Percentage of decisions" %}</th>
+                            <th width="5%" class="no-sort no-export"></th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
+
+    function villageTasksLink(project, village) {
+        if (project !== CURRENT_PROJECT) {
+            const message = `{% translate "Requires a change of project" %} [${CURRENT_PROJECT} {% translate "to" %} ${project}]`;
+            return `<i class="fas fa-info-circle text-info" title="${escapeHtml(message)}" style="cursor:help"></i>`;
+        }
+        if (!village.db) {
+            return '-';
+        }
+        const url = "{% url 'dashboard:facilitators:old_detail' 'DB_NAME' %}".replace('DB_NAME', encodeURIComponent(village.db))
+            + `?administrative_level_id=${village.id}&tasks_status=Completed_awaiting_validation,Invalidated_updated_after_invalidation`;
+        return `<a href="${url}" target="_blank" title="{% translate 'See profile' %}">{% translate "See" %}</a>`;
+    }
+
+    function supervisorCantonsTable(project, cantons) {
+        const rows = cantons.map((c, index) => {
+            const count = `${c.villages.length} {% translate 'headquarters village(s)' %}`;
+            return `
+                <tr>
+                    <td align="left" data-export="${escapeHtml(`${c.name} (${count})`)}">
+                        <b>${escapeHtml(c.name)}</b>
+                        <span class="badge badge-info ml-1 drill-count">${count}</span>
+                    </td>
+                    ${supervisorStatsCells(c)}
+                    <td class="pointer-event">
+                        ${c.villages.length ? `<i class="expand-canton drill-icon fas fa-chevron-circle-right text-primary" data-index="${index}" title="{% translate 'Situation by village' %}"></i>` : ''}
+                    </td>
+                </tr>`;
+        }).join('');
+        return supervisorDrillTable('drill-cantons', "{% translate 'Canton' %}", rows);
+    }
+
+    function supervisorVillagesTable(project, villages) {
+        const rows = villages.map(v => `
+                <tr>
+                    <td align="left">${escapeHtml(v.name)}</td>
+                    ${supervisorStatsCells(v)}
+                    <td>${villageTasksLink(project, v)}</td>
+                </tr>`).join('');
+        return supervisorDrillTable('drill-villages', "{% translate 'Village' %}", rows);
+    }
 
     $(document).ready(function () {
         {% get_current_language as lang %}
@@ -147,6 +304,7 @@
 
          table.on('click', '.expand-icon', function (e) {
             let supervisor_id = this.id.split('_')[1];
+            const supervisor_name = this.dataset.name || '';
             
             let target = e.target;
             let tr = target.closest('tr');
@@ -171,6 +329,8 @@
                 let invalidation_notifications = JSON.parse(
                     document.getElementById(`invalidation_notifications_${supervisor_id}`).textContent
                 );
+                const cantons_details_element = document.getElementById(`cantons_details_${supervisor_id}`);
+                const cantons_details = (cantons_details_element && JSON.parse(cantons_details_element.textContent)) || {};
                 
                 let table_tbody_html = "";
 
@@ -182,6 +342,11 @@
 
                         const rowId =
                             `${vals.project_id}-${v.cycle_id}`;
+
+                        const cantons = (cantons_details[project] || {})[cycle] || [];
+                        const expandProject = cantons.length
+                            ? `<i class="expand-project drill-icon fas fa-chevron-circle-right text-primary" data-project="${encodeURIComponent(project)}" data-cycle="${encodeURIComponent(cycle)}" title="{% translate 'Situation by canton' %}"></i>`
+                            : '';
 
                         table_tbody_html += `
                             <tr>
@@ -223,6 +388,8 @@
                                     ${v.decision_percent ?? 0} %
                                 </td>
 
+                                <td class="pointer-event">${expandProject}</td>
+
                             </tr>
                         `;
                     }
@@ -248,6 +415,7 @@
                                         <th>{% translate 'Invalidated tasks reviewed by the facilitator (No Completed)' %}</th>
                                         <th>{% translate "Percentage of completed tasks validated" %}</th>
                                         <th>{% translate "Percentage of decisions" %}</th>
+                                        <th width="5%" class="no-sort no-export"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -264,20 +432,49 @@
                     $('#table_detail').empty(); 
                 }
 
-                $('#table_detail').DataTable({
-                    language: {
-                        url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
-                    },
-                    columnDefs: [
-                        { 
-                            type: 'numeric-comma', targets: [1, 2, 3, 4, 5, 6, 7, 8, 9] 
-                        }
-                    ],
-                    dom: 'Brtip',
-                    buttons: ['copy', 'excel', 'pdf', 'colvis'],
-                    //lengthMenu: [10, 20, 30, 40, 43, 50, 60, 70, 80, 90, 100],
-                    //pageLength: 10,
-                    order: []
+                let detail_table = $('#table_detail').DataTable(drillTableOptions(supervisor_name));
+
+                // Ligne enfant d'une ligne de tableau : créée (et son tableau initialisé) au premier déroulé, puis
+                // simplement affichée / masquée.
+                function toggleChild(row, icon, html, init) {
+                    if (row.child.isShown()) {
+                        row.child.hide();
+                        $(icon).removeClass('fa-chevron-circle-down').addClass('fa-chevron-circle-right');
+                        return;
+                    }
+                    const created = !row.child();
+                    if (created) {
+                        row.child(html());
+                    }
+                    row.child.show();
+                    if (created) {
+                        init($(row.child()));
+                    }
+                    $(icon).removeClass('fa-chevron-circle-right').addClass('fa-chevron-circle-down');
+                }
+
+                // Projet -> cantons
+                $('#table_detail tbody').on('click', '.expand-project', function (e) {
+                    e.stopPropagation();
+                    const project = decodeURIComponent(this.dataset.project);
+                    const cycle = decodeURIComponent(this.dataset.cycle);
+                    const cantons = (cantons_details[project] || {})[cycle] || [];
+                    const title = `${supervisor_name} - ${project} [${cycle}]`;
+                    toggleChild(detail_table.row($(this).closest('tr')), this, () => supervisorCantonsTable(project, cantons), child => {
+                        const table = child.find('table.drill-cantons');
+                        table.data({project: project, cantons: cantons, title: title});
+                        table.DataTable(drillTableOptions(title));
+                    });
+                });
+                // Canton -> villages
+                $('#table_detail tbody').on('click', '.expand-canton', function (e) {
+                    e.stopPropagation();
+                    const cantons_table = $(this).closest('table');
+                    const {project, cantons, title} = cantons_table.data();
+                    const canton = cantons[this.dataset.index];
+                    toggleChild(cantons_table.DataTable().row($(this).closest('tr')), this, () => supervisorVillagesTable(project, canton.villages), child => {
+                        child.find('table.drill-villages').DataTable(drillTableOptions(`${title} - ${canton.name}`));
+                    });
                 });
 
             }

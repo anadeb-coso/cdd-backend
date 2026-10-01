@@ -3993,3 +3993,24 @@ msgstr "Pas avant le dernier changement enregistré (%(date)s)."
 #: localities change date
 msgid "recorded on"
 msgstr "enregistré le"
+
+#: supervisors drill-down
+msgid "Situation by canton"
+msgstr "Situation par canton"
+
+#: supervisors drill-down
+msgid "Situation by village"
+msgstr "Situation par village"
+
+
+#: localities history filters
+msgid "Persons"
+msgstr "Personnes"
+
+#: supervisors drill-down
+msgid "headquarters village(s)"
+msgstr "village(s) siège(s)"
+
+#: supervisors drill-down (nombre de lignes affichées)
+msgid "All rows"
+msgstr "Tous"

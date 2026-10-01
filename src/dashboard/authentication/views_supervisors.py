@@ -3,7 +3,8 @@ from django.utils.translation import gettext_lazy
 from django.views import generic
 from django.contrib.auth.models import User
 import itertools
-from django.db.models import Sum
+from collections import defaultdict
+from django.db.models import Q, Sum
 
 from dashboard.facilitators.forms import FilterFacilitatorForm
 from dashboard.mixins import PageMixin
@@ -11,7 +12,85 @@ import grm_client
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from process_manager.models import AggregatedStatus, Project
 from cdd.functions import list_with_and
+from administrativelevels.models import AdministrativeLevel
+from cdd.call_objects_from_other_db import mis_objects_call
 
+# Situation affichée pour un projet, un canton ou un village (mêmes colonnes que la ligne du superviseur)
+STATS_FIELDS = [
+    'total_tasks', 'total_tasks_completed', 'total_tasks_validated', 'total_tasks_invalidated',
+    'total_tasks_waiting_validation', 'total_tasks_invalidated_review', 'total_tasks_invalidated_review_completed',
+    'total_tasks_invalidated_review_in_pending',
+]
+
+
+def _stats(row):
+    stats = {field: (row or {}).get(field) or 0 for field in STATS_FIELDS}
+    completed, validated, invalidated = stats['total_tasks_completed'], stats['total_tasks_validated'], stats['total_tasks_invalidated']
+    stats['validation_percent'] = float("%.2f" % ((validated / completed * 100) if completed else 0))
+    stats['decision_percent'] = float("%.2f" % (((validated + invalidated) / completed * 100) if completed else 0))
+    return stats
+
+
+def attach_cantons_details(supervisors, projects):
+    """Situation par canton, puis par village siège, de chaque superviseur pour chaque projet et cycle (déroulé d'un
+    projet puis d'un canton sur /supervisors/, comme /diagnostics/adl-tasks) : `supervisor['cantons_details'][projet]
+    [cycle]` = cantons de sa zone avec leurs villages sièges (un par CVD : leurs chiffres s'additionnent pour donner
+    ceux du canton). Chaque village siège porte la base CouchDB du facilitateur qui lui est affecté dans le SIG pour
+    ce projet (lien « Voir » vers ses tâches). Quelques requêtes pour tous les superviseurs."""
+    from assignments.models import AssignAdministrativeLevelToFacilitator
+    from authentication.models import Facilitator
+    from subprojects.models import Project as MisProject
+
+    cycles = {cycle.id: (project, cycle.name) for project in projects for cycle in project.cycle_set.all()}
+    canton_ids = {canton_id for supervisor in supervisors for canton_id in supervisor.get('_canton_ids', [])}
+    names, villages_by_canton = {}, defaultdict(list)
+    if canton_ids:
+        names.update(mis_objects_call.filter_objects(AdministrativeLevel, id__in=canton_ids).values_list('id', 'name'))
+        for village_id, name, parent_id, cvd_name in mis_objects_call.filter_objects(
+            AdministrativeLevel, parent_id__in=canton_ids, type="Village", headquarters_village_of_the_cvd__isnull=False,
+        ).distinct().values_list('id', 'name', 'parent_id', 'cvd__name'):
+            names[village_id] = name if not cvd_name or name == cvd_name else f"{name} [{cvd_name}]"
+            villages_by_canton[parent_id].append(village_id)
+    village_ids = {v for vs in villages_by_canton.values() for v in vs}
+    level_ids = canton_ids | village_ids
+    stats = {
+        (row['administrative_level_id'], row['cycle_id']): row
+        for row in AggregatedStatus.objects.filter(
+            facilitator=None, task=None, administrative_level_id__in=level_ids, cycle_id__in=list(cycles),
+        ).values('administrative_level_id', 'cycle_id').annotate(**{field: Sum(field) for field in STATS_FIELDS})
+    } if level_ids and cycles else {}
+
+    # Facilitateur affecté à chaque village siège dans le SIG, par projet (mêmes critères que /diagnostics/adl-tasks)
+    mis_projects = dict(mis_objects_call.filter_objects(MisProject, name__in={p.name for p, _ in cycles.values()}).values_list('name', 'id'))
+    assignments = list(mis_objects_call.filter_objects(
+        AssignAdministrativeLevelToFacilitator, project_id__in=list(mis_projects.values()), administrative_level_id__in=village_ids,
+        activated=True,
+    ).values_list('project_id', 'administrative_level_id', 'facilitator_id')) if village_ids and mis_projects else []
+    databases = dict(Facilitator.objects.filter(
+        id__in={int(f) for _, _, f in assignments if str(f).isdigit()}, facilitator_type='community_facilitator',
+        develop_mode=False, training_mode=False,
+    ).values_list('id', 'no_sql_db_name'))
+    database_of = {(project_id, village_id): databases.get(int(f)) for project_id, village_id, f in assignments if str(f).isdigit()}
+
+    for supervisor in supervisors:
+        details = {}
+        for cycle_id, (project, cycle_name) in cycles.items():
+            mis_project_id = mis_projects.get(project.name)
+            cantons = []
+            for canton_id in sorted(supervisor.get('_canton_ids', []), key=lambda i: names.get(i, '')):
+                if (canton_id, cycle_id) not in stats:
+                    continue  # canton hors de ce projet / cycle
+                villages = sorted((v for v in villages_by_canton[canton_id] if (v, cycle_id) in stats), key=lambda i: names.get(i, ''))
+                cantons.append(dict(
+                    _stats(stats[(canton_id, cycle_id)]), id=canton_id, name=names.get(canton_id, canton_id),
+                    villages=[
+                        dict(_stats(stats[(v, cycle_id)]), id=v, name=names.get(v, v), db=database_of.get((mis_project_id, v)))
+                        for v in villages
+                    ],
+                ))
+            details.setdefault(project.name, {})[cycle_name] = cantons
+        supervisor['cantons_details'] = details
+        supervisor['cantons_details_id'] = f"cantons_details_{supervisor['user_object_cdd_id']}"
 
 
 class SupervisrosListView(PageMixin, LoginRequiredMixin, generic.ListView):
@@ -133,6 +212,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             cantons_stabilized_names = list(set(
                 list(itertools.chain(*[[str(ad['name'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'name' in ad]))
             ))
+            supervisor['_canton_ids'] = sorted({int(_id) for _id in cantons_stabilized_ids if str(_id).isdigit()})
             
             invalidation_notifications = {}
             supervisor['total_tasks'] = 0
@@ -221,6 +301,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                 )/supervisor['total_tasks_completed'])*100) if supervisor['total_tasks_completed'] else 0))
             )
             
+        attach_cantons_details(supervisors, projects)
         return supervisors
 
     def get_queryset(self):
