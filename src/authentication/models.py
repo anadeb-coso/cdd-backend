@@ -32,7 +32,14 @@ class Facilitator(BaseModel):
     administrative_levels_ids = models.JSONField(null=True, blank=True)
     stabilization_administrative_ids = models.JSONField(null=True, blank=True)
     additional_administrative_ids = models.JSONField(null=True, blank=True)
-    
+    # Choix tels que saisis (page « Localités » de CDD ou fiche EADL du GRM), avant calcul des villages
+    # stockés ci-dessus : niveau principal de l'EADL (1er choisi, de tout type ; "1" = TOGO) et niveaux
+    # choisis (régions, préfectures, communes, cantons, villages). Miroir de GovernmentWorker.administrative_id
+    # et Adl.administrative_region_ids / additional_administrative_region_ids côté GRM.
+    main_administrative_id = models.CharField(max_length=255, null=True, blank=True)
+    stabilization_administrative_choices = models.JSONField(null=True, blank=True)
+    additional_administrative_choices = models.JSONField(null=True, blank=True)
+
     facilitator_type = models.CharField(max_length=100, choices=FACILITATORS_TYPES, default='community_facilitator')
 
     # Compte Django permettant à ce Facilitator de se connecter au Web DCC
@@ -505,6 +512,79 @@ class Facilitator(BaseModel):
     class Meta:
         verbose_name = _('Facilitator')
         verbose_name_plural = _('Facilitators')
+
+
+class UserLocalities(models.Model):
+    """Localités d'intervention d'un utilisateur du dashboard (superviseurs surtout), copiées par email
+    avec le GRM (GovernmentWorker.administrative_id/administrative_ids/additional_administrative_ids du
+    compte GRM de même email). Pas d'enregistrement, ou aucun choix : superviseur = aucune localité,
+    autres utilisateurs = tout le pays. `administrative_id` "1" (TOGO) = tout le pays."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='intervention_localities')
+    administrative_id = models.CharField(max_length=255, null=True, blank=True)
+    administrative_choices = models.JSONField(null=True, blank=True)
+    additional_administrative_choices = models.JSONField(null=True, blank=True)
+    village_ids = models.JSONField(null=True, blank=True)
+    additional_village_ids = models.JSONField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
+    class Meta:
+        verbose_name = _('User localities')
+        verbose_name_plural = _('Users localities')
+
+
+class LocalityHistory(models.Model):
+    """Trajet des facilitateurs et utilisateurs : une ligne par changement de localités (affectation,
+    stabilisation, additionnelles, intervention), avec l'état avant/après, qui et d'où. Ajout seulement."""
+    SECTIONS = (
+        ('assignment', _('Assignment villages')),
+        ('stabilization', _('Stabilization villages')),
+        ('additional', _('Additional villages')),
+        ('intervention', _('Intervention localities')),
+        ('intervention_additional', _('Additional intervention localities')),
+    )
+    SOURCES = (
+        ('localities_page', _('Localities page')),
+        ('facilitator_form', _('Facilitator form')),
+        ('facilitator_creation', _('Facilitator creation')),
+        ('user_localities_page', _('User localities page')),
+        ('grm', _('GRM')),
+        ('mis_import', _('Imported from the MIS assignments')),
+        ('initial_state', _('Initial state')),
+        ('couchdb_rebuild', _('Rebuilt from CouchDB')),
+    )
+    facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, related_name='localities_history')
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='localities_history')
+    # copies : l'historique reste lisible si le facilitateur/l'utilisateur est supprimé
+    email = models.CharField(max_length=150, null=True, blank=True)
+    name = models.CharField(max_length=200, null=True, blank=True)
+    section = models.CharField(max_length=30, choices=SECTIONS)
+    main_before = models.CharField(max_length=255, null=True, blank=True)
+    main_after = models.CharField(max_length=255, null=True, blank=True)
+    choices_before = models.JSONField(null=True, blank=True)
+    choices_after = models.JSONField(null=True, blank=True)
+    # None avant = état antérieur inconnu (1re définition ou état initial constaté)
+    villages_before = models.JSONField(null=True, blank=True)
+    villages_after = models.JSONField(default=list, blank=True)
+    added = models.JSONField(default=list, blank=True)
+    removed = models.JSONField(default=list, blank=True)
+    project_id = models.IntegerField(null=True, blank=True)
+    source = models.CharField(max_length=30, choices=SOURCES)
+    changed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    changed_by_label = models.CharField(max_length=200, null=True, blank=True)
+    changed_at = models.DateTimeField(db_index=True)
+    # dates reconstituées (import des affectations du SIG : date de désaffectation = dernière modification)
+    approximate_date = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Locality history')
+        verbose_name_plural = _('Localities history')
+        ordering = ['-changed_at', '-id']
+        indexes = [
+            models.Index(fields=['facilitator', 'changed_at']),
+            models.Index(fields=['user', 'changed_at']),
+        ]
 
 
 

@@ -18,6 +18,9 @@ from subprojects.models import Project as MisProject
 from administrativelevels import models as administrativelevels_models
 from cdd.functions import list_with_and
 from dashboard.utils import search_facilitators_db_with_villages_stabilized
+from dashboard.facilitators.localities import administrative_choices, flag_sessions_for_zone_change, is_supervisor, supervisor_canton_ids
+from dashboard.facilitators.localities_history import facilitator_state, record_facilitator_changes, record_user_changes, user_state
+from authentication.models import UserLocalities
 
 
 
@@ -31,13 +34,26 @@ class RestUpdateFacilitatorAdl(APIView):
             serializer = self.serializer_class(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             validated_data = serializer.validated_data
+
+            if validated_data.get("account") is not None:
+                self.update_user_localities(validated_data["account"], validated_data)
+                return Response({'success': 'ok', 'status': 'success', 'type': 'user'}, status=status.HTTP_200_OK)
             
             facilitator = validated_data["user"]
+            localities_before = facilitator_state(facilitator)
 
             facilitator.stabilization_administrative_ids = validated_data["stabilization_administrative_ids"]
             facilitator.additional_administrative_ids = validated_data["additional_administrative_ids"]
+            # Choix de l'agent (envoyés par les versions récentes du GRM seulement).
+            if "administrative_id" in validated_data:
+                facilitator.main_administrative_id = validated_data["administrative_id"] or None
+            if "administrative_ids" in validated_data:
+                facilitator.stabilization_administrative_choices = administrative_choices(validated_data["administrative_ids"])
+            if "additional_administrative_region_ids" in validated_data:
+                facilitator.additional_administrative_choices = administrative_choices(validated_data["additional_administrative_region_ids"])
 
             facilitator.simple_save()
+            record_facilitator_changes(facilitator, localities_before, 'grm', sections=['stabilization', 'additional'], changed_by_label="GRM")
 
             stabilization_administrative = list(mis_objects_call.filter_objects(
                 administrativelevels_models.AdministrativeLevel,
@@ -71,7 +87,7 @@ class RestUpdateFacilitatorAdl(APIView):
             if additional_administrative:
                 datas[_("Additional locations")] = list_with_and(additional_administrative)
 
-            if facilitator.active and not settings.DEBUG:
+            if facilitator.active and not settings.DEBUG and validated_data.get("notify", True):
                 _status = send_email(
                     f'[COSO Apps : {datetime.now().strftime("%Y-%m-%d")}] {_("Update your service areas")}',
                     "mail/send/notification",
@@ -103,3 +119,27 @@ class RestUpdateFacilitatorAdl(APIView):
                 {'success': 'ok', 'status': 'success'}, 
                 status=status.HTTP_200_OK
             )
+
+    @staticmethod
+    def update_user_localities(account, validated_data):
+        """Localités d'intervention d'un utilisateur du dashboard (non facilitateur), copiées de son compte
+        GRM de même email. Aucun email n'est envoyé."""
+        record = UserLocalities.objects.filter(user=account).first()
+        before = user_state(record)
+        # zone d'un superviseur avant l'envoi (None : pas encore dans CDD, sa zone venait déjà du GRM)
+        zone_before = supervisor_canton_ids(account) if is_supervisor(account) else None
+        if record is None:
+            record = UserLocalities(user=account)
+        record.village_ids = administrative_choices(validated_data["stabilization_administrative_ids"])
+        record.additional_village_ids = administrative_choices(validated_data["additional_administrative_ids"])
+        if "administrative_id" in validated_data:
+            record.administrative_id = validated_data["administrative_id"] or None
+        if "administrative_ids" in validated_data:
+            record.administrative_choices = administrative_choices(validated_data["administrative_ids"])
+        if "additional_administrative_region_ids" in validated_data:
+            record.additional_administrative_choices = administrative_choices(validated_data["additional_administrative_region_ids"])
+        record.save()
+        record_user_changes(account, before, record, 'grm', changed_by_label="GRM")
+        if zone_before is not None and set(zone_before) != set(supervisor_canton_ids(account) or []):
+            # zone changée depuis le GRM : ses sessions CDD ouvertes sont déconnectées à leur requête suivante
+            flag_sessions_for_zone_change(account)

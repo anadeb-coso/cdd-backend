@@ -26,6 +26,7 @@ from dashboard.templatetags.custom_tags import get_group_high
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.models import Facilitator
+from dashboard.facilitators.localities import supervisor_canton_ids
 from subprojects.models import Project as MisProject
 from dashboard.facilitators.functions import (
     get_db_task, get_search_for_stabilized_facilitator_dbs
@@ -638,14 +639,22 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             self.request.session['tree_structure_projects_mis_ids'] = [mis_objects_call.get_object(ProjectMis, name=p.name).id for p in tree_structure_projects]
 
             if self.request.user.groups.filter(name__in=["Supervisor"]).exists() and hasattr(self.request.user, 'email'):
-                facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
-                grm_client.attach_administrative_regions_objects(facilitator_grm)
-                # administratives_stabilized = facilitator_grm['administrative_regions']
-                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects') if facilitator_grm else None
-                self.request.session['cantons_stabilized_ids'] = list(set(
-                    # (administratives_stabilized if administratives_stabilized else []) +
-                    list(itertools.chain(*[[str(ad['id'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
-                ))
+                # Zone = localités d'intervention enregistrées dans CDD (copiées du/vers le GRM) ; à défaut
+                # d'enregistrement dans CDD, lecture de l'EADL du GRM comme auparavant.
+                cantons_stabilized_ids = supervisor_canton_ids(self.request.user)
+                if cantons_stabilized_ids is None:
+                    facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
+                    grm_client.attach_administrative_regions_objects(facilitator_grm)
+                    # administratives_stabilized = facilitator_grm['administrative_regions']
+                    administrative_regions_objects = facilitator_grm.get('administrative_regions_objects') if facilitator_grm else None
+                    cantons_stabilized_ids = list(set(
+                        # (administratives_stabilized if administratives_stabilized else []) +
+                        list(itertools.chain(*[[str(ad['id'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
+                    ))
+                self.request.session['cantons_stabilized_ids'] = cantons_stabilized_ids
+                if not cantons_stabilized_ids:
+                    messages.warning(request, gettext_lazy("No intervention locality is defined for your account: contact an administrator."))
+                    return super().get(request)
 
             next_page = self.request.GET.get('next')
             if next_page:

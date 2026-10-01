@@ -3638,3 +3638,330 @@ msgstr "Impossible de mettre à jour le statut de la tâche — merci de réessa
 #: dashboard/templates/task_cycle/cvd_list.html
 msgid "Loading…"
 msgstr "Chargement…"
+
+#: .\dashboard\templatetags\custom_tags.py
+msgid "Safeguard"
+msgstr "Sauvegarde"
+
+#: dashboard/templates/facilitators/localities.html dashboard/facilitators/views_localities.py dashboard/facilitators/localities.py
+msgid "Localities"
+msgstr "Localités"
+
+msgid "Summary of changes — please confirm"
+msgstr "Résumé des changements — merci de confirmer"
+
+msgid "No stabilization locality chosen: the assignment villages are copied into the stabilization localities."
+msgstr "Aucune localité de stabilisation choisie : les villages d'affectation sont copiés dans les localités de stabilisation."
+
+msgid "Before"
+msgstr "Avant"
+
+msgid "After"
+msgstr "Après"
+
+msgid "Added"
+msgstr "Ajoutés"
+
+msgid "Removed"
+msgstr "Retirés"
+
+msgid "village(s)"
+msgstr "village(s)"
+
+msgid "Main level (EADL)"
+msgstr "Niveau principal (EADL)"
+
+msgid "Stabilization choices"
+msgstr "Choix de stabilisation"
+
+msgid "Additional choices"
+msgstr "Choix additionnels"
+
+msgid "Confirm and save"
+msgstr "Confirmer et enregistrer"
+
+msgid "Stabilization and additional localities are also sent to the GRM."
+msgstr "Les localités de stabilisation et additionnelles sont aussi transmises au GRM."
+
+msgid "No change compared to the current localities."
+msgstr "Aucun changement par rapport aux localités actuelles."
+
+msgid "Assignment villages (initial)"
+msgstr "Villages d'affectation (initiaux)"
+
+msgid "Current"
+msgstr "Actuellement"
+
+msgid "current project and cycle"
+msgstr "projet et cycle en cours"
+
+msgid "Already filled in: only Admin, FullStack and superuser can modify them."
+msgstr "Déjà renseignés : seuls Admin, FullStack et le superutilisateur peuvent les modifier."
+
+msgid "Stabilization localities"
+msgstr "Localités de stabilisation"
+
+msgid "main level"
+msgstr "niveau principal"
+
+msgid "The first choice is the main level of the EADL. Choosing a village of a CVD selects all the villages of this CVD."
+msgstr "Le premier choix est le niveau principal de l'EADL. Choisir un village d'un CVD sélectionne tous les villages de ce CVD."
+
+msgid "Outside your zone (kept, not modifiable)"
+msgstr "Hors de votre zone (conservé, non modifiable)"
+
+msgid "Main level"
+msgstr "Niveau principal"
+
+msgid "Additional localities"
+msgstr "Localités additionnelles"
+
+msgid "Preview the changes"
+msgstr "Aperçu des changements"
+
+msgid "Assignment villages"
+msgstr "Villages d'affectation"
+
+msgid "Stabilization villages"
+msgstr "Villages de stabilisation"
+
+msgid "Additional villages"
+msgstr "Villages additionnels"
+
+msgid "No change to save."
+msgstr "Aucun changement à enregistrer."
+
+#, python-format
+msgid "Access to other facilitators' databases not updated: %s"
+msgstr "Accès aux bases des autres facilitateurs non mis à jour : %s"
+
+msgid "Localities saved and sent to the GRM."
+msgstr "Localités enregistrées et transmises au GRM."
+
+#, python-format
+msgid "Localities saved in CDD but not sent to the GRM (%s)."
+msgstr "Localités enregistrées dans CDD mais non transmises au GRM (%s)."
+
+msgid "Localities saved."
+msgstr "Localités enregistrées."
+
+#, python-format
+msgid "%(n)s village(s) outside the project ignored for the assignment: %(names)s"
+msgstr "%(n)s village(s) hors du projet ignoré(s) pour l'affectation : %(names)s"
+
+#, python-format
+msgid "%(n)s village(s) outside your zone ignored for the assignment: %(names)s"
+msgstr "%(n)s village(s) hors de votre zone ignoré(s) pour l'affectation : %(names)s"
+
+#, python-format
+msgid "Already assigned to another facilitator in this project (MIS assignment unchanged for these villages): %(names)s"
+msgstr "Déjà affecté(s) à un autre facilitateur dans ce projet (affectation MIS inchangée pour ces villages) : %(names)s"
+
+#, python-format
+msgid "%(section)s: outside your zone -> %(names)s"
+msgstr "%(section)s : hors de votre zone -> %(names)s"
+
+
+#: localities
+msgid "Country"
+msgstr "Pays"
+
+#: localities
+msgid "Whole country (TOGO)"
+msgstr "Tout le pays (TOGO)"
+
+#: localities
+msgid "None"
+msgstr "Aucune"
+
+#: localities
+msgid "Whole country chosen: the other choices are ignored."
+msgstr "Tout le pays choisi : les autres choix sont ignorés."
+
+#: localities
+msgid "Without intervention localities, this supervisor will no longer have access to the dashboard data."
+msgstr "Sans localités d'intervention, ce superviseur n'aura plus accès aux données du tableau de bord."
+
+#: localities
+msgid "User localities"
+msgstr "Localités d'un utilisateur"
+
+#: localities
+msgid "Users localities"
+msgstr "Localités des utilisateurs"
+
+#: localities
+msgid "Intervention localities"
+msgstr "Localités d'intervention"
+
+#: localities
+msgid "Additional intervention localities"
+msgstr "Localités d'intervention additionnelles"
+
+#: localities
+msgid "Localities page"
+msgstr "Page Localités"
+
+#: localities
+msgid "Facilitator form"
+msgstr "Formulaire du facilitateur"
+
+#: localities
+msgid "Facilitator creation"
+msgstr "Création du facilitateur"
+
+#: localities
+msgid "User localities page"
+msgstr "Page Localités d'intervention"
+
+#: localities
+msgid "GRM"
+msgstr "GRM"
+
+#: localities
+msgid "Imported from the MIS assignments"
+msgstr "Importé des affectations du SIG"
+
+#: localities
+msgid "Initial state"
+msgstr "État initial"
+
+#: localities
+msgid "Locality history"
+msgstr "Historique de localités"
+
+#: localities
+msgid "Localities history"
+msgstr "Trajets (historique des localités)"
+
+#: localities
+msgid "no email"
+msgstr "pas d'email"
+
+#: localities
+msgid "No intervention locality is defined for your account: contact an administrator."
+msgstr "Aucune localité d'intervention n'est définie pour votre compte : contactez un administrateur."
+
+#: localities
+msgid "Localities history (trajectory)"
+msgstr "Historique des localités (trajet)"
+
+#: localities
+msgid "By"
+msgstr "Par"
+
+#: localities
+msgid "No change recorded yet."
+msgstr "Aucun changement enregistré pour le moment."
+
+#: localities
+msgid "updated on"
+msgstr "mises à jour le"
+
+#: localities
+msgid "by"
+msgstr "par"
+
+#: localities
+msgid "Supervisor: without intervention localities, no dashboard data is available to them."
+msgstr "Superviseur : sans localités d'intervention, aucune donnée du tableau de bord ne lui est accessible."
+
+#: localities
+msgid "When no locality is defined, this user intervenes in the whole country."
+msgstr "Sans localité définie, cet utilisateur intervient dans tout le pays."
+
+#: localities
+msgid "Intervention choices"
+msgstr "Choix d'intervention"
+
+#: localities
+msgid "The localities are also copied to the GRM account with the same email."
+msgstr "Les localités sont aussi copiées sur le compte GRM de même email."
+
+#: localities
+msgid "The first choice is the main level. Choosing a village of a CVD selects all the villages of this CVD. Choose TOGO for the whole country."
+msgstr "Le premier choix est le niveau principal. Choisir un village d'un CVD sélectionne tous les villages de ce CVD. Choisir TOGO pour tout le pays."
+
+#: localities
+msgid "Person (name or email)"
+msgstr "Personne (nom ou email)"
+
+#: localities
+msgid "From"
+msgstr "Du"
+
+#: localities
+msgid "Filter"
+msgstr "Filtrer"
+
+#: localities
+msgid "≈ : reconstructed date (import of the MIS assignments: unassignment date = last modification)."
+msgstr "≈ : date reconstituée (import des affectations du SIG : date de désaffectation = dernière modification)."
+
+#: localities
+msgid "Presence in"
+msgstr "Présences dans"
+
+#: localities
+msgid "Person"
+msgstr "Personne"
+
+#: localities
+msgid "Arrival"
+msgstr "Arrivée"
+
+#: localities
+msgid "Departure"
+msgstr "Départ"
+
+#: localities
+msgid "Villages concerned"
+msgstr "Villages concernés"
+
+#: localities
+msgid "at least since"
+msgstr "au moins depuis le"
+
+#: localities
+msgid "Still present"
+msgstr "Toujours présent"
+
+#: localities
+msgid "Nobody recorded in this locality."
+msgstr "Personne n'est enregistré dans cette localité."
+
+#: localities
+msgid "Changes"
+msgstr "Changements"
+
+#: localities
+msgid "the %(max_rows)s most recent are displayed"
+msgstr "les %(max_rows)s plus récents sont affichés"
+
+#: localities
+msgid "Facilitators (CF and TF)"
+msgstr "Facilitateurs (FC et FT)"
+
+#: localities
+msgid "CDD facilitator"
+msgstr "Facilitateur"
+
+#: localities
+msgid "Dashboard user"
+msgstr "Utilisateur"
+
+#: localities
+msgid "Rebuilt from CouchDB"
+msgstr "Reconstruit depuis CouchDB"
+
+#: facilitators/update.html
+msgid "Village of another project: it can only be removed from the session of that project"
+msgstr "Village d'un autre projet : il ne peut être retiré que depuis la session de ce projet"
+
+#: zone
+msgid "Your intervention localities have been changed: please log in again."
+msgstr "Vos localités d'intervention ont été modifiées : veuillez vous reconnecter."
+
+#: zone
+msgid "%(n)s open session(s) of this supervisor will be logged out: the new zone applies at the next login."
+msgstr "%(n)s session(s) ouverte(s) de ce superviseur seront déconnectée(s) : la nouvelle zone s'applique à la prochaine connexion."

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.facilitators import views, views_stabilized, views_old_profile, views_export
+from dashboard.facilitators import views, views_stabilized, views_old_profile, views_export, views_localities
 
 app_name = 'facilitators'
 urlpatterns = [
@@ -10,6 +10,8 @@ urlpatterns = [
     path('facilitators-percent/', views.FacilitatorsPercentView.as_view(), name='facilitators_percent'),
     path('create/', views.CreateFacilitatorFormView.as_view(), name='create'),
     path('<int:pk>/update/', views.UpdateFacilitatorView.as_view(), name='update'),
+    path('<int:pk>/localities/', views_localities.FacilitatorLocalitiesView.as_view(), name='localities'),
+    path('localities-history/', views_localities.LocalitiesHistoryView.as_view(), name='localities_history'),
     path('<slug:id>/detail/', views.FacilitatorDetailView.as_view(), name='detail'),
     path('task-list/<slug:id>/', views.FacilitatorTaskListView.as_view(), name='task_list'),
     path('task-detail/<slug:id>/', views.FacilitatorTaskDetailModalView.as_view(), name='task_detail_modal'),

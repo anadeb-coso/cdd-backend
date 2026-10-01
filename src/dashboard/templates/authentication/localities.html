@@ -1,0 +1,147 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n custom_tags %}
+
+{% block content %}
+<style>
+    .localities-note { font-size: 12px; color: #6c757d; }
+    .preview-table td, .preview-table th { vertical-align: top; font-size: 13px; }
+    .preview-added { color: #1e7e34; }
+    .preview-removed { color: #c82333; }
+</style>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <b>{{ account_name }}</b> — {{ account.email|default:account.username }}
+                    {% for group in account_groups %}<span class="badge badge-secondary ml-1">{{ group }}</span>{% endfor %}
+                    {% if not account.is_active %}<span class="badge badge-danger ml-1">{% translate "Inactive" %}</span>{% endif %}
+                </h3>
+            </div>
+            <div class="card-body py-2">
+                <b>{% translate "Intervention localities" %} :</b> {{ zone }}
+                {% if record %}
+                    <span class="localities-note ml-2">({% translate "updated on" %} {{ record.updated_at|date:"d/m/Y H:i" }}{% if record.updated_by %} {% translate "by" %} {{ record.updated_by.last_name }} {{ record.updated_by.first_name }}{% endif %})</span>
+                {% endif %}
+                <p class="localities-note mb-0">
+                    {% if supervisor %}
+                        {% translate "Supervisor: without intervention localities, no dashboard data is available to them." %}
+                    {% else %}
+                        {% translate "When no locality is defined, this user intervenes in the whole country." %}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% if preview %}
+        <div class="card card-outline {% if errors %}card-danger{% else %}card-warning{% endif %}" id="preview">
+            <div class="card-header">
+                <h3 class="card-title"><b>{% translate "Summary of changes — please confirm" %}</b></h3>
+            </div>
+            <div class="card-body">
+                {% for error in errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+                {% for warning in warnings %}<div class="alert alert-warning">{{ warning }}</div>{% endfor %}
+                {% if preview.whole_country %}
+                    <div class="alert alert-info">{% translate "Whole country (TOGO)" %}</div>
+                {% endif %}
+
+                <table class="table table-bordered preview-table">
+                    <thead>
+                        <tr>
+                            <th width="18%"></th>
+                            <th width="12%">{% translate "Before" %}</th>
+                            <th width="12%">{% translate "After" %}</th>
+                            <th width="29%">{% translate "Added" %}</th>
+                            <th width="29%">{% translate "Removed" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, label in sections %}
+                            {% with d=preview|get:key %}
+                            <tr>
+                                <th>{{ label }}</th>
+                                <td>{{ d.before }} {% translate "village(s)" %}</td>
+                                <td><b>{{ d.after }}</b> {% translate "village(s)" %}</td>
+                                <td class="preview-added">{% if d.added_count %}+{{ d.added_count }} : {{ d.added }}{% else %}-{% endif %}</td>
+                                <td class="preview-removed">{% if d.removed_count %}-{{ d.removed_count }} : {{ d.removed }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endwith %}
+                        {% endfor %}
+                        <tr>
+                            <th>{% translate "Main level" %}</th>
+                            <td colspan="2">{{ preview.main_before }}</td>
+                            <td colspan="2"><b>{{ preview.main_after }}</b></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="localities-note">
+                    <b>{% translate "Intervention choices" %} :</b> {{ preview.choices|join:", "|default:"-" }}<br>
+                    <b>{% translate "Additional choices" %} :</b> {{ preview.additional_choices|join:", "|default:"-" }}
+                </p>
+
+                {% if not errors %}
+                    {% if preview.changed %}
+                        <form method="post">
+                            {% csrf_token %}
+                            {% for key, value in submitted.items %}{% if value is not None %}<input type="hidden" name="{{ key }}_ids" value="{{ value }}">{% endif %}{% endfor %}
+                            <button type="submit" name="confirm" value="1" class="btn btn-success btn-sm rounded-xl">
+                                {% translate "Confirm and save" %}
+                            </button>
+                            <span class="localities-note ml-2">{% translate "The localities are also copied to the GRM account with the same email." %}</span>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">{% translate "No change compared to the current localities." %}</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" id="localities-form">
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><b>{% translate "Intervention localities" %}</b></h3></div>
+                <div class="card-body">
+                    <p class="localities-note">
+                        {% translate "Current" %} : {{ current.intervention.before }} {% translate "village(s)" %} — {% translate "main level" %} : {{ current.main }}.
+                        {% translate "The first choice is the main level. Choosing a village of a CVD selects all the villages of this CVD. Choose TOGO for the whole country." %}
+                    </p>
+                    <select id="intervention" multiple>
+                        {% for value, label in intervention_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <input type="hidden" name="intervention_ids" id="intervention_ids">
+                    <p class="mt-2 mb-0"><b>{% translate "Main level" %} :</b> <span id="main-level">-</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><b>{% translate "Additional intervention localities" %}</b></h3></div>
+                <div class="card-body">
+                    <p class="localities-note">{% translate "Current" %} : {{ current.additional.before }} {% translate "village(s)" %}.</p>
+                    <select id="additional" multiple>
+                        {% for value, label in localities_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <input type="hidden" name="additional_ids" id="additional_ids">
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-xl">{% translate "Preview the changes" %}</button>
+                    <a href="{% url 'dashboard:authentication:users' %}" class="btn btn-default btn-sm rounded-xl">{% translate "Cancel" %}</a>
+                </div>
+            </div>
+        </form>
+
+        {% include 'facilitators/_localities_history.html' %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block select2 %}
+    {% include 'facilitators/_localities_select_js.html' %}
+    <script type="text/javascript">
+        const selectedLocalities = {{ selected|safe }};
+        orderedSelect('intervention', selectedLocalities, 'main-level');
+        orderedSelect('additional', selectedLocalities);
+        {% if preview %}document.getElementById('preview').scrollIntoView();{% endif %}
+    </script>
+{% endblock select2 %}

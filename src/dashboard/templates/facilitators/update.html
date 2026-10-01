@@ -77,7 +77,11 @@
                             <div id="selected_regions" class="col-12">
                                 {% for elt in facilitator_administrative_levels %}
                                     <a class='tag mt-2' >
+                                        {% if elt.project_id == current_project_couch_id %}
                                         <i value='{{ elt.id }}_{{ elt.project_id }}_{{ elt.cycle_id }}' class='fa fa-remove mr-2 link remove-region' title='Remove'></i>
+                                        {% else %}
+                                        <i class='fa fa-lock mr-2 text-muted' title="{% translate 'Village of another project: it can only be removed from the session of that project' %}"></i>
+                                        {% endif %}
                                         <b>{{ elt.name }} {% if elt.cvd_name and elt.cvd_name != elt.name %}(CVD : {{ elt.cvd_name }}){% endif %}</b> | {{ elt.project_name }} - {{ elt.cycle_name }}
                                     </a>
                                 {% endfor %} 

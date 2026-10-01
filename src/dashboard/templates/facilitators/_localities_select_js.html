@@ -1,0 +1,32 @@
+{% load i18n %}
+<script type="text/javascript">
+    // select2 affiche/soumet les options dans l'ordre du DOM : chaque option choisie est déplacée en fin
+    // de liste pour conserver l'ordre de sélection (le 1er choix = niveau principal).
+    // `selected` : {id du select: [ids pré-sélectionnés]} ; `mainTarget` : élément affichant le 1er choix.
+    function orderedSelect(id, selected, mainTarget) {
+        const $select = $('#' + id);
+        $select.select2({placeholder: "{% translate 'Click to select location' %}", width: '100%'});
+        (selected[id] || []).forEach(function (value) {
+            const option = $select.find('option[value="' + value + '"]');
+            if (option.length) { option.prop('selected', true); option.detach(); $select.append(option); }
+        });
+        $select.trigger('change');
+
+        function sync() {
+            const ids = $select.find('option:selected').map(function () { return parseInt(this.value); }).get();
+            $('#' + id + '_ids').val(JSON.stringify(ids));
+            if (mainTarget) {
+                $('#' + mainTarget).text(ids.length ? $select.find('option[value="' + ids[0] + '"]').text() : '-');
+            }
+        }
+        $select.on('select2:select', function (e) {
+            const option = $(e.params.data.element);
+            option.detach();
+            $select.append(option);
+            $select.trigger('change');
+            sync();
+        });
+        $select.on('select2:unselect', sync);
+        sync();
+    }
+</script>

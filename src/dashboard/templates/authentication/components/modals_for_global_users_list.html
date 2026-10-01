@@ -29,7 +29,7 @@
                 <table id="table-global-facilitators-community" class="table-bordered w-100">
                     <thead>
                     <tr>
-                        {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                        {% if user|can_edit_facilitator or user|can_edit_localities %}
                         <th width="2%">{% translate 'Edit' %}</th>
                         <th width="28%">{% translate 'Name' %}</th>
                         {% else %}
@@ -69,12 +69,20 @@
                     <tbody>
                         {% for facilitator in object.global_facilitators %}
                             <tr {% if not facilitator.active %} style="color: red;" {% endif %} id="{{ facilitator.no_sql_db_name }}" >
-                                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                                {% if user|can_edit_facilitator or user|can_edit_localities %}
                                 <td>
+                                    {% if user|can_edit_facilitator %}
                                     <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
                                         class="" title="{% translate 'See profile' %}">
                                         <i class="fa fa-edit"></i>
                                     </a>
+                                    {% endif %}
+                                    {% if user|can_edit_localities %}
+                                    <a href="{% url 'dashboard:facilitators:localities' facilitator.pk %}" target="_blank"
+                                        class="ml-1" title="{% translate 'Localities' %}">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </a>
+                                    {% endif %}
                                 </td>
                                 {% endif %}
 
@@ -199,7 +207,7 @@
                     <thead>
                         <tr>
                             
-                            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                            {% if user|can_edit_facilitator or user|can_edit_localities %}
                             <th width="2%">{% translate 'Edit' %}</th>
                             <th width="18%">{% translate 'Name' %}</th>
                             {% else %}
@@ -216,32 +224,38 @@
                     </thead>
                     <tbody>
                     {% for facilitator in object.global_technical_facilitators_stabilized %}
-                        {% with facilitator|get_facilitator_by_email as facilitator_object %}
-                        {% if facilitator_object and facilitator_object.no_sql_db_name %}
-                        <tr {% if not facilitator.representative.is_active %} style="color: red;" {% endif %}>
+                        <tr {% if not facilitator.active %} style="color: red;" {% endif %}>
                             
-                            {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                            {% if user|can_edit_facilitator or user|can_edit_localities %}
                             <td align="left">
-                                <a href="https://mgp.coso-togo.com/fr/administrative-levels/{{facilitator|get:'_id'}}/" target="_blank"
+                                {% if user|can_edit_facilitator %}
+                                <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
                                     class="" title="{% translate 'See profile' %}">
                                     <i class="fa fa-edit"></i>
                                 </a>
+                                {% endif %}
+                                {% if user|can_edit_localities %}
+                                <a href="{% url 'dashboard:facilitators:localities' facilitator.pk %}" target="_blank"
+                                    class="ml-1" title="{% translate 'Localities' %}">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </a>
+                                {% endif %}
                             </td>
                             {% endif %}
 
-                            <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator_object.no_sql_db_name }}"
-                                    href="{% url 'dashboard:facilitators:detail' facilitator_object.no_sql_db_name %}"
-                                    target="_blank" title="{% translate 'See profile' %}"><span>{{ facilitator.representative.name }}</span></a></td>
+                            <td align="left"><a class="pointer-event" data-facilitatorid="{{ facilitator.no_sql_db_name }}"
+                                    href="{% url 'dashboard:facilitators:detail' facilitator.no_sql_db_name %}"
+                                    target="_blank" title="{% translate 'See profile' %}"><span>{{ facilitator.name }}</span></a></td>
 
-                            <td align="left">{{ facilitator_object.username }}</td>
-                            <td align="left">{{ facilitator_object.sex }}</td>
+                            <td align="left">{{ facilitator.username }}</td>
+                            <td align="left">{{ facilitator.sex }}</td>
                             <td align="left">
-                                {{ facilitator.representative.phone }}<br />
-                                {{ facilitator.representative.email }}
+                                {{ facilitator.phone }}<br />
+                                {{ facilitator.email }}
                             </td>
 
                             <td align="left">
-                                {% for project in facilitator_object.projects.all %}
+                                {% for project in facilitator.projects.all %}
                                     {{ project }}{% if not forloop.last %}, {% else %}{% endif %}
                                 {% endfor %}
                             </td>
@@ -252,8 +266,6 @@
                             <td align="left">{{ administrative_regions_objects.villages }}</td>
                             {% endwith %}
                         </tr>
-                        {% endif %}
-                        {% endwith %}
                     {% endfor %}
                     </tbody>
                 </table>
@@ -306,7 +318,7 @@
                             <th >{% translate 'Email' %}</th>
                             <th >{% translate 'Group' %}</th>
                             <th >{% translate 'Project' %}</th>
-                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                            {% if user|is_admin or user|can_assign_user_localities %}<th >
                                 {% translate 'Action' %}</th>
                             {% endif %}
                         </tr>
@@ -319,8 +331,9 @@
                             <td>{{ user_obj.email }}</td>
                             <td>{{ user_obj|get_group_high }}</td>
                             <td>{% for project in user_obj.projects.all %}{{ project }}{% if not forloop.last %}, {% else %}{% endif %}{% endfor %}</td>
-                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            {% if user|is_admin or user|can_assign_user_localities %}
                             <td>
+                                {% if user|is_admin %}
                                 <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                     class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                     <span class="_web">{% translate 'Edit' %}</span>
@@ -331,6 +344,13 @@
                                     <span class="_web">{% translate 'Delete' %}</span>
                                     <span class="_mobile"><i class="fa fa-trash"></i></span>
                                 </a>
+                                {% endif %}
+                                {% if user|can_assign_localities_of:user_obj %}
+                                <a href="{% url 'dashboard:authentication:user_localities' user_obj.pk %}" target="_blank"
+                                    class="btn btn-info btn-xs" title="{% translate 'Intervention localities' %}">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </a>
+                                {% endif %}
                             </td>
                             {% endif %}
                         </tr>
@@ -386,7 +406,7 @@
                             <th >{% translate 'Email' %}</th>
                             <th >{% translate 'Group' %}</th>
                             <th >{% translate 'Project' %}</th>
-                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                            {% if user|is_admin or user|can_assign_user_localities %}<th >
                                 {% translate 'Action' %}</th>
                             {% endif %}
                         </tr>
@@ -399,8 +419,9 @@
                             <td>{{ user_obj.email }}</td>
                             <td>{{ user_obj|get_group_high }}</td>
                             <td>{% for project in user_obj.projects.all %}{{ project }}{% if not forloop.last %}, {% else %}{% endif %}{% endfor %}</td>
-                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            {% if user|is_admin or user|can_assign_user_localities %}
                             <td>
+                                {% if user|is_admin %}
                                 <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                     class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                     <span class="_web">{% translate 'Edit' %}</span>
@@ -411,6 +432,13 @@
                                     <span class="_web">{% translate 'Delete' %}</span>
                                     <span class="_mobile"><i class="fa fa-trash"></i></span>
                                 </a>
+                                {% endif %}
+                                {% if user|can_assign_localities_of:user_obj %}
+                                <a href="{% url 'dashboard:authentication:user_localities' user_obj.pk %}" target="_blank"
+                                    class="btn btn-info btn-xs" title="{% translate 'Intervention localities' %}">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </a>
+                                {% endif %}
                             </td>
                             {% endif %}
                         </tr>
@@ -466,7 +494,7 @@
                             <th >{% translate 'Email' %}</th>
                             <th >{% translate 'Group' %}</th>
                             <th >{% translate 'Project' %}</th>
-                            {% if user.is_superuser or user|has_group:"Admin" %}<th >
+                            {% if user|is_admin or user|can_assign_user_localities %}<th >
                                 {% translate 'Action' %}</th>
                             {% endif %}
                         </tr>
@@ -479,8 +507,9 @@
                             <td>{{ user_obj.email }}</td>
                             <td>{{ user_obj|get_group_high }}</td>
                             <td>{% for project in user_obj.projects.all %}{{ project }}{% if not forloop.last %}, {% else %}{% endif %}{% endfor %}</td>
-                            {% if user.is_superuser or user|has_group:"Admin" %}
+                            {% if user|is_admin or user|can_assign_user_localities %}
                             <td>
+                                {% if user|is_admin %}
                                 <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                     class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                     <span class="_web">{% translate 'Edit' %}</span>
@@ -491,6 +520,13 @@
                                     <span class="_web">{% translate 'Delete' %}</span>
                                     <span class="_mobile"><i class="fa fa-trash"></i></span>
                                 </a>
+                                {% endif %}
+                                {% if user|can_assign_localities_of:user_obj %}
+                                <a href="{% url 'dashboard:authentication:user_localities' user_obj.pk %}" target="_blank"
+                                    class="btn btn-info btn-xs" title="{% translate 'Intervention localities' %}">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </a>
+                                {% endif %}
                             </td>
                             {% endif %}
                         </tr>

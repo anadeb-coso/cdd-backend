@@ -12,7 +12,7 @@
         <table id="table" class="table-bordered">
             <thead>
             <tr>
-                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                {% if user|can_edit_facilitator or user|can_edit_localities %}
                 <th width="2%">{% translate 'Edit' %}</th>
                 <th width="28%">{% translate 'Name' %}</th>
                 {% else %}
@@ -47,12 +47,20 @@
                             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
                         </span>
                         </td> {% endcomment %}
-                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                    {% if user|can_edit_facilitator or user|can_edit_localities %}
                     <td>
+                        {% if user|can_edit_facilitator %}
                         <a href="{% url 'dashboard:facilitators:update' facilitator.pk %}" target="_blank"
                             class="" title="{% translate 'See profile' %}">
                             <i class="fa fa-edit"></i>
                         </a>
+                        {% endif %}
+                        {% if user|can_edit_localities %}
+                        <a href="{% url 'dashboard:facilitators:localities' facilitator.pk %}" target="_blank"
+                            class="ml-1" title="{% translate 'Localities' %}">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </a>
+                        {% endif %}
                     </td>
                     {% endif %}
 

@@ -98,3 +98,29 @@ class FacilitatorMenuAccessMiddleware:
         return render(request, "common/facilitator_access_denied.html", status=404, context={
             "home_url": reverse("dashboard:reports:reports:index"),
         })
+
+
+class ZoneChangeLogoutMiddleware:
+    """Déconnecte un superviseur dont la zone (cantons de ses localités d'intervention) a changé pendant qu'il
+    était connecté : ses sessions ont été marquées au changement (depuis CDD ou le GRM, cf.
+    dashboard.facilitators.localities.flag_sessions_for_zone_change). À sa requête suivante, il est renvoyé
+    vers la connexion avec un message ; sa nouvelle zone est calculée quand il choisit son projet.
+    Doit suivre AuthenticationMiddleware et MessageMiddleware."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.conf import settings
+        from django.contrib import messages
+        from django.contrib.auth import logout
+        from django.shortcuts import redirect
+        from django.utils.translation import gettext
+        from dashboard.facilitators.localities import ZONE_CHANGED_SESSION_KEY
+
+        if getattr(request, 'user', None) is not None and request.user.is_authenticated \
+                and request.session.get(ZONE_CHANGED_SESSION_KEY):
+            logout(request)
+            messages.warning(request, gettext("Your intervention localities have been changed: please log in again."))
+            return redirect(settings.LOGIN_URL)
+        return self.get_response(request)

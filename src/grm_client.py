@@ -110,6 +110,31 @@ def get_all_facilitators():
     return response.json()
 
 
+def update_localities_on_grm(email, administrative_id, administrative_ids, additional_administrative_ids):
+    """Copie vers le compte GRM de même email les localités d'un facilitateur ou d'un utilisateur modifiées
+    dans CDD (pendant de `update-user-adls/` GRM -> CDD). Le GRM met à jour son GovernmentWorker/EADL
+    puis renvoie lui-même les villages calculés à CDD. Renvoie (ok, détail)."""
+    try:
+        response = requests.post(
+            f"{settings.GRM_URL_BASE}/api/service/adls/update-localities/",
+            json={
+                'email': email,
+                'administrative_id': administrative_id,
+                'administrative_ids': [str(_id) for _id in (administrative_ids or [])],
+                'additional_administrative_ids': [str(_id) for _id in (additional_administrative_ids or [])],
+            },
+            # plus long que _TIMEOUT : le GRM renvoie les villages à CDD avant de répondre
+            headers=_headers(), timeout=90,
+        )
+    except requests.RequestException as exc:
+        return False, str(exc)
+    if response.status_code == 404:
+        return False, "no GRM account"
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    return True, response.json()
+
+
 def attach_administrative_regions_objects(eadl_doc):
     """Reconstruit localement la clé `administrative_regions_objects` (arbre canton/village)
     que portaient les anciens documents CouchDB `eadls`, mais que les dicts renvoyés par
@@ -120,49 +145,17 @@ def attach_administrative_regions_objects(eadl_doc):
     consommateur qui lit `doc.get('administrative_regions_objects')`.
 
     Mute et renvoie `eadl_doc` (no-op si `eadl_doc` est None ou n'a pas de
-    `administrative_regions`)."""
-    
+    `administrative_regions`).
+
+    Pour une liste de documents, préférer `attach_administrative_regions_objects_bulk`
+    (une requête au total au lieu d'une par document)."""
+
     if eadl_doc is None:
         return eadl_doc
-    
-    region_ids = []
-    if isinstance(eadl_doc, str) and '@' in eadl_doc:
-        from authentication.models import Facilitator
-        facilitator = Facilitator.objects.filter(email=eadl_doc).first()
-        if facilitator:
-            region_ids = (facilitator.stabilization_administrative_ids or []) + (facilitator.additional_administrative_ids or [])
-        eadl_doc = {}
-    elif isinstance(eadl_doc, list):
-        region_ids = list(eadl_doc)
-        eadl_doc = {}
-    elif isinstance(eadl_doc, dict):
-        region_ids = (eadl_doc.get('smallest_administrative_level_ids') or []) + eadl_doc.get('additional_smallest_administrative_level_ids') or []
-    
-    region_ids = list(set(region_ids))
 
-    from administrativelevels.models import AdministrativeLevel
-    
-    adls = AdministrativeLevel.objects.using('mis').filter(
-        id__in=region_ids,
-        type="Village"
-    ).values_list('id', 'name', 'parent__id', 'parent__name')
+    eadl_doc, region_ids = _extract_region_ids(eadl_doc)
 
-    objects = {}
-
-    for village_id, village_name, parent_id, parent_name in adls:
-        objects.setdefault(
-            parent_id,
-            {
-                "id": parent_id,
-                "name": parent_name,
-                "villages": []
-            }
-        )["villages"].append({
-            "id": village_id,
-            "name": village_name
-        })
-
-    objects = list(objects.values())
+    objects = _group_villages_by_parent(_village_rows(region_ids))
 
     # objects = []
     # for region_id in region_ids:
@@ -186,6 +179,74 @@ def attach_administrative_regions_objects(eadl_doc):
 
     eadl_doc['administrative_regions_objects'] = objects
     return eadl_doc
+
+
+def attach_administrative_regions_objects_bulk(eadl_docs):
+    """`attach_administrative_regions_objects` appliquée à chaque document de `eadl_docs`, mais
+    avec une seule requête sur les villages de tous les documents (au lieu d'une par document :
+    ~170 requêtes pour les EADL de `get_all_facilitators()`). Renvoie la liste des documents
+    complétés, dans le même ordre."""
+    prepared = [None if eadl_doc is None else _extract_region_ids(eadl_doc) for eadl_doc in eadl_docs]
+    rows = list(_village_rows({region_id for item in prepared if item for region_id in item[1]}))
+
+    docs = []
+    for item in prepared:
+        if item is None:
+            docs.append(None)
+            continue
+        eadl_doc, region_ids = item
+        # Mêmes conversions que le `id__in` de Django (None ignoré, "12" == 12).
+        ids = {int(region_id) for region_id in region_ids if region_id is not None}
+        eadl_doc['administrative_regions_objects'] = _group_villages_by_parent(row for row in rows if row[0] in ids)
+        docs.append(eadl_doc)
+    return docs
+
+
+def _extract_region_ids(eadl_doc):
+    """(document à compléter, ids distincts des villages) pour `eadl_doc` : email d'un
+    facilitateur, liste d'ids ou document EADL de l'API GRM."""
+    region_ids = []
+    if isinstance(eadl_doc, str) and '@' in eadl_doc:
+        from authentication.models import Facilitator
+        facilitator = Facilitator.objects.filter(email=eadl_doc).first()
+        if facilitator:
+            region_ids = (facilitator.stabilization_administrative_ids or []) + (facilitator.additional_administrative_ids or [])
+        eadl_doc = {}
+    elif isinstance(eadl_doc, list):
+        region_ids = list(eadl_doc)
+        eadl_doc = {}
+    elif isinstance(eadl_doc, dict):
+        region_ids = (eadl_doc.get('smallest_administrative_level_ids') or []) + eadl_doc.get('additional_smallest_administrative_level_ids') or []
+
+    return eadl_doc, list(set(region_ids))
+
+
+def _village_rows(region_ids):
+    from administrativelevels.models import AdministrativeLevel
+
+    return AdministrativeLevel.objects.using('mis').filter(
+        id__in=region_ids,
+        type="Village"
+    ).values_list('id', 'name', 'parent__id', 'parent__name')
+
+
+def _group_villages_by_parent(rows):
+    objects = {}
+
+    for village_id, village_name, parent_id, parent_name in rows:
+        objects.setdefault(
+            parent_id,
+            {
+                "id": parent_id,
+                "name": parent_name,
+                "villages": []
+            }
+        )["villages"].append({
+            "id": village_id,
+            "name": village_name
+        })
+
+    return list(objects.values())
 
 
 def set_grm_user_password(email, new_password):

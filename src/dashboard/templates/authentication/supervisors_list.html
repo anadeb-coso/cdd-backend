@@ -12,7 +12,7 @@
         <table id="table" class="table-bordered" style="width: 100% !important;">
             <thead>
            <tr>
-                {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
+                {% if user|can_assign_user_localities %}
                 <th>{% translate 'Action' %}</th>
                 {% endif %}
                 <th >{% translate 'Name' %}</th>
@@ -32,13 +32,16 @@
             <tbody>
             {% for supervisor in supervisors %}
                 <tr>
-                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" %}
+                    {% if user|can_assign_user_localities %}
                     <td>
-                        
-                        <a href="https://mgp.coso-togo.com/fr/administrative-levels/{{supervisor|get:'_id'}}/" target="_blank"
-                            class="" title="{% translate 'See profile' %}">
-                            <i class="fa fa-edit"></i>
+                        {% with supervisor_user_id=supervisor|get:'user_object_cdd_id' %}
+                        {% if user|can_assign_localities_of:supervisor_user_id %}
+                        <a href="{% url 'dashboard:authentication:user_localities' supervisor_user_id %}" target="_blank"
+                            class="" title="{% translate 'Intervention localities' %}">
+                            <i class="fas fa-map-marker-alt"></i>
                         </a>
+                        {% endif %}
+                        {% endwith %}
                     </td>
                     {% endif %}
 

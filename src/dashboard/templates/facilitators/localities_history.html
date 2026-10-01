@@ -1,0 +1,164 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n custom_tags %}
+
+{% block content %}
+<style>
+    .localities-note { font-size: 12px; color: #6c757d; }
+    .history-table td, .history-table th { vertical-align: top; font-size: 13px; }
+    .preview-added { color: #1e7e34; }
+    .preview-removed { color: #c82333; }
+</style>
+
+<div class="row">
+    <div class="col-md-12">
+        <form method="get" class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>{% translate "Person (name or email)" %}</label>
+                        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm">
+                    </div>
+                    {% if can_see_users %}
+                    <div class="col-md-2">
+                        <label>{% translate "Type" %}</label>
+                        <select name="kind" class="form-control form-control-sm">
+                            <option value="">{% translate "All" %}</option>
+                            <option value="facilitator" {% if filters.kind == "facilitator" %}selected{% endif %}>{% translate "Facilitators (CF and TF)" %}</option>
+                            <option value="user" {% if filters.kind == "user" %}selected{% endif %}>{% translate "Users" %}</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-2">
+                        <label>{% translate "Localities" %}</label>
+                        <select name="section" class="form-control form-control-sm">
+                            <option value="">{% translate "All" %}</option>
+                            {% for value, label in sections %}<option value="{{ value }}" {% if filters.section == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>{% translate "Locality" %}</label>
+                        <select name="locality" id="locality" class="form-control form-control-sm">
+                            <option value=""></option>
+                            {% for value, label in localities_options %}<option value="{{ value }}" {% if filters.locality == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label>{% translate "From" %}</label>
+                        <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-1">
+                        <label>{% translate "To" %}</label>
+                        <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer py-2">
+                <button type="submit" class="btn btn-primary btn-sm rounded-xl">{% translate "Filter" %}</button>
+                <a href="{% url 'dashboard:facilitators:localities_history' %}" class="btn btn-default btn-sm rounded-xl">{% translate "Reset" %}</a>
+                <span class="localities-note ml-2">{% translate "≈ : reconstructed date (import of the MIS assignments: unassignment date = last modification)." %}</span>
+            </div>
+        </form>
+
+        {% if periods is not None %}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><b>{% translate "Presence in" %} {{ locality_label }}</b></h3>
+            </div>
+            <div class="card-body p-0">
+                {% if periods %}
+                <table class="table table-sm table-striped mb-0 history-table">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Person" %}</th>
+                            <th>{% translate "Localities" %}</th>
+                            <th>{% translate "Arrival" %}</th>
+                            <th>{% translate "Departure" %}</th>
+                            <th>{% translate "Villages concerned" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for period in periods %}
+                        <tr>
+                            <td>{{ period.event.name|default:period.event.email }}<br><span class="localities-note">{{ period.event.email }}</span></td>
+                            <td>{{ period.event.get_section_display }}</td>
+                            <td>
+                                {% if not period.start_known %}{% translate "at least since" %} {% endif %}{% if period.start_approximate %}≈ {% endif %}{{ period.start|date:"d/m/Y" }}
+                            </td>
+                            <td>
+                                {% if period.end %}{% if period.end_approximate %}≈ {% endif %}{{ period.end|date:"d/m/Y" }}{% else %}<span class="badge badge-success">{% translate "Still present" %}</span>{% endif %}
+                            </td>
+                            <td>{{ period.villages|length }} {% translate "village(s)" %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                    <p class="localities-note p-3 mb-0">{% translate "Nobody recorded in this locality." %}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <b>{% translate "Changes" %}</b>
+                    <span class="localities-note ml-2">{{ total }}{% if total > max_rows %} — {% blocktranslate %}the {{ max_rows }} most recent are displayed{% endblocktranslate %}{% endif %}</span>
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                {% if history %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0 history-table">
+                        <thead>
+                            <tr>
+                                <th width="9%">{% translate "Date" %}</th>
+                                <th width="15%">{% translate "Person" %}</th>
+                                <th width="11%">{% translate "Localities" %}</th>
+                                <th width="13%">{% translate "Main level" %}</th>
+                                <th width="20%">{% translate "Added" %}</th>
+                                <th width="20%">{% translate "Removed" %}</th>
+                                <th width="12%">{% translate "By" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in history %}
+                            <tr>
+                                <td>{% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    {% if row.event.facilitator_id and can_edit_localities %}
+                                        <a href="{% url 'dashboard:facilitators:localities' row.event.facilitator_id %}#localities-history" target="_blank">{{ row.event.name|default:row.event.email }}</a>
+                                    {% elif row.event.user_id and can_see_users %}
+                                        <a href="{% url 'dashboard:authentication:user_localities' row.event.user_id %}#localities-history" target="_blank">{{ row.event.name|default:row.event.email }}</a>
+                                    {% else %}
+                                        {{ row.event.name|default:row.event.email }}
+                                    {% endif %}
+                                    <br><span class="localities-note">{% if row.event.facilitator_id %}{% translate "CDD facilitator" %}{% else %}{% translate "Dashboard user" %}{% endif %}</span>
+                                </td>
+                                <td>{{ row.event.get_section_display }}<br><span class="localities-note">{{ row.after_count }} {% translate "village(s)" %}</span></td>
+                                <td>{% if row.main_changed %}{{ row.main_before }} → <b>{{ row.main_after }}</b>{% else %}{{ row.main_after }}{% endif %}</td>
+                                <td class="preview-added">
+                                    {% if row.first_definition %}<span class="badge badge-light border">{% translate "Initial state" %}</span> {% endif %}
+                                    {% if row.whole_country %}{% translate "Whole country (TOGO)" %}{% elif row.added_count %}+{{ row.added_count }} : {{ row.added }}{% else %}-{% endif %}
+                                </td>
+                                <td class="preview-removed">{% if row.removed_count %}-{{ row.removed_count }} : {{ row.removed }}{% else %}-{% endif %}</td>
+                                <td>{{ row.event.changed_by_label|default:"-" }}<br><span class="localities-note">{{ row.event.get_source_display }}</span></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="localities-note p-3 mb-0">{% translate "No change recorded yet." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block select2 %}
+    <script type="text/javascript">
+        $('#locality').select2({placeholder: "{% translate 'Click to select location' %}", allowClear: true, width: '100%'});
+    </script>
+{% endblock select2 %}

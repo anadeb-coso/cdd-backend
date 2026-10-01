@@ -76,16 +76,17 @@ class FullStackPermissionRequiredMixin(UserPassesTestMixin):
         return super(FullStackPermissionRequiredMixin, self).dispatch(request, *args, **kwargs)
     
 
+# Groupes admis par CDDSpecialistPermissionRequiredMixin (avec le superutilisateur) ; repris par le filtre
+# de template `can_edit_facilitator` pour n'afficher les liens qu'à ceux qui y ont accès.
+CDD_SPECIALIST_GROUPS = ("CDDSpecialist", "Evaluator", "Admin")
+
+
 class CDDSpecialistPermissionRequiredMixin(UserPassesTestMixin):
     permission_required = None
 
     def test_func(self):
         return True if(self.request.user.is_authenticated and (
-            self.request.user.groups.filter(name="CDDSpecialist").exists()
-            or 
-            self.request.user.groups.filter(name="Evaluator").exists()
-            or 
-            self.request.user.groups.filter(name="Admin").exists()
+            self.request.user.groups.filter(name__in=CDD_SPECIALIST_GROUPS).exists()
             or 
             bool(self.request.user.is_superuser)
         )) else False

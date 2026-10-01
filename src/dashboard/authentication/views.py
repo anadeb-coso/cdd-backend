@@ -20,6 +20,7 @@ from authentication.models import Facilitator
 from process_manager.models import Project
 import grm_client
 from dashboard.facilitators.functions import update_facilitators_stats
+from dashboard.facilitators.localities import with_stabilization_localities
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject
 
@@ -221,43 +222,14 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
         # )
         global_facilitators = global_community_facilitators
 
-        facilitators_stabilized_all_docs = dict([
-            (doc.get('representative').get('email'), doc) for doc in grm_client.get_all_facilitators() \
-                if (
-                    type(doc) is dict and doc.get('type') == 'adl' and \
-                    doc.get('representative') and doc.get('representative').get('email')
-                )
-        ])
-
-        # # - CF
-        # adls_emaails_community_facilitators = [
-        #     obj.email for obj in community_facilitators
-        # ]
-        # facilitators_stabilized_dict = dict([
-        #     (k, doc) for k, doc in facilitators_stabilized_all_docs.items() if k in adls_emaails_community_facilitators
-        # ])
-
-        # global_adls_emaails_community_facilitators = [
-        #     obj.email for obj in global_community_facilitators
-        # ]
-        # global_facilitators_stabilized_dict = dict([
-        #     (k, doc) for k, doc in facilitators_stabilized_all_docs.items() if k in global_adls_emaails_community_facilitators
-        # ])
-
-        # # # - TF
-        adls_emaails = [
-            obj.email for obj in technical_facilitators
-        ]
-        technical_facilitators_stabilized = [
-            doc for k, doc in facilitators_stabilized_all_docs.items() if k in adls_emaails
-        ]
-
-        global_adls_emaails = [
-            obj.email for obj in global_technical_facilitators
-        ]
-        global_technical_facilitators_stabilized = [
-            doc for k, doc in facilitators_stabilized_all_docs.items() if k in global_adls_emaails
-        ]
+        # Localités de stabilisation lues dans CDD (copie envoyée par le GRM) : par email pour les
+        # facilitateurs communautaires (les documents de l'API GRM n'avaient pas `administrative_regions_objects`,
+        # ces colonnes restaient vides), et facilitateurs techniques triés par nom.
+        facilitators_stabilized_all_docs = {
+            f.email: f for f in with_stabilization_localities(list(community_facilitators) + list(global_community_facilitators))
+        }
+        technical_facilitators_stabilized = with_stabilization_localities(technical_facilitators)
+        global_technical_facilitators_stabilized = with_stabilization_localities(global_technical_facilitators)
         
         # End Infos Generales
 

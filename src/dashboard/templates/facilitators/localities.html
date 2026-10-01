@@ -1,0 +1,150 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n custom_tags %}
+
+{% block content %}
+<style>
+    .localities-note { font-size: 12px; color: #6c757d; }
+    .preview-table td, .preview-table th { vertical-align: top; font-size: 13px; }
+    .preview-added { color: #1e7e34; }
+    .preview-removed { color: #c82333; }
+</style>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <b>{{ facilitator.name }}</b> — {{ facilitator.email }}
+                    <span class="badge badge-secondary ml-2">{{ facilitator.get_facilitator_type_display }}</span>
+                    {% if not facilitator.active %}<span class="badge badge-danger ml-1">{% translate "Inactive" %}</span>{% endif %}
+                </h3>
+            </div>
+        </div>
+
+        {% if preview %}
+        <div class="card card-outline {% if errors %}card-danger{% else %}card-warning{% endif %}" id="preview">
+            <div class="card-header">
+                <h3 class="card-title"><b>{% translate "Summary of changes — please confirm" %}</b></h3>
+            </div>
+            <div class="card-body">
+                {% for error in errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+                {% for warning in warnings %}<div class="alert alert-warning">{{ warning }}</div>{% endfor %}
+                {% if preview.copied_from_assignment %}
+                    <div class="alert alert-info">{% translate "No stabilization locality chosen: the assignment villages are copied into the stabilization localities." %}</div>
+                {% endif %}
+
+                <table class="table table-bordered preview-table">
+                    <thead>
+                        <tr>
+                            <th width="18%"></th>
+                            <th width="12%">{% translate "Before" %}</th>
+                            <th width="12%">{% translate "After" %}</th>
+                            <th width="29%">{% translate "Added" %}</th>
+                            <th width="29%">{% translate "Removed" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, label in sections %}
+                            {% with d=preview|get:key %}
+                            <tr>
+                                <th>{{ label }}</th>
+                                <td>{{ d.before }} {% translate "village(s)" %}</td>
+                                <td><b>{{ d.after }}</b> {% translate "village(s)" %}</td>
+                                <td class="preview-added">{% if d.added_count %}+{{ d.added_count }} : {{ d.added }}{% else %}-{% endif %}</td>
+                                <td class="preview-removed">{% if d.removed_count %}-{{ d.removed_count }} : {{ d.removed }}{% else %}-{% endif %}</td>
+                            </tr>
+                            {% endwith %}
+                        {% endfor %}
+                        <tr>
+                            <th>{% translate "Main level (EADL)" %}</th>
+                            <td colspan="2">{{ preview.main_before }}</td>
+                            <td colspan="2"><b>{{ preview.main_after }}</b></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="localities-note">
+                    <b>{% translate "Stabilization choices" %} :</b> {{ preview.stabilization_choices|join:", "|default:"-" }}<br>
+                    <b>{% translate "Additional choices" %} :</b> {{ preview.additional_choices|join:", "|default:"-" }}
+                </p>
+
+                {% if not errors %}
+                    {% if preview.changed %}
+                        <form method="post">
+                            {% csrf_token %}
+                            {% for key, value in submitted.items %}{% if value is not None %}<input type="hidden" name="{{ key }}_ids" value="{{ value }}">{% endif %}{% endfor %}
+                            <button type="submit" name="confirm" value="1" class="btn btn-success btn-sm rounded-xl">
+                                {% translate "Confirm and save" %}
+                            </button>
+                            <span class="localities-note ml-2">{% translate "Stabilization and additional localities are also sent to the GRM." %}</span>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">{% translate "No change compared to the current localities." %}</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" id="localities-form">
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><b>{% translate "Assignment villages (initial)" %}</b></h3></div>
+                <div class="card-body">
+                    <p class="localities-note">
+                        {% translate "Current" %} : {{ current.assignment.before }} {% translate "village(s)" %} ({% translate "current project and cycle" %}).
+                        {% if not can_edit_assignment %}{% translate "Already filled in: only Admin, FullStack and superuser can modify them." %}{% endif %}
+                    </p>
+                    <select id="assignment" multiple {% if not can_edit_assignment %}disabled{% endif %}>
+                        {% for value, label in assignment_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    {% if can_edit_assignment %}<input type="hidden" name="assignment_ids" id="assignment_ids">{% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><b>{% translate "Stabilization localities" %}</b></h3></div>
+                <div class="card-body">
+                    <p class="localities-note">
+                        {% translate "Current" %} : {{ current.stabilization.before }} {% translate "village(s)" %} — {% translate "main level" %} : {{ current.main }}.
+                        {% translate "The first choice is the main level of the EADL. Choosing a village of a CVD selects all the villages of this CVD." %}
+                    </p>
+                    <select id="stabilization" multiple>
+                        {% for value, label in localities_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <input type="hidden" name="stabilization_ids" id="stabilization_ids">
+                    <p class="mt-2 mb-0"><b>{% translate "Main level" %} :</b> <span id="main-level">-</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><b>{% translate "Additional localities" %}</b></h3></div>
+                <div class="card-body">
+                    <p class="localities-note">{% translate "Current" %} : {{ current.additional.before }} {% translate "village(s)" %}.</p>
+                    <select id="additional" multiple>
+                        {% for value, label in localities_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                    </select>
+                    <input type="hidden" name="additional_ids" id="additional_ids">
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-xl">{% translate "Preview the changes" %}</button>
+                    <a href="{% url 'dashboard:facilitators:list' %}" class="btn btn-default btn-sm rounded-xl">{% translate "Cancel" %}</a>
+                </div>
+            </div>
+        </form>
+
+        {% include 'facilitators/_localities_history.html' %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block select2 %}
+    {% include 'facilitators/_localities_select_js.html' %}
+    <script type="text/javascript">
+        const selectedLocalities = {{ selected|safe }};
+
+        orderedSelect('assignment', selectedLocalities);
+        orderedSelect('stabilization', selectedLocalities, 'main-level');
+        orderedSelect('additional', selectedLocalities);
+        {% if preview %}document.getElementById('preview').scrollIntoView();{% endif %}
+    </script>
+{% endblock select2 %}

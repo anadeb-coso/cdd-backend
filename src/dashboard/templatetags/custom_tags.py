@@ -378,9 +378,56 @@ def get_item(dictionary, key):
     except ValueError:
         return dictionary.get(key)
 
+def _group_names(user):
+    """Noms des groupes de `user`, lus une seule fois par objet user : les templates testent
+    souvent plusieurs groupes, parfois dans des boucles (une requête par test auparavant).
+    Profite d'un `prefetch_related('groups')` quand il y en a un."""
+    names = getattr(user, '_group_names', None)
+    if names is None:
+        names = user._group_names = {group.name for group in user.groups.all()}
+    return names
+
 @register.filter(name='has_group')
 def has_group(user, group_name):
-    return user.groups.filter(name=group_name).exists()
+    return group_name in _group_names(user)
+
+@register.filter(name='can_edit_localities')
+def filter_can_edit_localities(user):
+    """Accès à la page « Localités » d'un facilitateur (cf. dashboard/facilitators/localities.py)."""
+    from dashboard.facilitators.localities import can_edit_localities
+    return can_edit_localities(user)
+
+@register.filter(name='can_assign_user_localities')
+def filter_can_assign_user_localities(user):
+    """Accès à la page « Localités d'intervention » d'un utilisateur."""
+    from dashboard.facilitators.localities import can_assign_user_localities
+    return can_assign_user_localities(user)
+
+@register.filter(name='can_assign_localities_of')
+def filter_can_assign_localities_of(user, account):
+    """Accès à la page « Localités d'intervention » de CET utilisateur (`account` : User ou id) : jamais sa
+    propre zone pour un superviseur."""
+    from dashboard.facilitators.localities import can_assign_localities_of
+    return can_assign_localities_of(user, account)
+
+@register.filter(name='can_view_localities_history')
+def filter_can_view_localities_history(user):
+    """Accès à la page « Trajets » (historique des localités)."""
+    from dashboard.facilitators.localities import can_view_localities_history
+    return can_view_localities_history(user)
+
+@register.filter(name='can_edit_facilitator')
+def filter_can_edit_facilitator(user):
+    """Accès au formulaire de modification d'un facilitateur : même règle que
+    CDDSpecialistPermissionRequiredMixin (UpdateFacilitatorView)."""
+    from authentication.permissions import CDD_SPECIALIST_GROUPS
+    return bool(user.is_authenticated and (user.is_superuser or _group_names(user) & set(CDD_SPECIALIST_GROUPS)))
+
+@register.filter(name='is_admin')
+def filter_is_admin(user):
+    """Accès aux pages de modification/suppression d'un utilisateur : même règle que
+    AdminPermissionRequiredMixin."""
+    return bool(user.is_authenticated and (user.is_superuser or "Admin" in _group_names(user)))
 
 @register.filter(name='has_collectible_tasks')
 def has_collectible_tasks(user, request=None):
@@ -425,53 +472,57 @@ def get_group_high(user):
     if user:
         if user.is_superuser:
             return gettext_lazy("Principal Administrator").__str__()
+
+        group_names = _group_names(user)
         
-        if user.groups.filter(name="Admin").exists():
+        if "Admin" in group_names:
             return gettext_lazy("Administrator").__str__()
         
-        if user.groups.filter(name="Minister").exists():
+        if "Minister" in group_names:
             return gettext_lazy("Minister").__str__()
-        if user.groups.filter(name="Advisor").exists():
+        if "Advisor" in group_names:
             return gettext_lazy("Advisor").__str__()
-        if user.groups.filter(name="GeneralManager").exists():
+        if "GeneralManager" in group_names:
             return gettext_lazy("General Manager").__str__()
-        if user.groups.filter(name="NationalCoordinator").exists():
+        if "NationalCoordinator" in group_names:
             return gettext_lazy("National Coordinator").__str__()
-        if user.groups.filter(name="RegionalCoordinator").exists():
+        if "RegionalCoordinator" in group_names:
             return gettext_lazy("Regional Coordinator").__str__()
-        if user.groups.filter(name="Director").exists():
+        if "Director" in group_names:
             return gettext_lazy("Director").__str__()
-        
-        if user.groups.filter(name="Evaluator").exists():
+
+        if "Safeguard" in group_names:
+            return gettext_lazy("Safeguard").__str__()
+        if "Evaluator" in group_names:
             return gettext_lazy("Evaluator").__str__()
-        if user.groups.filter(name="Financial").exists():
+        if "Financial" in group_names:
             return gettext_lazy("Financial ").__str__()
-        if user.groups.filter(name="ProcurementSpecialist").exists():
+        if "ProcurementSpecialist" in group_names:
             return gettext_lazy("Procurement Specialist").__str__()
-        if user.groups.filter(name="KnowledgeManager").exists():
+        if "KnowledgeManager" in group_names:
             return gettext_lazy("Knowledge manager").__str__()
-        if user.groups.filter(name="CDDSpecialist").exists():
+        if "CDDSpecialist" in group_names:
             return gettext_lazy("CDD Specialist").__str__()
-        if user.groups.filter(name="Accountant").exists():
+        if "Accountant" in group_names:
             return gettext_lazy("Accountant").__str__()
-        if user.groups.filter(name="Infra").exists():
+        if "Infra" in group_names:
             return gettext_lazy("Infra").__str__()
         
-        if user.groups.filter(name="YouthProgramSpecialist").exists():
+        if "YouthProgramSpecialist" in group_names:
             return gettext_lazy("Youth Program Specialist").__str__()
-        if user.groups.filter(name="LocalEconomicDevelopmentSpecialist").exists():
+        if "LocalEconomicDevelopmentSpecialist" in group_names:
             return gettext_lazy("Local Economic Development Specialist").__str__()
-        if user.groups.filter(name="CommunicationSpecialist").exists():
+        if "CommunicationSpecialist" in group_names:
             return gettext_lazy("Communication Specialist").__str__()
-        if user.groups.filter(name="CommunityFacilitator").exists():
+        if "CommunityFacilitator" in group_names:
             return gettext_lazy("Community Facilitator").__str__()
-        if user.groups.filter(name="TechnicalFacilitator").exists():
+        if "TechnicalFacilitator" in group_names:
             return gettext_lazy("Technical Facilitator").__str__()
         
-        if user.groups.filter(name="Supervisor").exists():
+        if "Supervisor" in group_names:
             return gettext_lazy("Supervisor").__str__()
         
-        if user.groups.filter(name="Validator").exists():
+        if "Validator" in group_names:
             return gettext_lazy("Validator").__str__()
         
         

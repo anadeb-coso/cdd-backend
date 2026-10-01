@@ -22,6 +22,7 @@ from administrativelevels.models import CVD, AdministrativeLevel
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject, Cycle as MisCycle
 from dashboard.facilitators.functions import update_facilitators_stats
+from dashboard.facilitators.localities import with_stabilization_localities
 
 User = get_user_model()
 
@@ -108,24 +109,26 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             )
         )
         technical_facilitators_count = technical_facilitators.count()
+        # `prefetch_related('groups')` : le template affiche le groupe de chaque utilisateur
+        # (filtre `get_group_high`), sans requête par utilisateur.
         supervisors = User.objects.filter(
             groups__name__in=['Supervisor'],
             is_active=True,
             projects__in=[self.request.session.get('project_id')]
-        )
+        ).prefetch_related('groups')
         supervisors_count = supervisors.count()
         CDDSpecialists = User.objects.filter(
             groups__name__in=['CDDSpecialist'],
             is_active=True,
             projects__in=[self.request.session.get('project_id')]
-        )
+        ).prefetch_related('groups')
         CDDSpecialists_count = CDDSpecialists.count()
         others_users = User.objects.filter(
             projects__in=[self.request.session.get('project_id')],
             is_active=True,
         ).exclude(
             groups__name__in=['Supervisor', 'CDDSpecialist']
-        )
+        ).prefetch_related('groups')
         others_users_count = others_users.count()
         
         total_users = community_facilitators_count + technical_facilitators_count + supervisors_count + CDDSpecialists_count + others_users_count
@@ -170,21 +173,8 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             self.request.session.get('project_couch_id'),
             project_mis
         )
-        facilitators_stabilized_all_docs = [
-            doc for doc in grm_client.get_all_facilitators()
-                if (
-                    type(doc) is dict and doc.get('type') == 'adl' and \
-                    doc.get('representative') and doc.get('representative').get('email')
-                )
-        ]
-
-        adls_emaails = [
-            obj.email for obj in technical_facilitators
-        ]
-        
-        technical_facilitators_stabilized = [
-            doc for doc in facilitators_stabilized_all_docs if doc.get('representative').get('email') in adls_emaails
-        ]
+        # Facilitateurs techniques et leurs localités lus dans CDD (copie envoyée par le GRM), triés par nom
+        technical_facilitators_stabilized = with_stabilization_localities(technical_facilitators)
         
         # End Infos Generales
 
@@ -277,9 +267,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             }
         
         assigns = mis_objects_call.filter_objects(AssignAdministrativeLevelToFacilitator, project_id=project_mis_id)
-        assigns_adl_ids = list(assigns.values_list('administrative_level_id', flat=True))
+        # Ensembles : servent à des tests d'appartenance village par village (et `distinct()` évite
+        # de rapatrier une ligne par tâche × village).
+        assigns_adl_ids = set(assigns.values_list('administrative_level_id', flat=True))
         aggregated_status_project = AggregatedStatus.objects.filter(project_id=project_id, cycle_id=self.request.session.get('cycle_id'), facilitator=None)
-        aggregated_status_project_adl_ids = list(aggregated_status_project.values_list('administrative_level_id', flat=True))
+        aggregated_status_project_adl_ids = set(aggregated_status_project.values_list('administrative_level_id', flat=True).distinct())
         aggregated_status_taks = None
         if _type == "all" or type_p_a_t in ["phase", "activity", "task"]:
             tasks = []
@@ -292,7 +284,8 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             else:
                 tasks = Task.objects.filter(project_id=project_id).get_objects_by_general_filtre(request=self.request, attrs=None)
             
-            aggregated_status_taks = aggregated_status_project.filter(task_id__in=[t.id for t in tasks])
+            task_ids = [t.id for t in tasks] if isinstance(tasks, list) else list(tasks.values_list('id', flat=True))
+            aggregated_status_taks = aggregated_status_project.filter(task_id__in=task_ids)
 
         if _type in ["region", "prefecture", "commune", "canton", "village"] or type_ad_level in ["region", "prefecture", "commune", "canton", "village"]:
             region = None
@@ -319,10 +312,11 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 
                 cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
                 
-                if aggregated_status_taks:
-                    aggrs_status_region = aggregated_status_taks.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
+                # `.exists()` : le test de vérité d'un queryset chargerait toutes ses lignes.
+                if aggregated_status_taks is not None and aggregated_status_taks.exists():
+                    aggrs_status_region = aggregated_status_taks.filter(administrative_level_id__in=[c.headquarters_village_id for c in cvds])
                 else:
-                    aggrs_status_region = aggregated_status_project.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds], task__isnull=True)
+                    aggrs_status_region = aggregated_status_project.filter(administrative_level_id__in=[c.headquarters_village_id for c in cvds], task__isnull=True)
 
                 sums = aggrs_status_region.aggregate(
                     total_tasks_completed=Sum('total_tasks_completed'),
@@ -389,7 +383,7 @@ class GetTasksDiagnosticsView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
                 ]))
                 cvds = mis_objects_call.filter_objects(CVD, headquarters_village__in=villages_ids)
                 
-                aggrs_status_region = aggregated_status_taks.filter(administrative_level_id__in=[c.headquarters_village.id for c in cvds])
+                aggrs_status_region = aggregated_status_taks.filter(administrative_level_id__in=[c.headquarters_village_id for c in cvds])
                 sums = aggrs_status_region.aggregate(
                     total_tasks_completed=Sum('total_tasks_completed'),
                     total_tasks=Sum('total_tasks'),

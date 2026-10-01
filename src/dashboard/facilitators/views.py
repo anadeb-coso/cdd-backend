@@ -39,6 +39,8 @@ from cdd.call_objects_from_other_db import mis_objects_call
 from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_adl_by_facilitatrs, ensure_facilitator_user, sync_facilitator_user_projects
 from dashboard.tasks import sync_celery_tasks_re
 from .repository.db_facilitator_repository import FacilitatorRepository
+from .localities import apply_administrative_levels, keep_other_projects_levels, schedule_administrative_levels_documents_moves
+from .localities_history import facilitator_state, record_facilitator_changes, record_localities_change
 from .repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
@@ -1166,6 +1168,10 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         facilitator.administrative_levels = _administrative_levels
         facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
         facilitator.simple_save()
+        record_localities_change(
+            'assignment', 'facilitator_creation', {'villages': facilitator.administrative_levels_ids}, {'villages': []},
+            facilitator=facilitator, changed_by=self.request.user, project_id=self.request.session.get('project_id'),
+        )
 
 
         nsc = NoSQLClient()
@@ -1303,6 +1309,8 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
                 if administrativelevel_obj and administrativelevel_obj.cvd:
                     adls[i]['cvd_name'] = administrativelevel_obj.cvd.name
             ctx.setdefault('facilitator_administrative_levels', adls)
+            # seuls les villages du projet de la session peuvent être retirés depuis cette page
+            ctx.setdefault('current_project_couch_id', self.request.session.get('project_couch_id'))
 
         return ctx
 
@@ -1318,6 +1326,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
     def form_valid(self, form):
         data = form.cleaned_data
+        localities_before = facilitator_state(Facilitator.objects.get(pk=self.facilitator.pk))
         facilitator = form.save(commit=False)
         facilitator.name = data['name']
         facilitator.email = data['email']
@@ -1325,74 +1334,19 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         facilitator.sex = data['sex']
         facilitator.facilitator_type = data['facilitator_type']
         facilitator = facilitator.save_and_return_object(user=self.request.user)
-        administrative_levels_old = self.doc.get('administrative_levels')
-        administrative_levels_remove = []
-        _administrative_levels = []
-        administrative_levels_new = []
-        
         project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
         cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
 
-        if 'administrative_levels' in data and data['administrative_levels']:
-            
-            project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
-            villages_ids = [o.id for o in project_mis.administrative_levels.filter(type="Village")] if project_mis else []
-
-            for elt in data['administrative_levels']:
-                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').filter(id=int(elt['id'])).first()
-                if administrativelevel_obj:
-                    if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
-                        elt['is_headquarters_village'] = True
-
-                    if elt.get("project_id") == project_cdd.couch_id and elt.get("cycle_id") == cycle_cdd.couch_id:
-                        _elt = exists_id_in_a_dict_by_project_and_cycle(administrative_levels_old, elt.get('id'), elt.get('project_id'), elt.get('cycle_id'))
-                        if not _elt: # Useless
-                            # if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
-                            if int(elt['id']) in villages_ids:
-                                elt["project_id"] = project_cdd.couch_id
-                                elt["project_name"] = project_cdd.name
-                                elt["cycle_id"] = cycle_cdd.couch_id
-                                elt["cycle_name"] = cycle_cdd.name
-                            administrative_levels_new.append(elt)
-                                
-                        else:
-                            elt["project_id"] = _elt["project_id"]
-                            elt["project_name"] = _elt["project_name"]
-                            elt["cycle_id"] = _elt["cycle_id"]
-                            elt["cycle_name"] = _elt["cycle_name"]
-                            # elt = _elt
-                        # if not exists_id_in_a_dict_by_project_and_cycle(_administrative_levels, elt.get('id'), elt.get('project_id'), elt.get('cycle_id')):
-                    _administrative_levels.append(elt)
-
-
-        for ad in administrative_levels_old:
-            if ad.get('id') and not exists_id_in_a_dict_by_project_and_cycle(_administrative_levels, ad.get('id'), ad.get('project_id'), ad.get('cycle_id')):
-                administrative_levels_remove.append(ad)
-
-        #Assign ADL
-        for adl in administrative_levels_new:
-            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=self.project_mis_id, activated=True).first()
-            if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
-                    try:
-                        assign = AssignAdministrativeLevelToFacilitator()
-                        assign.administrative_level_id = int(adl['id'])
-                        assign.facilitator_id = facilitator.id
-                        assign.project_id = self.project_mis_id
-                        assign.save(using='mis')
-                    except Exception as exc:
-                        print(exc)
-        #End Assign ADL
-
-        #Unassign ADL
-        for adl in administrative_levels_remove:
-            assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=self.project_mis_id, activated=True).first()
-            if adl.get('id') and str(adl.get('id')).isdigit() and assign:
-                    try:
-                        assign.activated = False
-                        assign.save(using='mis')
-                    except Exception as exc:
-                        print(exc)
-        #End Unassign ADL
+        # Calcul + affectation/désaffectation MIS : logique commune avec la page « Localités » (localities.py).
+        # Depuis la session d'un projet, on ne retire que les villages de ce projet : ceux des autres projets absents
+        # de la saisie sont conservés (la croix de retrait n'est affichée que pour le projet de la session).
+        submitted_administrative_levels = keep_other_projects_levels(
+            data.get('administrative_levels'), self.doc.get('administrative_levels'), self.request.session.get('project_couch_id'),
+        )
+        _administrative_levels, administrative_levels_new, administrative_levels_remove = apply_administrative_levels(
+            facilitator, self.doc.get('administrative_levels'), submitted_administrative_levels,
+            project_cdd, cycle_cdd, self.project_mis_id, self.request.session.get('project_name'),
+        )
 
         # Connexion Web DCC : crée/relie (ou met à jour, y compris le groupe
         # Django si `facilitator_type` a changé) le `User` de ce facilitator
@@ -1419,6 +1373,10 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         facilitator.administrative_levels = _administrative_levels
         facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
         facilitator.simple_save()
+        record_facilitator_changes(
+            facilitator, localities_before, 'facilitator_form', sections=['assignment'],
+            changed_by=self.request.user, project_id=self.request.session.get('project_id'),
+        )
 
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
@@ -1433,27 +1391,8 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         #     [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
         # ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
 
-        process_adls = [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-        if process_adls:
-            process_add_or_remove_adl = ProcessAddOrRemoveADL(
-                name = f"backup_db_facilitators_docs_{self.facilitator_db_name}",
-                move_from = "backup_db_facilitators_docs",
-                move_to = self.facilitator_db_name,
-                administrative_levels = process_adls,
-                query_action = "update"
-            )
-            process_add_or_remove_adl.save()
-
-        process_adls = [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
-        if process_adls:
-            process_add_or_remove_adl = ProcessAddOrRemoveADL(
-                name = f"{self.facilitator_db_name}_backup_db_facilitators_docs",
-                move_from = self.facilitator_db_name,
-                move_to = "backup_db_facilitators_docs",
-                administrative_levels = process_adls,
-                query_action = "update"
-            )
-            process_add_or_remove_adl.save()
+        schedule_administrative_levels_documents_moves(self.facilitator_db_name, administrative_levels_new, administrative_levels_remove,
+                                                       kept_administrative_levels=_administrative_levels)
 
 
         sync_geographicalunits_with_cvd_on_facilittor(

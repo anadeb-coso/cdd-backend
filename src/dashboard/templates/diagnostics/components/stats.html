@@ -195,10 +195,11 @@
             let users_ids_modals_tables = [
                 "table-facilitators-community", "table-technical-facilitators", "table-supervisors", "table-CDDSpecialists", "table-others-users"
             ]
-            let user_id_modal_table;
             const table_stats = {};
             for(var i=0; i<users_ids_modals_tables.length; i++){
-                user_id_modal_table = users_ids_modals_tables[i];
+                // Déclarée dans la boucle : chaque champ de recherche (keyup ci-dessous) garde SA table.
+                // Déclarée hors de la boucle, tous filtraient la dernière table (« Spécialistes/Autres »).
+                let user_id_modal_table = users_ids_modals_tables[i];
                 
                 if ($.fn.DataTable.isDataTable(`#${user_id_modal_table}`)) {
                     $(`#${user_id_modal_table}`).DataTable().destroy();
@@ -212,7 +213,7 @@
                     language: {
                         url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
                     },
-                    {% if user.is_superuser or user|has_group:"Admin" or user|has_group:"CDDSpecialist" or user|has_group:"Evaluator" or user|has_group:"Supervisor" %}
+                    {% if user|can_edit_facilitator or user|can_edit_localities %}
                     columnDefs: [
                         { 
                             type: 'numeric-comma', targets: user_id_modal_table == "table-facilitators-community" ? [6, 7, 8, 9, 10, 11] : []
