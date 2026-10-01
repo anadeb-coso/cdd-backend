@@ -209,13 +209,11 @@
                                             {% if user|is_admin %}
                                             <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                                 class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
-                                                <span class="_web">{% translate 'Edit' %}</span>
-                                                <span class="_mobile"><i class="fa fa-edit"></i></span>
+                                                <i class="fa fa-edit"></i>
                                             </a>
                                             <a href="{% url 'dashboard:authentication:user_delete' user_obj.pk %}" 
                                                 class="btn btn-danger btn-xs" title="{% translate 'Delete' %}">
-                                                <span class="_web">{% translate 'Delete' %}</span>
-                                                <span class="_mobile"><i class="fa fa-trash"></i></span>
+                                                <i class="fa fa-trash"></i>
                                             </a>
                                             {% endif %}
                                             {% if user|can_assign_localities_of:user_obj %}
