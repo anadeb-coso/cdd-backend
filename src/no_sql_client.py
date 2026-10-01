@@ -27,6 +27,28 @@ class NoSQLClient:
     def get_db(self, db_name):
         return self.client[db_name]
 
+    def find_all(self, db, selector, fields=None, page_size=1000):
+        """Tous les documents correspondant à `selector` (`_find`), paginés par bookmark.
+
+        À préférer à `all_docs(include_docs=True)` quand on ne lit que quelques champs : avec
+        `fields`, CouchDB ne renvoie que ces champs au lieu des documents entiers (historiques,
+        formulaires… — une base facilitateur de 28 Mo de JSON occupe ~200 Mo de RAM une fois
+        parsée). Ne pas utiliser `db.get_query_result(...)[:]` pour tout récupérer : cloudant
+        n'envoie alors pas de `limit` et CouchDB tronque silencieusement à 25 documents.
+        """
+        docs = []
+        bookmark = None
+        while True:
+            kwargs = {'limit': page_size}
+            if bookmark:
+                kwargs['bookmark'] = bookmark
+            result = db.get_query_result(selector, fields=fields, raw_result=True, **kwargs)
+            page = result.get('docs', [])
+            docs.extend(page)
+            bookmark = result.get('bookmark')
+            if len(page) < page_size or not bookmark:
+                return docs
+
     def create_db(self, db_name, **kwargs):
         return self.client.create_database(db_name, **kwargs)
 

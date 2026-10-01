@@ -10,6 +10,9 @@ from dashboard.facilitators.functions import update_facilitators_stats
 
 class Command(BaseCommand):
     help = 'Update the AggregatedStatus objects for the funnel'
+    # sudo -i
+    # cd /var/app/current && source /var/app/venv/*/bin/activate && systemd-run --scope -p MemoryMax=800M -p MemorySwapMax=0 nice -n 19 python manage.py update_funnel
+
 
     def manage_prompt(self, type_value, prompt_message, options=None, default=''):
         if options:
