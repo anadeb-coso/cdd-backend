@@ -3965,3 +3965,31 @@ msgstr "Vos localités d'intervention ont été modifiées : veuillez vous recon
 #: zone
 msgid "%(n)s open session(s) of this supervisor will be logged out: the new zone applies at the next login."
 msgstr "%(n)s session(s) ouverte(s) de ce superviseur seront déconnectée(s) : la nouvelle zone s'applique à la prochaine connexion."
+
+#: localities change date
+msgid "Invalid date of the change in the field."
+msgstr "Date du changement sur le terrain invalide."
+
+#: localities change date
+msgid "The date of the change in the field cannot be in the future."
+msgstr "La date du changement sur le terrain ne peut pas être dans le futur."
+
+#: localities change date
+msgid "The date of the change in the field cannot be earlier than the last recorded change (%(date)s)."
+msgstr "La date du changement sur le terrain ne peut pas être antérieure au dernier changement enregistré (%(date)s)."
+
+#: localities change date
+msgid "Date of the change in the field"
+msgstr "Date du changement sur le terrain"
+
+#: localities change date
+msgid "Today by default."
+msgstr "Aujourd'hui par défaut."
+
+#: localities change date
+msgid "Not earlier than the last recorded change (%(date)s)."
+msgstr "Pas avant le dernier changement enregistré (%(date)s)."
+
+#: localities change date
+msgid "recorded on"
+msgstr "enregistré le"

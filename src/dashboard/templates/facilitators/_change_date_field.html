@@ -1,0 +1,11 @@
+{% load i18n %}
+{# Date du changement sur le terrain (pages Localités) : aujourd'hui par défaut, pas avant le dernier changement enregistré #}
+<div class="form-group mb-2">
+    <label for="change_date" class="mb-1"><b>{% translate "Date of the change in the field" %}</b></label>
+    <input type="date" name="change_date" id="change_date" class="form-control form-control-sm" style="max-width: 200px;"
+           value="{{ change_date }}" {% if min_change_date %}min="{{ min_change_date|date:'Y-m-d' }}"{% endif %} required>
+    <small class="localities-note">
+        {% translate "Today by default." %}
+        {% if min_change_date %}{% blocktranslate with date=min_change_date|date:"d/m/Y" %}Not earlier than the last recorded change ({{ date }}).{% endblocktranslate %}{% endif %}
+    </small>
+</div>

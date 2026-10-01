@@ -1,9 +1,58 @@
 """Trajet des facilitateurs et des utilisateurs : enregistrement de chaque changement de localités
 (`authentication.models.LocalityHistory`) et lecture (chronologie d'une personne, présences dans une
 localité)."""
+from datetime import date, datetime, time, timedelta
+
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from .localities import TOGO_ID, administrative_choices, user_display_name
+
+
+# ---------------------------------------------------------------------------------------------
+# Date du changement sur le terrain (saisie sur les pages Localités)
+# ---------------------------------------------------------------------------------------------
+
+def last_change_at(facilitator=None, user=None):
+    """Date du dernier changement enregistré dans le trajet de ce facilitateur / cet utilisateur (ou None)."""
+    from authentication.models import LocalityHistory
+
+    events = LocalityHistory.objects.filter(facilitator=facilitator) if facilitator is not None else \
+        LocalityHistory.objects.filter(user=user)
+    return events.order_by('-changed_at', '-id').values_list('changed_at', flat=True).first()
+
+
+def min_change_date(last_changed_at):
+    return timezone.localtime(last_changed_at).date() if last_changed_at else None
+
+
+def parse_change_date(raw, last_changed_at):
+    """(date, erreur) de la date du changement sur le terrain saisie (AAAA-MM-JJ), aujourd'hui par défaut ; pas
+    avant le dernier changement enregistré (le trajet reste dans l'ordre chronologique)."""
+    today = timezone.localdate()
+    if not raw:
+        return today, None
+    try:
+        value = date.fromisoformat(str(raw).strip())
+    except ValueError:
+        return None, _("Invalid date of the change in the field.")
+    minimum = min_change_date(last_changed_at)
+    if minimum and value < minimum:
+        return None, _("The date of the change in the field cannot be earlier than the last recorded change (%(date)s).") % {
+            'date': minimum.strftime('%d/%m/%Y')}
+    return value, None
+
+
+def change_datetime(value, last_changed_at):
+    """Horodatage de l'événement : maintenant pour aujourd'hui, midi pour une autre date ; toujours après le
+    dernier changement enregistré (même jour)."""
+    if value == timezone.localdate():
+        at = timezone.now()
+    else:
+        at = timezone.make_aware(datetime.combine(value, time(12, 0)))
+    if last_changed_at and at <= last_changed_at:
+        at = last_changed_at + timedelta(seconds=1)
+    return at
 
 
 def _main(value):

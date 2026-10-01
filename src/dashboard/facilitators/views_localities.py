@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from django.views import generic
 
@@ -23,7 +24,10 @@ from .localities import (
     AdministrativeTree, LocalitiesChange, apply_administrative_levels, can_assign_user_localities, can_edit_assignment,
     can_edit_localities, can_view_localities_history, schedule_administrative_levels_documents_moves,
 )
-from .localities_history import event_rows, facilitator_state, presence_periods, record_facilitator_changes
+from .localities_history import (
+    change_datetime, event_rows, facilitator_state, last_change_at, min_change_date, parse_change_date, presence_periods,
+    record_facilitator_changes,
+)
 
 SECTIONS = ('assignment', 'stabilization', 'additional')
 
@@ -110,6 +114,10 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
                 'additional': change.old_additional_choices,
             }),
             'history': event_rows(self.tree, LocalityHistory.objects.filter(facilitator=self.facilitator).select_related('changed_by')),
+            # date du changement sur le terrain : aujourd'hui par défaut, pas avant le dernier changement enregistré
+            'today': timezone.localdate().isoformat(),
+            'change_date': timezone.localdate().isoformat(),
+            'min_change_date': min_change_date(last_change_at(facilitator=self.facilitator)),
             'current': {
                 'assignment': change.diff(change.old_assignment, change.old_assignment),
                 'stabilization': change.diff(change.old_stabilization, change.old_stabilization),
@@ -124,6 +132,10 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
     def post(self, request, *args, **kwargs):
         submitted = self._submitted()
         change = self._change(submitted)
+        last_changed_at = last_change_at(facilitator=self.facilitator)
+        change_date, date_error = parse_change_date(request.POST.get('change_date'), last_changed_at)
+        if date_error:
+            change.errors.append(date_error)
         if 'confirm' not in request.POST or change.errors:
             # 1er temps (ou erreur) : aperçu comparé à l'état actuel, rien n'est enregistré.
             context = self.get_context_data(change=self._change())
@@ -133,20 +145,22 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
                 'submitted': {section: json.dumps(value) if value is not None else None for section, value in zip(SECTIONS, submitted)},
                 # le formulaire reste pré-rempli avec la saisie, pour l'ajuster avant de confirmer
                 'selected': json.dumps({section: value if value is not None else current[section] for section, value in zip(SECTIONS, submitted)}),
+                'change_date': change_date.isoformat() if change_date else request.POST.get('change_date', ''),
+                'change_date_display': change_date.strftime('%d/%m/%Y') if change_date else None,
             })
             return self.render_to_response(context)
 
         if change.summary()['changed']:
-            self._apply(change)
+            self._apply(change, change_datetime(change_date, last_changed_at))
         else:
             messages.info(request, gettext_lazy("No change to save."))
         return redirect('dashboard:facilitators:localities', pk=self.facilitator.pk)
 
-    def _apply(self, change):
+    def _apply(self, change, changed_at):
         facilitator = self.facilitator
         session = self.request.session
         before = facilitator_state(facilitator)
-        history = dict(changed_by=self.request.user, project_id=session.get('project_id'))
+        history = dict(changed_by=self.request.user, project_id=session.get('project_id'), changed_at=changed_at)
 
         if change.assignment_changed:
             _administrative_levels, administrative_levels_new, administrative_levels_remove = apply_administrative_levels(

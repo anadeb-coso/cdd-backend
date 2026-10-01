@@ -22,7 +22,8 @@
                 {% for row in history %}
                     <tr>
                         <td>
-                            {% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y H:i" }}
+                            {% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y" }}
+                                {% if row.event.changed_at|date:"Ymd" == row.event.created_at|date:"Ymd" %}{{ row.event.changed_at|date:"H:i" }}{% else %}<br><span class="localities-note">{% translate "recorded on" %} {{ row.event.created_at|date:"d/m/Y H:i" }}</span>{% endif %}
                         </td>
                         <td>
                             {{ row.event.get_section_display }}

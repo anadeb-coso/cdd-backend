@@ -63,6 +63,9 @@
                     </tbody>
                 </table>
                 <p class="localities-note">
+                    <b>{% translate "Date of the change in the field" %} :</b> {{ change_date_display|default:"-" }}
+                </p>
+                <p class="localities-note">
                     <b>{% translate "Stabilization choices" %} :</b> {{ preview.stabilization_choices|join:", "|default:"-" }}<br>
                     <b>{% translate "Additional choices" %} :</b> {{ preview.additional_choices|join:", "|default:"-" }}
                 </p>
@@ -72,6 +75,7 @@
                         <form method="post">
                             {% csrf_token %}
                             {% for key, value in submitted.items %}{% if value is not None %}<input type="hidden" name="{{ key }}_ids" value="{{ value }}">{% endif %}{% endfor %}
+                            <input type="hidden" name="change_date" value="{{ change_date }}">
                             <button type="submit" name="confirm" value="1" class="btn btn-success btn-sm rounded-xl">
                                 {% translate "Confirm and save" %}
                             </button>
@@ -126,6 +130,7 @@
                     <input type="hidden" name="additional_ids" id="additional_ids">
                 </div>
                 <div class="card-footer">
+                    {% include 'facilitators/_change_date_field.html' %}
                     <button type="submit" class="btn btn-primary btn-sm rounded-xl">{% translate "Preview the changes" %}</button>
                     <a href="{% url 'dashboard:facilitators:list' %}" class="btn btn-default btn-sm rounded-xl">{% translate "Cancel" %}</a>
                 </div>

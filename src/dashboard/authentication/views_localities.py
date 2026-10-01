@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.translation import gettext_lazy
 from django.views import generic
 
@@ -16,7 +17,9 @@ from dashboard.facilitators.localities import (
     TOGO_ID, AdministrativeTree, UserLocalitiesChange, can_assign_localities_of, describe_user_zone,
     flag_sessions_for_zone_change, is_supervisor, supervisor_canton_ids, user_display_name,
 )
-from dashboard.facilitators.localities_history import event_rows, record_user_changes, user_state
+from dashboard.facilitators.localities_history import (
+    change_datetime, event_rows, last_change_at, min_change_date, parse_change_date, record_user_changes, user_state,
+)
 from dashboard.mixins import PageMixin
 
 SECTIONS = ('intervention', 'additional')
@@ -94,6 +97,10 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                 'main': self.tree.label_of(change.old_main) if record else gettext_lazy("Not defined"),
             },
             'history': event_rows(self.tree, LocalityHistory.objects.filter(user=self.account).select_related('changed_by')),
+            # date du changement sur le terrain : aujourd'hui par défaut, pas avant le dernier changement enregistré
+            'today': timezone.localdate().isoformat(),
+            'change_date': timezone.localdate().isoformat(),
+            'min_change_date': min_change_date(last_change_at(user=self.account)),
         })
         return context
 
@@ -101,6 +108,10 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         submitted = self._submitted()
         record = self._record()
         change = UserLocalitiesChange(self.tree, self.account, record, *submitted)
+        last_changed_at = last_change_at(user=self.account)
+        change_date, date_error = parse_change_date(request.POST.get('change_date'), last_changed_at)
+        if date_error:
+            change.errors.append(date_error)
         if 'confirm' not in request.POST or change.errors:
             context = self.get_context_data(change=UserLocalitiesChange(self.tree, self.account, record))
             current = json.loads(context['selected'])
@@ -108,16 +119,18 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
                 'preview': change.summary(), 'errors': change.errors, 'warnings': change.warnings,
                 'submitted': {section: json.dumps(value) if value is not None else None for section, value in zip(SECTIONS, submitted)},
                 'selected': json.dumps({section: value if value is not None else current[section] for section, value in zip(SECTIONS, submitted)}),
+                'change_date': change_date.isoformat() if change_date else request.POST.get('change_date', ''),
+                'change_date_display': change_date.strftime('%d/%m/%Y') if change_date else None,
             })
             return self.render_to_response(context)
 
         if change.changed:
-            self._apply(change, record)
+            self._apply(change, record, change_datetime(change_date, last_changed_at))
         else:
             messages.info(request, gettext_lazy("No change to save."))
         return redirect('dashboard:authentication:user_localities', id=self.account.pk)
 
-    def _apply(self, change, record):
+    def _apply(self, change, record, changed_at):
         before = user_state(record)
         supervisor = is_supervisor(self.account)
         zone_before = supervisor_canton_ids(self.account) if supervisor else None
@@ -130,7 +143,7 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         record.additional_village_ids = change.new_additional
         record.updated_by = self.request.user
         record.save()
-        record_user_changes(self.account, before, record, 'user_localities_page', changed_by=self.request.user)
+        record_user_changes(self.account, before, record, 'user_localities_page', changed_by=self.request.user, changed_at=changed_at)
 
         zone_after = supervisor_canton_ids(self.account) if supervisor else None
         if supervisor and (zone_before is None or set(zone_before) != set(zone_after or [])):

@@ -124,7 +124,8 @@
                         <tbody>
                         {% for row in history %}
                             <tr>
-                                <td>{% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y H:i" }}</td>
+                                <td>{% if row.event.approximate_date %}≈ {% endif %}{{ row.event.changed_at|date:"d/m/Y" }}
+                                {% if row.event.changed_at|date:"Ymd" == row.event.created_at|date:"Ymd" %}{{ row.event.changed_at|date:"H:i" }}{% else %}<br><span class="localities-note">{% translate "recorded on" %} {{ row.event.created_at|date:"d/m/Y H:i" }}</span>{% endif %}</td>
                                 <td>
                                     {% if row.event.facilitator_id and can_edit_localities %}
                                         <a href="{% url 'dashboard:facilitators:localities' row.event.facilitator_id %}#localities-history" target="_blank">{{ row.event.name|default:row.event.email }}</a>
