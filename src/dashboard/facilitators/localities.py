@@ -642,16 +642,24 @@ ZONE_CHANGED_SESSION_KEY = 'intervention_zone_changed'
 def flag_sessions_for_zone_change(user, exclude_session_key=None):
     """Marque les sessions CDD ouvertes de `user` (celles qui portent un projet choisi, donc une zone) : à sa
     requête suivante, il est déconnecté (authentication.middleware.ZoneChangeLogoutMiddleware) et sa nouvelle
-    zone sera calculée au choix du projet. Renvoie le nombre de sessions marquées."""
+    zone sera calculée au choix du projet. Renvoie le nombre de sessions marquées.
+
+    La table django_session est partagée avec le SIG, dont les sessions sont signées avec une autre SECRET_KEY :
+    elles sont décodées sans `get_decoded()`, qui journaliserait « Session data corrupted » pour chacune."""
     from django.contrib.sessions.backends.db import SessionStore
     from django.contrib.sessions.models import Session
+    from django.core import signing
     from django.utils import timezone
 
+    decoder = SessionStore()
     count = 0
     for session in Session.objects.filter(expire_date__gt=timezone.now()):
         if session.session_key == exclude_session_key:
             continue
-        data = session.get_decoded()
+        try:
+            data = signing.loads(session.session_data, salt=decoder.key_salt, serializer=decoder.serializer)
+        except signing.BadSignature:
+            continue  # session du SIG (autre clé) ou illisible : jamais modifiée
         if data.get('_auth_user_id') != str(user.pk) or 'project_couch_id' not in data or data.get(ZONE_CHANGED_SESSION_KEY):
             continue
         store = SessionStore(session_key=session.session_key)

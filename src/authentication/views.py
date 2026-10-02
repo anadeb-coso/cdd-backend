@@ -6,6 +6,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 
+from authentication.functions import record_api_login
 from authentication.serializers import CredentialSerializer, UserAuthSerializer
 
 
@@ -34,6 +35,7 @@ class AuthenticateAPIView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        record_api_login(serializer.validated_data['user'])
         credentials = {
             'no_sql_user': serializer.validated_data['no_sql_user'],
             'no_sql_pass': serializer.validated_data['no_sql_pass'],

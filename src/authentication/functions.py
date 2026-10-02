@@ -186,6 +186,18 @@ def ensure_facilitator_user(facilitator):
     return user
 
 
+def record_api_login(account):
+    """Date de dernière connexion après une connexion API (mobile) : `last_login` du compte web lui-même, ou de
+    celui lié au Facilitator (rien si le facilitateur n'a pas de compte web). UPDATE direct, sans `save()` : ni
+    signaux, ni réécriture des autres colonnes (`SIMPLE_JWT['UPDATE_LAST_LOGIN']` ne s'applique qu'aux vues
+    de jeton SimpleJWT, que CDD n'utilise pas)."""
+    from django.utils import timezone
+
+    user_id = account.pk if isinstance(account, User) else getattr(account, 'user_id', None)
+    if user_id:
+        User.objects.filter(pk=user_id).update(last_login=timezone.now())
+
+
 def sync_facilitator_user_projects(facilitator):
     """Aligne les projets accessibles au `User` web de ce facilitator
     (Project.users) sur ceux auxquels le Facilitator est CURRENTLY associé

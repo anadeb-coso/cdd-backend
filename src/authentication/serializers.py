@@ -127,5 +127,6 @@ class UserAuthSerializer(serializers.Serializer):
         # refresh = RefreshToken.for_user(user)
         # attrs['refresh'] = str(refresh),
         # attrs['access'] = str(refresh.access_token),
-            
+
+        attrs['user'] = user  # compte connecté (Facilitator ou User), pour la date de dernière connexion
         return attrs

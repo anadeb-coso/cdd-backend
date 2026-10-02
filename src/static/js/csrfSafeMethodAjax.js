@@ -15,7 +15,6 @@ function getCookie(name) {
 }
 
 var csrftoken = getCookie('cdd_csrftoken');
-console.log(csrftoken);
 
 //Ajax call
 function csrfSafeMethod(method) {
