@@ -18,16 +18,18 @@ from process_manager.models import Task
 from dashboard.administrative_levels.views_adl import _derive_planning_task_status
 
 from .functions import list_cvds_with_overview, resolve_task_doc, save_task_form
+from authentication.identity import facilitator_of_user
 
 
 class TaskCycleHomeView(PageMixin, LoginRequiredMixin, generic.View):
     """Point d'entree du menu (URL sans id) : redirige vers la liste des CVD
     du facilitateur lie a l'utilisateur connecte (Facilitator.user, cf.
-    ensure_facilitator_user). Pas de compte facilitateur lie -> etat vide."""
+    ensure_facilitator_user, ou meme e-mail / identifiant), s'il est actif
+    (authentication/identity.py). Pas de facilitateur actif -> etat vide."""
     active_level1 = 'task_cycle'
 
     def get(self, request, *args, **kwargs):
-        facilitator = getattr(request.user, 'facilitator', None)
+        facilitator = facilitator_of_user(request.user)
         if not facilitator or not facilitator.no_sql_db_name:
             return render(request, 'task_cycle/empty.html', {
                 'title': gettext_lazy('Tasks (DCC cycle)'),

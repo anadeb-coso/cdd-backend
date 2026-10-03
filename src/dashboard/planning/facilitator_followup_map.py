@@ -1,3 +1,4 @@
+from authentication.identity import owned_by, same_person_accounts
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
@@ -342,7 +343,8 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         activities = Activity.objects.filter(Q(planned_date__in=planned_date_list) | Q(Q(type="vacation") & planned_datetime_list_query), project_id=project.id)
         
         if show_my_calendar:
-            activities = activities.filter(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
+            # Mes activités : compte web + compte facilitateur actifs (authentication/identity.py)
+            activities = activities.filter(owned_by(same_person_accounts(self.request.user)))
         
         if facilitators:
             activities.filter(facilitator_id__in=[f.id for f in facilitators])
@@ -434,7 +436,11 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         activities_users = activities.filter(user__in=users)
         # users = User.objects.filter(id__in=list(set([u[0] for u in activities.values_list('user')])))
         for u in users:
-            activities_u = activities_users.filter(user_id=u.id)
+            # Mon calendrier : ma ligne regroupe aussi les activités de mon compte facilitateur (actifs tous les deux)
+            if show_my_calendar and u.pk == self.request.user.pk:
+                activities_u = activities.filter(owned_by(same_person_accounts(u)))
+            else:
+                activities_u = activities_users.filter(user_id=u.id)
             if activities_u.exists():
                 _u = None
                 tasks_planed = []

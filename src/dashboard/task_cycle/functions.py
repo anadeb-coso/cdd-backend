@@ -1,4 +1,5 @@
 import json
+from authentication.identity import facilitator_of_user
 
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -103,8 +104,9 @@ def _facilitator_identity(request):
     forme que le sous-objet `facilitator` posé par mobile (name/email/phone/
     sex/sql_id/type). Utilise `Facilitator.user` (OneToOne) s'il existe,
     sinon replie sur les infos du `User` Django (ex. staff remplissant pour
-    le compte d'un facilitateur)."""
-    facilitator = getattr(request.user, 'facilitator', None)
+    le compte d'un facilitateur). Facilitateur = celui du compte web, actif
+    (lien ou même e-mail / identifiant, cf. authentication/identity.py)."""
+    facilitator = facilitator_of_user(request.user)
     if facilitator:
         return {
             'name': facilitator.name, 'email': facilitator.email, 'phone': facilitator.phone,

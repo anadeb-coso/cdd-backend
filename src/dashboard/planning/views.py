@@ -1,3 +1,4 @@
+from authentication.identity import owned_by, same_person_accounts
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User, Group
 from django.urls import reverse_lazy
@@ -318,7 +319,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
 
         if show_my_calendar:
             # activities = activities.filter(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
-            query &= Q(Q(facilitator_id=self.request.user.id) | Q(user_id=self.request.user.id))
+            # Mes activités : celles de mon compte web et de mon compte facilitateur (actifs tous les deux),
+            # jamais celles d'un facilitateur qui aurait par hasard le même id que mon compte web.
+            query &= owned_by(same_person_accounts(self.request.user))
         
         # if task_type == "free_tasks":
         #     activities = activities.filter(type="free_task")
@@ -432,7 +435,11 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         activities_users = activities.filter(user__in=users)
         
         for u in users:
-            activities_u = activities_users.filter(user_id=u.id)
+            # Mon calendrier : ma ligne regroupe aussi les activités de mon compte facilitateur (actifs tous les deux)
+            if show_my_calendar and u.pk == self.request.user.pk:
+                activities_u = activities.filter(owned_by(same_person_accounts(u)))
+            else:
+                activities_u = activities_users.filter(user_id=u.id)
             if activities_u.exists():
                 _u = None
                 tasks_planed = []

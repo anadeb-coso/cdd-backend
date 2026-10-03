@@ -11,6 +11,7 @@ import locale
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 # from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from authentication.models import Facilitator
+from authentication.identity import accounts_for_identifier, owned_by, same_person_accounts
 from planning.serializers import *
 from planning.models import *
 from authentication.api.auth.login import CheckUserSerializer
@@ -18,6 +19,18 @@ from cdd.my_librairies.mail.send_mail import send_email
 from cdd.functions import get_dates_between
 from planning.vars import WORK_ENVIRONMENT
 
+
+
+def activity_planner(identifier):
+    """Auteur d'une activité créée depuis le mobile : le Facilitator actif d'abord (comme la connexion API,
+    authentication/api/auth/login.py), sinon un compte web actif. Depuis que chaque facilitateur a aussi un compte
+    web lié (même e-mail, cf. authentication.functions.ensure_facilitator_user), chercher le compte web d'abord
+    rattachait l'activité à `user` au lieu de `facilitator` : le mobile, qui relit l'agenda d'un facilitateur par
+    `facilitator__username`, ne la retrouvait plus (le web, lui, l'affichait)."""
+    if not identifier:
+        return None
+    lookup = Q(email__iexact=identifier) | Q(username__iexact=identifier)
+    return Facilitator.objects.filter(lookup, active=True).first() or User.objects.filter(lookup, is_active=True).first()
 
 
 # =================================== Save =================================================================
@@ -92,17 +105,8 @@ class RestSaveActivity(APIView):
                     mail_message = gettext_lazy("An error occurred while sending the email")
                 
             if not id:
-                if request.data.get('username'):
-                    user = User.objects.filter(Q(email=request.data.get('username')) | Q(username=request.data.get('username')), is_active=True).first()
-                    user = Facilitator.objects.filter(
-                        Q(email=request.data.get('username')) | Q(username=request.data.get('username')), active=True
-                    ).first() if not user else user
-                if not user and request.data.get('email'):
-                    user = User.objects.filter(Q(email=request.data.get('email')) | Q(username=request.data.get('email')), is_active=True).first()
-                    user = Facilitator.objects.filter(
-                            Q(email=request.data.get('email')) | Q(username=request.data.get('email')), active=True
-                        ).first() if not user else user
-                
+                user = activity_planner(request.data.get('username')) or activity_planner(request.data.get('email'))
+
                 if user and not hasattr(user, 'no_sql_user'):
                     activity.user = user
                 else:
@@ -393,14 +397,18 @@ class RestGetActivityByAttributes(APIView):
                 project = Project.objects.get(id=project_id)
                 tree_projects = project.build_the_tree_structure()
                 request.data['project_id__in'] = [p.id for p in tree_projects]
-            if 'facilitator__username' in request.data and request.data['facilitator__username'] and '@' in request.data['facilitator__username']:
-                username = request.data['facilitator__username']
-                request.data['facilitator__username'] = Facilitator.objects.get(email=username).username
-            if 'user__username' in request.data and request.data['user__username'] and '@' in request.data['user__username']:
-                username = request.data['user__username']
-                request.data['user__username'] = User.objects.get(email=username).username
+            # Activités de la personne (le mobile envoie son identifiant ou son e-mail, en facilitator__username ou
+            # user__username) : celles de son compte facilitateur ET de son compte web, s'ils sont actifs tous les
+            # deux (authentication/identity.py).
+            # Identifiant vide : aucune activité (jamais celles de tout le projet).
+            owner_keys = [key for key in ('facilitator__username', 'user__username') if key in request.data]
+            identifier = next((request.data[key] for key in owner_keys if request.data[key]), None)
+            for key in owner_keys:
+                request.data.pop(key)
 
             activities = Activity.objects.filter(**dict(request.data))
+            if owner_keys:
+                activities = activities.filter(owned_by(accounts_for_identifier(identifier)))
 
             if start_date and end_date:
                 activities = activities.filter(
@@ -457,7 +465,8 @@ class DeleteActivityAPIView(APIView):
 
             username = request.data['username']
             if user and username:
-                _ = Activity.objects.get(Q(user__username=username) | Q(facilitator__username=username), id=request.data['id'], project_id=request.data['project'])
+                # Activité de la personne authentifiée : son compte facilitateur ou son compte web, actifs tous les deux
+                _ = Activity.objects.get(owned_by(same_person_accounts(user)), id=request.data['id'], project_id=request.data['project'])
                 
                 if _.validated:
                     return Response(
@@ -490,9 +499,9 @@ class DeleteActivityFileAPIView(APIView):
             serializer = self.serializer_class(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             user = serializer.validated_data
-            print(request.data)
-            username = request.data['username']
-            _ = ActivityFile.objects.get(Q(activity__user__username=username) | Q(activity__facilitator__username=username), id=request.data['id']).delete()
+            _ = ActivityFile.objects.get(
+                owned_by(same_person_accounts(user), 'activity__user', 'activity__facilitator'), id=request.data['id'],
+            ).delete()
             return Response(
                 {'success': 'deleted'}, 
                 status=status.HTTP_200_OK

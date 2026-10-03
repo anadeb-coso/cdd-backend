@@ -11,6 +11,7 @@ from django.urls import reverse_lazy
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 # from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from authentication.models import Facilitator
+from authentication.identity import accounts_for_identifier, owned_by
 from news.serializers import *
 from news.models import *
 from .custom import CustomPagination
@@ -221,13 +222,10 @@ class RestGetNews(APIView):
 
             query = Q()
             if type_news and 'my_' in type_news:
-                if username:
-                    query |= Q(facilitator__username=username)
-                    query |= Q(user__username=username)
-                elif email:
-                    query |= Q(facilitator__email=email)
-                    query |= Q(user__email=email)
-                    
+                # Mes nouvelles : celles de mon compte facilitateur et de mon compte web, actifs tous les deux
+                # (authentication/identity.py) ; sans identifiant, aucune.
+                query = owned_by(accounts_for_identifier(username or email))
+
                 if type_news == 'my_unpublish':
                     query &= Q(publish=False)
                 elif type_news == 'my_publish':

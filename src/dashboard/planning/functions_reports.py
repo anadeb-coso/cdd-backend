@@ -1,3 +1,4 @@
+from authentication.identity import owned_by, same_person_accounts
 from datetime import datetime, timedelta
 from django.utils.translation import gettext_lazy
 from django.utils.dateparse import parse_datetime
@@ -222,7 +223,8 @@ def planning_csv(request):
     
     if show_my_calendar:
         # activities = activities.filter(Q(facilitator_id=request.user.id) | Q(user_id=request.user.id))
-        query &= Q(Q(facilitator_id=request.user.id) | Q(user_id=request.user.id))
+        # Mes activités : compte web + compte facilitateur actifs (authentication/identity.py)
+        query &= owned_by(same_person_accounts(request.user))
     
     # if task_type == "free_tasks":
     #     activities = activities.filter(type="free_task")
