@@ -4014,3 +4014,124 @@ msgstr "village(s) siège(s)"
 #: supervisors drill-down (nombre de lignes affichées)
 msgid "All rows"
 msgstr "Tous"
+
+#: dashboard/views_doc.py
+msgid "Gallery"
+msgstr "Galerie"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "PAV and PAC"
+msgstr "PAV et PAC"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Attachment type"
+msgstr "Type de pièce jointe"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Documents"
+msgstr "Documents"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Photo"
+msgstr "Photo"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Document"
+msgstr "Document"
+
+#: dashboard/views_doc.py
+msgid "default"
+msgstr "par défaut"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Remove filter"
+msgstr "Retirer le filtre"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Select"
+msgstr "Sélectionner"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Select attachment"
+msgstr "Sélectionner la pièce jointe"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+#, python-format
+msgid "Limited to the first %(max)s files"
+msgstr "Limité aux %(max)s premiers fichiers"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "More filters"
+msgstr "Plus de filtres"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "file(s)"
+msgstr "fichier(s)"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Loading more attachments…"
+msgstr "Chargement des pièces jointes suivantes…"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Could not load more attachments. Check your connection and try again."
+msgstr "Impossible de charger la suite des pièces jointes. Vérifiez votre connexion et réessayez."
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Retry"
+msgstr "Réessayer"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Previous"
+msgstr "Précédent"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Next"
+msgstr "Suivant"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Missing file"
+msgstr "Fichier manquant"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "The image could not be loaded."
+msgstr "L'image n'a pas pu être chargée."
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "View the village"
+msgstr "Voir le village"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "No preview available for this file."
+msgstr "Aucun aperçu disponible pour ce fichier."
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "No attachments match your filters"
+msgstr "Aucune pièce jointe ne correspond à vos filtres"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Try clearing a filter or selecting a different type."
+msgstr "Essayez de retirer un filtre ou de choisir un autre type."
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Choosing a phase, an activity, a task or a label shows all the matching attachments, not only the PAV and PAC."
+msgstr "Choisir une phase, une activité, une tâche ou un libellé affiche toutes les pièces jointes correspondantes, pas seulement les PAV et PAC."
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Attachment label"
+msgstr "Libellé de la pièce jointe"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "All labels"
+msgstr "Tous les libellés"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Loading labels…"
+msgstr "Chargement des libellés…"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "labels"
+msgstr "libellés"
+
+#: dashboard/templates/administrative_levels/documents/attachments.html
+msgid "Could not load the labels."
+msgstr "Impossible de charger les libellés."

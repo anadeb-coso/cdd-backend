@@ -3,441 +3,676 @@
 
 {% block extracss %}
     {{ block.super }}
+    {% comment %}
+        Même présentation que la galerie du PDL (/administrative-levels/attachments/) :
+        boutons de type, pastilles des filtres actifs, grille de cartes, mode sélection,
+        visionneuse avec précédent/suivant, défilement infini. Cf. AttachmentListView
+        (dashboard/administrative_levels/views_doc.py).
+    {% endcomment %}
     <style>
-        .attachment-container {
-            display: inline-flex;
-            gap: 0 40px;
-            flex-wrap: wrap;
-            @media (max-width: 700px) {
-                gap: 10px;
-            }
+        .gallery-toolbar {
+            gap: 12px;
+            row-gap: 8px;
         }
 
-        .attachment-link-container {
-            width: 120px;
-            text-align: center;
-
-            &:nth-child(even) .attachment-link {
-                width: 120px;
-
-                .attachment-placeholder:not(.attachment-placeholder--document) {
-                    width: 120px;
-                }
-            }
-        }
-
-        .attachment-link {
-            width: 80px;
-            height: 80px;
-            background: #f6f9fb;
-            border-radius: 10px;
-            margin-top: 10px;
-            position: relative;
-        }
-
-        .attachment-placeholder {
-            height: 80px;
-            width: auto;
-            border-radius: 10px;
-        }
-
-        .attachment-placeholder--document {
-            height: 40px;
-            width: 30px;
-        }
-
-        #attachmentModal, #attachmentFilterModal {
-            .modal-header {
-                border: 0;
-            }
-
-            .btn-closeModal {
-                margin-bottom: 30px;
-                background-color: #599cf7;
-                color: white;
-                padding: 5px !important;
-                font-size: 10px;
-                height: 25px;
-                width: 25px;
-                opacity: 1;
-                border-radius: 50%;
-                margin: 5px;
-                margin-left: auto;
-                outline: transparent;
-            }
-        }
-
-        .checkbox {
-            position: absolute;
-            left: 5px;
-            top: 5px;
-        }
-
-        .form-attachment {
-            gap: 0 20px;
-            flex-wrap: wrap;
-        }
-
-        .pagination {
+        .gallery-toolbar .btn-group .btn {
+            border-radius: 999px !important;
+            padding: 4px 14px;
             font-size: 13px;
+            font-weight: 500;
         }
 
-        #attachmentModal {
-            .attachment-modal-link {
-                width: calc(100% - 120px);
-                height: 50vh;
-                margin: auto;
-                display: flex;
-            }
-
-            .attachment-placeholder {
-                height: 50vh;
-                width: 100%;
-                margin: auto;
-            }
-
-            .carousel-control-next, .carousel-control-prev {
-                bottom: -50px;
-            }
-
-            .carousel-control-next-icon, .carousel-control-prev-icon {
-                border-radius: 50%;
-                background-color: #599cf7;
-                padding: 5px !important;
-                background-size: 10px;
-                height: 25px;
-                width: 25px;
-                bottom: -40px;
-            }
-
-            .carousel-indicators {
-                bottom: -40px;
-            }
-
-            .carousel-indicators li {
-                background-color: #599cf7;
-            }
-
-            .download {
-                display: inline-flex;
-                width: calc(100% - 25px);
-                justify-content: flex-end;
-            }
+        .gallery-toolbar .btn-group .btn + .btn {
+            margin-left: 6px;
         }
 
-        .attachment-filter {
-            background-color: transparent;
-            border-radius: 50%;
-            border: 1px solid black;
-            height: 25px;
-            width: 25px;
-            padding: 2px 0 0 1px;
-        }
-
-        #attachmentFilterModal {
-            .form-checkbox-row {
-                display: inline-flex;
-                gap: 10px;
-                justify-content: center;
-            }
-
-            .select2-container {
-                width: 50% !important;
-            }
-
-            .select2-container--default .select2-selection--single .select2-selection__rendered {
-                color: black;
-            }
-
-            .form-checkbox label {
-                margin: 0 !important;
-            }
-
-            .btn-primary {
-                border-radius: 8px !important;
-                font-size: 12px;
-                float: right;
-            }
-        }
-
-        .download-all, .download-all-link {
+        .gallery-toolbar .btn-group .btn.active {
             background-color: #599cf7;
-            outline: transparent;
-            border-radius: 4px;
-            padding: 5px 10px 3px 10px;
-            border: 0;
-            display: inline-flex;
+            border-color: #599cf7;
+            color: #fff;
+        }
+
+        .gallery-toolbar .active-chips {
+            row-gap: 6px;
+        }
+
+        .gallery-toolbar .active-chips .badge {
+            font-size: 12px;
+            font-weight: 500;
+            background-color: #eef4fb;
+            color: #234;
+            border: 1px solid #d6e4f5;
+        }
+
+        .gallery-toolbar .active-chips .badge a {
+            text-decoration: none;
+            color: inherit;
+            font-weight: 600;
+        }
+
+        .gallery-toolbar .active-chips .badge a:hover {
+            color: #d9534f;
+        }
+
+        .gallery-toolbar .btn-sm {
+            margin-bottom: 4px;
+        }
+
+        .gallery-toolbar #toggleSelectMode.active {
+            background-color: #599cf7;
+            border-color: #599cf7;
+            color: #fff;
+        }
+
+        .gallery-summary {
+            font-size: 13px;
+            color: #5f6b7a;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        /* Pages suivantes (défilement infini) : une grille par page, empilées. */
+        .gallery-grid + .gallery-grid {
+            margin-top: 16px;
+        }
+
+        .gallery-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            transition: transform .15s ease, box-shadow .15s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+        }
+
+        .gallery-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+        }
+
+        .gallery-card__thumb {
+            position: relative;
+            aspect-ratio: 4 / 3;
+            background: #f6f9fb;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .gallery-card__media,
+        .gallery-card__media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-card__doc {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 8px;
+            padding: 16px;
+            text-align: center;
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5fa 100%);
         }
 
-        .download-all, .download-all:focus, .download-all:hover,
-        .download-all-link, .download-all-link:focus, .download-all-link:hover {
-            color: white;
-            text-transform: capitalize;
+        .gallery-card__doc .ext {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #6c757d;
+            letter-spacing: .05em;
+            font-weight: 600;
         }
 
-        .download-all:focus, .download-all:hover,
-        .download-all-link:focus, .download-all-link:hover {
-            opacity: 0.8;
+        .gallery-card__missing {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 6px;
+            padding: 16px;
+            text-align: center;
+            background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 8px, #f1f3f6 8px, #f1f3f6 16px);
+            color: #8a96a6;
         }
 
-        /* Carte de la galerie (cf. _attachment_card_content.html) : icônes
-           d'action en haut, aperçu/placeholder en dessous — AUCUN contenu de
-           fichier chargé au chargement de la page (icône générique pour
-           PDF/Word ; vraie miniature en chargement paresseux natif pour les
-           photos, cf. loading="lazy"). */
+        .gallery-card__missing i {
+            font-size: 32px;
+            color: #c5cdd8;
+        }
+
+        .gallery-card__missing .label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .gallery-card__overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 10px 12px;
+            background: linear-gradient(to top, rgba(0, 0, 0, .75) 0%, rgba(0, 0, 0, 0) 100%);
+            color: #fff;
+            opacity: 0;
+            transition: opacity .15s ease;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        .gallery-card:hover .gallery-card__overlay {
+            opacity: 1;
+        }
+
+        .gallery-card__checkbox {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            opacity: 0;
+            transition: opacity .15s ease;
+            z-index: 2;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        #gallery-root.select-mode .gallery-card__checkbox,
+        .gallery-card:hover .gallery-card__checkbox,
+        .gallery-card.is-selected .gallery-card__checkbox {
+            opacity: 1;
+        }
+
+        #gallery-root.select-mode .gallery-card {
+            cursor: pointer;
+        }
+
+        .gallery-card.is-selected {
+            outline: 3px solid #599cf7;
+            outline-offset: -3px;
+        }
+
+        .gallery-card__badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, .55);
+            color: #fff;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        .gallery-card__body {
+            padding: 8px 10px 10px;
+            font-size: 12px;
+        }
+
+        .gallery-card__title {
+            font-weight: 600;
+            color: #234;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.6em;
+        }
+
+        .gallery-card__location {
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
         .doc-card-actions {
             display: flex;
-            gap: 12px;
-            padding: 6px 8px 0;
+            gap: 14px;
+            margin-top: 8px;
         }
-        .doc-card-actions a { color: #6c757d; }
-        .doc-card-actions a:hover { color: #333; }
-        .doc-card-placeholder {
-            height: 100px;
+
+        .doc-card-actions a {
+            color: #6c757d;
+        }
+
+        .doc-card-actions a:hover {
+            color: #333;
+        }
+
+        .gallery-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .gallery-empty i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: .5;
+            display: block;
+        }
+
+        .gallery-sentinel {
+            height: 1px;
+        }
+
+        /* Chargement de la page suivante — visible seulement pendant la requête htmx. */
+        .gallery-loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px;
+            color: #6c757d;
+        }
+
+        .gallery-loading.htmx-request {
+            display: flex;
+        }
+
+        .gallery-error {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f6f9fb;
-        }
-        .doc-card-img {
-            max-width: 100%;
-            max-height: 100px;
-            object-fit: contain;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 16px;
+            margin-top: 12px;
+            border: 1px solid #dc3545;
+            border-radius: 8px;
+            background: #fdecea;
+            color: #dc3545;
         }
 
-        /* Visionneuse plein écran ("Voir en grand") de cette page — même
-           pattern que #tdmLightbox (static/dashboard/js/task_detail_modal.js),
-           dupliqué ici en local (page sans rapport avec les profils
-           facilitateur) plutôt que partagé entre les deux. */
-        #docGalleryLightbox {
+        .gallery-error[hidden] {
             display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 10000;
-            background: rgba(0, 0, 0, 0.85);
+        }
+
+        #attachmentModal .modal-header,
+        #attachmentFilterModal .modal-header {
+            border: 0;
+        }
+
+        #attachmentModal .modal-dialog {
+            max-width: 1100px;
+        }
+
+        #attachmentModal .modal-content {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #attachmentModal .modal-header {
+            padding: 8px 16px 0;
+            align-items: center;
+        }
+
+        #attachmentModal .lightbox-counter {
+            font-size: 13px;
+            color: #6c757d;
+        }
+
+        #attachmentModal .modal-body {
+            padding: 8px 20px 20px;
+        }
+
+        #attachmentModal .lightbox-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 16px;
+            padding: 8px 16px;
+            margin-bottom: 12px;
+            background: #f6f9fb;
+            border-radius: 8px;
+        }
+
+        #attachmentModal .lightbox-header__location {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #1a5fb4;
+            font-weight: 600;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        #attachmentModal a.lightbox-header__location:hover {
+            color: #0d4a99;
+            text-decoration: underline;
+        }
+
+        #attachmentModal .lightbox-header__location--static {
+            color: #455a73;
+        }
+
+        #attachmentModal .lightbox-header__task {
+            font-size: 13px;
+            text-align: right;
+            color: #5f6b7a;
+        }
+
+        #attachmentModal .lightbox-stage {
+            position: relative;
+            padding: 0 44px;
+        }
+
+        #attachmentModal .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            border-radius: 50%;
+            background-color: #599cf7;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            padding: 30px;
-        }
-        #docGalleryLightbox.doc-gallery-lightbox-open { display: flex; }
-        .doc-gallery-lightbox-close {
-            position: absolute;
-            top: 15px; right: 25px;
-            color: #fff;
-            font-size: 2rem;
-            line-height: 1;
-            background: none;
-            border: 0;
-            cursor: pointer;
+            opacity: .9;
             z-index: 1;
         }
-        #docGalleryLightboxContent {
+
+        #attachmentModal .lightbox-nav:disabled {
+            opacity: .3;
+            cursor: default;
+        }
+
+        #attachmentModal .lightbox-prev { left: 0; }
+        #attachmentModal .lightbox-next { right: 0; }
+
+        #attachmentModal .lightbox-photo {
+            min-height: 40vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0e1217;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        #attachmentModal .lightbox-photo img {
+            max-height: 65vh;
             max-width: 100%;
-            max-height: 100%;
-            text-align: center;
-        }
-        #docGalleryLightboxContent img {
-            max-width: 90vw;
-            max-height: 85vh;
+            width: auto;
             object-fit: contain;
+            border-radius: 4px;
         }
-        #docGalleryLightboxContent iframe {
-            width: 90vw;
-            height: 85vh;
+
+        #attachmentModal .lightbox-frame {
+            width: 100%;
+            height: 70vh;
             border: 0;
+            border-radius: 8px;
             background: #fff;
         }
 
+        #attachmentModal .lightbox-doc {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            min-height: 40vh;
+            text-align: center;
+            color: #455a73;
+        }
+
+        #attachmentModal .lightbox-missing__panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 40vh;
+            width: 100%;
+            color: #8a96a6;
+            background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 8px, #f1f3f6 8px, #f1f3f6 16px);
+            border-radius: 8px;
+            padding: 30px;
+        }
+
+        #attachmentModal .lightbox-footer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid #eef1f4;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        #attachmentFilterModal .modal-dialog {
+            max-width: 760px;
+        }
+
+        #attachmentFilterModal .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #455a73;
+        }
+
+        #attachmentFilterModal .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: black;
+        }
+
+        #attachmentFilterModal .btn-primary {
+            border-radius: 8px !important;
+        }
+
+        #attachmentFilterModal .gallery-label-filter {
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #eef1f4;
+        }
+
+        #attachmentFilterModal .gallery-label-status,
+        #attachmentFilterModal .gallery-filter-hint {
+            color: #5f6b7a;
+            min-height: 1.2em;
+        }
     </style>
-    {% comment %}
-        babylon-grid retiré : son propre système de colonnes (wrapInner + ses
-        .column générés en JS) casse le contexte flex de Bootstrap dont
-        dépendent les cartes .col-3 de _grid.html (une fois enveloppées, elles
-        ne sont plus enfants directs de .row -> écroulées sur ~20% de large
-        au lieu d'un vrai damier 4 colonnes). Les deux systèmes de grille
-        n'étaient pas censés coexister ; comme le plugin n'a jamais été
-        chargé avant ce correctif (404 depuis toujours), ce conflit n'avait
-        jamais pu se produire/être vu. La grille Bootstrap seule (.row/.col-3,
-        déjà en place) suffit et fonctionne sans JS.
-    {% endcomment %}
 {% endblock %}
 
 {% block content %}
-    {% csrf_token %}
-    <div class="row">
-
-        <div class="col-12 p-0 d-flex justify-content-end align-items-center">
-            <a class="download-all-link mr-2" href="{% url 'dashboard:administrative_levels:documents_download_zip' %}?{{ query_strings_raw.urlencode }}"
-               title="{% translate 'Download all' %}">
-                <i class="fas fa-file-archive mr-1"></i>{% translate 'Download all' %}
+    <div class="gallery-toolbar d-flex flex-wrap align-items-center mb-2">
+        <div class="btn-group flex-wrap" role="group" aria-label="{% translate 'Attachment type' %}">
+            <a href="{{ type_links.pav_pac }}"
+               class="btn btn-outline-secondary {% if type_links.active == 'pav_pac' %}active{% endif %}">
+                <i class="fas fa-file-signature"></i> {% translate 'PAV and PAC' %}
             </a>
-            <button type="button" class="download-all mr-2" title="{% translate 'Download selection' %}">
-                <i class="fas fa-check-square mr-1"></i>{% translate 'Download selection' %}
-            </button>
-            <button class="attachment-filter" data-toggle="modal" data-target="#attachmentFilterModal">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                     class="bi bi-filter" viewBox="0 0 16 16">
-                    <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
-                </svg>
-            </button>
+            <a href="{{ type_links.all }}"
+               class="btn btn-outline-secondary {% if type_links.active == 'all' %}active{% endif %}">
+                {% translate 'All' %}
+            </a>
+            <a href="{{ type_links.Photo }}"
+               class="btn btn-outline-secondary {% if type_links.active == 'Photo' %}active{% endif %}">
+                <i class="fas fa-image"></i> {% translate 'Photos' %}
+            </a>
+            <a href="{{ type_links.Document }}"
+               class="btn btn-outline-secondary {% if type_links.active == 'Document' %}active{% endif %}">
+                <i class="fas fa-file-alt"></i> {% translate 'Documents' %}
+            </a>
         </div>
 
-        <div class="col-12">
-            <p>{% translate "PAV and PAC from " %} {{ canton }}</p>
-            <form method="post" id="attachmentsForm" class="form-attachment"
-                  action="{% url 'dashboard:administrative_levels:documents_download_zip' %}">
-                {% csrf_token %}
-                {% include 'administrative_levels/documents/_grid.html' with attachments=attachments %}
-            </form>
+        {% if active_filter_chips %}
+            <div class="active-chips d-flex flex-wrap align-items-center">
+                {% for chip in active_filter_chips %}
+                    <span class="badge badge-pill px-2 py-1 mr-1">
+                        {{ chip.label }}
+                        {% if chip.remove_url %}
+                            <a href="{{ chip.remove_url }}" class="ml-1"
+                               aria-label="{% translate 'Remove filter' %}" title="{% translate 'Remove filter' %}">&times;</a>
+                        {% endif %}
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
 
+        <div class="ml-auto d-flex flex-wrap align-items-center">
+            <button type="button" id="toggleSelectMode" class="btn btn-outline-primary btn-sm mr-2">
+                <i class="fas fa-check-square"></i> {% translate 'Select' %}
+            </button>
+            <button type="button" class="btn btn-primary btn-sm download-all mr-2" disabled>
+                <i class="fas fa-download"></i> {% translate 'Download selection' %} <span class="selection-count"></span>
+            </button>
+            <a class="btn btn-outline-primary btn-sm mr-2 {% if no_results %}disabled{% endif %}"
+               href="{% url 'dashboard:administrative_levels:documents_download_zip' %}?{{ query_strings_raw.urlencode }}"
+               {% if no_results %}aria-disabled="true" tabindex="-1"{% endif %}
+               title="{% if total_count > max_zip_files %}{% blocktranslate with max=max_zip_files %}Limited to the first {{ max }} files{% endblocktranslate %}{% else %}{% translate 'Download all' %}{% endif %}">
+                <i class="fas fa-file-archive"></i> {% translate 'Download all' %}
+            </a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#attachmentFilterModal">
+                <i class="fas fa-sliders-h"></i> {% translate 'More filters' %}
+            </button>
         </div>
     </div>
 
+    <p class="gallery-summary mb-3">
+        {% if gallery_mode == 'pav_pac' and scope %}{% translate "PAV and PAC from " %} {{ scope.name }} &middot; {% endif %}
+        {{ total_count }} {% translate 'file(s)' %}
+    </p>
+
     {% comment %}
-        Visionneuse plein écran ("Voir en grand") — un seul exemplaire pour toute la
-        page, piloté par window.docGalleryOpenLightbox()/docGalleryCloseLightbox()
-        (voir {% block javascript %} plus bas). Même pattern que #tdmLightbox
-        (task_detail_modal.js), local à cette page.
+        « Télécharger la sélection » : POST des cases cochées (name="urls") vers
+        DownloadAttachmentsZipView, AVEC la query string des filtres actifs (elle y
+        ré-exécute le même filtrage pour retrouver le nom + village/canton de chaque fichier).
     {% endcomment %}
-    <div id="docGalleryLightbox">
-        <button type="button" class="doc-gallery-lightbox-close" aria-label="Close" onclick="window.docGalleryCloseLightbox()">&times;</button>
-        <div id="docGalleryLightboxContent"></div>
+    <form method="post" id="attachmentsForm"
+          action="{% url 'dashboard:administrative_levels:documents_download_zip' %}?{{ query_strings_raw.urlencode }}">
+        {% csrf_token %}
+        <div id="gallery-root">
+            {% include 'administrative_levels/documents/_grid.html' %}
+        </div>
+    </form>
+
+    <div id="gallery-loading" class="gallery-loading" role="status" aria-live="polite">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>{% translate 'Loading more attachments…' %}</span>
+    </div>
+    <div id="gallery-error" class="gallery-error" role="alert" hidden>
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <span>{% translate 'Could not load more attachments. Check your connection and try again.' %}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="gallery-retry">{% translate 'Retry' %}</button>
     </div>
 {% endblock %}
 
 {% block modals %}
-    <div class="modal fade" id="attachmentModal" tabindex="-1" role="dialog"
-         aria-labelledby="attachmentModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog modal-xl" role="document">
+    {% comment %}
+        Visionneuse (« Voir en grand ») : UNE pièce jointe à la fois, construite à la
+        demande depuis les attributs data-* de la carte (_attachment_card_content.html),
+        précédent/suivant parmi les cartes chargées. Contrairement au carrousel du PDL, on
+        ne construit pas toutes les diapositives d'un coup : rien n'est chargé (photo, PDF,
+        Word) avant d'être affiché.
+    {% endcomment %}
+    <div class="modal fade" id="attachmentModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <button type="button" class="close btn-closeModal" data-dismiss="modal" aria-label="Close">
+                    <span class="lightbox-counter"></span>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{% translate 'Close' %}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body mb-5">
+                <div class="modal-body">
+                    <div class="lightbox-header-slot"></div>
+                    <div class="lightbox-stage">
+                        <button type="button" class="lightbox-nav lightbox-prev" title="{% translate 'Previous' %}" aria-label="{% translate 'Previous' %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="lightbox-media"></div>
+                        <button type="button" class="lightbox-nav lightbox-next" title="{% translate 'Next' %}" aria-label="{% translate 'Next' %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="lightbox-footer"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="attachmentFilterModal" tabindex="-1" role="dialog"
-         aria-labelledby="attachmentFilterModalLabel"
-         aria-hidden="true">
+         aria-labelledby="attachmentFilterModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5>{% translate 'Choose attachments to view' %}</h5>
-                    <button type="button" class="close btn-closeModal" data-dismiss="modal" aria-label="Close">
+                    <h5 id="attachmentFilterModalLabel">{% translate 'Choose attachments to view' %}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{% translate 'Close' %}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="card-body">
-                    <form action="" method="get">
-                        {% comment %} <div class="form-checkbox-row">
-
-                            <div class="form-checkbox">
-                                <label for="id_type_0"><input type="radio" name="type" value="Photo" id="id_type_0" required="" {% if 'type' in query_strings_raw and query_strings_raw.type == 'Photo' %}checked=""{% endif %}> Photo</label>
-                            </div>
-
-                            <div class="form-checkbox">
-                                <label for="id_type_1"><input type="radio" name="type" value="Document" id="id_type_1" required="" {% if 'type' in query_strings_raw and query_strings_raw.type == 'Document' %}checked=""{% endif %}> Document</label>
-                            </div>
-
-                            <div class="form-checkbox">
-                                <label for="id_type_2"><input type="radio" name="type" value="" id="id_type_2" required="" {% if not 'type' in query_strings_raw or query_strings_raw.type not in 'Photo,Document' %}checked=""{% endif %}> Both</label>
-                            </div>
-
+                <div class="modal-body">
+                    <form action="{% url 'dashboard:administrative_levels:documents' %}" method="get" id="galleryFilterForm">
+                        <input type="hidden" name="type" value="{% if gallery_mode != 'pav_pac' %}{{ query_strings_raw.type }}{% endif %}">
+                        {% comment %}
+                            Libellés des pièces jointes du périmètre choisi ci-dessous (avec leur nombre de
+                            fichiers) : chargés à l'ouverture du modal puis à chaque changement de filtre
+                            (documents/label-choices/, cf. DocumentsLabelChoicesView) ; recherche dans la liste
+                            via select2. Le libellé déjà choisi est rendu côté serveur pour ne pas être perdu
+                            si le formulaire est envoyé avant la fin du chargement.
+                        {% endcomment %}
+                        <div class="form-group gallery-label-filter">
+                            <label for="id_label">{% translate 'Attachment label' %}</label>
+                            <select class="form-control" name="label" id="id_label" style="width: 100%;">
+                                <option value="">{% translate 'All labels' %}</option>
+                                {% if selected_label %}
+                                    <option value="{{ selected_label }}" selected>{{ selected_label }}</option>
+                                {% endif %}
+                            </select>
+                            <small class="form-text gallery-label-status" id="labelChoicesStatus"></small>
                         </div>
-                        <br><br> {% endcomment %}
-                        <div class="form-group">
-                            <div class="form-label">
-                                <label for="id_administrative_level">{% translate 'Administrative level' %}</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% for select in geo_selects %}
+                                    <div class="form-group">
+                                        <label for="id_{{ select.key }}">{{ select.label }}</label>
+                                        <select class="form-control" name="{{ select.key }}" id="id_{{ select.key }}" style="width: 100%;"{% if select.disabled %} disabled{% endif %}>
+                                            <option value="">---</option>
+                                            {% for option_id, option_name in select.options %}
+                                                <option value="{{ option_id }}"{% if option_id == select.selected %} selected{% endif %}>{{ option_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endfor %}
                             </div>
-                            <div class="form-select-row">
-                                <select class="form-control" name="administrative_level" id="id_administrative_level" empty-option="---" style="width: 100%;">
-                                    <option selected value="">---</option>
-                                    {% for administrative_level in administrative_levels %}
-                                        {% if 'administrative_level' in query_strings_raw %}
-                                            {% if query_strings_raw|get_item:'administrative_level' == administrative_level.id %}
-                                            <option value="{{ administrative_level.id }}" selected>{{ administrative_level.name }}</option>
-                                            {% else %}
-                                            <option value="{{ administrative_level.id }}">{{ administrative_level.name }}</option>
-                                            {% endif %}
-                                        {% else %}
-                                            <option value="{{ administrative_level.id }}">{{ administrative_level.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        {% comment %} <div class="form-group">
-                            <div class="form-label">
-                                <label for="id_phase">{% translate 'Phase' %}</label>
-                            </div>
-                            <div class="form-select-row">
-                                <select class="form-control" name="phase" id="id_phase" empty-option="---" style="width: 100%;" {% if not 'administrative_level' in query_strings_raw %}disabled{% endif %}>
-                                    <option selected value="">---</option>
-                                    {% for phase in phases %}
-                                        {% if 'phase' in query_strings_raw %}
-                                            {% if query_strings_raw|get_item:'phase' == phase.id %}
-                                            <option value="{{ phase.id }}" selected>{{ phase.name }}</option>
-                                            {% else %}
-                                            <option value="{{ phase.id }}">{{ phase.name }}</option>
-                                            {% endif %}
-                                        {% else %}
-                                            <option value="{{ phase.id }}">{{ phase.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                </select>
+                            <div class="col-md-6">
+                                {% for select in process_selects %}
+                                    <div class="form-group">
+                                        <label for="id_{{ select.key }}">{{ select.label }}</label>
+                                        <select class="form-control" name="{{ select.key }}" id="id_{{ select.key }}" style="width: 100%;"{% if select.disabled %} disabled{% endif %}>
+                                            <option value="">---</option>
+                                            {% for option_id, option_name in select.options %}
+                                                <option value="{{ option_id }}"{% if option_id == select.selected %} selected{% endif %}>{{ option_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endfor %}
+                                {% if gallery_mode == 'pav_pac' %}
+                                    <p class="small mb-0 gallery-filter-hint">
+                                        {% translate 'Choosing a phase, an activity, a task or a label shows all the matching attachments, not only the PAV and PAC.' %}
+                                    </p>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="form-group">
-                            <div class="form-label">
-                                <label for="id_activity">{% translate 'Activity' %}</label>
-                            </div>
-                            <div class="form-select-row">
-                                <select class="form-control" name="activity" id="id_activity" empty-option="---" style="width: 100%;" {% if not 'phase' in query_strings_raw %}disabled{% endif %}>
-                                    <option selected value="">---</option>
-                                    {% for activity in activities %}
-                                        {% if 'activity' in query_strings_raw %}
-                                            {% if query_strings_raw|get_item:'activity' == activity.id %}
-                                            <option value="{{ activity.id }}" selected>{{ activity.name }}</option>
-                                            {% else %}
-                                            <option value="{{ activity.id }}">{{ activity.name }}</option>
-                                            {% endif %}
-                                        {% else %}
-                                            <option value="{{ activity.id }}">{{ activity.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="form-label">
-                                <label for="id_task">{% translate 'Task' %}</label>
-                            </div>
-                            <div class="form-select-row">
-                                <select class="form-control" name="task" id="id_task" empty-option="---" style="width: 100%;" {% if not 'activity' in query_strings_raw %}disabled{% endif %}>
-                                    <option selected value="">---</option>
-                                    {% for task in tasks %}
-                                        {% if 'task' in query_strings_raw %}
-                                            {% if query_strings_raw|get_item:'task' == task.id %}
-                                            <option value="{{ task.id }}" selected>{{ task.name }}</option>
-                                            {% else %}
-                                            <option value="{{ task.id }}">{{ task.name }}</option>
-                                            {% endif %}
-                                        {% else %}
-                                            <option value="{{ task.id }}">{{ task.name }}</option>
-                                        {% endif %}
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div> {% endcomment %}
 
-                        <input type="submit" class="btn btn-primary" value="{% translate 'Apply' %}">
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'dashboard:administrative_levels:documents' %}{% if gallery_mode != 'pav_pac' and query_strings_raw.type %}?type={{ query_strings_raw.type|urlencode }}{% endif %}"
+                               class="btn btn-link px-0">{% translate 'Reset' %}</a>
+                            <input type="submit" class="btn btn-primary" value="{% translate 'Apply' %}">
+                        </div>
                     </form>
                 </div>
             </div>
@@ -447,133 +682,340 @@
 
 {% block javascript %}
     {{ block.super }}
-    {% comment %}
-        htmx retiré : ne servait qu'au trigger de pagination "infinie" de
-        _grid.html, lui-même retiré (jamais fonctionnel côté vue, cf.
-        commentaire dans _grid.html). Rien d'autre sur cette page ne
-        l'utilise — à réintroduire avec le script si une vraie fonctionnalité
-        htmx est ajoutée plus tard.
-    {% endcomment %}
-    <script type="text/javascript" data-attachments="{{ attachments }}">
-        var current_page = "{{ request.path }}";
-        var csrf_token = "{{ csrf_token }}";
-
-        // Visionneuse plein écran ("Voir en grand") — cf. #docGalleryLightbox
-        // et facilitators/_task_attachment.html pour le même pattern côté
-        // modal de détail de tâche (window.tdmOpenLightbox).
-        window.docGalleryOpenLightbox = function (url, type) {
-            var $content = $('#docGalleryLightboxContent');
-            if (!$content.length) return;
-            if (type === 'pdf') {
-                $content.html($('<iframe>').attr('src', url));
-            } else if (type === 'office') {
-                var viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url);
-                $content.html($('<iframe>').attr({ src: viewerUrl, frameborder: '0' }));
-            } else {
-                $content.html($('<img>').attr('src', url));
-            }
-            $('#docGalleryLightbox').addClass('doc-gallery-lightbox-open');
-        };
-        window.docGalleryCloseLightbox = function () {
-            $('#docGalleryLightbox').removeClass('doc-gallery-lightbox-open');
-            $('#docGalleryLightboxContent').empty();
-        };
-
+    <script type="text/javascript" src="{% static 'js/htmx.min.js' %}"></script>
+    <script type="text/javascript">
         $(document).ready(function () {
-            $(document).on('click', '#docGalleryLightbox', function (e) {
-                if (e.target === this) window.docGalleryCloseLightbox();
-            });
-            $(document).on('keydown', function (e) {
-                if (e.key === 'Escape' || e.keyCode === 27) window.docGalleryCloseLightbox();
-            });
+            var root = document.getElementById('gallery-root');
+            var $root = $(root);
+            var $downloadBtn = $('.download-all');
+            var choicesUrl = "{% url 'dashboard:administrative_levels:documents_filter_choices' %}";
+            var officeViewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=';
 
-            $('input[type=checkbox]').click(function (event) {
-                if (event.stopPropagation) {
-                    event.stopPropagation();
-                } else {
-                    event.cancelBubble = true;
+            var strings = {
+                missingFile: "{% translate 'Missing file'|escapejs %}",
+                missingFileHint: "{% translate 'The image could not be loaded.'|escapejs %}",
+                openInNewTab: "{% translate 'Open in a new tab'|escapejs %}",
+                download: "{% translate 'Download'|escapejs %}",
+                viewLocation: "{% translate 'View the village'|escapejs %}",
+                noPreview: "{% translate 'No preview available for this file.'|escapejs %}"
+            };
+
+            /* ---- Photos introuvables (grille) : panneau « fichier manquant » ---- */
+            function markImageMissing(img) {
+                var media = img.closest('.gallery-card__media');
+                if (!media || media.dataset.missing === '1') return;
+                media.dataset.missing = '1';
+                media.classList.remove('gallery-card__media');
+                media.classList.add('gallery-card__missing');
+                $(media).empty()
+                    .append('<i class="fas fa-image"></i>')
+                    .append($('<div class="label">').text(strings.missingFile));
+            }
+            // Les erreurs de chargement ne remontent pas : écoute en phase de capture,
+            // valable aussi pour les cartes ajoutées ensuite par le défilement infini.
+            root.addEventListener('error', function (e) {
+                if (e.target && e.target.tagName === 'IMG' && e.target.closest('.gallery-card__media')) {
+                    markImageMissing(e.target);
                 }
+            }, true);
+            root.querySelectorAll('.gallery-card__media img').forEach(function (img) {
+                if (img.complete && img.naturalWidth === 0) markImageMissing(img);
             });
 
-            $('#id_administrative_level').on('change', function(){
-                change_filters_selects(
-                    $(this), $('#id_phase'),
-                    [$('#id_activity'), $('#id_task')]
-                )
-            });
+            /* ---- Mode sélection + « Télécharger la sélection » ---- */
+            function refreshSelection() {
+                var count = $root.find('.gallery-card__checkbox:checked').length;
+                $downloadBtn.prop('disabled', count === 0);
+                $('.selection-count').text(count ? '(' + count + ')' : '');
+            }
 
-            $('#id_phase').on('change', function(){
-                change_filters_selects(
-                    $(this), $('#id_activity'),
-                    [$('#id_task')]
-                )
-            });
+            function toggleCard(card) {
+                var checkbox = card.querySelector('.gallery-card__checkbox');
+                if (!checkbox) return;
+                checkbox.checked = !checkbox.checked;
+                $(checkbox).trigger('change');
+            }
 
-            $('#id_activity').on('change', function(){
-                change_filters_selects(
-                    $(this), $('#id_task'), []
-                )
-            });
-
-            // « Télécharger la sélection » : soumet #attachmentsForm en POST
-            // (les cases NON cochées ne sont jamais incluses dans une
-            // soumission de formulaire -> pas besoin de sérialiser nous-mêmes
-            // la sélection, cf. DownloadAttachmentsZipView.post). « Télécharger
-            // tout » (.download-all-link) est un lien GET simple, sans JS.
-            $('.download-all').click(function () {
-                var checked = $('#attachmentsForm input[name="urls"]:checked');
-                if (!checked.length) {
-                    alert("{% translate 'Please select at least one file.' %}");
-                    return;
+            $('#toggleSelectMode').on('click', function () {
+                root.classList.toggle('select-mode');
+                $(this).toggleClass('active', root.classList.contains('select-mode'));
+                if (!root.classList.contains('select-mode')) {
+                    $root.find('.gallery-card__checkbox').prop('checked', false);
+                    $root.find('.gallery-card.is-selected').removeClass('is-selected');
                 }
+                refreshSelection();
+            });
+
+            $root.on('change', '.gallery-card__checkbox', function () {
+                $(this).closest('.gallery-card').toggleClass('is-selected', this.checked);
+                refreshSelection();
+            });
+
+            $downloadBtn.on('click', function () {
+                if (!$root.find('.gallery-card__checkbox:checked').length) return;
                 $('#attachmentsForm').trigger('submit');
             });
 
-            /* "Voir en grand" : clic sur la miniature elle-même (photos) ouvre la
-               même visionneuse que l'icône dédiée de chaque carte
-               (_attachment_card_content.html) — plus de carrousel plein-page
-               construit d'un coup pour TOUTES les pièces jointes au premier clic
-               (chargeait leur contenu en bloc ; remplacé par une visionneuse
-               mono-fichier, ouverte à la demande, cohérente avec le reste de la
-               page qui ne charge rien avant un clic explicite). */
-            $('.second-target').click(function (e) {
+            /* ---- Clics sur une carte ---- */
+            $root.on('click', '.js-gallery-view', function (e) {
                 e.preventDefault();
-                var $img = $(this);
-                window.docGalleryOpenLightbox($img.attr('src'), 'image');
+                openLightbox($(this).closest('.gallery-card')[0]);
             });
 
-            function change_filters_selects(select_input, select_to_fill, other_selects){
-                let selected_value = select_input.find(":selected").val();
+            $root.on('click', '.gallery-card__thumb', function (e) {
+                var card = $(this).closest('.gallery-card')[0];
+                if ($(e.target).closest('.gallery-card__checkbox').length) return;
+                if (root.classList.contains('select-mode')) {
+                    toggleCard(card);
+                } else {
+                    openLightbox(card);
+                }
+            });
 
-                if (selected_value != '') {
-                    let base_url = "{% url 'dashboard:administrative_levels:attachment_filter' %}";
-                    $.ajax({
-                        type : "POST",
-                        url: base_url,
-                        data: {
-                          type: select_input.attr('name'),
-                          value: selected_value,
-                          csrfmiddlewaretoken: '{{ csrf_token }}',
-                        },
-                        success: function(response){
-                            select_to_fill.html("<option selected value=''>" + select_to_fill.attr('empty-option') + "</option>");
-                            response.values.forEach((element) => {
-                                select_to_fill.html(select_to_fill.html() + "<option value='" + element.id + "'>" + element.name + "</option>");
-                            })
-                        }
+            $root.on('click', '.gallery-card__body', function (e) {
+                // Liens (actions, localité) : comportement normal ; ailleurs, en mode
+                // sélection, un clic sur la carte la (dé)sélectionne.
+                if ($(e.target).closest('a').length) return;
+                if (root.classList.contains('select-mode')) {
+                    toggleCard($(this).closest('.gallery-card')[0]);
+                }
+            });
+
+            /* ---- Visionneuse (« Voir en grand ») ---- */
+            var $modal = $('#attachmentModal');
+            var lightboxCards = [];
+            var lightboxIndex = -1;
+
+            function missingPanel() {
+                return $('<div class="lightbox-missing__panel">')
+                    .append('<i class="fas fa-image fa-3x"></i>')
+                    .append($('<div class="mt-2 font-weight-bold">').text(strings.missingFile))
+                    .append($('<div class="small text-muted">').text(strings.missingFileHint));
+            }
+
+            function actionButton(href, icon, label, primary) {
+                return $('<a class="btn btn-sm" target="_blank" rel="noopener">')
+                    .addClass(primary ? 'btn-primary' : 'btn-outline-primary')
+                    .attr('href', href)
+                    .append($('<i>').addClass('fas ' + icon))
+                    .append(document.createTextNode(' ' + label));
+            }
+
+            function renderSlide() {
+                var card = lightboxCards[lightboxIndex];
+                if (!card) return;
+                var d = card.dataset;
+
+                var $header = $('<div class="lightbox-header">');
+                if (d.admLabel) {
+                    var $location = d.admUrl
+                        ? $('<a class="lightbox-header__location" target="_blank">').attr('href', d.admUrl)
+                        : $('<span class="lightbox-header__location lightbox-header__location--static">');
+                    $location.append('<i class="fas fa-map-marker-alt"></i>').append(document.createTextNode(' ' + d.admLabel));
+                    $header.append($location);
+                }
+                var taskText = [d.taskLabel, d.name].filter(Boolean).join(' — ');
+                if (taskText) $header.append($('<span class="lightbox-header__task">').text(taskText));
+                $modal.find('.lightbox-header-slot').empty().append($header);
+
+                var $media;
+                if (d.kind === 'image') {
+                    $media = $('<div class="lightbox-photo">').append(
+                        $('<img class="img-fluid mx-auto d-block">').attr({ src: d.url, alt: d.name || '' })
+                            .on('error', function () { $(this).closest('.lightbox-photo').replaceWith(missingPanel()); })
+                    );
+                } else if (d.kind === 'pdf') {
+                    $media = $('<iframe class="lightbox-frame">').attr('src', d.url);
+                } else if (d.kind === 'word' || d.kind === 'office') {
+                    $media = $('<iframe class="lightbox-frame" frameborder="0">').attr('src', officeViewerUrl + encodeURIComponent(d.url));
+                } else {
+                    $media = $('<div class="lightbox-doc">')
+                        .append('<i class="fas fa-file-alt fa-5x text-secondary"></i>')
+                        .append($('<div class="mt-3 font-weight-bold">').text(d.name || ''))
+                        .append($('<div class="small text-muted mt-2">').text(strings.noPreview));
+                }
+                $modal.find('.lightbox-media').empty().append($media);
+
+                var $footer = $modal.find('.lightbox-footer').empty();
+                if (d.openUrl) $footer.append(actionButton(d.openUrl, 'fa-external-link-alt', strings.openInNewTab, false));
+                $footer.append(actionButton(d.downloadUrl, 'fa-download', strings.download, true));
+                if (d.convertUrl) {
+                    $footer.append(actionButton(d.convertUrl, d.kind === 'pdf' ? 'fa-file-word' : 'fa-file-pdf', d.convertLabel, false));
+                }
+                if (d.admUrl) {
+                    var $locationBtn = actionButton(d.admUrl, 'fa-map-marker-alt', strings.viewLocation, false);
+                    $locationBtn.removeClass('btn-outline-primary').addClass('btn-outline-secondary');
+                    $footer.append($locationBtn);
+                }
+
+                $modal.find('.lightbox-counter').text((lightboxIndex + 1) + ' / ' + lightboxCards.length);
+                $modal.find('.lightbox-prev').prop('disabled', lightboxIndex <= 0);
+                $modal.find('.lightbox-next').prop('disabled', lightboxIndex >= lightboxCards.length - 1);
+            }
+
+            function openLightbox(card) {
+                if (!card) return;
+                lightboxCards = $root.find('.gallery-card').toArray();
+                lightboxIndex = lightboxCards.indexOf(card);
+                renderSlide();
+                $modal.modal('show');
+            }
+
+            function moveLightbox(step) {
+                var next = lightboxIndex + step;
+                if (next < 0 || next >= lightboxCards.length) return;
+                lightboxIndex = next;
+                renderSlide();
+            }
+
+            $modal.find('.lightbox-prev').on('click', function () { moveLightbox(-1); });
+            $modal.find('.lightbox-next').on('click', function () { moveLightbox(1); });
+            $(document).on('keydown', function (e) {
+                if (!$modal.hasClass('show')) return;
+                if (e.key === 'ArrowLeft') moveLightbox(-1);
+                if (e.key === 'ArrowRight') moveLightbox(1);
+            });
+            // Fermeture : on vide la visionneuse (arrête le chargement d'un PDF/Word en cours).
+            $modal.on('hidden.bs.modal', function () {
+                $modal.find('.lightbox-header-slot, .lightbox-media, .lightbox-footer').empty();
+            });
+
+            /* ---- Modal de filtres : listes en cascade ---- */
+            function resetSelect($select, disabled) {
+                $select.empty().append(new Option('---', '', true, true));
+                $select.prop('disabled', disabled).trigger('change.select2');
+            }
+
+            function bindCascade(keys) {
+                keys.forEach(function (key, index) {
+                    var $select = $('#id_' + key);
+                    $select.on('change', function () {
+                        var value = $select.val();
+                        var $next = $('#id_' + keys[index + 1]);
+                        keys.slice(index + 2).forEach(function (k) { resetSelect($('#id_' + k), true); });
+                        if (!$next.length) return;
+                        resetSelect($next, true);
+                        if (!value) return;
+                        var token = String(Date.now()) + Math.random();
+                        $next.data('cascadeToken', token);
+                        $.getJSON(choicesUrl, { type: key, value: value }).done(function (response) {
+                            if ($next.data('cascadeToken') !== token) return;
+                            (response.values || []).forEach(function (element) {
+                                $next.append(new Option(element.name, element.id, false, false));
+                            });
+                            $next.prop('disabled', false).trigger('change.select2');
+                        });
                     });
-                    select_to_fill.prop('disabled', false);
-                }
-                else {
-                    select_to_fill.prop('disabled', 'disabled');
-                    select_to_fill.html("<option selected value=''>" + select_to_fill.attr('empty-option') + "</option>");
-                }
-                other_selects.forEach((select) => {
-                    select.prop('disabled', 'disabled');
-                    select.html("<option selected value=''>" + select.attr('empty-option') + "</option>");
                 });
-            };
-        })
+            }
 
+            bindCascade(['region', 'prefecture', 'commune', 'canton', 'village']);
+            bindCascade(['phase', 'activity', 'task']);
+
+            /* ---- Modal de filtres : liste des libellés des pièces jointes ---- */
+            var labelChoicesUrl = "{% url 'dashboard:administrative_levels:documents_label_choices' %}";
+            var $label = $('#id_label');
+            var $labelStatus = $('#labelChoicesStatus');
+            var labelStrings = {
+                all: "{% translate 'All labels'|escapejs %}",
+                loading: "{% translate 'Loading labels…'|escapejs %}",
+                count: "{% translate 'labels'|escapejs %}",
+                error: "{% translate 'Could not load the labels.'|escapejs %}",
+                files: "{% translate 'file(s)'|escapejs %}"
+            };
+            var labelsQuery = null;
+            var labelsTimer = null;
+
+            // Périmètre = les autres champs du modal (le libellé lui-même exclu).
+            function labelScopeQuery() {
+                return $.param($('#galleryFilterForm').serializeArray().filter(function (field) {
+                    return field.name !== 'label' && field.value !== '';
+                }));
+            }
+
+            function loadLabels() {
+                var query = labelScopeQuery();
+                if (query === labelsQuery) return;
+                labelsQuery = query;
+                $labelStatus.text(labelStrings.loading);
+                $.getJSON(labelChoicesUrl + (query ? '?' + query : '')).done(function (response) {
+                    if (query !== labelsQuery) return;
+                    var current = $label.val();
+                    var values = response.values || [];
+                    $label.empty().append(new Option(labelStrings.all, '', false, !current));
+                    var found = false;
+                    values.forEach(function (element) {
+                        var selected = current && element.name === current;
+                        found = found || selected;
+                        $label.append(new Option(element.name + ' (' + element.count + ')', element.name, selected, selected));
+                    });
+                    // Libellé choisi absent du nouveau périmètre : gardé (0 fichier) pour rester visible.
+                    if (current && !found) $label.append(new Option(current + ' (0)', current, true, true));
+                    $label.trigger('change.select2');
+                    $labelStatus.text(values.length + ' ' + labelStrings.count);
+                }).fail(function () {
+                    if (query !== labelsQuery) return;
+                    labelsQuery = null;
+                    $labelStatus.text(labelStrings.error);
+                });
+            }
+
+            function scheduleLoadLabels() {
+                clearTimeout(labelsTimer);
+                labelsTimer = setTimeout(loadLabels, 400);
+            }
+
+            $('#attachmentFilterModal').on('shown.bs.modal', loadLabels);
+            $('#attachmentFilterModal select').not('#id_label').on('change', scheduleLoadLabels);
+
+            // Seuls les champs renseignés vont dans l'URL (pas de « region=&prefecture=… »).
+            $('#galleryFilterForm').on('submit', function (e) {
+                e.preventDefault();
+                var params = $(this).serializeArray().filter(function (field) { return field.value !== ''; });
+                var query = $.param(params);
+                window.location = this.getAttribute('action') + (query ? '?' + query : '');
+            });
+
+            /* ---- Défilement infini (htmx) : chargement en cours / erreur + réessayer ---- */
+            var galleryError = document.getElementById('gallery-error');
+            var lastFailedTrigger = null;
+
+            function inGallery(target) {
+                return target && target.closest && target.closest('#gallery-root');
+            }
+
+            document.body.addEventListener('htmx:beforeRequest', function (e) {
+                if (inGallery(e.target)) galleryError.hidden = true;
+            });
+            ['htmx:responseError', 'htmx:sendError', 'htmx:timeout'].forEach(function (eventName) {
+                document.body.addEventListener(eventName, function (e) {
+                    if (inGallery(e.target)) {
+                        lastFailedTrigger = e.target;
+                        galleryError.hidden = false;
+                    }
+                });
+            });
+            document.getElementById('gallery-retry').addEventListener('click', function () {
+                galleryError.hidden = true;
+                if (lastFailedTrigger && window.htmx) window.htmx.trigger(lastFailedTrigger, 'revealed');
+            });
+        });
     </script>
 {% endblock %}
+
+{% block select2 %}
+    {% comment %}
+        Même initialisation que layouts/base.html, sauf pour les listes du modal de filtres :
+        `dropdownParent` = le modal (sinon la recherche select2 n'est pas utilisable dans un
+        modal Bootstrap) et pleine largeur.
+    {% endcomment %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("select").not('#attachmentFilterModal select').select2();
+            $('#attachmentFilterModal select').select2({
+                dropdownParent: $('#attachmentFilterModal'),
+                width: '100%'
+            });
+        });
+    </script>
+{% endblock select2 %}

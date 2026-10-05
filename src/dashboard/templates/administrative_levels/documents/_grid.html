@@ -1,80 +1,32 @@
-{% load static i18n humanize bootstrap4 custom_tags %}
+{% load i18n %}
+{% comment %}
+    Une page de la grille de la galerie (GALLERY_PAGE_SIZE cartes) — rendu dans la page
+    complète (attachments.html) ET seul, comme fragment, pour le défilement infini :
+    AttachmentListView.get_template_names renvoie CE gabarit (jamais la page complète, dont
+    les <script> seraient réexécutés) aux requêtes htmx (en-tête HX-Request).
+    Défilement infini : le repère `.gallery-sentinel` placé APRÈS la grille charge la page
+    suivante quand il devient visible et est remplacé par elle (hx-swap="outerHTML"), le
+    fragment reçu apportant à son tour son propre repère s'il reste des pages. Le repère est
+    en fin de grille (et non sur la grille elle-même, visible dès l'arrivée) pour ne charger
+    la page suivante qu'une fois le bas de la page atteint.
+{% endcomment %}
+<div class="gallery-grid">
+    {% for attachment in attachments %}
+        {% include 'administrative_levels/documents/_attachment_card_content.html' with attachment=attachment %}
+    {% endfor %}
 
-    {% comment %}
-        Retiré : `hx-trigger="revealed"` déclenchait un rechargement infini de
-        pagination jamais réellement implémenté côté vue (`AttachmentListView`
-        ne définit pas `page_obj`, et renvoie déjà TOUTE la liste sans
-        découpage — `__build_db_filter` crée un `Paginator` mais ignore son
-        résultat). En plus, `hx-get` pointait vers la vue de PAGE ENTIÈRE
-        (`documents/`, pas un partiel) : chaque déclenchement réinjectait donc
-        la page HTML complète (styles, tous les <script>), y compris ses
-        propres balises <script> réexécutées -> erreurs "identifier already
-        declared" / "custom element already defined" (jquery.inputmask,
-        htmx lui-même). Resté invisible tant que `static/js/htmx.min.js`
-        était en 404 (htmx ne se chargeait jamais) ; redevenu actif — et donc
-        bloquant — une fois ce fichier vendorisé. Cf. mémoire de session pour
-        le détail ; à réintroduire seulement avec une vraie pagination
-        serveur ET un gabarit renvoyant un partiel (`_grid.html` seul), pas
-        page complète.
-
-        `babylongrid` également retiré de cette div (classe seule, plus
-        appelée en JS) : son propre système de colonnes casse le contexte
-        flex Bootstrap dont dépendent les cartes `.col-3` ci-dessous (une
-        fois enveloppées par le plugin, elles ne sont plus enfants directs de
-        `.row` -> grille écroulée sur une colonne étroite au lieu d'un vrai
-        damier). La grille Bootstrap seule (`.row`/`.col-3`) suffit.
-    {% endcomment %}
-    <div class="row">
-        {% for attachment in attachments %}
-        {% if attachment.attachment.uri|not_local %}
-        <div class="col-3">
-            <article>
-                <div class="card mr-3">
-                    <input type="checkbox" class="checkbox" name="urls" value="{{ attachment.attachment.uri }}">
-                    <div class="card-body">
-                        <p class="card-title" style="height: 20px !important; font-size: 11px;">
-                            <a href="{% url 'dashboard:administrative_levels:detail' attachment.no_sql_db_name %}?administrative_level={{ attachment.headquarters_village_id }}" target="_blank">
-                                {% if "canton" in attachment.name %}
-                                    {{ attachment.canton }}
-                                {% else %}
-                                    {% translate "Village" %}: {{ attachment.headquarters_village }} {% if attachment.villages_names %}({{ attachment.villages_names }}){% endif %}
-                                {% endif %}
-                            </a>
-                        </p>
-                        {% if attachment.task %}
-                        <p class="card-text">
-                            <b>{% translate 'Task' %}</b>: {{ attachment.task.name }}
-                            <span class="badge badge-pill badge-info">{{ attachment.task.status }}</span>
-                        </p>
-                        <p class="card-text">
-                            {{ attachment.task.description }}
-                        </p>
-                        {% endif %}
-                    </div>
-                    {% if attachment.attachment.uri|is_pdf %}
-                        <div class="card">
-                            <div class="card-body attach-file">
-                                {% if attachment.attachment.uri %}
-                                    {% if "file:///data" in attachment.attachment.uri %}
-                                        <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not synchronized' %}</p>
-                                    {% else %}
-                                        {% include 'administrative_levels/documents/_attachment_card_content.html' with attachment=attachment %}
-                                    {% endif %}
-                                {% else %}
-                                    <p><i class="fas fa-paperclip mr-2"></i>{% translate 'Not present' %}</p>
-                                {% endif %}
-                            </div>
-                            <div class="card-footer">
-                                <p>{{ attachment.name|replace:"Télecharger le " }}</p>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-                    {% else %}
-                        {% include 'administrative_levels/documents/_attachment_card_content.html' with attachment=attachment %}
-                    {% endif %}
-                </div>
-            </article>
-            </div>
-        {% endif %}
-        {% endfor %}
-    </div>
+    {% if no_results %}
+        <div class="gallery-empty" style="grid-column: 1 / -1;">
+            <i class="fas fa-images"></i>
+            <div class="font-weight-bold">{% translate 'No attachments match your filters' %}</div>
+            <div class="small">{% translate 'Try clearing a filter or selecting a different type.' %}</div>
+        </div>
+    {% endif %}
+</div>
+{% if next_page_url %}
+    <div class="gallery-sentinel"
+         hx-get="{{ next_page_url }}"
+         hx-trigger="revealed"
+         hx-swap="outerHTML"
+         hx-indicator="#gallery-loading"></div>
+{% endif %}

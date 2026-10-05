@@ -29,6 +29,8 @@ urlpatterns = [
     
     path('documents/', views_doc.AttachmentListView.as_view(), name='documents'),
     path('documents/download-zip/', views_doc.DownloadAttachmentsZipView.as_view(), name='documents_download_zip'),
+    path('documents/filter-choices/', views_doc.DocumentsFilterChoicesView.as_view(), name='documents_filter_choices'),
+    path('documents/label-choices/', views_doc.DocumentsLabelChoicesView.as_view(), name='documents_label_choices'),
 
     path('export-situations/', views_export.export_administrativelels_situation_to_excel, name='export_administrativelels_situation_to_excel'),
 ]
