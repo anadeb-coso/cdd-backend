@@ -149,10 +149,13 @@ class RestChangePassword(APIView):
                             logging.exception(exc)
                 
                     user = cdd_user if cdd_user else (mis_user if mis_user else (grm_user if grm_user else cdd_facilitator))
-                    
-                    user = user.__dict__ if user else None
-                    
-                    if not user or not check_password(current_password, user.get('password')):
+
+                    # `grm_user` est un dict (lu en SQL brut), les autres des instances de modèle :
+                    # `user.__dict__` levait une AttributeError (erreur 500) pour un compte qui
+                    # n'existe que côté GRM (agent MGP sans compte DCC).
+                    current_password_hash = user.get('password') if isinstance(user, dict) else getattr(user, 'password', None)
+
+                    if not current_password_hash or not check_password(current_password, current_password_hash):
                         msg = _('Current password does not match.')
                     else:
                         password_new_hashed = make_password(password_new)
