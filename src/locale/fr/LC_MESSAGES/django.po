@@ -4135,3 +4135,813 @@ msgstr "libellés"
 #: dashboard/templates/administrative_levels/documents/attachments.html
 msgid "Could not load the labels."
 msgstr "Impossible de charger les libellés."
+
+#: COSOCollect (coso_collect, dashboard/coso_collect)
+msgid "Export (JSON)"
+msgstr "Exporter (JSON)"
+
+msgid "Import a form file"
+msgstr "Importer un fichier de formulaire"
+
+msgid "The form is already published: each save creates a new version, reloaded automatically by the mobile application."
+msgstr "Le formulaire est déjà publié : chaque enregistrement crée une nouvelle version, rechargée automatiquement par l’application mobile."
+
+msgid "File / document"
+msgstr "Fichier / document"
+
+msgid "The options of this field will be exactly the choices made in the source field. Empty list until the source has an answer."
+msgstr "Les options de ce champ seront exactement les choix faits dans le champ source. Liste vide tant que la source n’a pas de réponse."
+
+msgid "Form file imported — review then Save."
+msgstr "Fichier de formulaire importé — relisez puis enregistrez."
+
+msgid "Remove the file"
+msgstr "Retirer le fichier"
+
+msgid "Combined title"
+msgstr "Titre combiné"
+
+msgid "Label that will represent each record in the lists (mobile and web)."
+msgstr "Libellé qui représentera chaque saisie dans les listes (mobile et web)."
+
+msgid "Recording date and time (YYYYMMDDHHMMSS)"
+msgstr "Date et heure d’enregistrement (AAAAMMJJHHMMSS)"
+
+msgid "Recording date (YYYYMMDD)"
+msgstr "Date d’enregistrement (AAAAMMJJ)"
+
+msgid "Recording time (HHMMSS)"
+msgstr "Heure d’enregistrement (HHMMSS)"
+
+msgid "Author of the record"
+msgstr "Auteur de la saisie"
+
+msgid "Form title"
+msgstr "Titre du formulaire"
+
+msgid "(deleted field)"
+msgstr "(champ supprimé)"
+
+msgid "Move left"
+msgstr "Déplacer à gauche"
+
+msgid "Move right"
+msgstr "Déplacer à droite"
+
+msgid "Remove"
+msgstr "Retirer"
+
+msgid "No element: the title will be “form title + recording date”."
+msgstr "Aucun élément : le titre sera « titre du formulaire + date d’enregistrement »."
+
+msgid "Add an element…"
+msgstr "Ajouter un élément…"
+
+msgid "Form fields"
+msgstr "Champs du formulaire"
+
+msgid "Record metadata"
+msgstr "Métadonnées de la saisie"
+
+msgid "Fixed text…"
+msgstr "Texte fixe…"
+
+msgid "Fixed text to insert:"
+msgstr "Texte fixe à insérer :"
+
+msgid "Separator"
+msgstr "Séparateur"
+
+msgid "Simplify (lowercase, no accents or spaces)"
+msgstr "Simplifier (minuscules, sans accents ni espaces)"
+
+msgid "Preview:"
+msgstr "Aperçu :"
+
+msgid "author"
+msgstr "auteur"
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "Combined title, author…"
+msgstr "Titre combiné, auteur…"
+
+msgid "Only records reopened for modification"
+msgstr "Uniquement les saisies rouvertes à la modification"
+
+msgid "record(s)"
+msgstr "saisie(s)"
+
+msgid "Export these records (XLSX)"
+msgstr "Exporter ces saisies (XLSX)"
+
+msgid "Author"
+msgstr "Auteur"
+
+msgid "Recorded on"
+msgstr "Enregistrée le"
+
+msgid "Sent on"
+msgstr "Envoyée le"
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "View"
+msgstr "Voir"
+
+msgid "Lock again"
+msgstr "Reverrouiller"
+
+msgid "Reopen for modification"
+msgstr "Rouvrir la modification"
+
+msgid "No record matches."
+msgstr "Aucune saisie ne correspond."
+
+msgid "Export the data"
+msgstr "Exporter les données"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "XLSX (one sheet per repeating group)"
+msgstr "XLSX (une feuille par groupe répétable)"
+
+msgid "CSV (main data, ; separator)"
+msgstr "CSV (données principales, séparateur ;)"
+
+msgid "GPS points"
+msgstr "points GPS"
+
+msgid "ZIP of the photos and documents"
+msgstr "ZIP des photos et documents"
+
+msgid "Values of the choices"
+msgstr "Valeurs des choix"
+
+msgid "Labels"
+msgstr "Libellés"
+
+msgid "Values (XML)"
+msgstr "Valeurs (XML)"
+
+msgid "Column headers"
+msgstr "En-têtes de colonnes"
+
+msgid "Question labels"
+msgstr "Libellés des questions"
+
+msgid "Field names (keys)"
+msgstr "Noms des champs (clés)"
+
+msgid "Group separator"
+msgstr "Séparateur de groupes"
+
+msgid "Recorded from"
+msgstr "Enregistrées du"
+
+msgid "Include the groups in the headers"
+msgstr "Inclure les groupes dans les en-têtes"
+
+msgid "Multiple choice: one column per choice (1/0)"
+msgstr "Choix multiple : une colonne par choix (1/0)"
+
+msgid "Add the link of the photos and documents (_URL column)"
+msgstr "Ajouter le lien des photos et documents (colonne _URL)"
+
+msgid "Export the form"
+msgstr "Exporter le formulaire"
+
+msgid "Form file, to re-import it here or into another tool (kobocollect, ODK…)."
+msgstr "Fichier du formulaire, pour le réimporter ici ou dans un autre outil (kobocollect, ODK…)."
+
+msgid "The XLSX file contains a main sheet (one row per record, with _index) and one sheet per repeating group linked by _parent_index, as in kobocollect."
+msgstr "Le fichier XLSX contient une feuille principale (une ligne par saisie, avec _index) et une feuille par groupe répétable reliée par _parent_index, comme dans kobocollect."
+
+msgid "New record"
+msgstr "Nouvel enregistrement"
+
+msgid "My records"
+msgstr "Mes saisies"
+
+msgid "An administrator has reopened this record: you can modify it and send it again."
+msgstr "Un administrateur a rouvert cette saisie : vous pouvez la modifier et la renvoyer."
+
+msgid "Network error: the record was not saved."
+msgstr "Erreur réseau : la saisie n’a pas été enregistrée."
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Save the draft"
+msgstr "Enregistrer le brouillon"
+
+msgid "No file"
+msgstr "Aucun fichier"
+
+msgid "View the file"
+msgstr "Voir le fichier"
+
+msgid "Uploading…"
+msgstr "Envoi en cours…"
+
+msgid "The file could not be sent."
+msgstr "Le fichier n’a pas pu être envoyé."
+
+msgid "Please fill in the required fields shown in red."
+msgstr "Merci de renseigner les champs obligatoires en rouge."
+
+msgid "Invalid value."
+msgstr "Valeur non valide."
+
+msgid "Add a row"
+msgstr "Ajouter une ligne"
+
+msgid "No position captured"
+msgstr "Aucune position capturée"
+
+msgid "Capture the position"
+msgstr "Capturer la position"
+
+msgid "Capturing…"
+msgstr "Capture en cours…"
+
+msgid "Geolocation unavailable in this browser"
+msgstr "Géolocalisation indisponible sur ce navigateur"
+
+msgid "The position could not be captured"
+msgstr "La position n’a pas pu être capturée"
+
+msgid "Draft saved."
+msgstr "Brouillon enregistré."
+
+msgid "Save without sending"
+msgstr "Enregistrer sans envoyer"
+
+msgid "Once sent, the record can no longer be modified (unless an administrator reopens it). Send it?"
+msgstr "Une fois envoyée, la saisie ne pourra plus être modifiée (sauf réouverture par un administrateur). L’envoyer ?"
+
+msgid "Combined title or file name…"
+msgstr "Titre combiné ou nom de fichier…"
+
+msgid "Question"
+msgstr "Question"
+
+msgid "Download all (ZIP)"
+msgstr "Tout télécharger (ZIP)"
+
+msgid "No photo or document has been received for this form."
+msgstr "Aucune photo ni aucun document n’a été reçu pour ce formulaire."
+
+msgid "Search a form…"
+msgstr "Rechercher un formulaire…"
+
+msgid "New form"
+msgstr "Nouveau formulaire"
+
+msgid "Import a form"
+msgstr "Importer un formulaire"
+
+msgid "Forms to fill in"
+msgstr "Formulaires à remplir"
+
+msgid "Started"
+msgstr "Démarrée"
+
+msgid "Filled in"
+msgstr "Remplie"
+
+msgid "Sent"
+msgstr "Envoyée"
+
+msgid "Start a record"
+msgstr "Démarrer un enregistrement"
+
+msgid "No form is available to you for the moment."
+msgstr "Aucun formulaire ne vous est accessible pour le moment."
+
+msgid "Forms I administer"
+msgstr "Formulaires que j’administre"
+
+msgid "Form"
+msgstr "Formulaire"
+
+msgid "Records"
+msgstr "Saisies"
+
+msgid "Last record"
+msgstr "Dernière saisie"
+
+msgid "Modified"
+msgstr "Modifiée"
+
+msgid "Created by"
+msgstr "Créé par"
+
+msgid "Data"
+msgstr "Données"
+
+msgid "Settings"
+msgstr "Paramètres"
+
+msgid "You have not created any form yet."
+msgstr "Vous n’avez encore créé aucun formulaire."
+
+msgid "Description"
+msgstr "Description"
+
+msgid "Create and build the form"
+msgstr "Créer et construire le formulaire"
+
+msgid "XLSForm workbook (.xlsx, e.g. exported from kobocollect or from this application) or COSOCollect file (.json). The combined title is read from the instance_name setting."
+msgstr "Classeur XLSForm (.xlsx, par ex. exporté de kobocollect ou de cette application) ou fichier COSOCollect (.json). Le titre combiné est lu dans le paramètre instance_name."
+
+msgid "Import"
+msgstr "Importer"
+
+msgid "This form is closed: no more data can be sent."
+msgstr "Ce formulaire est clôturé : plus aucune donnée ne peut être envoyée."
+
+msgid "This form has no GPS coordinates question: nothing to display on the map."
+msgstr "Ce formulaire n’a pas de question « Coordonnées GPS » : rien à afficher sur la carte."
+
+msgid "GPS question"
+msgstr "Question GPS"
+
+msgid "point(s)"
+msgstr "point(s)"
+
+msgid "Open the record"
+msgstr "Ouvrir la saisie"
+
+msgid "Administration"
+msgstr "Administration"
+
+msgid "Search by combined title…"
+msgstr "Rechercher par titre combiné…"
+
+msgid "All statuses"
+msgstr "Tous les statuts"
+
+msgid "No record yet."
+msgstr "Aucune saisie pour le moment."
+
+msgid "Access"
+msgstr "Accès"
+
+msgid "Status of the collection"
+msgstr "État de la collecte"
+
+msgid "Draft: invisible to users, freely editable."
+msgstr "Brouillon : invisible des utilisateurs, librement modifiable."
+
+msgid "Open: users load the form and send their records (online or later, offline on mobile)."
+msgstr "Ouvert : les utilisateurs chargent le formulaire et envoient leurs saisies (en ligne, ou plus tard hors connexion sur le mobile)."
+
+msgid "Closed: no more data can be sent; waiting users receive the closing message."
+msgstr "Clôturé : plus aucune donnée ne peut être envoyée ; les utilisateurs en attente reçoivent le message de clôture."
+
+msgid "Publish"
+msgstr "Publier"
+
+msgid "Close the form"
+msgstr "Clôturer le formulaire"
+
+msgid "Back to draft"
+msgstr "Repasser en brouillon"
+
+msgid "Reopen the collection"
+msgstr "Rouvrir la collecte"
+
+msgid "Created"
+msgstr "Créé"
+
+msgid "Published"
+msgstr "Publié"
+
+msgid "Closed"
+msgstr "Clôturé"
+
+msgid "Delete the form"
+msgstr "Supprimer le formulaire"
+
+msgid "Deletes the form, all its records and their files. This cannot be undone."
+msgstr "Supprime le formulaire, toutes ses saisies et leurs fichiers. Action irréversible."
+
+msgid "Type the title of the form to confirm"
+msgstr "Saisissez le titre du formulaire pour confirmer"
+
+msgid "Delete permanently"
+msgstr "Supprimer définitivement"
+
+msgid "The author will be able to modify this record and send it again."
+msgstr "L’auteur pourra modifier cette saisie et la renvoyer."
+
+msgid "Delete this record and its files permanently?"
+msgstr "Supprimer définitivement cette saisie et ses fichiers ?"
+
+msgid "This record has been sent: it can be consulted but no longer modified, unless an administrator reopens it."
+msgstr "Cette saisie a été envoyée : elle reste consultable mais n’est plus modifiable, sauf réouverture par un administrateur."
+
+msgid "No data."
+msgstr "Aucune donnée."
+
+msgid "Information"
+msgstr "Informations"
+
+msgid "Last update"
+msgstr "Dernière mise à jour"
+
+msgid "Reopened on"
+msgstr "Rouverte le"
+
+msgid "History"
+msgstr "Historique"
+
+msgid "Contributors"
+msgstr "Contributeurs"
+
+msgid "Last activity"
+msgstr "Dernière activité"
+
+msgid "Records over time"
+msgstr "Saisies dans le temps"
+
+msgid "7 days"
+msgstr "7 jours"
+
+msgid "31 days"
+msgstr "31 jours"
+
+msgid "3 months"
+msgstr "3 mois"
+
+msgid "12 months"
+msgstr "12 mois"
+
+msgid "By status"
+msgstr "Par statut"
+
+msgid "By contributor"
+msgstr "Par contributeur"
+
+msgid "By source"
+msgstr "Par source"
+
+msgid "Reports by question"
+msgstr "Rapports par question"
+
+msgid "All records"
+msgstr "Toutes les saisies"
+
+msgid "Sent records only"
+msgstr "Saisies envoyées uniquement"
+
+msgid "Count"
+msgstr "Nombre"
+
+msgid "Sum"
+msgstr "Somme"
+
+msgid "Mean"
+msgstr "Moyenne"
+
+msgid "Min"
+msgstr "Min"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "No choice or number question has an answer yet."
+msgstr "Aucune question à choix ou numérique n’a encore de réponse."
+
+msgid "Cumulative sent"
+msgstr "Cumul des envoyées"
+
+msgid "Answers"
+msgstr "Réponses"
+
+#, python-format
+msgid "%(answered)s answer(s) out of %(total)s record(s)"
+msgstr "%(answered)s réponse(s) sur %(total)s saisie(s)"
+
+msgid "Close this form? Users will no longer be able to send data."
+msgstr "Clôturer ce formulaire ? Les utilisateurs ne pourront plus envoyer de données."
+
+msgid "Summary"
+msgstr "Résumé"
+
+msgid "Photos & documents"
+msgstr "Photos & documents"
+
+msgid "Map"
+msgstr "Carte"
+
+msgid "Downloads"
+msgstr "Téléchargements"
+
+msgid "Open"
+msgstr "Ouvert"
+
+msgid "Draft"
+msgstr "Brouillon"
+
+#, python-format
+msgid "%(start)s–%(end)s of %(total)s"
+msgstr "%(start)s–%(end)s sur %(total)s"
+
+msgid "Reopened for modification by an administrator"
+msgstr "Rouverte à la modification par un administrateur"
+
+msgid "Reopened"
+msgstr "Rouverte"
+
+msgid "No row"
+msgstr "Aucune ligne"
+
+msgid "not yet received"
+msgstr "pas encore reçu"
+
+msgid "All connected users"
+msgstr "Tous les utilisateurs connectés"
+
+msgid "Only the users, groups and facilitators selected"
+msgstr "Seulement les utilisateurs, groupes et facilitateurs choisis"
+
+msgid "Message shown once closed"
+msgstr "Message affiché après clôture"
+
+msgid "Who can fill in this form"
+msgstr "Qui peut remplir ce formulaire"
+
+msgid "Allowed users"
+msgstr "Utilisateurs autorisés"
+
+msgid "Allowed groups"
+msgstr "Groupes autorisés"
+
+msgid "Allowed facilitators"
+msgstr "Facilitateurs autorisés"
+
+msgid "Administrators"
+msgstr "Administrateurs"
+
+msgid "COSOCollect form"
+msgstr "Formulaire COSOCollect"
+
+msgid "COSOCollect forms"
+msgstr "Formulaires COSOCollect"
+
+msgid "Invalid identifier."
+msgstr "Identifiant invalide."
+
+msgid "Invalid status."
+msgstr "Statut invalide."
+
+msgid "Invalid data."
+msgstr "Données invalides."
+
+msgid "This record belongs to another form."
+msgstr "Cette saisie appartient à un autre formulaire."
+
+msgid "This record belongs to another user."
+msgstr "Cette saisie appartient à un autre utilisateur."
+
+msgid "You do not have access to this form."
+msgstr "Vous n’avez pas accès à ce formulaire."
+
+msgid "This form is not published."
+msgstr "Ce formulaire n’est pas publié."
+
+msgid "This record has already been sent and can no longer be modified."
+msgstr "Cette saisie a déjà été envoyée et n’est plus modifiable."
+
+msgid "COSOCollect"
+msgstr "COSOCollect"
+
+msgid "The title is required."
+msgstr "Le titre est obligatoire."
+
+msgid "No file."
+msgstr "Aucun fichier."
+
+msgid "Partial import: "
+msgstr "Import partiel : "
+
+msgid "Form imported. Review it, then publish it."
+msgstr "Formulaire importé. Relisez-le, puis publiez-le."
+
+msgid "Invalid JSON."
+msgstr "JSON invalide."
+
+msgid "A published form must keep at least one field."
+msgstr "Un formulaire publié doit conserver au moins un champ."
+
+msgid "Settings saved."
+msgstr "Paramètres enregistrés."
+
+msgid "The form must contain at least one valid field before being published."
+msgstr "Le formulaire doit contenir au moins un champ valide avant d’être publié."
+
+msgid "Form published: users can now load and fill it in."
+msgstr "Formulaire publié : les utilisateurs peuvent maintenant le charger et le remplir."
+
+msgid "Form closed: users can no longer send data."
+msgstr "Formulaire clôturé : les utilisateurs ne peuvent plus envoyer de données."
+
+msgid "Form back to draft."
+msgstr "Formulaire repassé en brouillon."
+
+msgid "Action not allowed."
+msgstr "Action non autorisée."
+
+msgid "Type the exact title of the form to confirm the deletion."
+msgstr "Saisissez le titre exact du formulaire pour confirmer la suppression."
+
+msgid "Form deleted."
+msgstr "Formulaire supprimé."
+
+msgid "File too large."
+msgstr "Fichier trop volumineux."
+
+msgid "Reopened for modification"
+msgstr "Rouverte à la modification"
+
+msgid "Locked again"
+msgstr "Reverrouillée"
+
+msgid "Modification reopened for the author."
+msgstr "Modification rouverte pour l’auteur."
+
+msgid "Record locked."
+msgstr "Saisie verrouillée."
+
+msgid "Record deleted."
+msgstr "Saisie supprimée."
+
+msgid "Shown to users who try to send data after the form is closed."
+msgstr "Affiché aux utilisateurs qui tentent d’envoyer des données après la clôture du formulaire."
+
+msgid "Form file (.xlsx XLSForm or .json)"
+msgstr "Fichier de formulaire (.xlsx XLSForm ou .json)"
+
+msgid "In addition to the creator: they can see all the data, export it, close the form and reopen sent records."
+msgstr "En plus du créateur : ils voient toutes les données, les exportent, clôturent le formulaire et rouvrent les saisies envoyées."
+
+
+msgid "Read all the data"
+msgstr "Lire toutes les données"
+
+msgid "Modify the form"
+msgstr "Modifier le formulaire"
+
+msgid "Publish the form"
+msgstr "Publier le formulaire"
+
+msgid "Reopen sent records"
+msgstr "Rouvrir les saisies envoyées"
+
+msgid "Modify the records (data objects)"
+msgstr "Modifier les saisies (objets de données)"
+
+msgid "Delete records"
+msgstr "Supprimer des saisies"
+
+msgid "Add an administrator"
+msgstr "Ajouter un administrateur"
+
+msgid "Choose a user…"
+msgstr "Choisir un utilisateur…"
+
+msgid "You do not have this right on this form."
+msgstr "Vous n’avez pas ce droit sur ce formulaire."
+
+msgid "Collection reopened: users can send data again."
+msgstr "Collecte rouverte : les utilisateurs peuvent de nouveau envoyer des données."
+
+msgid "Choose a user who is not yet an administrator of this form."
+msgstr "Choisissez un utilisateur qui n’est pas encore administrateur de ce formulaire."
+
+#, python-format
+msgid "%(name)s is now an administrator of this form: tick the rights to grant."
+msgstr "%(name)s est maintenant administrateur de ce formulaire : cochez les droits à lui accorder."
+
+msgid "Administrator removed."
+msgstr "Administrateur retiré."
+
+msgid "Rights saved."
+msgstr "Droits enregistrés."
+
+msgid "Data corrected by an administrator"
+msgstr "Données corrigées par un administrateur"
+
+msgid "Correct the data"
+msgstr "Corriger les données"
+
+msgid "As an administrator: the author, the status and the dates are kept."
+msgstr "En tant qu’administrateur : l’auteur, le statut et les dates sont conservés."
+
+#, python-format
+msgid "Correction by an administrator of the record of %(author)s (%(status)s): the author, the status and the dates are kept, the correction is recorded in the history."
+msgstr "Correction par un administrateur de la saisie de %(author)s (%(status)s) : l’auteur, le statut et les dates sont conservés, la correction est inscrite dans l’historique."
+
+msgid "This record has not been sent yet: its author can still modify it on their device, which would replace your corrections."
+msgstr "Cette saisie n’est pas encore envoyée : son auteur peut encore la modifier sur son appareil, ce qui remplacerait vos corrections."
+
+msgid "Save the corrections"
+msgstr "Enregistrer les corrections"
+
+msgid "Read only: you do not have the right to modify this form."
+msgstr "Lecture seule : vous n’avez pas le droit de modifier ce formulaire."
+
+msgid "Closing"
+msgstr "Clôture"
+
+msgid "My rights on this form"
+msgstr "Mes droits sur ce formulaire"
+
+msgid "No right granted yet: ask the creator of the form."
+msgstr "Aucun droit accordé pour l’instant : adressez-vous au créateur du formulaire."
+
+msgid "Administrators and their rights"
+msgstr "Administrateurs et leurs droits"
+
+msgid "The creator of the form and the superusers have every right; they alone manage this list. Each administrator only has the rights ticked below. Exporting, reopening, modifying or deleting records also gives the reading of the data."
+msgstr "Le créateur du formulaire et les superutilisateurs ont tous les droits ; eux seuls gèrent cette liste. Chaque administrateur n’a que les droits cochés ci-dessous. Exporter, rouvrir, modifier ou supprimer des saisies donne aussi la lecture des données."
+
+msgid "inactive account"
+msgstr "compte inactif"
+
+msgid "all"
+msgstr "tout"
+
+msgid "none"
+msgstr "aucun"
+
+msgid "Remove this administrator"
+msgstr "Retirer cet administrateur"
+
+msgid "Save the rights"
+msgstr "Enregistrer les droits"
+
+msgid "Remove this administrator? They will lose all their rights on this form."
+msgstr "Retirer cet administrateur ? Il perdra tous ses droits sur ce formulaire."
+
+msgid "No administrator yet: only you (and the superusers) manage this form."
+msgstr "Aucun administrateur pour l’instant : seuls vous (et les superutilisateurs) gérez ce formulaire."
+
+msgid "The new administrator first receives the reading of the data only."
+msgstr "Le nouvel administrateur reçoit d’abord la seule lecture des données."
+
+msgid "Administrator (limited rights)"
+msgstr "Administrateur (droits limités)"
+
+msgid "Only one record per person"
+msgstr "Un seul enregistrement par personne"
+
+msgid "This form accepts only one record per person: you already have one. Open it to continue it."
+msgstr "Ce formulaire n’accepte qu’un enregistrement par personne : vous en avez déjà un. Ouvrez-le pour le poursuivre."
+
+msgid "This form accepts only one record per person: here is yours."
+msgstr "Ce formulaire n’accepte qu’un enregistrement par personne : voici le vôtre."
+
+msgid "Unticked (default): each person can send as many records as they want. Ticked: each person has only one record (their web and facilitator accounts count as one person); once started, they continue it instead of creating another. Records already received are kept."
+msgstr "Décoché (par défaut) : chaque personne peut envoyer autant d’enregistrements qu’elle le souhaite. Coché : chaque personne n’a qu’un enregistrement (ses comptes web et facilitateur comptent pour une seule personne) ; une fois démarré, elle le reprend au lieu d’en créer un autre. Les enregistrements déjà reçus sont conservés."
+
+msgid "Records per person"
+msgstr "Enregistrements par personne"
+
+msgid "One record per person"
+msgstr "Un enregistrement par personne"
+
+msgid "Open my record"
+msgstr "Ouvrir mon enregistrement"
+
+msgid "This form accepts only one record per person."
+msgstr "Ce formulaire n’accepte qu’un enregistrement par personne."
+
+msgid "Search…"
+msgstr "Rechercher…"
+
+msgid "No results"
+msgstr "Aucun résultat"
+
+msgid "selected"
+msgstr "sélectionné(s)"
+
+msgid "Untick all"
+msgstr "Tout décocher"
+
+#: usermanager/templates/profile.html
+msgid "Profile"
+msgstr "Profil"
+
+#: usermanager/templates/profile.html
+msgid "Phone"
+msgstr "Téléphone"
+
+#: usermanager/templates/profile.html
+msgid "Change password"
+msgstr "Modifier le mot de passe"

@@ -44,13 +44,13 @@ def user_manager(request):
                 try:
                     cursor.execute(
                         """
-                        SELECT id, username, first_name, last_name, email, password, phone_number
+                        SELECT id, username, first_name, last_name, email, password, phone_number, is_superuser
                         FROM authentication_user
                         WHERE email = %s AND is_active = TRUE
                         """,
                         [email],
                     )
-                    
+
                     count = 0
                     for row in cursor.fetchall():
                         grm_user['id'] = row[0]
@@ -60,8 +60,23 @@ def user_manager(request):
                         grm_user['email'] = row[4]
                         grm_user['password'] = row[5]
                         grm_user['phone_number'] = row[6]
+                        grm_user['is_superuser'] = row[7]
                         count += 1
-                        
+
+                    # Groupes MGP : rôle affiché sur la page (filtre `get_group_high`) pour un
+                    # compte qui n'existe que sur le MGP.
+                    if grm_user:
+                        cursor.execute(
+                            """
+                            SELECT g.name
+                            FROM auth_group g
+                            JOIN authentication_user_groups ug ON ug.group_id = g.id
+                            WHERE ug.user_id = %s
+                            """,
+                            [grm_user['id']],
+                        )
+                        grm_user['groups'] = [row[0] for row in cursor.fetchall()]
+
                 except Exception as exc:
                     logging.exception(exc)
             

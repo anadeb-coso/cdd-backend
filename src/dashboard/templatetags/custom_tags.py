@@ -470,10 +470,22 @@ def get_group_high(user):
         etc.
     """
     if user:
-        if user.is_superuser:
+        # Page « Profil » (usermanager/views.py::user_manager) : un compte présent seulement sur
+        # le MGP y est un dict lu en SQL brut, et un facilitateur sans compte web un
+        # `Facilitator` — ni l'un ni l'autre n'a `is_superuser`/`groups` (AttributeError -> 500).
+        if isinstance(user, dict):
+            is_superuser = bool(user.get('is_superuser'))
+        else:
+            is_superuser = getattr(user, 'is_superuser', False)
+        if is_superuser:
             return gettext_lazy("Principal Administrator").__str__()
 
-        group_names = _group_names(user)
+        if isinstance(user, dict):
+            group_names = set(user.get('groups') or ())
+        elif isinstance(user, Facilitator):
+            group_names = {'TechnicalFacilitator' if user.facilitator_type == 'technical_facilitator' else 'CommunityFacilitator'}
+        else:
+            group_names = _group_names(user)
         
         if "Admin" in group_names:
             return gettext_lazy("Administrator").__str__()
