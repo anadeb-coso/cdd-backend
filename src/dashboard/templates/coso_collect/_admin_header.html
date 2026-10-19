@@ -1,0 +1,68 @@
+{% load i18n %}
+<div class="cc-head">
+    <div>
+        <h4>{{ collect_form.title }}</h4>
+        <div class="d-flex flex-wrap align-items-center mt-1" style="gap:.4rem;">
+            {% include "coso_collect/_form_status.html" with status=collect_form.status %}
+            <span class="cc-pill">{% translate "Version" %} <span id="tfb-version">{{ collect_form.version }}</span></span>
+            <span class="cc-pill"><i class="fas fa-database"></i> {{ submissions_count }} {% translate "record(s)" %}</span>
+            {% if collect_form.single_submission %}<span class="cc-pill"><i class="fas fa-user-check"></i> {% translate "One record per person" %}</span>{% endif %}
+        </div>
+    </div>
+    <div class="cc-head-actions">
+        {% if collect_form.status == 'published' %}
+            <a class="btn btn-sm btn-primary rounded-xl" href="{% url 'dashboard:coso_collect:fill' collect_form.pk %}">
+                {% if has_own_record %}<i class="fas fa-folder-open mr-1"></i> {% translate "Open my record" %}{% else %}<i class="fas fa-plus mr-1"></i> {% translate "New record" %}{% endif %}
+            </a>
+        {% endif %}
+        {% comment %}
+            L'action est portée par un champ caché, pas par le bouton : static/js/disableOnSubmit.js (chargé
+            sur tout le dashboard) désactive les boutons à l'envoi, et un bouton désactivé n'envoie pas sa valeur.
+            Chaque bouton n'apparaît qu'avec le droit correspondant (publier / clôturer / rouvrir la collecte).
+        {% endcomment %}
+        {% if collect_form.status == 'draft' and rights.publish %}
+            <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="action" value="publish">
+                <button class="btn btn-sm btn-success rounded-xl">
+                    <i class="fas fa-rocket mr-1"></i> {% translate "Publish" %}
+                </button>
+            </form>
+        {% elif collect_form.status == 'published' and rights.close %}
+            <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="action" value="close">
+                <button class="btn btn-sm btn-outline-danger rounded-xl"
+                        onclick="return confirm('{% translate "Close this form? Users will no longer be able to send data." %}');">
+                    <i class="fas fa-lock mr-1"></i> {% translate "Close the form" %}
+                </button>
+            </form>
+        {% elif collect_form.status == 'closed' and rights.reopen_form %}
+            <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="action" value="reopen">
+                <button class="btn btn-sm btn-outline-success rounded-xl">
+                    <i class="fas fa-lock-open mr-1"></i> {% translate "Reopen the collection" %}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+<nav class="cc-tabs">
+    {% if rights.view_data %}
+    <a class="{% if tab == 'summary' %}active{% endif %}" href="{% url 'dashboard:coso_collect:summary' collect_form.pk %}"><i class="fas fa-chart-bar mr-1"></i>{% translate "Summary" %}</a>
+    <a class="{% if tab == 'data' %}active{% endif %}" href="{% url 'dashboard:coso_collect:data' collect_form.pk %}"><i class="fas fa-table mr-1"></i>{% translate "Data" %}</a>
+    <a class="{% if tab == 'gallery' %}active{% endif %}" href="{% url 'dashboard:coso_collect:gallery' collect_form.pk %}"><i class="fas fa-images mr-1"></i>{% translate "Photos & documents" %}</a>
+    <a class="{% if tab == 'map' %}active{% endif %}" href="{% url 'dashboard:coso_collect:map' collect_form.pk %}"><i class="fas fa-map-marked-alt mr-1"></i>{% translate "Map" %}</a>
+    {% endif %}
+    {% if rights.export %}
+    <a class="{% if tab == 'export' %}active{% endif %}" href="{% url 'dashboard:coso_collect:export' collect_form.pk %}"><i class="fas fa-file-download mr-1"></i>{% translate "Downloads" %}</a>
+    {% endif %}
+    {% if rights.edit_form %}
+    <a class="{% if tab == 'builder' %}active{% endif %}" href="{% url 'dashboard:coso_collect:builder' collect_form.pk %}"><i class="fas fa-tools mr-1"></i>{% translate "Form" %}</a>
+    {% endif %}
+    <a class="{% if tab == 'settings' %}active{% endif %}" href="{% url 'dashboard:coso_collect:settings' collect_form.pk %}"><i class="fas fa-cog mr-1"></i>{% translate "Settings" %}</a>
+</nav>

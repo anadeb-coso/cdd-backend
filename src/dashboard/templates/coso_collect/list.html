@@ -1,0 +1,172 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cc-toolbar">
+    <input type="search" id="cc-search" class="form-control cc-search" placeholder="{% translate 'Search a form…' %}" autocomplete="off">
+    {% if can_create %}
+        <button class="btn btn-primary rounded-xl" data-toggle="modal" data-target="#cc-create-modal">
+            <i class="fas fa-plus mr-1"></i> {% translate "New form" %}
+        </button>
+        <button class="btn btn-outline-secondary rounded-xl" data-toggle="modal" data-target="#cc-import-modal">
+            <i class="fas fa-file-import mr-1"></i> {% translate "Import a form" %}
+        </button>
+    {% endif %}
+</div>
+
+<h6 class="cc-section-title">{% translate "Forms to fill in" %} <span class="text-muted">({{ fillable_forms|length }})</span></h6>
+{% if fillable_forms %}
+<div class="row">
+    {% for f in fillable_forms %}
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-3 cc-item" data-search="{{ f.title|lower }} {{ f.description|lower }}">
+        <div class="card cc-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start" style="gap:.5rem;">
+                    <p class="cc-card-title">{{ f.title }}</p>
+                    {% include "coso_collect/_form_status.html" with status=f.status %}
+                </div>
+                <p class="cc-card-desc">{{ f.description|truncatechars:140 }}</p>
+                <div class="cc-counts">
+                    <span class="cc-pill cc-sub-draft" title="{% translate 'Started' %}"><i class="fas fa-hourglass-half"></i> {{ f.my_counts.draft|default:0 }}</span>
+                    <span class="cc-pill cc-sub-completed" title="{% translate 'Filled in' %}"><i class="fas fa-clipboard-check"></i> {{ f.my_counts.completed|default:0 }}</span>
+                    <span class="cc-pill cc-sub-submitted" title="{% translate 'Sent' %}"><i class="fas fa-check"></i> {{ f.my_counts.submitted|default:0 }}</span>
+                </div>
+                {% if f.single_submission %}
+                    <div class="small text-muted"><i class="fas fa-user-check mr-1"></i>{% translate "One record per person" %}</div>
+                {% endif %}
+                {% if f.status == 'closed' %}
+                    <div class="small text-danger"><i class="fas fa-lock mr-1"></i>{{ f.close_message|default:_("This form is closed: no more data can be sent.") }}</div>
+                {% endif %}
+                <div class="d-flex flex-wrap mt-1" style="gap:.4rem;">
+                    {% if f.status == 'published' %}
+                        {% if f.single_submission and f.my_total %}
+                            <a class="btn btn-sm btn-primary" href="{% url 'dashboard:coso_collect:fill' f.pk %}"><i class="fas fa-folder-open mr-1"></i>{% translate "Open my record" %}</a>
+                        {% else %}
+                            <a class="btn btn-sm btn-primary" href="{% url 'dashboard:coso_collect:fill' f.pk %}"><i class="fas fa-plus mr-1"></i>{% translate "Start a record" %}</a>
+                        {% endif %}
+                    {% endif %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'dashboard:coso_collect:my_submissions' f.pk %}"><i class="fas fa-list mr-1"></i>{% translate "My records" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+    <p class="text-muted">{% translate "No form is available to you for the moment." %}</p>
+{% endif %}
+
+{% if administered_forms or can_create %}
+<h6 class="cc-section-title">{% translate "Forms I administer" %} <span class="text-muted">({{ administered_forms|length }})</span></h6>
+<div class="card cc-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 cc-table">
+            <thead>
+                <tr>
+                    <th>{% translate "Form" %}</th>
+                    <th>{% translate "Status" %}</th>
+                    <th class="text-center">{% translate "Version" %}</th>
+                    <th class="text-center">{% translate "Records" %}</th>
+                    <th>{% translate "Last record" %}</th>
+                    <th>{% translate "Modified" %}</th>
+                    <th class="text-right">{% translate "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in administered_forms %}
+                <tr class="cc-item" data-search="{{ f.title|lower }} {{ f.description|lower }}">
+                    <td class="cc-title-cell">
+                        <a href="{{ f.admin_url }}">{{ f.title }}</a>
+                        {% if f.created_by %}<div class="small text-muted">{% translate "Created by" %} {{ f.created_by.get_full_name|default:f.created_by.username }}</div>{% endif %}
+                        {% if not f.rights.full %}<div class="small text-muted"><i class="fas fa-user-shield"></i> {% translate "Administrator (limited rights)" %}</div>{% endif %}
+                    </td>
+                    <td>{% include "coso_collect/_form_status.html" with status=f.status %}</td>
+                    <td class="text-center">{{ f.version }}</td>
+                    <td class="text-center">{{ f.n_submissions }}</td>
+                    <td>{{ f.last_submission|date:"d/m/Y H:i"|default:"—" }}</td>
+                    <td>{{ f.updated_at|date:"d/m/Y H:i" }}</td>
+                    <td class="text-right text-nowrap">
+                        {% if f.rights.view_data %}<a class="btn btn-xs btn-outline-primary" href="{% url 'dashboard:coso_collect:data' f.pk %}" title="{% translate 'Data' %}"><i class="fas fa-table"></i></a>{% endif %}
+                        {% if f.rights.export %}<a class="btn btn-xs btn-outline-success" href="{% url 'dashboard:coso_collect:export' f.pk %}" title="{% translate 'Downloads' %}"><i class="fas fa-file-download"></i></a>{% endif %}
+                        {% if f.rights.edit_form %}<a class="btn btn-xs btn-outline-secondary" href="{% url 'dashboard:coso_collect:builder' f.pk %}" title="{% translate 'Form' %}"><i class="fas fa-tools"></i></a>{% endif %}
+                        <a class="btn btn-xs btn-outline-secondary" href="{% url 'dashboard:coso_collect:settings' f.pk %}" title="{% translate 'Settings' %}"><i class="fas fa-cog"></i></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-muted">{% translate "You have not created any form yet." %}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block modals %}
+{% if can_create %}
+<div class="modal fade" id="cc-create-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form class="modal-content" method="post" action="{% url 'dashboard:coso_collect:create' %}">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus mr-1"></i> {% translate "New form" %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="id_title">{% translate "Title" %}</label>
+                    {{ create_form.title }}
+                </div>
+                <div class="form-group mb-0">
+                    <label for="id_description">{% translate "Description" %}</label>
+                    {{ create_form.description }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
+                <button class="btn btn-primary btn-sm">{% translate "Create and build the form" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal fade" id="cc-import-modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form class="modal-content" method="post" enctype="multipart/form-data" action="{% url 'dashboard:coso_collect:import' %}">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-import mr-1"></i> {% translate "Import a form" %}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">{% translate "XLSForm workbook (.xlsx, e.g. exported from kobocollect or from this application) or COSOCollect file (.json). The combined title is read from the instance_name setting." %}</p>
+                <input type="file" name="file" accept=".xlsx,.json" class="form-control-file" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
+                <button class="btn btn-primary btn-sm">{% translate "Import" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock modals %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        (function () {
+            var input = document.getElementById("cc-search");
+            function norm(s) { return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+            input.addEventListener("input", function () {
+                var q = norm(input.value.trim());
+                document.querySelectorAll(".cc-item").forEach(function (el) {
+                    el.style.display = !q || norm(el.getAttribute("data-search")).indexOf(q) !== -1 ? "" : "none";
+                });
+            });
+        })();
+    </script>
+{% endblock javascript %}

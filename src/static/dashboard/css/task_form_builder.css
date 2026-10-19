@@ -149,3 +149,17 @@
 .tfb-drag-active .tfb-dropzone-hint { display: inline; }
 .tfb-drag-active .tfb-dropzone { outline: 1px dashed #cbd5e1; outline-offset: 2px; border-radius: 8px; }
 .tfb-node-actions .btn[title] { cursor: pointer; }
+
+/* ---------- Titre combiné (COSOCollect, #tfb-title-template) ---------- */
+.tfb-tt-parts { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tfb-tt-chip {
+    display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px 1px 8px;
+    border-radius: 14px; background: #e8f7f1; border: 1px solid #b9e6d4; font-size: .82rem;
+    max-width: 320px;
+}
+.tfb-tt-chip.tfb-tt-meta { background: #eef2ff; border-color: #c9d3fb; }
+.tfb-tt-chip.tfb-tt-text { background: #fff7e6; border-color: #f3d9a4; }
+.tfb-tt-chip .btn { padding: 0 5px; line-height: 1.3; font-size: .7rem; background: transparent; border: 0; }
+.tfb-tt-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tfb-tt-add { min-width: 220px; max-width: 360px; }
+.tfb-tt-preview { background: #f4f6f8; padding: 2px 6px; border-radius: 4px; color: #2b6e55; word-break: break-all; }

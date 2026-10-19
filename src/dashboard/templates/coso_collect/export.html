@@ -1,0 +1,106 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="get" class="cc-fill-card mb-3" id="cc-export-form">
+            <h6 class="font-weight-bold mb-3">{% translate "Export the data" %}</h6>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>{% translate "Format" %}</label>
+                    <select name="download" class="form-control">
+                        <option value="xlsx">{% translate "XLSX (one sheet per repeating group)" %}</option>
+                        <option value="csv">{% translate "CSV (main data, ; separator)" %}</option>
+                        {% if has_geopoint %}<option value="geojson">GeoJSON ({% translate "GPS points" %})</option>{% endif %}
+                        {% if has_media %}<option value="zip">{% translate "ZIP of the photos and documents" %}</option>{% endif %}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Values of the choices" %}</label>
+                    <select name="labels" class="form-control">
+                        <option value="labels">{% translate "Labels" %}</option>
+                        <option value="values">{% translate "Values (XML)" %}</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Column headers" %}</label>
+                    <select name="headers" class="form-control">
+                        <option value="labels">{% translate "Question labels" %}</option>
+                        <option value="names">{% translate "Field names (keys)" %}</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Group separator" %}</label>
+                    <select name="group_sep" class="form-control">
+                        <option value="/">/</option><option value=".">.</option><option value="-">-</option><option value=":">:</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Status" %}</label>
+                    <select name="status" class="form-control" multiple data-placeholder="{% translate 'All' %}">
+                        {% for key, label in statuses %}<option value="{{ key }}" {% if key == 'submitted' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Source" %}</label>
+                    <select name="source" class="form-control">
+                        <option value="">{% translate "All" %}</option>
+                        {% for key, label in sources %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Recorded from" %}</label>
+                    <input type="date" name="date_from" class="form-control">
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "to" %}</label>
+                    <input type="date" name="date_to" class="form-control">
+                </div>
+            </div>
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="cc-group-headers" name="group_headers" value="1" checked>
+                <label class="custom-control-label" for="cc-group-headers">{% translate "Include the groups in the headers" %}</label>
+            </div>
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input" id="cc-split" name="split_multiple" value="1">
+                <label class="custom-control-label" for="cc-split">{% translate "Multiple choice: one column per choice (1/0)" %}</label>
+            </div>
+            <div class="custom-control custom-checkbox mb-3">
+                <input type="checkbox" class="custom-control-input" id="cc-media-urls" name="media_urls" value="1" checked>
+                <label class="custom-control-label" for="cc-media-urls">{% translate "Add the link of the photos and documents (_URL column)" %}</label>
+            </div>
+            <input type="hidden" name="group_headers" value="0" id="cc-group-headers-off" disabled>
+            <button class="btn btn-primary rounded-xl"><i class="fas fa-file-download mr-1"></i>{% translate "Download" %}</button>
+        </form>
+    </div>
+    <div class="col-lg-4">
+        <div class="cc-fill-card mb-3">
+            <h6 class="font-weight-bold">{% translate "Export the form" %}</h6>
+            <p class="small text-muted">{% translate "Form file, to re-import it here or into another tool (kobocollect, ODK…)." %}</p>
+            <a class="btn btn-sm btn-outline-secondary mb-1" href="{% url 'dashboard:coso_collect:form_file' collect_form.pk 'xlsx' %}"><i class="fas fa-file-excel mr-1"></i>XLSForm (.xlsx)</a>
+            <a class="btn btn-sm btn-outline-secondary mb-1" href="{% url 'dashboard:coso_collect:form_file' collect_form.pk 'json' %}"><i class="fas fa-file-code mr-1"></i>COSOCollect (.json)</a>
+        </div>
+        <div class="cc-fill-card small text-muted">
+            <i class="fas fa-info-circle mr-1"></i>{% translate "The XLSX file contains a main sheet (one row per record, with _index) and one sheet per repeating group linked by _parent_index, as in kobocollect." %}
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        // Case décochée : envoie explicitement group_headers=0 / media_urls absent (valeur par défaut côté serveur sinon).
+        $("#cc-export-form").on("submit", function () {
+            $("#cc-group-headers-off").prop("disabled", $("#cc-group-headers").is(":checked"));
+            if (!$("#cc-media-urls").is(":checked")) $(this).append('<input type="hidden" name="media_urls" value="0">');
+        });
+    </script>
+{% endblock javascript %}

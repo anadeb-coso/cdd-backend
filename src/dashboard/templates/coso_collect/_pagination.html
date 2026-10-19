@@ -1,0 +1,16 @@
+{% load i18n %}{% if page_obj.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3 flex-wrap" style="gap:.5rem;">
+    <span class="small text-muted">{% blocktranslate with start=page_obj.start_index end=page_obj.end_index total=page_obj.paginator.count %}{{ start }}–{{ end }} of {{ total }}{% endblocktranslate %}</span>
+    <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page=1">&laquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">&lsaquo;</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">&rsaquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

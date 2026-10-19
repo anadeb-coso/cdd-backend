@@ -1,0 +1,146 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/chart.js/Chart.min.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+<div class="cc-kpis">
+    <div class="cc-kpi"><div class="cc-kpi-value">{{ overview.total }}</div><div class="cc-kpi-label">{% translate "Records" %}</div></div>
+    {% for s in overview.by_status %}
+        <div class="cc-kpi"><div class="cc-kpi-value">{{ s.count }}</div><div class="cc-kpi-label">{{ s.label }}</div></div>
+    {% endfor %}
+    <div class="cc-kpi"><div class="cc-kpi-value">{{ overview.authors }}</div><div class="cc-kpi-label">{% translate "Contributors" %}</div></div>
+    <div class="cc-kpi"><div class="cc-kpi-value" style="font-size:1rem;">{{ overview.last|date:"d/m/Y H:i"|default:"—" }}</div><div class="cc-kpi-label">{% translate "Last activity" %}</div></div>
+</div>
+
+<div class="cc-chart-card">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2" style="gap:.5rem;">
+        <h6 class="mb-0">{% translate "Records over time" %}</h6>
+        <div class="btn-group btn-group-sm" role="group">
+            {% for r in ranges %}
+                <a class="btn {% if r == days %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ r }}&amp;scope={{ scope }}">
+                    {% if r == 7 %}{% translate "7 days" %}{% elif r == 31 %}{% translate "31 days" %}{% elif r == 90 %}{% translate "3 months" %}{% else %}{% translate "12 months" %}{% endif %}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="cc-chart-box"><canvas id="cc-timeline"></canvas></div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="cc-chart-card"><h6>{% translate "By status" %}</h6><div class="cc-chart-box" style="height:240px;"><canvas id="cc-status"></canvas></div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="cc-chart-card"><h6>{% translate "By contributor" %}</h6><div class="cc-chart-box" style="height:240px;"><canvas id="cc-authors"></canvas></div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="cc-chart-card"><h6>{% translate "By source" %}</h6><div class="cc-chart-box" style="height:240px;"><canvas id="cc-source"></canvas></div></div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-2" style="gap:.5rem;">
+    <h6 class="cc-section-title m-0">{% translate "Reports by question" %}</h6>
+    <div class="btn-group btn-group-sm">
+        <a class="btn {% if scope != 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=all">{% translate "All records" %}</a>
+        <a class="btn {% if scope == 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=submitted">{% translate "Sent records only" %}</a>
+    </div>
+</div>
+<div class="row" id="cc-questions">
+    {% for q in charts.questions %}
+        <div class="col-lg-6">
+            <div class="cc-chart-card">
+                <h6 class="mb-1">{{ q.label }}</h6>
+                <div class="small text-muted mb-2">{% if q.group %}{{ q.group }} · {% endif %}{% blocktranslate with answered=q.answered total=q.total %}{{ answered }} answer(s) out of {{ total }} record(s){% endblocktranslate %}</div>
+                {% if q.stats %}
+                    <table class="table table-sm mb-0">
+                        <tr><th>{% translate "Count" %}</th><th>{% translate "Sum" %}</th><th>{% translate "Mean" %}</th><th>{% translate "Min" %}</th><th>{% translate "Max" %}</th></tr>
+                        <tr><td>{{ q.stats.count }}</td><td>{{ q.stats.sum }}</td><td>{{ q.stats.mean }}</td><td>{{ q.stats.min }}</td><td>{{ q.stats.max }}</td></tr>
+                    </table>
+                {% else %}
+                    <div class="cc-chart-box" style="height:{% if q.labels|length > 8 %}360{% else %}240{% endif %}px;"><canvas data-question="{{ forloop.counter0 }}"></canvas></div>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12"><p class="text-muted">{% translate "No choice or number question has an answer yet." %}</p></div>
+    {% endfor %}
+</div>
+
+{{ charts|json_script:"cc-charts" }}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'AdminLTE/plugins/chart.js/Chart.min.js' %}"></script>
+    <script>
+    (function () {
+        var charts = JSON.parse(document.getElementById("cc-charts").textContent);
+        var GREEN = "#24c38b", BLUE = "#3b82f6", ORANGE = "#f59e0b";
+        var PALETTE = ["#24c38b", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#ec4899", "#84cc16", "#f97316", "#64748b"];
+        var integerTicks = { beginAtZero: true, precision: 0 };
+
+        new Chart(document.getElementById("cc-timeline"), {
+            type: "bar",
+            data: {
+                labels: charts.timeline.labels,
+                datasets: [
+                    { type: "line", label: "{% translate 'Cumulative sent' %}", data: charts.timeline.cumulative, borderColor: ORANGE,
+                      backgroundColor: "transparent", yAxisID: "cumul", pointRadius: 0, borderWidth: 2 },
+                    { label: "{% translate 'Sent' %}", data: charts.timeline.sent, backgroundColor: GREEN, yAxisID: "daily", maxBarThickness: 18 },
+                    { label: "{% translate 'Started' %}", data: charts.timeline.started, backgroundColor: "rgba(59,130,246,.45)", yAxisID: "daily", maxBarThickness: 18 }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                tooltips: { mode: "index", intersect: false },
+                scales: {
+                    xAxes: [{ gridLines: { display: false }, ticks: { autoSkip: true, maxTicksLimit: 16 } }],
+                    yAxes: [
+                        { id: "daily", position: "left", ticks: integerTicks },
+                        { id: "cumul", position: "right", ticks: integerTicks, gridLines: { drawOnChartArea: false } }
+                    ]
+                }
+            }
+        });
+
+        new Chart(document.getElementById("cc-status"), {
+            type: "doughnut",
+            data: { labels: charts.by_status.labels, datasets: [{ data: charts.by_status.values, backgroundColor: [ORANGE, BLUE, GREEN] }] },
+            options: { maintainAspectRatio: false, legend: { position: "bottom" } }
+        });
+
+        new Chart(document.getElementById("cc-authors"), {
+            type: "horizontalBar",
+            data: { labels: charts.by_author.labels, datasets: [{ label: "{% translate 'Records' %}", data: charts.by_author.values, backgroundColor: BLUE, maxBarThickness: 28 }] },
+            options: { maintainAspectRatio: false, legend: { display: false }, scales: { xAxes: [{ ticks: integerTicks }] } }
+        });
+
+        new Chart(document.getElementById("cc-source"), {
+            type: "pie",
+            data: { labels: charts.by_source.labels, datasets: [{ data: charts.by_source.values, backgroundColor: [GREEN, BLUE] }] },
+            options: { maintainAspectRatio: false, legend: { position: "bottom" } }
+        });
+
+        document.querySelectorAll("canvas[data-question]").forEach(function (canvas) {
+            var q = charts.questions[parseInt(canvas.getAttribute("data-question"), 10)];
+            var total = q.values.reduce(function (a, b) { return a + b; }, 0) || 1;
+            new Chart(canvas, {
+                type: "horizontalBar",
+                data: { labels: q.labels, datasets: [{ label: "{% translate 'Answers' %}", data: q.values,
+                    backgroundColor: q.labels.map(function (_l, i) { return PALETTE[i % PALETTE.length]; }), maxBarThickness: 28 }] },
+                options: {
+                    maintainAspectRatio: false, legend: { display: false },
+                    scales: { xAxes: [{ ticks: integerTicks }], yAxes: [{ ticks: { callback: function (v) { v = String(v); return v.length > 38 ? v.slice(0, 36) + "…" : v; } } }] },
+                    tooltips: { callbacks: { label: function (item) { return item.xLabel + " (" + Math.round(item.xLabel * 1000 / total) / 10 + " %)"; } } }
+                }
+            });
+        });
+    })();
+    </script>
+{% endblock javascript %}

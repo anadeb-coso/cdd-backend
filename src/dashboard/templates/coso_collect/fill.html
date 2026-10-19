@@ -1,0 +1,164 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <style>
+        .tcf-checklist.is-invalid { border: 1px solid #dc3545; border-radius: 4px; padding: 4px; }
+        .tcf-repeat-row.is-invalid-row { border-color: #dc3545 !important; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="cc-head">
+    <div>
+        <h4>{{ collect_form.title }}</h4>
+        <div class="text-muted small" id="cc-record-title">{% if submission %}{{ submission.title }}{% else %}{% translate "New record" %}{% endif %}</div>
+    </div>
+    <div class="cc-head-actions">
+        {% if admin_edit %}
+            <a class="btn btn-sm btn-outline-secondary rounded-xl" href="{% url 'dashboard:coso_collect:submission' submission.uuid %}"><i class="fas fa-times mr-1"></i>{% translate "Cancel" %}</a>
+        {% else %}
+            <a class="btn btn-sm btn-outline-secondary rounded-xl" href="{% url 'dashboard:coso_collect:my_submissions' collect_form.pk %}"><i class="fas fa-list mr-1"></i>{% translate "My records" %}</a>
+        {% endif %}
+    </div>
+</div>
+{% if admin_edit %}
+    <div class="cc-banner alert-warning">
+        <i class="fas fa-user-shield mr-1"></i>{% blocktranslate with author=submission.author_name|default:"—" status=submission.get_status_display %}Correction by an administrator of the record of {{ author }} ({{ status }}): the author, the status and the dates are kept, the correction is recorded in the history.{% endblocktranslate %}
+        {% if submission.status != 'submitted' %}<br><i class="fas fa-exclamation-triangle mr-1"></i>{% translate "This record has not been sent yet: its author can still modify it on their device, which would replace your corrections." %}{% endif %}
+    </div>
+{% elif submission and submission.editable %}
+    <div class="cc-banner alert-info"><i class="fas fa-lock-open mr-1"></i>{% translate "An administrator has reopened this record: you can modify it and send it again." %}</div>
+{% endif %}
+<div id="cc-alert"></div>
+<div class="cc-fill-card"><div id="cc-fill"></div></div>
+
+{{ form_json|json_script:"cc-form-json" }}
+{{ initial_json|json_script:"cc-initial-json" }}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=2"></script>
+    <script>
+    (function () {
+        var FORM_ID = {{ collect_form.pk }};
+        var FORM_VERSION = {{ collect_form.version }};
+        var UUID = "{{ submission_uuid }}";
+        var ADMIN_EDIT = {{ admin_edit|yesno:"true,false" }};
+        var SAVE_URL = "{{ save_url }}";
+        var EDIT_URL = "{{ edit_url }}";
+        var UPLOAD_URL = "{{ upload_url }}";
+        var ATTACHMENT_URL = "{% url 'dashboard:coso_collect:attachment' 0 %}";
+        var CSRF = "{{ csrf_token }}";
+        var form = JSON.parse(document.getElementById("cc-form-json").textContent);
+        var initial = JSON.parse(document.getElementById("cc-initial-json").textContent) || [];
+
+        function pad(n) { return (n < 10 ? "0" : "") + n; }
+        // Date d'enregistrement en heure locale AVEC son fuseau : base du titre combiné (AAAAMMJJHHMMSS).
+        function localIso(d) {
+            var off = -d.getTimezoneOffset(), sign = off >= 0 ? "+" : "-";
+            off = Math.abs(off);
+            return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" +
+                pad(d.getMinutes()) + ":" + pad(d.getSeconds()) + sign + pad(Math.floor(off / 60)) + ":" + pad(off % 60);
+        }
+        var createdAt = "{{ created_at|escapejs }}" || localIso(new Date());
+        var busy = false;
+
+        function alertBox(html, kind) {
+            document.getElementById("cc-alert").innerHTML = html ? '<div class="alert alert-' + kind + '">' + html + "</div>" : "";
+            if (html) window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+        function save(values, status, done) {
+            if (busy) return;
+            busy = true;
+            // Correction par un administrateur : seules les données partent, le serveur garde le reste.
+            var body = ADMIN_EDIT ? { data: values } : {
+                form_id: FORM_ID, form_version: FORM_VERSION, status: status, data: values,
+                created_at: createdAt, updated_at: localIso(new Date()),
+                submitted_at: status === "submitted" ? localIso(new Date()) : null
+            };
+            fetch(SAVE_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+                body: JSON.stringify(body)
+            }).then(function (r) { return r.json(); }).then(function (j) {
+                busy = false;
+                if (!j.ok) { alertBox(esc(j.message || "{% translate 'Save failed.' %}"), "danger"); return; }
+                document.getElementById("cc-record-title").textContent = j.submission.title;
+                if (window.history && history.replaceState && location.pathname !== EDIT_URL) history.replaceState(null, "", EDIT_URL);
+                done(j);
+            }).catch(function () {
+                busy = false;
+                alertBox("{% translate 'Network error: the record was not saved.' %}", "danger");
+            });
+        }
+
+        new window.TCFillForm.FillFormController($("#cc-fill"), {
+            form: form,
+            initialResponses: initial,
+            i18n: {
+                submit: "{% translate 'Save' %}",
+                next: "{% translate 'Next' %}",
+                previous: "{% translate 'Previous' %}",
+                saveDraft: "{% translate 'Save the draft' %}",
+                removeFile: "{% translate 'Remove the file' %}",
+                noFileYet: "{% translate 'No file' %}",
+                viewFile: "{% translate 'View the file' %}",
+                uploading: "{% translate 'Uploading…' %}",
+                uploadError: "{% translate 'The file could not be sent.' %}",
+                requiredFieldsMissing: "{% translate 'Please fill in the required fields shown in red.' %}",
+                invalidValue: "{% translate 'Invalid value.' %}",
+                addRow: "{% translate 'Add a row' %}",
+                addChoice: "{% translate 'Add a choice' %}",
+                noLocationYet: "{% translate 'No position captured' %}",
+                captureLocation: "{% translate 'Capture the position' %}",
+                capturing: "{% translate 'Capturing…' %}",
+                geolocationUnavailable: "{% translate 'Geolocation unavailable in this browser' %}",
+                geolocationFailed: "{% translate 'The position could not be captured' %}",
+                search: "{% translate 'Search…' %}",
+                noResults: "{% translate 'No results' %}",
+                selectedCount: "{% translate 'selected' %}",
+                clearAll: "{% translate 'Untick all' %}"
+            },
+            onSaveDraft: ADMIN_EDIT ? null : function (values) {
+                save(values, "draft", function () { alertBox("{% translate 'Draft saved.' %}", "success"); });
+            },
+            finalActions: ADMIN_EDIT ? [
+                { key: "admin", label: "{% translate 'Save the corrections' %}", cls: "btn-primary" }
+            ] : [
+                { key: "completed", label: "{% translate 'Save without sending' %}", cls: "btn-outline-primary" },
+                { key: "submitted", label: "{% translate 'Send' %}", cls: "btn-primary" }
+            ],
+            onSubmit: function (values, attachments, key) {
+                if (key === "submitted" && !confirm("{% translate 'Once sent, the record can no longer be modified (unless an administrator reopens it). Send it?' %}")) return;
+                save(values, key || "completed", function (j) { window.location.href = j.redirect; });
+            },
+            uploadMedia: function (file, path, cb) {
+                var fd = new FormData();
+                fd.append("file", file);
+                fd.append("submission_uuid", UUID);
+                fd.append("field_path", path);
+                fetch(UPLOAD_URL, { method: "POST", headers: { "X-CSRFToken": CSRF }, body: fd })
+                    .then(function (r) { return r.json(); })
+                    .then(function (j) {
+                        if (!j.ok) { alertBox(esc(j.message), "danger"); cb(null); return; }
+                        cb({ attachment_id: j.attachment.attachment_id, name: j.attachment.name, mime: j.attachment.mime, size: j.attachment.size });
+                    })
+                    .catch(function () { cb(null); });
+            },
+            mediaUrl: function (value) {
+                return value && value.attachment_id ? ATTACHMENT_URL.replace(/\/0\/$/, "/" + value.attachment_id + "/") : null;
+            }
+        });
+    })();
+    </script>
+{% endblock javascript %}
+
+{% block select2 %}{% endblock select2 %}

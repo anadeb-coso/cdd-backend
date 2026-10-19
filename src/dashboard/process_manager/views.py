@@ -9,14 +9,12 @@ from django.conf import settings
 from django.shortcuts import resolve_url
 from django.http import HttpResponseRedirect
 from django.contrib import messages
-import itertools
 import logging
 
 logger = logging.getLogger(__name__)
 
 from dashboard.mixins import AJAXRequestMixin, JSONResponseMixin, PageMixin
 from no_sql_client import NoSQLClient
-import grm_client
 from process_manager.models import Task, Phase, Activity, Project, Cycle
 from .functions import get_cascade_phase_activity_task_by_their_id
 from cdd.my_librairies.mail.send_mail import send_email
@@ -639,18 +637,8 @@ class ProjectListView(PageMixin, LoginRequiredMixin, generic.ListView):
             self.request.session['tree_structure_projects_mis_ids'] = [mis_objects_call.get_object(ProjectMis, name=p.name).id for p in tree_structure_projects]
 
             if self.request.user.groups.filter(name__in=["Supervisor"]).exists() and hasattr(self.request.user, 'email'):
-                # Zone = localités d'intervention enregistrées dans CDD (copiées du/vers le GRM) ; à défaut
-                # d'enregistrement dans CDD, lecture de l'EADL du GRM comme auparavant.
-                cantons_stabilized_ids = supervisor_canton_ids(self.request.user)
-                if cantons_stabilized_ids is None:
-                    facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
-                    grm_client.attach_administrative_regions_objects(facilitator_grm)
-                    # administratives_stabilized = facilitator_grm['administrative_regions']
-                    administrative_regions_objects = facilitator_grm.get('administrative_regions_objects') if facilitator_grm else None
-                    cantons_stabilized_ids = list(set(
-                        # (administratives_stabilized if administratives_stabilized else []) +
-                        list(itertools.chain(*[[str(ad['id'])] for ad in (administrative_regions_objects if administrative_regions_objects else []) if ad and type(ad) is dict and 'id' in ad]))
-                    ))
+                # Zone = localités enregistrées dans CDD (copiées du/vers le GRM), sans appel au GRM.
+                cantons_stabilized_ids = supervisor_canton_ids(self.request.user) or []
                 self.request.session['cantons_stabilized_ids'] = cantons_stabilized_ids
                 if not cantons_stabilized_ids:
                     messages.warning(request, gettext_lazy("No intervention locality is defined for your account: contact an administrator."))

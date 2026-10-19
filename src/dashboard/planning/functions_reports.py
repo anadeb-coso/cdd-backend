@@ -10,7 +10,6 @@ import pytz
 import os
 import pandas as pd
 from sys import platform
-import itertools
 
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
 from subprojects.models import Project as MisProject
@@ -19,13 +18,13 @@ from cdd.call_objects_from_other_db import mis_objects_call
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from dashboard.facilitators.functions import get_stabilizing_facilitators_emails_by_village
+from dashboard.facilitators.localities import my_area_ids
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from planning.models import Activity, ValidationGroupsProcess
 from cdd.functions import get_dates_between
 from authentication.functions import get_group_high as auth_get_group_high
 from authentication import PROFESSIONAL_GROUPS, FACILITATORS_TYPES_WITH_GROUP_NAME
 from no_sql_client import NoSQLClient
-import grm_client
 from planning.vars import WORK_ENVIRONMENT
 
 
@@ -108,18 +107,9 @@ def planning_csv(request):
     #AREA
     liste_my_area_villages_ids = []
     if my_area:
-        try:
-            facilitator_grm = grm_client.get_facilitator_by_email(request.user.email)
-            grm_client.attach_administrative_regions_objects(facilitator_grm)
-            liste_my_area_villages_ids = facilitator_grm['administrative_regions']
-            administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
-            liste_my_area_villages_ids = list(set(
-                (liste_my_area_villages_ids if liste_my_area_villages_ids else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
-            ))
-        except:
-            pass
-        liste_my_area_villages_ids = [int(ad) for ad in liste_my_area_villages_ids if str(ad).isdigit()]
-    
+        # localités enregistrées dans CDD (copie de l'EADL du GRM), sans appel au GRM
+        liste_my_area_villages_ids = my_area_ids(request.user)
+
     #END AREA
     def get_facilitators_emails(villages_ids):
         # Emails des facilitateurs qui stabilisent ces villages, lus dans CDD (copie envoyée par le GRM).

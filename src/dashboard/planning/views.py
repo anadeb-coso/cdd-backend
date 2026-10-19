@@ -17,14 +17,13 @@ import json
 import pytz
 from django.shortcuts import redirect
 import locale
-import itertools
 
 from authentication.models import Facilitator
 from dashboard.facilitators.repository.db_facilitator_repository import FacilitatorRepository
 from dashboard.facilitators.functions import get_stabilizing_facilitators_emails_by_village
+from dashboard.facilitators.localities import my_area_ids
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from no_sql_client import NoSQLClient
-import grm_client
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin, ModalFormMixin
 from dashboard.facilitators.forms import FilterFacilitatorFormMultiChoices
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
@@ -219,18 +218,9 @@ class PlanningListTableView(LoginRequiredMixin, generic.ListView):
         #AREA
         liste_my_area_villages_ids = []
         if my_area:
-            try:
-                facilitator_grm = grm_client.get_facilitator_by_email(self.request.user.email)
-                grm_client.attach_administrative_regions_objects(facilitator_grm)
-                liste_my_area_villages_ids = facilitator_grm['administrative_regions']
-                administrative_regions_objects = facilitator_grm.get('administrative_regions_objects')
-                liste_my_area_villages_ids = list(set(
-                    (liste_my_area_villages_ids if liste_my_area_villages_ids else []) + list(itertools.chain(*[[str(v['id']) for v in ad['villages']] for ad in (administrative_regions_objects if administrative_regions_objects else [])]))
-                ))
-            except:
-                pass
-            liste_my_area_villages_ids = [int(ad) for ad in liste_my_area_villages_ids if str(ad).isdigit()]
-            
+            # localités enregistrées dans CDD (copie de l'EADL du GRM), sans appel au GRM
+            liste_my_area_villages_ids = my_area_ids(self.request.user)
+
         #END AREA
         
         def get_facilitators_emails(villages_ids):

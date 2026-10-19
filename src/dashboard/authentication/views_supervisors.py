@@ -14,6 +14,7 @@ from process_manager.models import AggregatedStatus, Project
 from cdd.functions import list_with_and
 from administrativelevels.models import AdministrativeLevel
 from cdd.call_objects_from_other_db import mis_objects_call
+from dashboard.facilitators.localities import user_localities_copy
 
 # Situation affichée pour un projet, un canton ou un village (mêmes colonnes que la ligne du superviseur)
 STATS_FIELDS = [
@@ -124,6 +125,24 @@ class SupervisrosListView(PageMixin, LoginRequiredMixin, generic.ListView):
     
 
 
+def supervisors_localities_docs(user_ids):
+    """Localités des superviseurs `user_ids` lues dans CDD (`user_localities_copy`, copie de leur EADL du GRM) au lieu
+    de `grm_client.get_all_facilitators()` / `get_facilitator_by_village` : un document par superviseur qui en a, avec
+    les clés des documents du GRM utilisées par /supervisors/ (`representative.email`, niveaux choisis, villages)."""
+    docs = []
+    for user in User.objects.filter(id__in=user_ids).order_by('last_name', 'first_name', 'id'):
+        localities = user_localities_copy(user)
+        if localities is None:
+            continue
+        docs.append({
+            'representative': {'email': user.email},
+            'administrative_regions': [str(_id) for _id in localities['choices']],
+            'smallest_administrative_level_ids': [str(_id) for _id in localities['villages']],
+            'additional_smallest_administrative_level_ids': [str(_id) for _id in localities['additional']],
+        })
+    return docs
+
+
 class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
     template_name = 'authentication/supervisors_list.html'
     context_object_name = 'supervisors'
@@ -144,20 +163,9 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             is_active=True,
             projects__in=[self.request.session.get('project_id')]
         ).values_list('id', 'email', 'username', 'last_name', 'first_name')}
-        adls_emails = list(_supervisors.keys())
+        # Localités des superviseurs lues dans CDD (copie de leur EADL du GRM), sans appel au GRM
+        supervisors = supervisors_localities_docs([s[0] for s in _supervisors.values()])
 
-        def get_supervisors(docs=None):
-
-            if docs is not None:
-                return [
-                    doc for doc in docs if doc.get('representative').get('email') in adls_emails
-                ]
-            else:
-                return [
-                    doc for doc in grm_client.get_all_facilitators()
-                    if doc.get('representative') and doc.get('representative').get('email') in adls_emails
-                ]
-        
         if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
             _type = None
             if id_region and type_field == "region":
@@ -181,20 +189,13 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                 liste_villages = []
                 liste_villages = get_cascade_villages_by_administrative_level_id(_id)
 
-                supervisors = grm_client.get_facilitator_by_village([v['administrative_id'] for v in liste_villages])
-
-                if supervisors:
-                    _f_s = []
-                    for elt in supervisors:
-                        if elt.get('representative', {}).get('email') in adls_emails and elt not in _f_s:
-                            _f_s.append(elt)
-                            
-                    supervisors = get_supervisors(_f_s)
-                
-            else:
-                supervisors = get_supervisors()
-        else:
-            supervisors = get_supervisors()
+                # Comme `grm_client.get_facilitator_by_village` : un niveau choisi ou un village de la zone, sans les
+                # villages additionnels.
+                area_ids = {str(v['administrative_id']) for v in liste_villages}
+                supervisors = [
+                    doc for doc in supervisors
+                    if area_ids.intersection(doc['administrative_regions'] + doc['smallest_administrative_level_ids'])
+                ]
 
         projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
 

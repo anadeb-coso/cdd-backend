@@ -60,6 +60,9 @@ BUILDER_FIELD_TYPES = {
     "select_one", "select_multiple", "select_multiple_check",
     "date", "datetime", "time",
     "geopoint",
+    # Photo / fichier joint : types de question utilisés par COSOCollect (coso_collect), rendus par
+    # MediaInput côté mobile et par le moteur web (task_cycle_fill_form.js) ; XLSForm `image` / `file`.
+    "photo", "file",
     "group", "repeat",
 }
 
@@ -912,8 +915,11 @@ def _detect_calc_cycles(targets, prefix, errors):
 # ---------------------------------------------------------------------------
 # XLSForm  (feuilles survey / choices / settings) — openpyxl uniquement
 # ---------------------------------------------------------------------------
-def form_design_to_xlsform(form, form_title="form"):
-    """Sérialise ``form`` en classeur XLSForm (bytes .xlsx)."""
+def form_design_to_xlsform(form, form_title="form", instance_name=None):
+    """Sérialise ``form`` en classeur XLSForm (bytes .xlsx).
+
+    ``instance_name`` (optionnel) : expression XLSForm du nom d'une saisie (titre combiné de
+    COSOCollect), écrite dans la feuille ``settings``."""
     from openpyxl import Workbook
 
     wb = Workbook()
@@ -924,8 +930,12 @@ def form_design_to_xlsform(form, form_title="form"):
     choices = wb.create_sheet("choices")
     choices.append(["list_name", "name", "label"])
     settings = wb.create_sheet("settings")
-    settings.append(["form_title", "form_id"])
-    settings.append([form_title, _slugify(form_title)])
+    if instance_name:
+        settings.append(["form_title", "form_id", "instance_name"])
+        settings.append([form_title, _slugify(form_title), instance_name])
+    else:
+        settings.append(["form_title", "form_id"])
+        settings.append([form_title, _slugify(form_title)])
 
     choice_lists = {}
 
@@ -1009,6 +1019,10 @@ def _xls_type(prop, name, choices, choice_lists):
     fmt = prop.get("format")
     if t == "geopoint":
         return "geopoint", None
+    if t == "photo":
+        return "image", None
+    if t == "file":
+        return "file", None
     if "enum" in prop:
         list_name = _register_choice_list(prop["enum"], name, choices, choice_lists)
         return "select_one", list_name
@@ -1255,6 +1269,12 @@ def _xls_row_to_prop(row, head, raw_type, choice_map):
     elif head in ("geopoint", "geotrace", "geoshape"):
         prop = {"type": "geopoint"}
         opt["mode"] = "geopoint"
+    elif head in ("image", "photo"):
+        prop = {"type": "photo"}
+        opt["mode"] = "photo"
+    elif head in ("file", "audio", "video"):
+        prop = {"type": "file"}
+        opt["mode"] = "file"
     else:
         prop = {"type": "string"}
 

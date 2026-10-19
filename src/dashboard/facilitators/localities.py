@@ -611,21 +611,68 @@ def all_canton_ids():
     return [str(_id) for _id in mis_objects_call.filter_objects(AdministrativeLevel, type="Canton").values_list('id', flat=True)]
 
 
+def user_localities_copy(user):
+    """Localités du compte GRM de même email qu'un utilisateur du dashboard, lues dans CDD au lieu de son EADL
+    du GRM (`grm_client.get_facilitator_by_email`) : CDD en garde la copie (`update-user-adls/`,
+    `push_adls_to_cdd`). Ses localités d'intervention ; à défaut, celles du facilitateur de cet email ou
+    identifiant, où le GRM range celles d'un compte qui est aussi facilitateur dans CDD.
+    {'main', 'choices', 'villages', 'additional'} ; None : rien d'enregistré dans CDD."""
+    from django.db.models import Q
+    from authentication.models import Facilitator, UserLocalities
+
+    if not getattr(user, 'is_authenticated', False):
+        return None
+    record = UserLocalities.objects.filter(user=user).first()
+    if record is not None:
+        return {
+            'main': record.administrative_id,
+            'choices': record.administrative_choices or [],
+            'villages': record.village_ids or [],
+            'additional': record.additional_village_ids or [],
+        }
+    email = (user.email or '').strip()
+    facilitator = Facilitator.objects.filter(Q(email=email) | Q(username=email)).first() if email else None
+    if facilitator is None:
+        return None
+    return {
+        'main': facilitator.main_administrative_id,
+        'choices': facilitator.stabilization_administrative_choices or [],
+        'villages': facilitator.stabilization_administrative_ids or [],
+        'additional': facilitator.additional_administrative_ids or [],
+    }
+
+
+def my_area_ids(user):
+    """Ids (entiers) du filtre « Ma zone » de la planification : niveaux choisis et villages (stabilisation et
+    additionnels, type Village seulement), comme `administrative_regions` + `administrative_regions_objects` de
+    l'EADL du GRM qu'ils remplacent. Rien d'enregistré : liste vide (pas de filtre)."""
+    import grm_client
+
+    localities = user_localities_copy(user)
+    if localities is None:
+        return []
+    administrative_regions_objects = grm_client.attach_administrative_regions_objects(
+        localities['villages'] + localities['additional']
+    ).get('administrative_regions_objects')
+    ids = {str(_id) for _id in localities['choices']} | {
+        str(v['id']) for ad in (administrative_regions_objects or []) for v in ad['villages']
+    }
+    return [int(_id) for _id in ids if _id.isdigit()]
+
+
 def supervisor_canton_ids(user):
     """Cantons de la zone d'un superviseur (`session['cantons_stabilized_ids']`) d'après ses localités
-    d'intervention enregistrées dans CDD : cantons parents de ses villages, comme le faisait la lecture de
-    son EADL dans le GRM ; tout le pays = tous les cantons. None : aucune localité enregistrée dans CDD
-    (l'appelant se replie alors sur le GRM)."""
+    enregistrées dans CDD (`user_localities_copy`) : cantons parents de ses villages, comme le faisait la lecture
+    de son EADL dans le GRM ; tout le pays = tous les cantons. None : aucune localité enregistrée dans CDD."""
     import grm_client
-    from authentication.models import UserLocalities
 
-    record = UserLocalities.objects.filter(user=user).first()
-    if record is None:
+    localities = user_localities_copy(user)
+    if localities is None:
         return None
-    if record.administrative_id == TOGO_ID:
+    if localities['main'] == TOGO_ID:
         return all_canton_ids()
     administrative_regions_objects = grm_client.attach_administrative_regions_objects(
-        (record.village_ids or []) + (record.additional_village_ids or [])
+        localities['villages'] + localities['additional']
     ).get('administrative_regions_objects')
     return list(set(
         str(ad['id']) for ad in (administrative_regions_objects or []) if ad and type(ad) is dict and 'id' in ad

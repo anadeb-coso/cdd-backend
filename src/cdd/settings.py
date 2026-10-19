@@ -63,6 +63,7 @@ CREATED_APPS = [
     'planning',
     'usermanager',
     'reports',
+    'coso_collect',
 ]
 
 THIRD_PARTY_APPS = [

@@ -1,0 +1,89 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cc-head">
+    <div>
+        <h4 style="word-break:break-word;">{{ submission.title }}</h4>
+        <div class="d-flex flex-wrap align-items-center mt-1" style="gap:.4rem;">
+            {% include "coso_collect/_submission_status.html" %}
+            <span class="cc-pill"><i class="fas fa-user"></i> {{ submission.author_name|default:"—" }}</span>
+            <span class="cc-pill"><i class="fas fa-{% if submission.source == 'web' %}desktop{% else %}mobile-alt{% endif %}"></i> {{ submission.get_source_display }}</span>
+            <span class="cc-pill">{% translate "Form" %} : {{ collect_form.title }} (v{{ submission.form_version }})</span>
+        </div>
+    </div>
+    <div class="cc-head-actions">
+        {% if can_edit %}
+            <a class="btn btn-sm btn-primary rounded-xl" href="{% url 'dashboard:coso_collect:edit' submission.uuid %}"><i class="fas fa-pen mr-1"></i>{% translate "Edit" %}</a>
+        {% endif %}
+        {% if rights.edit_data %}
+            <a class="btn btn-sm btn-outline-primary rounded-xl" href="{% url 'dashboard:coso_collect:admin_edit' submission.uuid %}"
+               title="{% translate 'As an administrator: the author, the status and the dates are kept.' %}"><i class="fas fa-pen mr-1"></i>{% translate "Correct the data" %}</a>
+        {% endif %}
+        {% if submission.status == 'submitted' and rights.reopen_records %}
+            <form method="post" action="{% url 'dashboard:coso_collect:editable' submission.uuid %}" class="d-inline">
+                {% csrf_token %}
+                {% if submission.editable %}
+                    <input type="hidden" name="editable" value="0">
+                    <button class="btn btn-sm btn-outline-secondary rounded-xl"><i class="fas fa-lock mr-1"></i>{% translate "Lock again" %}</button>
+                {% else %}
+                    <input type="hidden" name="editable" value="1">
+                    <button class="btn btn-sm btn-outline-warning rounded-xl" title="{% translate 'The author will be able to modify this record and send it again.' %}"><i class="fas fa-lock-open mr-1"></i>{% translate "Reopen for modification" %}</button>
+                {% endif %}
+            </form>
+        {% endif %}
+        {% if rights.delete_records %}
+            <form method="post" action="{% url 'dashboard:coso_collect:delete_submission' submission.uuid %}" class="d-inline"
+                  onsubmit="return confirm('{% translate "Delete this record and its files permanently?" %}');">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger rounded-xl" title="{% translate 'Delete' %}"><i class="fas fa-trash"></i></button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if submission.is_locked and is_owner %}
+    <div class="cc-banner alert-secondary"><i class="fas fa-lock mr-1"></i>{% translate "This record has been sent: it can be consulted but no longer modified, unless an administrator reopens it." %}</div>
+{% elif submission.editable and is_owner %}
+    <div class="cc-banner alert-info"><i class="fas fa-lock-open mr-1"></i>{% translate "An administrator has reopened this record: you can modify it and send it again." %}</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-xl-9">
+        {% for page in pages %}
+            <div class="cc-record">
+                {% if pages|length > 1 %}<div class="cc-record-page">{% translate "Page" %} {{ page.number }}</div>{% endif %}
+                {% include "coso_collect/_tree_nodes.html" with nodes=page.nodes %}
+            </div>
+        {% empty %}
+            <div class="cc-record cc-empty">{% translate "No data." %}</div>
+        {% endfor %}
+    </div>
+    <div class="col-xl-3">
+        <div class="cc-record">
+            <h6 class="font-weight-bold">{% translate "Information" %}</h6>
+            <div class="small">
+                <div><span class="text-muted">{% translate "Recorded on" %} :</span> {{ submission.started_at|date:"d/m/Y H:i:s"|default:"—" }}</div>
+                <div><span class="text-muted">{% translate "Sent on" %} :</span> {{ submission.submitted_at|date:"d/m/Y H:i:s"|default:"—" }}</div>
+                <div><span class="text-muted">{% translate "Last update" %} :</span> {{ submission.updated_at|date:"d/m/Y H:i:s" }}</div>
+                {% if submission.reopened_at %}<div><span class="text-muted">{% translate "Reopened on" %} :</span> {{ submission.reopened_at|date:"d/m/Y H:i" }}{% if submission.reopened_by %} — {{ submission.reopened_by.get_full_name|default:submission.reopened_by.username }}{% endif %}</div>{% endif %}
+                <div class="text-muted mt-1" style="word-break:break-all;">UUID : {{ submission.uuid }}</div>
+            </div>
+        </div>
+        {% if history %}
+        <div class="cc-record">
+            <h6 class="font-weight-bold">{% translate "History" %}</h6>
+            <ul class="list-unstyled small mb-0">
+                {% for h in history %}
+                    <li class="mb-1"><span class="text-muted">{{ h.at_display }}</span> — {{ h.label }}{% if h.by %} · {{ h.by }}{% endif %}{% if h.source %} ({{ h.source }}){% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}

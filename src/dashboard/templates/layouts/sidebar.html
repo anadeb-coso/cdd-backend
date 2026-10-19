@@ -164,6 +164,18 @@
         </nav>
         {% endif %}
 
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:coso_collect:list' %}"
+                       class="nav-link {% if active_level1 == 'coso_collect' %}active{% endif %}">
+                        <i class="nav-icon fa fa-clipboard-check"></i>
+                        <p>COSOCollect</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
         {% if not user|has_group:"CommunityFacilitator" and not user|has_group:"TechnicalFacilitator" %}
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">

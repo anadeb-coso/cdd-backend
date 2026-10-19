@@ -13,6 +13,10 @@
   var CFG = JSON.parse(document.getElementById("tfb-config").textContent);
   var T = CFG.i18n || {};
   function t(k, d) { return T[k] || d || k; }
+  // "task" (Task.form, Cycle d'investissement) ou "collect" (formulaire COSOCollect) : en mode
+  // collect, pas de partage villages sièges / visibilité ou choix depuis une AUTRE tâche / pièces
+  // jointes de tâche ; en plus, types photo/fichier et titre combiné (CFG.titleTemplate).
+  var IS_COLLECT = CFG.mode === "collect";
 
   var FIELD_TYPES = [
     ["text", t("type_text", "Texte")],
@@ -29,6 +33,12 @@
     ["group", t("type_group", "Groupe")],
     ["repeat", t("type_repeat", "Groupe répétable")]
   ];
+  if (IS_COLLECT) {
+    // Photo / document joint : rendus par MediaInput (mobile) et task_cycle_fill_form.js (web).
+    FIELD_TYPES.splice(FIELD_TYPES.length - 2, 0,
+      ["photo", t("type_photo", "Photo")],
+      ["file", t("type_file", "Fichier / document")]);
+  }
   var DEFAULT_GPS_ACCURACY = 20;
   var CONTAINER_TYPES = { group: 1, repeat: 1 };
   var OPS = [
@@ -59,7 +69,11 @@
     // Pièces jointes attendues pour la tâche (onglet "Pièces jointes",
     // `Task.attachments` — hors de `form`, donc jamais compilé/décompilé par
     // page comme le reste de `state`, cf. renderAttachmentsEditor).
-    attachments: []
+    attachments: [],
+    // Titre combiné (COSOCollect) : parties {type:"field", nodeId} | {type:"meta", key} |
+    // {type:"text", value} — les champs sont suivis par id de nœud (et non par chemin) pour
+    // survivre à un renommage de clé ; recompilés en chemins "$<page>.<chemin>" à l'enregistrement.
+    titleTemplate: { parts: [], separator: "_", slugify: true }
   };
 
   var DS_OPS = [
@@ -333,7 +347,9 @@
       n.type = "geopoint";
       n.accuracyThreshold = opts.accuracyThreshold != null && opts.accuracyThreshold !== ""
         ? opts.accuracyThreshold : DEFAULT_GPS_ACCURACY;
-    } else if (prop.type === "integer") { n.type = "integer"; copyRange(n, prop); }
+    } else if (prop.type === "photo" || opts.mode === "photo") { n.type = "photo"; }
+    else if (prop.type === "file" || opts.mode === "file") { n.type = "file"; }
+    else if (prop.type === "integer") { n.type = "integer"; copyRange(n, prop); }
     else if (prop.type === "number") { n.type = "decimal"; copyRange(n, prop); }
     else if (prop.format === "date") { n.type = "date"; n.mode = true; }
     else if (prop.format === "datetime") { n.type = "datetime"; }
@@ -429,6 +445,8 @@
         options.accuracyThreshold = acc != null ? acc : DEFAULT_GPS_ACCURACY;
         break;
       }
+      case "photo":
+      case "file": schema = { type: n.type }; options.mode = n.type; break;
       case "group": {
         var g = compileContainer(n); schema = { type: "object", properties: g.properties, required: g.required };
         options.fields = g.fields; options.order = g.order; break;
@@ -684,6 +702,7 @@
     root.appendChild(wrap);
     applySelect2();
     renderVisibilityConditionToolbar();
+    renderTitleTemplateToolbar();
   }
 
   // Rafraîchit UNIQUEMENT les colonnes gauche + centre (liste des pages, arbre
@@ -804,7 +823,9 @@
     var tabs = el("div", { class: "tfb-tabs" });
     [["field", t("tab_field", "Champ")], ["rules", t("tab_rules", "Règles")],
      ["calc", t("tab_calc", "Calculs")], ["attachments", t("tab_attachments", "Pièces jointes")],
-     ["preview", t("tab_preview", "Aperçu")], ["json", "JSON"]].forEach(function (tb) {
+     ["preview", t("tab_preview", "Aperçu")], ["json", "JSON"]].filter(function (tb) {
+      return !(IS_COLLECT && tb[0] === "attachments");
+    }).forEach(function (tb) {
       tabs.appendChild(el("button", { class: state.tab === tb[0] ? "active" : "", text: tb[1], onclick: function () { state.tab = tb[0]; render(); } }));
     });
     card.appendChild(tabs);
@@ -1088,7 +1109,7 @@
       // partagé. Indépendant des autres champs de la même tâche — le bouton
       // "Appliquer à tous les champs" du toolbar (cf. applyShareModeToAllFields)
       // offre un raccourci pour tout mettre au même mode en une fois.
-      box.appendChild(fieldRow(t("f_share", "Partage villages sièges"), (function () {
+      if (!IS_COLLECT) box.appendChild(fieldRow(t("f_share", "Partage villages sièges"), (function () {
         var s = el("select", { class: "form-control form-control-sm", onchange: function () { n.shareMode = this.value; } });
         s.appendChild(opt("", t("f_share_none", "Non partagé")));
         s.appendChild(opt("fixed_canton", t("share_fixed_canton", "Automatique — villages sièges du canton")));
@@ -1101,7 +1122,7 @@
       // (contrairement à `renderChoicesFromEditor`, réservé aux select),
       // puisqu'on peut cacher/afficher un texte/nombre/date selon la réponse
       // d'un select (ou l'inverse) d'une autre tâche.
-      box.appendChild(renderCrossTaskVisibilityEditor(n));
+      if (!IS_COLLECT) box.appendChild(renderCrossTaskVisibilityEditor(n));
     }
     if (n.type === "date") {
       box.appendChild(el("div", { class: "tfb-field-row" }, [checkbox(n.mode, function (v) { n.mode = v; }, t("f_datepicker", "Sélecteur de date (mode date)"))]));
@@ -1426,12 +1447,27 @@
   }
   function renderChoicesFromEditor(n) {
     var cf = n.choicesFrom || (n.choicesFrom = { sourceTaskId: null, sourcePath: "" });
-    ensureOtherTasks(); // liste des tâches nécessaire dès l'ouverture du picker "tâche"
-
     var wrap = el("div", { style: "margin-top:10px; padding-top:10px; border-top:1px dashed #ccc" });
     wrap.appendChild(el("div", { class: "tfb-field-row" }, [
       el("label", { text: t("f_choices_from", "Options dynamiques depuis un autre champ") })
     ]));
+    if (IS_COLLECT) {
+      // Formulaire COSOCollect : la source est toujours un champ de CE formulaire.
+      cf.sourceTaskId = null;
+      var ownPath = nodePath(n.id);
+      wrap.appendChild(fieldRow(
+        t("f_choices_from_field", "Champ source"),
+        selectPaths(currentPagePaths().concat(crossPagePaths()).filter(function (p) {
+          return SELECT_TYPES[p.type] && p.path !== ownPath;
+        }), cf.sourcePath, function (v) { cf.sourcePath = v; })
+      ));
+      wrap.appendChild(el("div", { class: "tfb-muted", text: t(
+        "f_choices_from_hint_collect",
+        "Les options de ce champ seront exactement les choix faits dans le champ source. Liste vide tant que la source n'a pas de réponse."
+      ) }));
+      return wrap;
+    }
+    ensureOtherTasks(); // liste des tâches nécessaire dès l'ouverture du picker "tâche"
 
     var taskOpts = [["", t("choices_from_same_task", "— même tâche —")]].concat(
       (state.otherTasks || []).map(function (tsk) {
@@ -2094,6 +2130,12 @@
       uploadFile: function (file, cb) {
         try { cb(URL.createObjectURL(file), file.name); } catch (e) { cb(null, null); }
       },
+      // Champs photo / fichier (COSOCollect) : même simulation, rien n'est envoyé.
+      uploadMedia: function (file, path, cb) {
+        try { cb({ name: file.name, mime: file.type, size: file.size, _preview: URL.createObjectURL(file) }); }
+        catch (e) { cb(null); }
+      },
+      mediaUrl: function (value) { return value && value._preview ? value._preview : null; },
       // choicesFrom/crossTaskVisibility inter-tâches : pas de `fetchExternalTask`
       // fourni ici (aucune vraie tâche source consultable depuis un aperçu
       // isolé) -> ces champs restent "pas encore de réponse" (repli déjà
@@ -2116,6 +2158,168 @@
       },
     });
     return box;
+  }
+
+  /* ------------------------------------------------ titre combiné (COSOCollect) */
+  // Libellé qui représentera chaque saisie (ex. "cinkasse_cinkasse_centre_20261005141350") : suite
+  // de champs, de métadonnées et de textes fixes, joints par un séparateur. Même calcul côté serveur
+  // (coso_collect/titles.py) et mobile (src/utils/collectTitle.ts) ; ici on n'en montre qu'un aperçu.
+  var TITLE_META = [
+    ["created_at", t("tt_meta_created_at", "Date et heure d'enregistrement (AAAAMMJJHHMMSS)")],
+    ["created_date", t("tt_meta_created_date", "Date d'enregistrement (AAAAMMJJ)")],
+    ["created_time", t("tt_meta_created_time", "Heure d'enregistrement (HHMMSS)")],
+    ["author", t("tt_meta_author", "Auteur de la saisie")],
+    ["form", t("tt_meta_form", "Titre du formulaire")]
+  ];
+  function titleMetaLabel(key) {
+    for (var i = 0; i < TITLE_META.length; i++) if (TITLE_META[i][0] === key) return TITLE_META[i][1];
+    return key;
+  }
+  // Champs utilisables dans le titre : une seule valeur par saisie -> feuilles hors répétable, hors notes.
+  function titleCandidates() {
+    var out = [];
+    state.pages.forEach(function (pg, i) {
+      (function walk(nodes, prefix, labels) {
+        (nodes || []).forEach(function (n) {
+          var path = (prefix ? prefix + "." : "") + n.key;
+          if (n.type === "repeat" || n.type === "note") return;
+          if (n.type === "group") { walk(n.children, path, labels.concat([n.label || n.key])); return; }
+          out.push({
+            nodeId: n.id, key: n.key, path: "$" + i + "." + path,
+            label: (state.pages.length > 1 ? "P" + (i + 1) + " · " : "") + labels.concat([n.label || n.key]).join(" › ")
+          });
+        });
+      })(pg.nodes, "", []);
+    });
+    return out;
+  }
+  function titleCandidatesById() {
+    var byId = {};
+    titleCandidates().forEach(function (c) { byId[c.nodeId] = c; });
+    return byId;
+  }
+  function decompileTitleTemplate(raw) {
+    raw = raw || {};
+    var byPath = {};
+    titleCandidates().forEach(function (c) { byPath[c.path] = c.nodeId; });
+    var parts = [];
+    (raw.parts || []).forEach(function (p) {
+      if (!p) return;
+      if (p.type === "field" && byPath[p.path]) parts.push({ type: "field", nodeId: byPath[p.path] });
+      else if (p.type === "meta" && p.key) parts.push({ type: "meta", key: p.key });
+      else if (p.type === "text" && p.value) parts.push({ type: "text", value: String(p.value) });
+    });
+    return { parts: parts, separator: raw.separator == null ? "_" : String(raw.separator), slugify: raw.slugify !== false };
+  }
+  function compileTitleTemplate() {
+    var byId = titleCandidatesById();
+    var tt = state.titleTemplate;
+    return {
+      parts: tt.parts.map(function (p) {
+        if (p.type === "field") return byId[p.nodeId] ? { type: "field", path: byId[p.nodeId].path } : null;
+        return p.type === "meta" ? { type: "meta", key: p.key } : { type: "text", value: p.value };
+      }).filter(Boolean),
+      separator: tt.separator,
+      slugify: tt.slugify
+    };
+  }
+  function titleSlug(v) {
+    var s = String(v == null ? "" : v);
+    if (s.normalize) s = s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+  function titlePreview() {
+    var tt = state.titleTemplate;
+    var byId = titleCandidatesById();
+    var d = new Date();
+    function p2(n) { return (n < 10 ? "0" : "") + n; }
+    var date = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var time = p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds());
+    var meta = { created_at: date + time, created_date: date, created_time: time,
+      author: t("tt_sample_author", "auteur"), form: CFG.formTitle || "" };
+    var pieces = [];
+    tt.parts.forEach(function (p) {
+      var v = p.type === "field" ? (byId[p.nodeId] ? (tt.slugify ? byId[p.nodeId].key : "{" + byId[p.nodeId].key + "}") : "")
+        : p.type === "meta" ? meta[p.key] : p.value;
+      v = tt.slugify ? titleSlug(v) : String(v || "").trim();
+      if (v) pieces.push(v);
+    });
+    if (!pieces.length) pieces = [tt.slugify ? titleSlug(CFG.formTitle || "") : (CFG.formTitle || ""), date + time].filter(Boolean);
+    return pieces.join(tt.separator);
+  }
+  function moveTitlePart(i, d) {
+    var parts = state.titleTemplate.parts, j = i + d;
+    if (j < 0 || j >= parts.length) return;
+    var x = parts.splice(i, 1)[0];
+    parts.splice(j, 0, x);
+    renderTitleTemplateToolbar();
+  }
+  function renderTitleTemplateToolbar() {
+    var host = document.getElementById("tfb-title-template");
+    if (!host || !IS_COLLECT) return;
+    host.innerHTML = "";
+    var tt = state.titleTemplate;
+    var cands = titleCandidates();
+    var byId = titleCandidatesById();
+
+    host.appendChild(el("span", { class: "tfb-share-mode-label", style: "font-weight:600",
+      title: t("tt_help", "Libellé qui représentera chaque saisie dans les listes (mobile et web).") }, [
+      el("i", { class: "fa fa-tag mr-1" }), t("tt_title", "Titre combiné")
+    ]));
+
+    var chips = el("span", { class: "tfb-tt-parts" });
+    tt.parts.forEach(function (p, i) {
+      var label = p.type === "field"
+        ? (byId[p.nodeId] ? byId[p.nodeId].label : t("tt_missing_field", "(champ supprimé)"))
+        : p.type === "meta" ? titleMetaLabel(p.key) : "« " + p.value + " »";
+      chips.appendChild(el("span", { class: "tfb-tt-chip tfb-tt-" + p.type }, [
+        i > 0 ? btn("‹", function () { moveTitlePart(i, -1); }, "btn-light", t("tt_move_left", "Déplacer à gauche")) : null,
+        el("span", { class: "tfb-tt-chip-label", text: label }),
+        i < tt.parts.length - 1 ? btn("›", function () { moveTitlePart(i, 1); }, "btn-light", t("tt_move_right", "Déplacer à droite")) : null,
+        btn("✕", function () { tt.parts.splice(i, 1); renderTitleTemplateToolbar(); }, "btn-light", t("tt_remove", "Retirer"))
+      ]));
+    });
+    if (!tt.parts.length) {
+      chips.appendChild(el("span", { class: "tfb-muted", text: t("tt_empty", "Aucun élément : le titre sera « titre du formulaire + date d'enregistrement ».") }));
+    }
+    host.appendChild(chips);
+
+    var addSel = el("select", { class: "form-control form-control-sm d-inline-block", style: "width:auto", onchange: function () {
+      var v = this.value;
+      if (!v) return;
+      if (v === "__text__") {
+        var txt = window.prompt(t("tt_text_prompt", "Texte fixe à insérer :"), "");
+        if (txt && txt.trim()) tt.parts.push({ type: "text", value: txt.trim() });
+      } else if (v.indexOf("meta:") === 0) {
+        tt.parts.push({ type: "meta", key: v.slice(5) });
+      } else if (v.indexOf("field:") === 0) {
+        tt.parts.push({ type: "field", nodeId: v.slice(6) });
+      }
+      renderTitleTemplateToolbar();
+    } });
+    addSel.appendChild(opt("", "+ " + t("tt_add", "Ajouter un élément…")));
+    var ogFields = el("optgroup", { label: t("tt_fields", "Champs du formulaire") });
+    cands.forEach(function (c) { ogFields.appendChild(opt("field:" + c.nodeId, c.label)); });
+    var ogMeta = el("optgroup", { label: t("tt_meta", "Métadonnées de la saisie") });
+    TITLE_META.forEach(function (m) { ogMeta.appendChild(opt("meta:" + m[0], m[1])); });
+    var ogOther = el("optgroup", { label: t("tt_other", "Autre") });
+    ogOther.appendChild(opt("__text__", t("tt_text", "Texte fixe…")));
+    addSel.appendChild(ogFields);
+    addSel.appendChild(ogMeta);
+    addSel.appendChild(ogOther);
+    var addWrap = el("span", { class: "tfb-tt-add" }, [addSel]);
+    host.appendChild(addWrap);
+
+    var preview = el("code", { class: "tfb-tt-preview" });
+    function updatePreview() { preview.textContent = titlePreview(); }
+    var sepInput = el("input", { class: "form-control form-control-sm d-inline-block", style: "width:56px", value: tt.separator,
+      oninput: function () { tt.separator = this.value; updatePreview(); } });
+    host.appendChild(el("label", { class: "mb-0 tfb-muted" }, [t("tt_separator", "Séparateur") + " ", sepInput]));
+    host.appendChild(checkbox(tt.slugify, function (v) { tt.slugify = v; updatePreview(); },
+      t("tt_slugify", "Simplifier (minuscules, sans accents ni espaces)")));
+    host.appendChild(el("span", { class: "tfb-muted" }, [t("tt_preview", "Aperçu :") + " ", preview]));
+    updatePreview();
+    applySelect2(addWrap);
   }
 
   /* ------------------------------------------------------------- json editor */
@@ -2164,17 +2368,25 @@
     var form = safeCompile();
     if (!form) { lastErrors = [t("compile_err", "Formulaire non compilable (vérifiez les clés des champs).")]; render(); return; }
     lastErrors = [];
+    var payload = IS_COLLECT
+      ? { form: form, title_template: compileTitleTemplate() }
+      : {
+        form: form, share_mode: state.shareMode || "none",
+        visibility_condition: state.visibilityCondition, attachments: state.attachments
+      };
     fetch(CFG.urls.save, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CFG.csrfToken },
-      body: JSON.stringify({
-        form: form, share_mode: state.shareMode || "none",
-        visibility_condition: state.visibilityCondition, attachments: state.attachments
-      })
+      body: JSON.stringify(payload)
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (res.j.ok) {
           lastErrors = [];
+          if (IS_COLLECT && res.j.title_template) state.titleTemplate = decompileTitleTemplate(res.j.title_template);
+          if (IS_COLLECT && res.j.version != null) {
+            var verEl = document.getElementById("tfb-version");
+            if (verEl) verEl.textContent = res.j.version;
+          }
           flash(t("saved", "Formulaire enregistré."), true);
         } else {
           lastErrors = res.j.errors || [t("save_failed", "Échec de l'enregistrement.")];
@@ -2198,6 +2410,7 @@
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j.form) { state.pages = decompile(j.form); state.active = 0; state.sel = null; }
+        if (IS_COLLECT && j.title_template) state.titleTemplate = decompileTitleTemplate(j.title_template);
         lastErrors = j.errors || [];
         render();
         flash(j.ok ? t("imported", "XLSForm importé — relisez puis Enregistrez.") : t("import_warn", "Import partiel — voir les erreurs."), j.ok);
@@ -2250,5 +2463,6 @@
     catch (e) { state.attachments = []; }
   })();
   state.pages = decompile(CFG.formJson);
+  if (IS_COLLECT) state.titleTemplate = decompileTitleTemplate(CFG.titleTemplate);
   render();
 })();

@@ -1,0 +1,112 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+    {% include "coso_collect/_admin_header.html" %}
+
+    <div class="tfb-toolbar">
+        <button id="tfb-save" type="button" class="btn btn-primary btn-sm rounded-xl">
+            <i class="fa fa-save mr-1"></i> {% translate "SAVE" %}
+        </button>
+        <a href="{% url 'dashboard:coso_collect:form_file' collect_form.pk 'xlsx' %}" class="btn btn-outline-secondary btn-sm rounded-xl">
+            <i class="fa fa-file-excel mr-1"></i> {% translate "Export XLSForm" %}
+        </a>
+        <a href="{% url 'dashboard:coso_collect:form_file' collect_form.pk 'json' %}" class="btn btn-outline-secondary btn-sm rounded-xl">
+            <i class="fa fa-file-code mr-1"></i> {% translate "Export (JSON)" %}
+        </a>
+        <label class="btn btn-outline-secondary btn-sm rounded-xl mb-0">
+            <i class="fa fa-file-import mr-1"></i> {% translate "Import a form file" %}
+            <input id="tfb-import" type="file" accept=".xlsx,.json" hidden>
+        </label>
+        {% if collect_form.status != 'draft' %}
+            <span class="small text-muted"><i class="fas fa-info-circle mr-1"></i>{% translate "The form is already published: each save creates a new version, reloaded automatically by the mobile application." %}</span>
+        {% endif %}
+    </div>
+
+    {# Titre combiné : peuplé par task_form_builder.js (renderTitleTemplateToolbar). #}
+    <div id="tfb-title-template" class="tfb-toolbar"></div>
+
+    <div id="tfb-flash" style="display:none"></div>
+    <div id="tfb-root"></div>
+
+    {{ form_json|json_script:"tfb-form-json" }}
+    {{ title_template_json|json_script:"tfb-title-template-json" }}
+    <script id="tfb-config" type="application/json">
+    {
+        "mode": "collect",
+        "formJson": __FORM_JSON__,
+        "titleTemplate": __TITLE_TEMPLATE_JSON__,
+        "formTitle": "{{ collect_form.title|escapejs }}",
+        "csrfToken": "{{ csrf_token }}",
+        "urls": {
+            "save": "{% url 'dashboard:coso_collect:builder_save' collect_form.pk %}",
+            "import": "{% url 'dashboard:coso_collect:builder_import' collect_form.pk %}",
+            "export": "{% url 'dashboard:coso_collect:form_file' collect_form.pk 'xlsx' %}",
+            "choices_import": "{% url 'dashboard:coso_collect:builder_choices_import' collect_form.pk %}",
+            "choices_export": "{% url 'dashboard:coso_collect:builder_choices_export' collect_form.pk %}",
+            "datasources": "{% url 'dashboard:coso_collect:builder_datasources' collect_form.pk %}",
+            "datasource_preview": "{% url 'dashboard:coso_collect:builder_datasource_preview' collect_form.pk %}",
+            "dataset_sheet": "{% url 'dashboard:coso_collect:builder_dataset_sheet' collect_form.pk %}"
+        },
+        "i18n": {
+            {% include "process_manager/tasks/_form_builder_i18n.html" %},
+            "type_photo": "{% translate 'Photo' %}",
+            "type_file": "{% translate 'File / document' %}",
+            "f_choices_from_hint_collect": "{% translate 'The options of this field will be exactly the choices made in the source field. Empty list until the source has an answer.' %}",
+            "imported": "{% translate 'Form file imported — review then Save.' %}",
+            "removeFile": "{% translate 'Remove the file' %}",
+            "tt_title": "{% translate 'Combined title' %}",
+            "tt_help": "{% translate 'Label that will represent each record in the lists (mobile and web).' %}",
+            "tt_meta_created_at": "{% translate 'Recording date and time (YYYYMMDDHHMMSS)' %}",
+            "tt_meta_created_date": "{% translate 'Recording date (YYYYMMDD)' %}",
+            "tt_meta_created_time": "{% translate 'Recording time (HHMMSS)' %}",
+            "tt_meta_author": "{% translate 'Author of the record' %}",
+            "tt_meta_form": "{% translate 'Form title' %}",
+            "tt_missing_field": "{% translate '(deleted field)' %}",
+            "tt_move_left": "{% translate 'Move left' %}",
+            "tt_move_right": "{% translate 'Move right' %}",
+            "tt_remove": "{% translate 'Remove' %}",
+            "tt_empty": "{% translate 'No element: the title will be “form title + recording date”.' %}",
+            "tt_add": "{% translate 'Add an element…' %}",
+            "tt_fields": "{% translate 'Form fields' %}",
+            "tt_meta": "{% translate 'Record metadata' %}",
+            "tt_other": "{% translate 'Other' %}",
+            "tt_text": "{% translate 'Fixed text…' %}",
+            "tt_text_prompt": "{% translate 'Fixed text to insert:' %}",
+            "tt_separator": "{% translate 'Separator' %}",
+            "tt_slugify": "{% translate 'Simplify (lowercase, no accents or spaces)' %}",
+            "tt_preview": "{% translate 'Preview:' %}",
+            "tt_sample_author": "{% translate 'author' %}"
+        }
+    }
+    </script>
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        (function () {
+            var cfgEl = document.getElementById("tfb-config");
+            // Remplacement par fonction : une chaîne de remplacement interpréterait les motifs « $ »
+            // présents dans le JSON (chemins "$0.champ").
+            var formJson = document.getElementById("tfb-form-json").textContent;
+            var titleJson = document.getElementById("tfb-title-template-json").textContent;
+            cfgEl.textContent = cfgEl.textContent
+                .replace("__FORM_JSON__", function () { return formJson; })
+                .replace("__TITLE_TEMPLATE_JSON__", function () { return titleJson; });
+        })();
+    </script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}"></script>
+    {# Moteur de remplissage réel, réutilisé pour l'onglet « Aperçu ». #}
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=2"></script>
+{% endblock javascript %}
+
+{% block select2 %}{% endblock select2 %}

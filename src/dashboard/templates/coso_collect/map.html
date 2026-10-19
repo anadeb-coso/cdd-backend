@@ -1,0 +1,125 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link href="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+{% if not geo_fields %}
+    <div class="cc-banner alert-secondary"><i class="fas fa-info-circle mr-1"></i>{% translate "This form has no GPS coordinates question: nothing to display on the map." %}</div>
+{% else %}
+<form method="get" class="cc-filters">
+    <div class="form-row align-items-end">
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Search" %}</label>
+            <input type="search" name="q" value="{{ filters.q }}" class="form-control form-control-sm">
+        </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Status" %}</label>
+            <select name="status" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+                {% for key, label in statuses %}<option value="{{ key }}" {% if key in selected_statuses %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "GPS question" %}</label>
+            <select id="cc-geo-field" class="form-control form-control-sm">
+                <option value="">{% translate "All" %}</option>
+                {% for f in geo_fields %}<option value="{{ f.path }}">{{ f.label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 mb-2 d-flex" style="gap:.4rem;">
+            <button class="btn btn-sm btn-primary"><i class="fas fa-filter mr-1"></i>{% translate "Filter" %}</button>
+            {% if rights.export %}<a class="btn btn-sm btn-outline-success" href="{% url 'dashboard:coso_collect:export' collect_form.pk %}?download=geojson"><i class="fas fa-download mr-1"></i>GeoJSON</a>{% endif %}
+        </div>
+    </div>
+    <div class="small text-muted"><span id="cc-point-count">{{ points|length }}</span> {% translate "point(s)" %}</div>
+</form>
+<div id="cc-map" class="cc-map"></div>
+{{ points|json_script:"cc-points" }}
+{{ map_center|json_script:"cc-map-center" }}
+{% endif %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% if geo_fields %}
+    <script src="{% static 'plugins/mapbox-gl-js/v2.6.1/mapbox-gl.js' %}"></script>
+    <script>
+    (function () {
+        var points = JSON.parse(document.getElementById("cc-points").textContent);
+        var center = JSON.parse(document.getElementById("cc-map-center").textContent);
+        var STATUS_COLORS = { draft: "#f59e0b", completed: "#3b82f6", submitted: "#24c38b" };
+        mapboxgl.accessToken = "{{ mapbox_token }}";
+        var map = new mapboxgl.Map({
+            container: "cc-map",
+            style: "mapbox://styles/mapbox/streets-v11",
+            center: [parseFloat(center.lng) || 1.17, parseFloat(center.lat) || 8.62],
+            zoom: parseFloat(center.zoom) || 6
+        });
+        map.addControl(new mapboxgl.NavigationControl(), "top-right");
+        map.addControl(new mapboxgl.FullscreenControl(), "top-right");
+
+        function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+        function geojson(fieldPath) {
+            return {
+                type: "FeatureCollection",
+                features: points.filter(function (p) { return !fieldPath || p.field_path === fieldPath; }).map(function (p) {
+                    return { type: "Feature", geometry: { type: "Point", coordinates: [p.lng, p.lat] }, properties: p };
+                })
+            };
+        }
+        function fit(data) {
+            if (!data.features.length) return;
+            var b = new mapboxgl.LngLatBounds();
+            data.features.forEach(function (f) { b.extend(f.geometry.coordinates); });
+            map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 0 });
+        }
+
+        map.on("load", function () {
+            var data = geojson("");
+            map.addSource("records", { type: "geojson", data: data, cluster: true, clusterRadius: 40, clusterMaxZoom: 13 });
+            map.addLayer({ id: "clusters", type: "circle", source: "records", filter: ["has", "point_count"],
+                paint: { "circle-color": "#24c38b", "circle-opacity": .8, "circle-radius": ["step", ["get", "point_count"], 16, 10, 22, 50, 28] } });
+            map.addLayer({ id: "cluster-count", type: "symbol", source: "records", filter: ["has", "point_count"],
+                layout: { "text-field": "{point_count_abbreviated}", "text-size": 12 }, paint: { "text-color": "#fff" } });
+            map.addLayer({ id: "points", type: "circle", source: "records", filter: ["!", ["has", "point_count"]],
+                paint: {
+                    "circle-radius": 7, "circle-stroke-width": 2, "circle-stroke-color": "#fff",
+                    "circle-color": ["match", ["get", "status"], "draft", STATUS_COLORS.draft, "completed", STATUS_COLORS.completed, STATUS_COLORS.submitted]
+                } });
+            fit(data);
+
+            map.on("click", "clusters", function (e) {
+                var f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
+                map.getSource("records").getClusterExpansionZoom(f.properties.cluster_id, function (err, zoom) {
+                    if (!err) map.easeTo({ center: f.geometry.coordinates, zoom: zoom });
+                });
+            });
+            map.on("click", "points", function (e) {
+                var p = e.features[0].properties;
+                new mapboxgl.Popup().setLngLat(e.features[0].geometry.coordinates).setHTML(
+                    '<div style="max-width:240px"><b>' + esc(p.title) + "</b><br><small>" + esc(p.field) + "<br>" +
+                    esc(p.author) + " · " + esc(p.date) + (p.accuracy && p.accuracy !== "null" ? "<br>± " + Math.round(p.accuracy) + " m" : "") +
+                    '</small><br><a href="' + esc(p.url) + '">{% translate "Open the record" %}</a></div>'
+                ).addTo(map);
+            });
+            ["clusters", "points"].forEach(function (layer) {
+                map.on("mouseenter", layer, function () { map.getCanvas().style.cursor = "pointer"; });
+                map.on("mouseleave", layer, function () { map.getCanvas().style.cursor = ""; });
+            });
+
+            $("#cc-geo-field").on("change", function () {
+                var d = geojson(this.value);
+                map.getSource("records").setData(d);
+                document.getElementById("cc-point-count").textContent = d.features.length;
+                fit(d);
+            });
+        });
+    })();
+    </script>
+    {% endif %}
+{% endblock javascript %}

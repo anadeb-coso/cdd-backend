@@ -1,0 +1,249 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" class="cc-fill-card mb-3">
+            {% csrf_token %}
+            {% if not rights.edit_form %}
+                <div class="alert alert-light border small"><i class="fas fa-eye mr-1"></i>{% translate "Read only: you do not have the right to modify this form." %}</div>
+            {% endif %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="form-group">
+                <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+                {{ form.title }}
+                {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+                {{ form.description }}
+            </div>
+
+            <h6 class="cc-section-title mt-4">{% translate "Access" %}</h6>
+            <div class="form-group">
+                <label>{{ form.access_scope.label }}</label>
+                {% for radio in form.access_scope %}
+                    <div class="custom-control custom-radio">
+                        {{ radio.tag }}
+                        <label class="custom-control-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+            <div id="cc-restricted" class="pl-3 border-left" style="border-color:#d7f2e6 !important;">
+                <div class="form-group">
+                    <label for="{{ form.allowed_groups.id_for_label }}">{{ form.allowed_groups.label }}</label>
+                    {{ form.allowed_groups }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.allowed_users.id_for_label }}">{{ form.allowed_users.label }}</label>
+                    {{ form.allowed_users }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.allowed_facilitators.id_for_label }}">{{ form.allowed_facilitators.label }}</label>
+                    {{ form.allowed_facilitators }}
+                </div>
+            </div>
+
+            <h6 class="cc-section-title mt-4">{% translate "Records per person" %}</h6>
+            <div class="form-group">
+                <div class="custom-control custom-switch">
+                    {{ form.single_submission }}
+                    <label class="custom-control-label" for="{{ form.single_submission.id_for_label }}">{{ form.single_submission.label }}</label>
+                </div>
+                <small class="form-text text-muted">{{ form.single_submission.help_text }}</small>
+            </div>
+
+            <h6 class="cc-section-title mt-4">{% translate "Closing" %}</h6>
+            <div class="form-group">
+                <label for="{{ form.close_message.id_for_label }}">{{ form.close_message.label }}</label>
+                {{ form.close_message }}
+                <small class="form-text text-muted">{{ form.close_message.help_text }}</small>
+            </div>
+            {% if rights.edit_form %}
+                <button class="btn btn-primary rounded-xl"><i class="fa fa-save mr-1"></i> {% translate "Save" %}</button>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="cc-fill-card mb-3">
+            <h6 class="font-weight-bold">{% translate "Status of the collection" %}</h6>
+            <p class="mb-2">{% include "coso_collect/_form_status.html" with status=collect_form.status %}</p>
+            <ul class="small text-muted pl-3">
+                <li>{% translate "Draft: invisible to users, freely editable." %}</li>
+                <li>{% translate "Open: users load the form and send their records (online or later, offline on mobile)." %}</li>
+                <li>{% translate "Closed: no more data can be sent; waiting users receive the closing message." %}</li>
+            </ul>
+            {# Une action = un formulaire avec un champ caché (cf. _admin_header.html : disableOnSubmit.js). #}
+            <div class="d-flex flex-wrap" style="gap:.4rem;">
+                {% if collect_form.status == 'draft' %}
+                    {% if rights.publish %}
+                    <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}">
+                        {% csrf_token %}<input type="hidden" name="action" value="publish">
+                        <button class="btn btn-success btn-sm"><i class="fas fa-rocket mr-1"></i>{% translate "Publish" %}</button>
+                    </form>
+                    {% endif %}
+                {% elif collect_form.status == 'published' %}
+                    {% if rights.close %}
+                    <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}">
+                        {% csrf_token %}<input type="hidden" name="action" value="close">
+                        <button class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('{% translate "Close this form? Users will no longer be able to send data." %}');"><i class="fas fa-lock mr-1"></i>{% translate "Close the form" %}</button>
+                    </form>
+                    {% endif %}
+                    {% if rights.publish and not submissions_count %}
+                        <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}">
+                            {% csrf_token %}<input type="hidden" name="action" value="unpublish">
+                            <button class="btn btn-outline-secondary btn-sm">{% translate "Back to draft" %}</button>
+                        </form>
+                    {% endif %}
+                {% elif rights.reopen_form %}
+                    <form method="post" action="{% url 'dashboard:coso_collect:status' collect_form.pk %}">
+                        {% csrf_token %}<input type="hidden" name="action" value="reopen">
+                        <button class="btn btn-outline-success btn-sm"><i class="fas fa-lock-open mr-1"></i>{% translate "Reopen the collection" %}</button>
+                    </form>
+                {% endif %}
+            </div>
+            <hr>
+            <div class="small text-muted">
+                {% translate "Created" %} : {{ collect_form.created_at|date:"d/m/Y H:i" }}{% if collect_form.created_by %} — {{ collect_form.created_by.get_full_name|default:collect_form.created_by.username }}{% endif %}<br>
+                {% if collect_form.published_at %}{% translate "Published" %} : {{ collect_form.published_at|date:"d/m/Y H:i" }}<br>{% endif %}
+                {% if collect_form.closed_at %}{% translate "Closed" %} : {{ collect_form.closed_at|date:"d/m/Y H:i" }}{% endif %}
+            </div>
+        </div>
+
+        {% if not rights.manage_admins %}
+        <div class="cc-fill-card mb-3">
+            <h6 class="font-weight-bold"><i class="fas fa-user-shield mr-1"></i>{% translate "My rights on this form" %}</h6>
+            {% if my_rights %}
+                <ul class="small pl-3 mb-0 cc-my-rights">{% for label in my_rights %}<li>{{ label }}</li>{% endfor %}</ul>
+            {% else %}
+                <p class="small text-muted mb-0">{% translate "No right granted yet: ask the creator of the form." %}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if rights.delete_form %}
+        <div class="cc-fill-card mb-3 border-danger">
+            <h6 class="font-weight-bold text-danger">{% translate "Delete the form" %}</h6>
+            <p class="small text-muted">{% translate "Deletes the form, all its records and their files. This cannot be undone." %}</p>
+            <form method="post" action="{% url 'dashboard:coso_collect:delete' collect_form.pk %}">
+                {% csrf_token %}
+                <input type="text" name="confirm_title" class="form-control form-control-sm mb-2" placeholder="{% translate 'Type the title of the form to confirm' %}" autocomplete="off">
+                <button class="btn btn-danger btn-sm"><i class="fas fa-trash mr-1"></i>{% translate "Delete permanently" %}</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if rights.manage_admins %}
+<div class="cc-fill-card mb-3" id="cc-admins">
+    <h6 class="cc-section-title mt-0"><i class="fas fa-user-shield mr-1"></i>{% translate "Administrators and their rights" %}</h6>
+    <p class="small text-muted mb-3">
+        {% translate "The creator of the form and the superusers have every right; they alone manage this list. Each administrator only has the rights ticked below. Exporting, reopening, modifying or deleting records also gives the reading of the data." %}
+    </p>
+
+    {% if admin_rows %}
+    <form method="post" action="{% url 'dashboard:coso_collect:admins' collect_form.pk %}" id="cc-rights-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="rights">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover cc-table cc-rights mb-2">
+                <thead class="thead-light">
+                    <tr>
+                        <th>{% translate "Administrator" %}</th>
+                        {% for code, label in right_choices %}<th class="cc-right-col">{{ label }}</th>{% endfor %}
+                        <th class="text-right"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in admin_rows %}
+                    <tr data-admin="{{ row.user_id }}">
+                        <td class="cc-admin-name">
+                            <input type="hidden" name="admins" value="{{ row.user_id }}">
+                            {{ row.user.get_full_name|default:row.user.username }}
+                            <div class="small text-muted font-weight-normal">{{ row.user.username }}{% if not row.user.is_active %} · {% translate "inactive account" %}{% endif %}</div>
+                            <a href="#" class="small cc-all" data-on="1">{% translate "all" %}</a> ·
+                            <a href="#" class="small cc-all" data-on="0">{% translate "none" %}</a>
+                        </td>
+                        {% for cell in row.cells %}
+                            <td class="cc-right-cell">
+                                <input type="checkbox" name="rights_{{ row.user_id }}" value="{{ cell.code }}" data-code="{{ cell.code }}"
+                                       title="{{ cell.label }}" {% if cell.on %}checked{% endif %}>
+                            </td>
+                        {% endfor %}
+                        <td class="text-right">
+                            <button type="submit" form="cc-remove-{{ row.user_id }}" class="btn btn-xs btn-outline-danger" title="{% translate 'Remove this administrator' %}"><i class="fas fa-user-minus"></i></button>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-primary btn-sm rounded-xl"><i class="fa fa-save mr-1"></i>{% translate "Save the rights" %}</button>
+    </form>
+    {% for row in admin_rows %}
+        <form method="post" action="{% url 'dashboard:coso_collect:admins' collect_form.pk %}" id="cc-remove-{{ row.user_id }}" class="d-none"
+              onsubmit="return confirm('{% translate "Remove this administrator? They will lose all their rights on this form." %}');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="remove">
+            <input type="hidden" name="user" value="{{ row.user_id }}">
+        </form>
+    {% endfor %}
+    {% else %}
+        <p class="text-muted small">{% translate "No administrator yet: only you (and the superusers) manage this form." %}</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'dashboard:coso_collect:admins' collect_form.pk %}" class="form-inline mt-3" style="gap:.5rem;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <label for="{{ add_admin_form.user.id_for_label }}" class="small text-muted">{{ add_admin_form.user.label }}</label>
+        <div style="min-width:280px;">{{ add_admin_form.user }}</div>
+        <button class="btn btn-outline-primary btn-sm rounded-xl"><i class="fas fa-user-plus mr-1"></i>{% translate "Add" %}</button>
+        <small class="text-muted w-100">{% translate "The new administrator first receives the reading of the data only." %}</small>
+    </form>
+</div>
+{{ right_requires|json_script:"cc-right-requires" }}
+{% endif %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        $(function () {
+            function toggle() {
+                $("#cc-restricted").toggle($("input[name='access_scope']:checked").val() === "restricted");
+            }
+            $("input[name='access_scope']").on("change", toggle);
+            toggle();
+
+            // Droits : un droit sur les saisies entraîne la lecture des données (même règle côté serveur).
+            var requiresEl = document.getElementById("cc-right-requires");
+            if (!requiresEl) return;
+            var requires = JSON.parse(requiresEl.textContent);
+            $(".cc-rights").on("change", "input[type=checkbox]", function () {
+                var $row = $(this).closest("tr"), code = $(this).data("code");
+                if (this.checked && requires[code]) {
+                    $row.find("input[data-code='" + requires[code] + "']").prop("checked", true);
+                }
+                if (!this.checked) {
+                    Object.keys(requires).forEach(function (dep) {
+                        if (requires[dep] === code) $row.find("input[data-code='" + dep + "']").prop("checked", false);
+                    });
+                }
+            });
+            $(".cc-rights").on("click", ".cc-all", function (e) {
+                e.preventDefault();
+                $(this).closest("tr").find("input[type=checkbox]").prop("checked", $(this).data("on") === 1);
+            });
+        });
+    </script>
+{% endblock javascript %}

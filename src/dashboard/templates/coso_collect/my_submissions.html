@@ -1,0 +1,80 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="cc-head">
+    <div>
+        <h4>{{ collect_form.title }}</h4>
+        {% if collect_form.description %}<p class="text-muted mb-0">{{ collect_form.description }}</p>{% endif %}
+    </div>
+    <div class="cc-head-actions">
+        {% if admin_url %}
+            <a class="btn btn-sm btn-outline-secondary rounded-xl" href="{{ admin_url }}"><i class="fas fa-chart-bar mr-1"></i>{% translate "Administration" %}</a>
+        {% endif %}
+        {% if collect_form.status == 'published' %}
+            {% if has_own_record %}
+                <a class="btn btn-sm btn-primary rounded-xl" href="{% url 'dashboard:coso_collect:fill' collect_form.pk %}"><i class="fas fa-folder-open mr-1"></i>{% translate "Open my record" %}</a>
+            {% else %}
+                <a class="btn btn-sm btn-primary rounded-xl" href="{% url 'dashboard:coso_collect:fill' collect_form.pk %}"><i class="fas fa-plus mr-1"></i>{% translate "Start a record" %}</a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% if collect_form.single_submission %}
+    <div class="cc-banner alert-light border"><i class="fas fa-user-check mr-1"></i>{% translate "This form accepts only one record per person." %}</div>
+{% endif %}
+
+{% if collect_form.status == 'closed' %}
+    <div class="cc-banner alert-danger"><i class="fas fa-lock mr-1"></i>{{ collect_form.close_message|default:_("This form is closed: no more data can be sent.") }}</div>
+{% endif %}
+
+<form method="get" class="cc-toolbar">
+    <input type="search" name="q" value="{{ q }}" class="form-control cc-search" placeholder="{% translate 'Search by combined title…' %}">
+    <select name="status" class="form-control" style="max-width:220px;" onchange="this.form.submit()">
+        <option value="">{% translate "All statuses" %}</option>
+        {% for key, label in statuses %}<option value="{{ key }}" {% if status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-outline-secondary"><i class="fas fa-search"></i></button>
+</form>
+
+<div class="card cc-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 cc-table">
+            <thead>
+                <tr>
+                    <th>{% translate "Combined title" %}</th>
+                    <th>{% translate "Status" %}</th>
+                    <th>{% translate "Recorded on" %}</th>
+                    <th>{% translate "Sent on" %}</th>
+                    <th>{% translate "Source" %}</th>
+                    <th class="text-right">{% translate "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in page_obj %}
+                <tr>
+                    <td class="cc-title-cell"><a href="{% url 'dashboard:coso_collect:submission' s.uuid %}">{{ s.title|default:s.uuid }}</a></td>
+                    <td>{% include "coso_collect/_submission_status.html" with submission=s %}</td>
+                    <td>{{ s.started_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                    <td>{{ s.submitted_at|date:"d/m/Y H:i"|default:"—" }}</td>
+                    <td>{{ s.get_source_display }}</td>
+                    <td class="text-right text-nowrap">
+                        <a class="btn btn-xs btn-outline-secondary" href="{% url 'dashboard:coso_collect:submission' s.uuid %}" title="{% translate 'View' %}"><i class="fas fa-eye"></i></a>
+                        {% if collect_form.status == 'published' and not s.is_locked %}
+                            <a class="btn btn-xs btn-outline-primary" href="{% url 'dashboard:coso_collect:edit' s.uuid %}" title="{% translate 'Edit' %}"><i class="fas fa-pen"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6" class="text-muted">{% translate "No record yet." %}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% include "coso_collect/_pagination.html" %}
+{% endblock content %}

@@ -1,0 +1,48 @@
+{% load i18n %}{% for n in nodes %}
+    {% if n.type == 'note' %}
+        <div class="cc-field"><div class="cc-field-label" style="grid-column:1/-1;"><i class="fas fa-info-circle mr-1"></i>{{ n.label }}</div></div>
+    {% elif n.type == 'group' %}
+        <div class="cc-group">
+            <div class="cc-group-title">{{ n.label }}</div>
+            {% include "coso_collect/_tree_nodes.html" with nodes=n.children %}
+        </div>
+    {% elif n.type == 'repeat' %}
+        <div class="cc-group">
+            <div class="cc-group-title">{{ n.label }} <span class="cc-pill">{{ n.rows|length }}</span></div>
+            {% for row in n.rows %}
+                <div class="cc-repeat-row">
+                    <div class="small font-weight-bold text-muted mb-1">#{{ forloop.counter }}</div>
+                    {% include "coso_collect/_tree_nodes.html" with nodes=row %}
+                </div>
+            {% empty %}
+                <div class="cc-empty">{% translate "No row" %}</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="cc-field">
+            <div class="cc-field-label">{{ n.label }}</div>
+            <div class="cc-field-value">
+                {% if n.media %}
+                    {% if n.media.is_image and n.media.url %}
+                        <a href="{{ n.media.url }}" target="_blank" rel="noopener"><img src="{{ n.media.url }}" alt="{{ n.media.name }}" class="img-thumbnail" style="max-height:220px;"></a>
+                        <div class="small"><a href="{{ n.media.url }}?download=1">{{ n.media.name }}</a></div>
+                    {% elif n.media.url %}
+                        <a href="{{ n.media.url }}" target="_blank" rel="noopener"><i class="fas fa-paperclip mr-1"></i>{{ n.media.name }}</a>
+                    {% else %}
+                        <span class="cc-empty">{{ n.media.name }} ({% translate "not yet received" %})</span>
+                    {% endif %}
+                {% elif n.geo %}
+                    <a href="https://www.openstreetmap.org/?mlat={{ n.geo.lat }}&mlon={{ n.geo.lng }}#map=17/{{ n.geo.lat }}/{{ n.geo.lng }}" target="_blank" rel="noopener">
+                        <i class="fas fa-map-marker-alt mr-1"></i>{{ n.geo.lat|floatformat:6 }}, {{ n.geo.lng|floatformat:6 }}</a>
+                    {% if n.geo.accuracy %}<span class="small text-muted">(± {{ n.geo.accuracy|floatformat:0 }} m)</span>{% endif %}
+                {% elif n.is_list %}
+                    {% if n.value %}<ul class="mb-0 pl-3">{% for v in n.value %}<li>{{ v }}</li>{% endfor %}</ul>{% else %}<span class="cc-empty">—</span>{% endif %}
+                {% elif n.value == '' or n.value is None %}
+                    <span class="cc-empty">—</span>
+                {% else %}
+                    {{ n.value|linebreaksbr }}
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% endfor %}

@@ -27,6 +27,7 @@ ALLOWED_NAMESPACE_PREFIXES = [
     ("dashboard", "news"),
     ("dashboard", "statistics"),
     ("dashboard", "task_cycle"),  # menu "Tâches (cycle DCC)", gated par groups_collectors
+    ("dashboard", "coso_collect"),  # menu "COSOCollect" : saisie ; l'administration est vérifiée par formulaire
 ]
 
 # Vues PRÉCISES autorisées dans des namespaces par ailleurs bloqués (dépendances cross-namespace

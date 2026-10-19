@@ -15,4 +15,5 @@ urlpatterns = [
     path('planning/', include('dashboard.planning.urls')),
     path('news/', include('dashboard.news.urls')),
     path('task-cycle/', include('dashboard.task_cycle.urls')),
+    path('coso-collect/', include('dashboard.coso_collect.urls')),
 ]

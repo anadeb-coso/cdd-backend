@@ -1,0 +1,64 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+<form method="get" class="cc-filters">
+    <div class="form-row align-items-end">
+        <div class="col-md-4 mb-2">
+            <label class="small text-muted mb-1">{% translate "Search" %}</label>
+            <input type="search" name="q" value="{{ filters.q }}" class="form-control form-control-sm" placeholder="{% translate 'Combined title or file name…' %}">
+        </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Question" %}</label>
+            <select name="field" class="form-control form-control-sm">
+                <option value="">{% translate "All" %}</option>
+                {% for f in media_fields %}<option value="{{ f.path }}" {% if filters.field == f.path %}selected{% endif %}>{{ f.label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 mb-2">
+            <label class="small text-muted mb-1">{% translate "Type" %}</label>
+            <select name="kind" class="form-control form-control-sm">
+                <option value="">{% translate "All" %}</option>
+                <option value="images" {% if filters.kind == 'images' %}selected{% endif %}>{% translate "Photos" %}</option>
+                <option value="documents" {% if filters.kind == 'documents' %}selected{% endif %}>{% translate "Documents" %}</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2 d-flex flex-wrap" style="gap:.4rem;">
+            <button class="btn btn-sm btn-primary"><i class="fas fa-filter mr-1"></i>{% translate "Filter" %}</button>
+            {% if rights.export %}<a class="btn btn-sm btn-outline-success" href="?{{ query_string }}{% if query_string %}&amp;{% endif %}download=zip"><i class="fas fa-file-archive mr-1"></i>{% translate "Download all (ZIP)" %}</a>{% endif %}
+        </div>
+    </div>
+    <div class="small text-muted">{{ page_obj.paginator.count }} {% translate "file(s)" %}</div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="cc-gallery">
+    {% for a in page_obj %}
+        <div class="cc-gallery-item">
+            {% if a.is_image %}
+                <a href="{{ a.url }}" target="_blank" rel="noopener" class="cc-gallery-thumb" style="background-image:url('{{ a.url }}');" title="{{ a.name }}"></a>
+            {% else %}
+                <a href="{{ a.url }}" target="_blank" rel="noopener" class="cc-gallery-thumb" title="{{ a.name }}"><i class="far fa-file-alt"></i></a>
+            {% endif %}
+            <div class="cc-gallery-meta">
+                <div class="cc-gallery-title"><a href="{% url 'dashboard:coso_collect:submission' a.submission.uuid %}">{{ a.submission.title|truncatechars:60 }}</a></div>
+                <div>{{ a.field_label }}</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>{{ a.created_at|date:"d/m/Y H:i" }} · {{ a.size|filesizeformat }}</span>
+                    <a href="{{ a.url }}?download=1" title="{% translate 'Download' %}"><i class="fas fa-download"></i></a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% include "coso_collect/_pagination.html" %}
+{% else %}
+    <p class="text-muted">{% translate "No photo or document has been received for this form." %}</p>
+{% endif %}
+{% endblock content %}

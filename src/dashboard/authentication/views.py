@@ -9,8 +9,7 @@ from dashboard.mixins import PageMixin
 from authentication.permissions import AdminPermissionRequiredMixin
 from authentication.middleware import FACILITATOR_GROUP_NAMES
 from dashboard.authentication.forms import CreateUserForm, UpdateUserForm
-from django.contrib.auth.models import User, Group, Permission
-from django.forms.models import model_to_dict
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import Http404
 
@@ -323,68 +322,33 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             
             groups = form.cleaned_data['groups']
             user_permissions = form.cleaned_data['user_permissions']
-            try:
-                for g in groups:
-                    Group.objects.using('mis').get(name=g.name)
-                for u_p in user_permissions:
-                    Permission.objects.using('mis').get(name=u_p.name)
-            except Exception as exc:
-                messages.info(request, gettext_lazy(exc.__str__()))
-                return super(CreateUpdateUserFormView, self).get(request, *args, **kwargs)
 
+            # Un seul enregistrement : depuis la fusion cdd + cosomis, l'alias `mis` est la MÊME
+            # base que `default` (cdd/settings.py). L'ancienne copie « Save on MIS DB »
+            # (`User.objects.using('mis').create(...)`) recréait le compte qui venait d'être
+            # enregistré : IntegrityError (identifiant en double), page d'erreur, et compte laissé
+            # sans groupes ni projets.
             instance = form.save()
+            instance.groups.set(groups)
+            instance.user_permissions.set(user_permissions)
 
-            # Save on MIS DB
-            a_dict = model_to_dict(instance)
-            
-            del a_dict['id']
-            del a_dict['groups']
-            del a_dict['user_permissions']
-            user = None
-            if self.id:
-                try:
-                    _user = User.objects.get(id=self.id)
-                    # user_id = User.objects.using('mis').get(username=_user.username).id
-                    # a_dict['id'] = user_id
-                    # User.objects.using('mis').update(**a_dict)
-                    user = User.objects.using('mis').get(username=_user.username)
-                    for k, v in a_dict.items():
-                        setattr(user, k, v)
-                except Exception as exc:
-                    messages.info(request, gettext_lazy(exc.__str__()))
-                    return redirect('dashboard:authentication:users')
-            else:
-                User.objects.using('mis').create(**a_dict)
-                user = User.objects.using('mis').get(username=instance.username)
-            # print(groups, user_permissions)
-            instance.groups.set([])
-            user.groups.set([])
-            instance.user_permissions.set([])
-            user.user_permissions.set([])
-            for g in groups:
-                instance.groups.add(g)
-                user.groups.add(Group.objects.using('mis').get(name=g.name))
-            for u_p in user_permissions:
-                instance.user_permissions.add(u_p)
-                user.user_permissions.add(Permission.objects.using('mis').get(name=u_p.name))
-            
-            if not self.id and hasattr(user, 'projects'):
-                instance.projects.add(*(Project.objects.get(id=self.request.session.get('project_id')).build_the_tree_structure()))
+            project_id = self.request.session.get('project_id')
+            if not self.id and project_id:
+                instance.projects.add(*(Project.objects.get(id=project_id).build_the_tree_structure()))
 
             instance.save()
-            user.save(using='mis')
-            #End
 
-    
-            try:
-                facilitator = Facilitator.objects.get(email=(facilitator_email if facilitator_email else _user.email))
-                facilitator.password = _user.password
-                facilitator.username = _user.username
-                facilitator.name = f"{_user.last_name} {_user.first_name}"
-                facilitator.active = _user.is_active
-                facilitator.save()
-            except:
-                pass
+            # Modification : le facilitateur de même e-mail (ancienne adresse) suit le compte.
+            if self.id:
+                try:
+                    facilitator = Facilitator.objects.get(email=facilitator_email)
+                    facilitator.password = instance.password
+                    facilitator.username = instance.username
+                    facilitator.name = f"{instance.last_name} {instance.first_name}"
+                    facilitator.active = instance.is_active
+                    facilitator.save()
+                except:
+                    pass
 
             return redirect('dashboard:authentication:users')
         return super(CreateUpdateUserFormView, self).get(request, *args, **kwargs)

@@ -62,6 +62,9 @@
     } else if (prop.type === 'geopoint' || opts.mode === 'geopoint') {
       f.type = 'geopoint';
       f.accuracyThreshold = (opts.accuracyThreshold != null && opts.accuracyThreshold !== '') ? opts.accuracyThreshold : 20;
+    } else if (prop.type === 'photo' || opts.mode === 'photo' || prop.type === 'file' || opts.mode === 'file') {
+      // Photo / document joint (formulaires COSOCollect) : valeur {attachment_id, name, mime, size}.
+      f.type = (prop.type === 'photo' || opts.mode === 'photo') ? 'photo' : 'file';
     } else if (prop.type === 'integer') {
       f.type = 'integer'; f.min = prop.minimum != null ? prop.minimum : null; f.max = prop.maximum != null ? prop.maximum : null;
     } else if (prop.type === 'number') {
@@ -260,7 +263,8 @@
       // l'intérieur d'un répétable (le niveau page reste couvert par
       // `validateSchemaRequired`, pas dupliqué ici).
       if (insideRepeat && f.required && (f.type === 'text' || f.type === 'integer' || f.type === 'decimal' ||
-          f.type === 'select_one' || f.type === 'date' || f.type === 'datetime' || f.type === 'time' || f.type === 'geopoint') &&
+          f.type === 'select_one' || f.type === 'date' || f.type === 'datetime' || f.type === 'time' || f.type === 'geopoint' ||
+          f.type === 'photo' || f.type === 'file') &&
           L.isEmpty(val)) {
         out.push({ path: path, message: messageFor(page, f.key, 'required') || 'Ce champ est obligatoire.' });
       }
@@ -352,9 +356,11 @@
     if (field.help) $wrap.append('<small class="form-text text-muted mb-1">' + esc(field.help) + '</small>');
 
     var $input;
+    var $checklistTools = null;
     switch (field.type) {
       case 'select_one': {
         $input = $('<select class="form-control"></select>');
+        if (!searchDisabled(field)) $input.addClass('tcf-searchable').attr('data-search-placeholder', ctx.i18n.search);
         $input.append('<option value="">—</option>');
         choiceOptions(dyn, field.choices).forEach(function (o) {
           var $o = $('<option></option>').attr('value', o.value).text(o.text);
@@ -373,7 +379,8 @@
       case 'select_multiple_check': {
         $input = $('<div class="tcf-checklist"></div>');
         var checkedVals = Array.isArray(value) ? value.map(String) : [];
-        choiceOptions(dyn, field.choices).forEach(function (o, i) {
+        var checkOpts = choiceOptions(dyn, field.choices);
+        checkOpts.forEach(function (o, i) {
           var cid = domId(path) + '_' + i;
           var $c = $(
             '<div class="form-check">' +
@@ -381,9 +388,15 @@
               '<label class="form-check-label" for="' + cid + '">' + esc(o.text) + '</label>' +
             '</div>'
           );
+          $c.attr('data-search', normText(o.text));
           if (checkedVals.indexOf(String(o.value)) !== -1) $c.find('input').prop('checked', true);
           $input.append($c);
         });
+        // Longue liste : hauteur bornée + défilement (seuil du générateur, défaut 25 — parité mobile).
+        if (checkOpts.length > checklistInlineMax(field)) $input.addClass('tcf-checklist-scroll');
+        if (checkOpts.length > 1) {
+          $checklistTools = renderChecklistTools(path, checkOpts.length, checkedVals.length, $input, ctx, disabled);
+        }
         break;
       }
       case 'integer':
@@ -415,6 +428,9 @@
         break;
       case 'geopoint':
         return renderGeopoint(field, path, value, dyn, ctx, $wrap);
+      case 'photo':
+      case 'file':
+        return renderMedia(field, path, value, dyn, ctx, $wrap);
       default: {
         $input = (field.maxLength && field.maxLength > 160)
           ? $('<textarea class="form-control" rows="3"></textarea>')
@@ -426,11 +442,183 @@
     }
     $input.attr('id', domId(path)).attr('name', path).attr('data-field-path', path);
     if (disabled) $input.prop('disabled', true);
-    $wrap.append($input);
-    $input.on('change input', function () {
-      ctx.onFieldChange(path, readInputValue(field, $input));
-    });
+    if ($checklistTools) {
+      // Filtre HORS du conteneur des cases : sa saisie ne doit pas remonter jusqu'au gestionnaire
+      // 'input' ci-dessous (qui re-rend la page).
+      $wrap.append($checklistTools.$tools).append($input).append($checklistTools.$empty);
+      if (disabled) $checklistTools.$tools.find('button').prop('disabled', true);
+    } else {
+      $wrap.append($input);
+    }
+    if (field.type === 'select_one') {
+      // 'change' seul (un <select> émet aussi 'input' : double rendu évité) ; différé pour laisser
+      // select2 terminer sa sélection (fermeture de la liste) avant que la page ne soit re-rendue.
+      $input.on('change', function () {
+        var v = readInputValue(field, $input);
+        setTimeout(function () { ctx.onFieldChange(path, v); }, 0);
+      });
+    } else {
+      $input.on('change input', function () {
+        ctx.onFieldChange(path, readInputValue(field, $input));
+      });
+    }
     return $wrap;
+  }
+
+  /* ------------------------------------------------- Recherche dans les listes -
+     Parité mobile (fork tcomb-form-native : `CustomPickerModal` pour les listes
+     déroulantes ; `CheckListInput` pour les cases à cocher) : une barre de
+     recherche sur chaque liste de choix, insensible à la casse et aux accents.
+     Le générateur règle `listThreshold` par champ : 0 désactive la recherche des
+     listes déroulantes ; pour les cases à cocher, c'est le nombre de choix
+     au-delà duquel la liste devient défilante (défaut 25).
+     Web : select2 (déjà chargé sur tout le dashboard, layouts/foot.html) sur les
+     <select> — appliqué APRÈS insertion dans la page (cf. `_renderNow`), car le
+     contrôleur re-rend toute la page à chaque changement de valeur. */
+  var CHECKLIST_INLINE_MAX = 25;
+
+  function normText(s) {
+    return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  }
+
+  function searchDisabled(field) {
+    var t = field.listThreshold;
+    return t !== null && t !== undefined && t !== '' && Number(t) === 0;
+  }
+
+  function checklistInlineMax(field) {
+    var t = Number(field.listThreshold);
+    return t > 0 ? t : CHECKLIST_INLINE_MAX;
+  }
+
+  /** Filtre texte + compteur « n sélectionné(s) » / « Tout décocher » au-dessus des
+   * cases à cocher. Le texte du filtre est conservé dans `ctx.filters` : cocher une
+   * case re-rend la page, le filtre doit survivre. */
+  function renderChecklistTools(path, count, selectedCount, $list, ctx, disabled) {
+    ctx.filters = ctx.filters || {};
+    var $tools = $('<div class="tcf-checklist-tools"></div>');
+    var $filter = $('<input type="search" class="form-control form-control-sm tcf-checklist-filter" autocomplete="off">')
+      .attr('id', domId(path) + '__filter')
+      .attr('placeholder', ctx.i18n.search + ' (' + count + ')')
+      .val(ctx.filters[path] || '');
+    var $empty = $('<div class="small text-muted tcf-checklist-empty"></div>').text(ctx.i18n.noResults).hide();
+    $tools.append($filter);
+    if (selectedCount > 0) {
+      var $clear = $('<button type="button" class="btn btn-link btn-sm text-danger p-0"></button>').text(ctx.i18n.clearAll);
+      $clear.on('click', function () { ctx.onFieldChange(path, []); });
+      $tools.append($('<span class="small text-muted"></span>').text(selectedCount + ' ' + ctx.i18n.selectedCount))
+        .append($clear);
+    }
+    function apply() {
+      var q = normText($.trim($filter.val()));
+      ctx.filters[path] = $filter.val();
+      var shown = 0;
+      $list.children('.form-check').each(function () {
+        var match = !q || (this.getAttribute('data-search') || '').indexOf(q) !== -1;
+        this.style.display = match ? '' : 'none';
+        if (match) shown += 1;
+      });
+      $empty.toggle(shown === 0);
+      $list.toggle(shown > 0); // pas de cadre vide (liste défilante) quand rien ne correspond
+    }
+    $filter.on('input', apply);
+    apply();
+    return { $tools: $tools, $empty: $empty };
+  }
+
+  /** select2 sur les listes de la page qui viennent d'être insérées (`$area` DOIT être
+   * dans le document : select2 y mesure la largeur et y rattache sa liste). Dans un
+   * modal Bootstrap, la liste est rattachée au modal (sinon le piège à focus du modal
+   * empêche de taper dans le champ de recherche). */
+  function enhanceSelects($area, i18n, retried) {
+    if (!$.fn.select2) return; // repli silencieux : <select> natif
+    if (!$area[0] || !document.body.contains($area[0])) {
+      // Contrôleur rendu avant d'être inséré dans la page (aperçu du générateur) : une fois
+      // l'appelant ayant inséré le conteneur.
+      if (!retried) setTimeout(function () { enhanceSelects($area, i18n, true); }, 0);
+      return;
+    }
+    $area.find('select.tcf-searchable').each(function () {
+      var $s = $(this);
+      if ($s.data('select2')) return;
+      var $modal = $s.closest('.modal');
+      $s.select2({
+        width: '100%',
+        placeholder: '—',
+        allowClear: !$s.prop('disabled'),
+        dropdownParent: $modal.length ? $modal : $(document.body),
+        language: {
+          noResults: function () { return i18n.noResults; },
+          searching: function () { return i18n.search; }
+        }
+      });
+    });
+  }
+
+  function destroySelects($area) {
+    if (!$.fn.select2) return;
+    $area.find('select.tcf-searchable').each(function () {
+      if ($(this).data('select2')) $(this).select2('destroy');
+    });
+  }
+
+  // Champ de recherche de la liste ouverte : libellé et focus (select2 4.0.13 ne le
+  // focalise pas tout seul avec jQuery >= 3.6).
+  $(document).on('select2:open', 'select.tcf-searchable', function () {
+    var placeholder = this.getAttribute('data-search-placeholder') || '';
+    setTimeout(function () {
+      var input = document.querySelector('.select2-container--open .select2-search__field');
+      if (!input) return;
+      if (placeholder) input.setAttribute('placeholder', placeholder);
+      input.focus();
+    }, 0);
+  });
+
+  /** Le contrôleur re-rend toute la page à chaque changement de valeur (règles,
+   * calculs, cascades) : sans ceci, le champ texte en cours de saisie était remplacé
+   * après le PREMIER caractère tapé (focus perdu, la suite de la frappe partait
+   * dans le vide). On note l'élément actif (et la position du curseur) avant le
+   * rendu, et on le refocalise ensuite. */
+  function captureFocus($area) {
+    var el = document.activeElement;
+    if (!el || !$area[0].contains(el)) return null;
+    var container = $(el).closest('.select2-container');
+    if (container.length) {
+      var sel = container.prev('select');
+      return sel.length && sel[0].id ? { id: sel[0].id, select2: true } : null;
+    }
+    if (!el.id) return null;
+    var info = { id: el.id, start: null, end: null };
+    try { info.start = el.selectionStart; info.end = el.selectionEnd; } catch (e) { /* type sans curseur */ }
+    return info;
+  }
+
+  function restoreFocus($area, info) {
+    if (!info) return;
+    var el = document.getElementById(info.id);
+    if (!el || !$area[0].contains(el)) return;
+    if (info.select2) {
+      $(el).next('.select2-container').find('.select2-selection').trigger('focus');
+      return;
+    }
+    if (el.readOnly) return; // calendriers (daterangepicker) : les refocaliser les rouvrirait
+    try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+    if (info.start != null) {
+      try { el.setSelectionRange(info.start, info.end); } catch (e) { /* type sans curseur */ }
+    }
+  }
+
+  function ensureSearchStyles() {
+    if (document.getElementById('tcf-search-styles')) return;
+    $('<style id="tcf-search-styles"></style>').text([
+      'select.is-invalid + .select2-container .select2-selection { border-color: #dc3545 !important; }',
+      '.tcf-multi-rows .select2-container { flex: 1 1 auto; min-width: 0; }',
+      '.tcf-checklist-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .35rem; }',
+      '.tcf-checklist-tools .tcf-checklist-filter { max-width: 320px; }',
+      // padding gauche : la case Bootstrap (.form-check-input) est décalée à gauche de son libellé
+      // et serait rognée par le conteneur défilant.
+      '.tcf-checklist-scroll { max-height: 320px; overflow-y: auto; border: 1px solid #e3e7ea; border-radius: 6px; padding: .35rem .6rem .35rem 1.9rem; }'
+    ].join('\n')).appendTo(document.head);
   }
 
   /** select_multiple (sans mode "checklist") : liste ajout/suppression, une
@@ -450,20 +638,26 @@
       ctx.onFieldChange(path, vals);
     }
 
+    var rowCount = 0;
     function addRow(val) {
       var $row = $('<div class="d-flex align-items-center mb-1" style="gap:.4rem;"></div>');
-      var $sel = $('<select class="form-control"></select>');
+      var $sel = $('<select class="form-control"></select>').attr('id', domId(path) + '__' + (rowCount++));
+      if (!searchDisabled(field)) $sel.addClass('tcf-searchable').attr('data-search-placeholder', ctx.i18n.search);
       $sel.append('<option value="">—</option>');
       choiceOptions(dyn, field.choices).forEach(function (o) {
         var $o = $('<option></option>').attr('value', o.value).text(o.text);
         if (val != null && String(val) === String(o.value)) $o.attr('selected', 'selected');
         $sel.append($o);
       });
-      $sel.on('change', notify);
+      // Différé : cf. select_one dans renderField (select2 termine sa sélection d'abord).
+      $sel.on('change', function () { setTimeout(notify, 0); });
       var $rm = $('<button type="button" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button>');
       $rm.on('click', function () { $row.remove(); notify(); });
       $row.append($sel).append($rm);
       $rows.append($row);
+      // Ligne ajoutée par le bouton (page déjà affichée) : recherche appliquée tout de suite ;
+      // au premier rendu, c'est `_renderNow` qui s'en charge après insertion.
+      if (document.body.contains($rows[0])) enhanceSelects($row, ctx.i18n);
     }
 
     (Array.isArray(value) ? value : []).forEach(function (v) { addRow(v); });
@@ -632,6 +826,51 @@
     return $wrap;
   }
 
+  /** Photo / document joint : choix d'un fichier, envoi immédiat via `ctx.uploadMedia` (opts du
+   * contrôleur), valeur = référence renvoyée par le serveur ({attachment_id, name, mime, size}). */
+  function renderMedia(field, path, value, dyn, ctx, $wrap) {
+    $wrap.attr('data-field-path', path);
+    var $current = $('<div class="tcf-media-current mb-1"></div>');
+    var url = value && ctx.mediaUrl ? ctx.mediaUrl(value) : null;
+    if (value && (value.name || url)) {
+      if (field.type === 'photo' && url) {
+        $current.append($('<a target="_blank" rel="noopener"></a>').attr('href', url)
+          .append($('<img class="img-thumbnail" style="max-height:160px;">').attr('src', url).attr('alt', value.name || '')));
+      } else {
+        $current.append($('<a target="_blank" rel="noopener"></a>').attr('href', url || '#')
+          .html('<i class="fas fa-paperclip"></i> ' + esc(value.name || ctx.i18n.viewFile)));
+      }
+    } else {
+      $current.addClass('small text-muted').text(ctx.i18n.noFileYet);
+    }
+    $wrap.append($current);
+    if (dyn.disabled) return $wrap;
+
+    var $input = $('<input type="file" class="form-control-file">').attr('id', domId(path));
+    if (field.type === 'photo') $input.attr('accept', 'image/*').attr('capture', 'environment');
+    var $spin = $('<span class="ml-2 small" style="display:none;"><i class="fas fa-sync-alt fa-spin"></i> ' + esc(ctx.i18n.uploading) + '</span>');
+    $input.on('change', function () {
+      var file = this.files && this.files[0];
+      if (!file || !ctx.uploadMedia) return;
+      $spin.show();
+      $input.prop('disabled', true);
+      // Chemin complet "$<page>.<chemin>" (même convention que le mobile et la galerie admin).
+      ctx.uploadMedia(file, '$' + ctx.pageIndex + '.' + path, function (media) {
+        $spin.hide();
+        $input.prop('disabled', false);
+        if (!media) { alert(ctx.i18n.uploadError); return; }
+        ctx.onFieldChange(path, media);
+      });
+    });
+    $wrap.append($('<div class="d-flex align-items-center"></div>').append($input).append($spin));
+    if (value) {
+      var $clear = $('<button type="button" class="btn btn-sm btn-link text-danger px-0"></button>').text(ctx.i18n.removeFile);
+      $clear.on('click', function () { ctx.onFieldChange(path, undefined); });
+      $wrap.append($clear);
+    }
+    return $wrap;
+  }
+
   /* ---------------------------------------------------------- E6 : contrôleur */
 
   var DEFAULT_I18N = {
@@ -657,7 +896,14 @@
     viewFile: 'Voir le fichier',
     noFileYet: 'Aucun fichier',
     uploading: 'Envoi en cours…',
-    uploadError: "Échec de l'envoi du fichier."
+    uploadError: "Échec de l'envoi du fichier.",
+    removeFile: 'Retirer le fichier',
+    saveDraft: 'Enregistrer le brouillon',
+    // Recherche dans les listes (select2) et filtre des cases à cocher.
+    search: 'Rechercher…',
+    noResults: 'Aucun résultat',
+    selectedCount: 'sélectionné(s)',
+    clearAll: 'Tout décocher'
   };
 
   /**
@@ -685,6 +931,10 @@
     this.externalDocs = {}; // sourceTaskId -> {form, form_response} | null (cache, jamais re-fetché)
     this.attachmentSlots = opts.attachments || [];
     this.uploadFile = opts.uploadFile || null;
+    // COSOCollect : brouillon à tout moment (sans validation) et plusieurs actions finales
+    // ([{key, label, cls}] -> onSubmit(values, attachments, key)) ; photo/fichier par champ.
+    this.onSaveDraft = opts.onSaveDraft || null;
+    this.finalActions = opts.finalActions || null;
     this.state = {
       values: (opts.initialResponses || []).map(function (v) { return v || {}; }),
       attachments: (opts.existingAttachments || []).map(function (a) { return a || {}; })
@@ -698,8 +948,11 @@
       state: this.state,
       get pageIndex() { return self.pageIndex; },
       onFieldChange: function (path, val) { self.handleFieldChange(path, val); },
-      rerender: function () { self.render(); }
+      rerender: function () { self.render(); },
+      uploadMedia: opts.uploadMedia || null,
+      mediaUrl: opts.mediaUrl || null
     };
+    ensureSearchStyles();
     this.$pageArea = $('<div class="tcf-page-area"></div>');
     this.$attachmentsArea = $('<div class="tcf-attachments-area"></div>');
     this.$container.empty().append(this.$pageArea).append(this.$attachmentsArea);
@@ -796,7 +1049,11 @@
       $form.append($el);
     });
 
+    var focus = captureFocus(this.$pageArea);
+    destroySelects(this.$pageArea);
     this.$pageArea.empty().append($form);
+    enhanceSelects(this.$pageArea, this.i18n);
+    restoreFocus(this.$pageArea, focus);
     this.renderNav();
     this.renderAttachments();
   };
@@ -812,9 +1069,24 @@
       $nav.append('<span></span>');
     }
     var isLast = this.pageIndex >= this.form.length - 1;
-    var $next = $('<button type="button" class="btn btn-primary">' + esc(isLast ? this.i18n.submit : this.i18n.next) + '</button>');
-    $next.on('click', function () { self.goNext(); });
-    $nav.append($next);
+    var $right = $('<div class="d-flex flex-wrap justify-content-end" style="gap:.5rem;"></div>');
+    if (this.onSaveDraft) {
+      var $draft = $('<button type="button" class="btn btn-outline-secondary">' + esc(this.i18n.saveDraft) + '</button>');
+      $draft.on('click', function () { self.onSaveDraft(self.state.values, self.pageIndex); });
+      $right.append($draft);
+    }
+    if (isLast && this.finalActions && this.finalActions.length) {
+      this.finalActions.forEach(function (action) {
+        var $btn = $('<button type="button"></button>').addClass('btn ' + (action.cls || 'btn-primary')).text(action.label);
+        $btn.on('click', function () { self.goNext(action.key); });
+        $right.append($btn);
+      });
+    } else {
+      var $next = $('<button type="button" class="btn btn-primary">' + esc(isLast ? this.i18n.submit : this.i18n.next) + '</button>');
+      $next.on('click', function () { self.goNext(); });
+      $right.append($next);
+    }
+    $nav.append($right);
     this.$pageArea.append($nav);
   };
 
@@ -867,7 +1139,7 @@
     });
   }
 
-  FillFormController.prototype.goNext = function () {
+  FillFormController.prototype.goNext = function (actionKey) {
     var page = this.currentPage();
     var values = this.state.values[this.pageIndex] || {};
     var dynOptions = this.buildFullDynOptions(page, values);
@@ -885,7 +1157,7 @@
       this.pageIndex += 1;
       this.render();
     } else {
-      this.onSubmit(this.state.values, this.state.attachments);
+      this.onSubmit(this.state.values, this.state.attachments, actionKey);
     }
   };
 
