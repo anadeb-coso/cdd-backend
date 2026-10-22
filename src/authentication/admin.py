@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.utils.translation import gettext_lazy as _
 
-from authentication.models import Facilitator
+from authentication.models import Facilitator, PlatformAccessToken
 
 
 class FacilitatorForm(forms.ModelForm):
@@ -67,5 +67,18 @@ class LogEntryAdmin(admin.ModelAdmin):
         return super().queryset(request).prefetch_related('content_type')
 
 
+
+class PlatformAccessTokenAdmin(admin.ModelAdmin):
+    """Sessions du mobile (jetons valables sur le DCC, le SIG et le MGP) : consultation et révocation. Le jeton lui-même
+    n'est pas connu (seule son empreinte est rangée)."""
+    list_display = ['username', 'email', 'account_kind', 'client', 'created_at', 'last_used_at', 'expires_at', 'revoked_at']
+    list_filter = ['account_kind', 'client']
+    search_fields = ['username', 'email']
+    readonly_fields = [f.name for f in PlatformAccessToken._meta.fields if f.name != 'revoked_at']
+
+    def has_add_permission(self, request):
+        return False
+
 admin.site.register(Facilitator, FacilitatorAdmin)
 admin.site.register(LogEntry, LogEntryAdmin)
+admin.site.register(PlatformAccessToken, PlatformAccessTokenAdmin)

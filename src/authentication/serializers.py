@@ -59,7 +59,10 @@ class CredentialSerializer(serializers.Serializer):
     is_superuser = serializers.BooleanField(allow_null=True)
     groups = serializers.JSONField(allow_null=True)
     # refresh = serializers.CharField(allow_blank=True, allow_null=True)
-    # access = serializers.CharField(allow_blank=True, allow_null=True)
+    # jeton de session du mobile, valable sur le DCC, le SIG et le MGP (authentication/platform_tokens.py)
+    access = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    access_expires_at = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    access_renew_before_days = serializers.IntegerField(allow_null=True, required=False)
     
 class UserAuthSerializer(serializers.Serializer):
     username = serializers.CharField()

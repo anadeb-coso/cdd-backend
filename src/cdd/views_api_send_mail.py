@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
+from authentication.api.auth.login import CheckUserSerializer
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse_lazy
 from django.contrib.auth.models import User
@@ -68,6 +69,8 @@ class RestSendMail(APIView):
     permission_classes = ()
 
     def post(self, request):
+        # appel du mobile : identifiant + jeton de session (ou mot de passe, versions d'avant les jetons)
+        CheckUserSerializer(data=request.data).is_valid(raise_exception=True)
         ok, mail_message = send_invalidation_reviewed_mail(
             request,
             request.data['task'],

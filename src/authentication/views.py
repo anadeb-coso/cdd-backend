@@ -6,7 +6,11 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 
+from django.utils.translation import gettext as _
+
+from authentication.accounts import password_change_required
 from authentication.functions import record_api_login
+from authentication.platform_tokens import issue_token, token_payload
 from authentication.serializers import CredentialSerializer, UserAuthSerializer
 
 
@@ -35,8 +39,19 @@ class AuthenticateAPIView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
+        if password_change_required(account=serializer.validated_data['user']):
+            # Mot de passe initial pas encore changé (sur aucune plateforme) : pas d'accès aux données avant le
+            # changement (écran dédié de l'application, `authentication/api/first-login-password/`). Les versions
+            # de l'application sans cet écran affichent le message (`non_field_errors`).
+            return Response({
+                'non_field_errors': [_("You must change your password before your first login.")],
+                'password_change_required': True,
+            }, status=status.HTTP_403_FORBIDDEN)
         record_api_login(serializer.validated_data['user'])
+        # jeton de session valable sur le DCC, le SIG et le MGP : le mobile l'envoie ensuite à la place du mot de passe
+        token, expires_at = issue_token(serializer.validated_data['user'])
         credentials = {
+            **token_payload(token, expires_at),
             'no_sql_user': serializer.validated_data['no_sql_user'],
             'no_sql_pass': serializer.validated_data['no_sql_pass'],
             'no_sql_db_name': serializer.validated_data['no_sql_db_name'],

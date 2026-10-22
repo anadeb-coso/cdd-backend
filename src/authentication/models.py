@@ -122,13 +122,17 @@ class Facilitator(BaseModel):
         return self.username
 
     def set_no_sql_user(self):
-        now = str(int(time.time()))
+        now = int(time.time())
 
-        # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators
-        while Facilitator.objects.filter(no_sql_user=now).exists():
-            now = str(int(time.time()))
+        # Added to avoid repeating the same value for no_sql_user when bulk creating facilitators.
+        # Le code (`get_code`, adler32 de cet identifiant) doit lui aussi être libre : adler32 de deux horodatages
+        # coïncide souvent (une seconde sur dix environ avec les ~240 codes en base), et la création échouait alors
+        # sur la contrainte d'unicité de `code`. On prend la seconde suivante plutôt que d'attendre l'horloge.
+        while (Facilitator.objects.filter(no_sql_user=str(now)).exists()
+               or Facilitator.objects.filter(code=self.get_code(str(now))).exists()):
+            now += 1
 
-        self.no_sql_user = now
+        self.no_sql_user = str(now)
 
     def simple_save(self, *args, **kwargs):
         return super().save(*args, **kwargs)
@@ -551,6 +555,7 @@ class LocalityHistory(models.Model):
         ('mis_import', _('Imported from the MIS assignments')),
         ('initial_state', _('Initial state')),
         ('couchdb_rebuild', _('Rebuilt from CouchDB')),
+        ('excel_import', _('Excel import')),
     )
     facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.SET_NULL, related_name='localities_history')
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='localities_history')
@@ -584,6 +589,62 @@ class LocalityHistory(models.Model):
             models.Index(fields=['facilitator', 'changed_at']),
             models.Index(fields=['user', 'changed_at']),
         ]
+
+
+class PasswordChangeRequirement(models.Model):
+    """Mot de passe initial à changer à la première connexion, quelle que soit la plateforme (DCC web et mobile,
+    MGP web et mobile, SIG). Une ligne par compte créé dans le DCC (utilisateur web ou facilitateur), reconnue
+    par l'e-mail (en minuscules, commun aux trois plateformes) et, sans e-mail, par le compte lui-même. Un
+    changement de mot de passe fait sur une plateforme vaut pour toutes : `changed_at` est alors renseigné sur
+    toutes les lignes de la personne (cf. authentication/accounts.py).
+
+    Lue aussi par le SIG (même base) et par le MGP (connexion `mis` vers cette base) en SQL brut : ne pas
+    renommer la table ni les colonnes `email`, `user_id`, `changed_at`."""
+    email = models.CharField(max_length=254, null=True, blank=True, db_index=True)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='+')
+    facilitator = models.ForeignKey(Facilitator, null=True, blank=True, on_delete=models.CASCADE, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    changed_at = models.DateTimeField(null=True, blank=True)
+    # plateforme du changement : dcc_web, dcc_mobile, mgp_web, mgp_mobile, sig_web, profile, password_reset
+    changed_on = models.CharField(max_length=30, null=True, blank=True)
+
+    class Meta:
+        db_table = 'authentication_passwordchangerequirement'
+        verbose_name = _('Password change requirement')
+        verbose_name_plural = _('Password change requirements')
+
+
+class PlatformAccessToken(models.Model):
+    """Jeton de session du mobile DCC, valable sur les trois plateformes (DCC, SIG, MGP) : délivré par le DCC à la
+    connexion (authentication/platform_tokens.py), puis envoyé à chaque appel à la place du mot de passe. Seule son
+    empreinte SHA-256 est rangée. Il ne vaut plus après sa date d'expiration, sa révocation (déconnexion,
+    renouvellement) ou un changement du mot de passe du compte (empreinte du hash du mot de passe différente).
+
+    Lue aussi par le SIG (même base) et par le MGP (connexion `mis` vers cette base) en SQL brut : ne pas renommer la
+    table ni les colonnes `key_hash`, `account_kind`, `account_id`, `email`, `password_fingerprint`, `expires_at`,
+    `revoked_at`, `last_used_at`."""
+    KIND_FACILITATOR = 'facilitator'
+    KIND_USER = 'user'
+
+    key_hash = models.CharField(max_length=64, unique=True)
+    account_kind = models.CharField(max_length=12, choices=[(KIND_FACILITATOR, 'Facilitator'), (KIND_USER, 'User')])
+    account_id = models.IntegerField()
+    # compte MGP de la même personne (e-mail en minuscules)
+    email = models.CharField(max_length=254, blank=True, default='')
+    username = models.CharField(max_length=150, blank=True, default='')
+    password_fingerprint = models.CharField(max_length=64)
+    client = models.CharField(max_length=50, default='dcc_mobile')
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'authentication_platformaccesstoken'
+        indexes = [models.Index(fields=['account_kind', 'account_id'], name='auth_platformtoken_account')]
+        verbose_name = _('Platform access token')
+        verbose_name_plural = _('Platform access tokens')
 
 
 
