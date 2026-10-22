@@ -19,6 +19,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from authentication.identity import is_facilitator
+from authentication.platform_tokens import account_from_token as account_from_platform_token, is_platform_token
 
 from . import access
 from .models import CollectAttachment, CollectForm, CollectSubmission
@@ -64,7 +65,12 @@ def token_view(request):
         body = json.loads(request.body.decode('utf-8') or '{}')
     except (ValueError, UnicodeDecodeError):
         body = request.POST
-    account = authenticate_credentials(body.get('username'), body.get('password'))
+    # jeton de session du mobile (valable sur le DCC, le SIG et le MGP) ou, avant les jetons, identifiant + mot de passe
+    platform_token = body.get('token')
+    if is_platform_token(platform_token):
+        account = account_from_platform_token(platform_token)
+    else:
+        account = authenticate_credentials(body.get('username'), body.get('password'))
     if account is None:
         return _error('invalid_credentials', 'Incorrect identifiers.', status=401)
     name = (account.name or account.username) if is_facilitator(account) else (account.get_full_name() or account.username)
@@ -72,7 +78,12 @@ def token_view(request):
         'ok': True,
         'token': issue_token(account),
         'expires_in': MAX_AGE,
-        'account': {'kind': 'facilitator' if is_facilitator(account) else 'user', 'id': account.pk, 'name': name},
+        'account': {
+            'kind': 'facilitator' if is_facilitator(account) else 'user', 'id': account.pk, 'name': name,
+            # identifiants de connexion du compte (le mobile range ses données par compte, quel que soit
+            # l'identifiant tapé : nom d'utilisateur ou e-mail)
+            'logins': sorted({str(v).strip().lower() for v in (account.username, account.email) if v}),
+        },
     })
 
 
