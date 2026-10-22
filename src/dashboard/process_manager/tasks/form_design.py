@@ -53,6 +53,38 @@ SHARE_MODE_VALIDATOR_ONLY = "validator_only"
 SHARE_MODES = {SHARE_MODE_FIXED_CANTON, SHARE_MODE_FACILITATOR_THEN_VALIDATOR, SHARE_MODE_VALIDATOR_ONLY}
 SHARE_MODE_DEFAULT = SHARE_MODE_FIXED_CANTON
 
+# Pièces jointes (`Task.attachments[i]["file_type"]`) : type de fichier
+# accepté par le slot. Absent = comportement historique du mobile (déduit du
+# nom du slot, cf. `legacy_attachment_file_type`).
+ATTACHMENT_FILE_TYPE_PHOTO = "photo"
+ATTACHMENT_FILE_TYPE_PDF = "pdf"
+ATTACHMENT_FILE_TYPE_WORD = "word"
+ATTACHMENT_FILE_TYPE_PDF_WORD = "pdf_word"
+ATTACHMENT_FILE_TYPE_OTHER = "other"
+ATTACHMENT_FILE_TYPES = {
+    ATTACHMENT_FILE_TYPE_PHOTO, ATTACHMENT_FILE_TYPE_PDF, ATTACHMENT_FILE_TYPE_WORD,
+    ATTACHMENT_FILE_TYPE_PDF_WORD, ATTACHMENT_FILE_TYPE_OTHER,
+}
+# Extensions acceptées par type (le type "other" accepte tout).
+ATTACHMENT_FILE_EXTENSIONS = {
+    ATTACHMENT_FILE_TYPE_PHOTO: {"jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp"},
+    ATTACHMENT_FILE_TYPE_PDF: {"pdf"},
+    ATTACHMENT_FILE_TYPE_WORD: {"doc", "docx"},
+    ATTACHMENT_FILE_TYPE_PDF_WORD: {"pdf", "doc", "docx"},
+}
+# Mots du nom d'un slot qui désignent un document (et non une photo) — copie
+# de FILE_CONTENT_CONNAT_IMAGE_LIST_OPTIONS (mobile, src/utils/constants.js).
+LEGACY_DOCUMENT_NAME_WORDS = (
+    "PV", "DOCUMENT", "DOCUMENTS", "FICHIER", "FICHIERS", "LISTE", "LISTES", "PLAN", "PLANS", "LETTRE",
+    "LETTRES", "FICHE", "FICHES", "CERTIFICATION", "CERTIFICATIONS", "RAPPORT", "RAPPORTS", "CERTIFICAT",
+    "AUTORISATION", "NOTIFICATION", "DÉCHARGE", "ACCUSÉE", "AVIS", "PASSATION", "INVITATION",
+    "ARCHITECTURES", "ARCHITECTURE", "PAYMENT", "REÇUS",
+)
+# Clé d'une pièce jointe partagée dans les valeurs de partage
+# (`TaskShareRecord.share_values`, `share_history[].fields`), à côté des
+# chemins de champs. Un chemin de champ ne peut pas commencer par "@".
+ATTACHMENT_SHARE_PREFIX = "@attachment:"
+
 # Types manipulés par le builder -> (json-schema, options tcomb) est reconstruit
 # côté JS ; cette table sert au mapping XLSForm.
 BUILDER_FIELD_TYPES = {
@@ -412,6 +444,10 @@ def validate_attachments(raw):
             "type": attach_type,
             "optional": bool(entry.get("optional")),
         }
+        if entry.get("file_type") in ATTACHMENT_FILE_TYPES:
+            slot["file_type"] = entry["file_type"]
+        if entry.get("share") in SHARE_MODES:
+            slot["share"] = entry["share"]
         if conditions:
             slot["conditions"] = conditions
         clean.append(slot)
@@ -420,6 +456,31 @@ def validate_attachments(raw):
         slot["order"] = order
 
     return clean, []
+
+
+def legacy_attachment_file_type(slot):
+    """Type de fichier d'un slot sans ``file_type`` : ce que le mobile
+    acceptait jusqu'ici, déduit du nom (document PDF/Word si le nom contient
+    un mot de LEGACY_DOCUMENT_NAME_WORDS, photo sinon)."""
+    name = str((slot or {}).get("name") or "").upper()
+    if any(word in name for word in LEGACY_DOCUMENT_NAME_WORDS):
+        return ATTACHMENT_FILE_TYPE_PDF_WORD
+    return ATTACHMENT_FILE_TYPE_PHOTO
+
+
+def attachment_file_type(slot):
+    """Type de fichier accepté par un slot (``file_type``, sinon déduit)."""
+    file_type = (slot or {}).get("file_type")
+    return file_type if file_type in ATTACHMENT_FILE_TYPES else legacy_attachment_file_type(slot)
+
+
+def attachment_file_allowed(file_type, filename):
+    """Vrai si l'extension de ``filename`` convient au type ``file_type``."""
+    allowed = ATTACHMENT_FILE_EXTENSIONS.get(file_type)
+    if not allowed:
+        return True  # "other" ou type inconnu : tout fichier
+    ext = str(filename or "").rsplit(".", 1)[-1].lower() if "." in str(filename or "") else ""
+    return ext in allowed
 
 
 def _normalize_order(order, properties):
@@ -610,20 +671,107 @@ def _share_entries(page):
     return out
 
 
-def group_share_paths_by_mode(form):
+def attachment_share_key(name):
+    """Clé d'une pièce jointe dans les valeurs de partage."""
+    return ATTACHMENT_SHARE_PREFIX + str(name).strip()
+
+
+def _attachment_share_entries(attachments):
+    """Slots de ``Task.attachments`` marqués ``share`` ->
+    ``[{"key", "name", "mode", "order"}]``."""
+    out = []
+    for order, slot in enumerate(attachments if isinstance(attachments, list) else []):
+        if not isinstance(slot, dict) or slot.get("share") not in SHARE_MODES:
+            continue
+        name = str(slot.get("name") or "").strip()
+        if name:
+            out.append({"key": attachment_share_key(name), "name": name, "mode": slot["share"],
+                        "order": slot.get("order", order)})
+    return out
+
+
+def group_share_paths_by_mode(form, attachments=None):
     """``{mode: [chemin_pointé, ...]}`` — tous les champs ``share`` de
-    ``form``, groupés par mode (un même chemin ne peut apparaître qu'une fois,
-    dans le groupe de SON mode). Modes absents du formulaire -> absents du
-    dict (pas de clé avec liste vide)."""
+    ``form`` (et les pièces jointes ``share`` de ``attachments``, sous la clé
+    :func:`attachment_share_key`), groupés par mode (un même chemin ne peut
+    apparaître qu'une fois, dans le groupe de SON mode). Modes absents ->
+    absents du dict (pas de clé avec liste vide)."""
     groups = {}
-    if not isinstance(form, list):
-        return groups
-    for page in form:
+    for page in form if isinstance(form, list) else []:
         if not isinstance(page, dict):
             continue
         for entry in _share_entries(page):
             groups.setdefault(entry["mode"], []).append(entry["path"])
+    for entry in _attachment_share_entries(attachments):
+        groups.setdefault(entry["mode"], []).append(entry["key"])
     return groups
+
+
+def _is_uploaded_attachment(doc_slot):
+    """Vrai si le fichier du slot est en ligne (URL http), donc lisible depuis
+    un autre téléphone. Un fichier encore local (``file://``, pas encore
+    synchronisé) n'est jamais partagé."""
+    uri = ((doc_slot or {}).get("attachment") or {}).get("uri") if isinstance(doc_slot, dict) else None
+    return isinstance(uri, str) and uri.startswith(("http://", "https://"))
+
+
+def _norm_attachment_name(name):
+    name = name.get("name") if isinstance(name, dict) else name  # anciens docs : name = {name: ...}
+    return " ".join(str(name or "").split()).lower()
+
+
+def extract_attachment_share_values(attachments, doc_attachments, mode=None):
+    """``{clé: {"attachment": ..., "type": ...}}`` pour les pièces jointes
+    ``share`` de ``attachments`` (tous modes, ou seulement ``mode``) déjà
+    envoyées en ligne dans ``doc_attachments`` (``doc["attachments"]``)."""
+    values = {}
+    doc_list = doc_attachments if isinstance(doc_attachments, list) else []
+    by_name = {_norm_attachment_name(s.get("name")): s for s in doc_list if isinstance(s, dict)}
+    for entry in _attachment_share_entries(attachments):
+        if mode is not None and entry["mode"] != mode:
+            continue
+        doc_slot = by_name.get(_norm_attachment_name(entry["name"]))
+        if _is_uploaded_attachment(doc_slot):
+            values[entry["key"]] = {
+                "attachment": copy.deepcopy(doc_slot["attachment"]),
+                "type": doc_slot.get("type"),
+            }
+    return values
+
+
+def merge_attachment_share_values(attachments, doc_attachments, values):
+    """Copie de ``doc_attachments`` où les pièces jointes partagées présentes
+    dans ``values`` (cf. :func:`extract_attachment_share_values`) remplacent
+    le fichier du slot de même nom ; les autres slots restent tels quels.
+    Renvoie ``None`` si ``values`` ne contient aucune pièce jointe."""
+    att_values = {k: v for k, v in (values or {}).items()
+                  if str(k).startswith(ATTACHMENT_SHARE_PREFIX) and isinstance(v, dict) and v.get("attachment")}
+    if not att_values:
+        return None
+    config = {_norm_attachment_name(s.get("name")): s for s in (attachments or []) if isinstance(s, dict)}
+    out = copy.deepcopy(doc_attachments) if isinstance(doc_attachments, list) else []
+    for entry in _attachment_share_entries(attachments):
+        value = att_values.get(entry["key"])
+        if value is None:
+            continue
+        norm = _norm_attachment_name(entry["name"])
+        idx = next((i for i, s in enumerate(out) if isinstance(s, dict) and _norm_attachment_name(s.get("name")) == norm), None)
+        if idx is None:
+            # slot absent du document cible (configuration pas encore synchronisée)
+            slot = dict(config.get(norm) or {"name": entry["name"]})
+            order = entry["order"] if isinstance(entry["order"], int) else len(out)
+            if order < len(out) and not (isinstance(out[order], dict) and out[order].get("name")):
+                idx = order
+                out[idx] = slot
+            else:
+                out.append(slot)
+                idx = len(out) - 1
+        target = dict(out[idx]) if isinstance(out[idx], dict) else {"name": entry["name"]}
+        target["attachment"] = copy.deepcopy(value["attachment"])
+        if value.get("type"):
+            target["type"] = value["type"]
+        out[idx] = target
+    return out
 
 
 def extract_share_values(form, form_response, mode=None):
@@ -675,10 +823,11 @@ def merge_share_values(form, form_response, values):
     return out
 
 
-def has_share_fields(form):
-    """Vrai si au moins une page du design porte des champs ``share`` (quel
-    que soit leur mode)."""
-    return any(isinstance(p, dict) and p.get("share") for p in (form or []))
+def has_share_fields(form, attachments=None):
+    """Vrai si au moins une page du design porte des champs ``share``, ou au
+    moins une pièce jointe est marquée ``share`` (quel que soit le mode)."""
+    return any(isinstance(p, dict) and p.get("share") for p in (form or [])) \
+        or bool(_attachment_share_entries(attachments))
 
 
 def _leaf_field_paths(properties, prefix=""):
@@ -703,9 +852,10 @@ def _leaf_field_paths(properties, prefix=""):
     return out
 
 
-def all_fields_shared(form, mode=None):
+def all_fields_shared(form, mode=None, attachments=None):
     """Vrai si TOUTES les feuilles "de données" du formulaire (toutes pages
-    confondues, groupes/répétables compris) sont marquées ``share`` —
+    confondues, groupes/répétables compris) ET toutes les pièces jointes de
+    ``attachments`` sont marquées ``share`` —
     optionnellement restreint à un seul ``mode`` (sinon : partagée dans
     N'IMPORTE QUEL mode). Faux si le formulaire n'a aucune feuille de données
     du tout (rien à partager).
@@ -722,10 +872,15 @@ def all_fields_shared(form, mode=None):
     PLUSIEURS modes, aucun des deux passages de copie ne verra "tous les
     champs" pour SON mode, et la propagation ne se déclenche pour aucun :
     comportement voulu, ce cas correspond à un formulaire réellement mixte)."""
-    if not isinstance(form, list) or not form:
-        return False
     total = 0
-    for page in form:
+    slots = [s for s in (attachments if isinstance(attachments, list) else [])
+             if isinstance(s, dict) and str(s.get("name") or "").strip()]
+    if slots:
+        shared = {e["key"] for e in _attachment_share_entries(slots) if mode is None or e["mode"] == mode}
+        if any(attachment_share_key(str(s.get("name") or "").strip()) not in shared for s in slots):
+            return False
+        total += len(slots)
+    for page in form if isinstance(form, list) else []:
         if not isinstance(page, dict):
             continue
         props = (page.get("page") or {}).get("properties") or {}

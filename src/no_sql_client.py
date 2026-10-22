@@ -1,6 +1,11 @@
 from django.conf import settings
 
 
+# Réglages d'une pièce jointe de tâche (Task.attachments) recopiés sur les
+# tâches déjà distribuées, le fichier saisi restant inchangé.
+ATTACHMENT_CONFIG_KEYS = ("optional", "conditions", "file_type", "share")
+
+
 class NoSQLClient:
 
     def __init__(self, username=settings.NO_SQL_USER, password=settings.NO_SQL_PASS, url=settings.NO_SQL_URL, timeout=None):
@@ -109,9 +114,17 @@ class NoSQLClient:
                         new_elt = v[i].copy()
 
                         if k == "attachments" and attachments: #if we have the attachments to modify
-                            for elt_attach in attachments: #Go through the attachments
-                                if elt_attach.get("name") and elt_attach.get("name") == elt.get("name"):
-                                    elt = attachments[i]
+                            # Slot déjà présent (même nom) : on garde le fichier saisi
+                            # et on reprend la configuration du Générateur de formulaire.
+                            existing = next((e for e in attachments if isinstance(e, dict)
+                                             and e.get("name") and e.get("name") == elt.get("name")), None)
+                            if existing is not None:
+                                elt = dict(existing)
+                                for config_key in ATTACHMENT_CONFIG_KEYS:
+                                    if config_key in new_elt:
+                                        elt[config_key] = new_elt[config_key]
+                                    else:
+                                        elt.pop(config_key, None)
 
                         for _v in dict_of_list_values[k]: # Go through the attributs list of the doc attr than we going modify
                             if elt.get(_v):

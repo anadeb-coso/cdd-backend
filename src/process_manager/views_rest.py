@@ -95,7 +95,9 @@ class ReportTaskCompletion(APIView):
     permission_classes = ()
 
     def post(self, request, *args, **kwargs):
-        from dashboard.process_manager.tasks.form_design import extract_share_values, has_share_fields
+        from dashboard.process_manager.tasks.form_design import (
+            extract_share_values, extract_attachment_share_values, has_share_fields,
+        )
 
         data = request.data or {}
         task_sql_id = data.get('task_sql_id')
@@ -113,9 +115,10 @@ class ReportTaskCompletion(APIView):
         except Task.DoesNotExist:
             return Response({'ok': False, 'error': 'Tâche introuvable.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Le mode de partage est porté PAR CHAMP (form_design.group_share_paths_by_mode) ;
-        # "partageable" = au moins un champ marqué share, quel que soit son mode.
-        if not has_share_fields(task.form):
+        # Le mode de partage est porté PAR CHAMP / PAR PIÈCE JOINTE
+        # (form_design.group_share_paths_by_mode) ; "partageable" = au moins un
+        # champ ou une pièce jointe marqué share, quel que soit son mode.
+        if not has_share_fields(task.form, task.attachments):
             return Response({'ok': True, 'tracked': False})
 
         facilitator_sql_id = (data.get('facilitator') or {}).get('sql_id') or data.get('facilitator_sql_id')
@@ -134,6 +137,9 @@ class ReportTaskCompletion(APIView):
             defaults['facilitator'] = facilitator
         if completed:
             values = extract_share_values(task.form, form_response)
+            # Pièces jointes déjà en ligne (le mobile envoie `attachments`
+            # depuis cette version ; absent = ancienne application).
+            values.update(extract_attachment_share_values(task.attachments, data.get('attachments')))
             if values:
                 defaults['share_values'] = values
         if isinstance(share_targets, list) and share_targets:
@@ -173,7 +179,7 @@ class PullableTaskSource(APIView):
         from dashboard.process_manager.tasks.form_design import has_share_fields
 
         task = Task.objects.filter(id=task_sql_id).first()
-        if not task or not has_share_fields(task.form):
+        if not task or not has_share_fields(task.form, task.attachments):
             return Response({'found': False})
 
         # NB : `cycle_id` n'est PLUS utilisé pour filtrer ici — le mobile ne
@@ -217,7 +223,9 @@ class PullTaskData(APIView):
     permission_classes = ()
 
     def post(self, request, *args, **kwargs):
-        from dashboard.process_manager.tasks.form_design import merge_share_values, has_share_fields
+        from dashboard.process_manager.tasks.form_design import (
+            merge_share_values, merge_attachment_share_values, has_share_fields,
+        )
         from dashboard.utils import _share_history_entry, find_task_share_record, upsert_task_share_record
         from administrativelevels.models import AdministrativeLevel
 
@@ -237,7 +245,7 @@ class PullTaskData(APIView):
             task = Task.objects.get(id=task_sql_id)
         except Task.DoesNotExist:
             return Response({'ok': False, 'error': 'Tâche introuvable.'}, status=status.HTTP_404_NOT_FOUND)
-        if not has_share_fields(task.form):
+        if not has_share_fields(task.form, task.attachments):
             return Response({'ok': False, 'error': 'Cette tâche ne permet pas le partage.'}, status=status.HTTP_400_BAD_REQUEST)
 
         source_record = find_task_share_record(
@@ -261,6 +269,7 @@ class PullTaskData(APIView):
             )
 
         merged_response = merge_share_values(task.form, doc.get('form_response') or [], values)
+        merged_attachments = merge_attachment_share_values(task.attachments, doc.get('attachments'), values)
         source_label = None
         try:
             source_label = AdministrativeLevel.objects.using('mis').filter(
@@ -272,10 +281,13 @@ class PullTaskData(APIView):
             'pulled_by_facilitator', source_administrative_level_id, source_label,
             source_record.facilitator if source_record.facilitator_id else None, values.keys(),
         )
-        nsc.update_doc_uncontrolled(db, doc['_id'], {
+        updates = {
             "form_response": merged_response,
             "share_history": (doc.get('share_history') or []) + [history_entry],
-        })
+        }
+        if merged_attachments is not None:
+            updates["attachments"] = merged_attachments
+        nsc.update_doc_uncontrolled(db, doc['_id'], updates)
 
         pull_defaults = {'couch_task_id': target_couch_task_id, 'share_values': values}
         if cycle_id is not None:
@@ -284,7 +296,11 @@ class PullTaskData(APIView):
             task_sql_id, project_id, target_administrative_level_id, defaults=pull_defaults,
         )
 
-        return Response({'ok': True, 'form_response': merged_response, 'values': values})
+        return Response({
+            'ok': True, 'form_response': merged_response, 'values': values,
+            # liste complète des pièces jointes de la tâche cible (None : inchangée)
+            'attachments': merged_attachments,
+        })
 
 
 class RestGetProjects(APIView):

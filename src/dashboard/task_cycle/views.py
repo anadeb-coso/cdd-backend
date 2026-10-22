@@ -16,6 +16,7 @@ from no_sql_client import NoSQLClient
 from process_manager.models import Task
 
 from dashboard.administrative_levels.views_adl import _derive_planning_task_status
+from dashboard.process_manager.tasks.form_design import attachment_file_allowed, attachment_file_type
 
 from .functions import list_cvds_with_overview, resolve_task_doc, save_task_form
 from authentication.identity import facilitator_of_user
@@ -89,7 +90,9 @@ class TaskFormFetchView(LoginRequiredMixin, generic.View):
             'ok': True,
             'form': task.form or [],
             'form_response': (doc or {}).get('form_response') or [],
-            'attachments': task.attachments or [],
+            # file_type effectif (déduit du nom pour les anciens slots), comme sur le mobile
+            'attachments': [dict(slot, file_type=attachment_file_type(slot)) if isinstance(slot, dict) else slot
+                            for slot in (task.attachments or [])],
             'existing_attachments': (doc or {}).get('attachments') or [],
             'validated': (doc or {}).get('validated'),
             'task_name': task.name,
@@ -142,6 +145,10 @@ class TaskAttachmentUploadView(LoginRequiredMixin, generic.View):
             return JsonResponse({'ok': False, 'message': 'no file'}, status=400)
         if f.size > settings.MAX_UPLOAD_SIZE:
             return JsonResponse({'ok': False, 'message': 'file too large'}, status=400)
+        # Type de fichier attendu par la pièce jointe (Task.attachments[i].file_type)
+        file_type = request.POST.get('file_type')
+        if file_type and not attachment_file_allowed(file_type, f.name):
+            return JsonResponse({'ok': False, 'message': 'file type not allowed'}, status=400)
 
         no_sql_db_name = kwargs['id']
         file_name = f"{int(time.time() * 1000)}-{f.name}"

@@ -307,6 +307,10 @@
         else if (n.type !== "note") { n.shareMode = mode || ""; }
       });
     })([].concat.apply([], state.pages.map(function (p) { return p.nodes; })));
+    // Les pièces jointes de la tâche suivent le même mode (`slot.share`).
+    (state.attachments || []).forEach(function (slot) {
+      if (mode) slot.share = mode; else delete slot.share;
+    });
   }
   function applyStoredMessages(nodes, msgs) {
     (nodes || []).forEach(function (n) {
@@ -1596,16 +1600,26 @@
   // champ soit de LA MÊME tâche (`sourceTaskId: null`, résolu localement,
   // aucune lecture réseau), soit d'une AUTRE tâche (mêmes pickers que
   // `renderCrossTaskVisibilityEditor`, réutilisés tels quels).
-  var ATTACHMENT_TYPES = [
-    ["photos", t("attach_type_photos", "Photos")],
-    ["procès-verbaux", t("attach_type_pv", "Procès-verbaux")],
-    ["autre document", t("attach_type_other", "Autre document")]
+  // Type de fichier accepté par le slot (`slot.file_type`) : filtre le
+  // sélecteur de fichier sur mobile et sur le web.
+  var ATTACHMENT_FILE_TYPES = [
+    ["photo", t("attach_file_photo", "Photo")],
+    ["pdf", t("attach_file_pdf", "PDF")],
+    ["word", t("attach_file_word", "Word")],
+    ["pdf_word", t("attach_file_pdf_word", "PDF ou Word")],
+    ["other", t("attach_file_other", "Autre document")]
+  ];
+  var ATTACHMENT_SHARE_MODES = [
+    ["", t("f_share_none", "Non partagé")],
+    ["fixed_canton", t("share_fixed_canton", "Automatique — villages sièges du canton")],
+    ["facilitator_then_validator", t("share_facilitator_then_validator", "Facilitateur puis validateur")],
+    ["validator_only", t("share_validator_only", "Validateur uniquement")]
   ];
   var ATTACHMENT_CONDITION_ACTIONS = ACTIONS.filter(function (a) {
     return a[0] === "show" || a[0] === "hide" || a[0] === "require" || a[0] === "optional";
   });
   function newAttachmentSlot() {
-    return { name: "", type: "photos", optional: false, conditions: [] };
+    return { name: "", type: "photos", file_type: "photo", optional: false, conditions: [] };
   }
   function newAttachmentCondition() {
     return { sourceTaskId: null, sourcePath: "", op: "eq", value: "", action: "show", defaultWhenUnknown: "hidden" };
@@ -1692,8 +1706,12 @@
       var card = el("div", { class: "tfb-calc" });
       card.appendChild(el("div", { class: "tfb-inline" }, [
         fieldRow(t("f_attachment_name", "Nom"), textInput(slot.name, function (v) { slot.name = v; })),
-        fieldRow(t("f_attachment_type", "Type"), selectFrom(ATTACHMENT_TYPES, slot.type, function (v) { slot.type = v; }))
+        fieldRow(t("f_attachment_type", "Type"), selectFrom(ATTACHMENT_FILE_TYPES, slot.file_type || "photo", function (v) { slot.file_type = v; }))
       ]));
+      // Partage du fichier avec les tâches jumelles à la validation, comme un champ.
+      card.appendChild(fieldRow(t("f_share", "Partage villages sièges"), selectFrom(ATTACHMENT_SHARE_MODES, slot.share || "", function (v) {
+        if (v) slot.share = v; else delete slot.share;
+      })));
       card.appendChild(checkbox(slot.optional, function (v) { slot.optional = v; },
         t("f_attachment_optional_default", "Facultatif par défaut (si aucune condition « rendre obligatoire/facultatif » ci-dessous)")));
 

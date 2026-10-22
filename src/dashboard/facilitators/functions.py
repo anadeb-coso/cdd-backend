@@ -354,11 +354,20 @@ def build_task_history(task_doc):
         if h.get('source_label'):
             parts.append(str(h['source_label']))
         if h.get('fields'):
-            parts.append(', '.join(h['fields']))
+            parts.append(', '.join(_share_field_label(f) for f in h['fields']))
         _add('shared_data_loaded', h.get('date'), fac.get('name'), ' — '.join(parts) or None)
 
     entries.sort(key=lambda e: e['date'] or datetime.min, reverse=True)
     return entries
+
+
+def _share_field_label(key):
+    """Libellé d'un élément partagé : chemin de champ, ou pièce jointe."""
+    from dashboard.process_manager.tasks.form_design import ATTACHMENT_SHARE_PREFIX
+    key = str(key)
+    if key.startswith(ATTACHMENT_SHARE_PREFIX):
+        return str(gettext_lazy("Attachment: %(name)s") % {'name': key[len(ATTACHMENT_SHARE_PREFIX):]})
+    return key
 
 
 def build_task_detail_context(request, task_doc, no_sql_db_name):
@@ -393,7 +402,7 @@ def build_task_detail_context(request, task_doc, no_sql_db_name):
     task_model = Task.objects.filter(id=sql_id).first()
     if not task_model:
         return context
-    modes_present = group_share_paths_by_mode(task_model.form)
+    modes_present = group_share_paths_by_mode(task_model.form, task_model.attachments)
     if not modes_present:
         return context
 

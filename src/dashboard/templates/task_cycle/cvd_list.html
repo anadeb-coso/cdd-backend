@@ -425,11 +425,12 @@
                                     error: function () { cb(null); }
                                 });
                             },
-                            uploadFile: function (file, cb) {
+                            uploadFile: function (file, cb, fileType) {
                                 // E5 : upload S3 (dashboard.task_cycle.views.TaskAttachmentUploadView),
                                 // sous la base de la CVD actuellement sélectionnée.
                                 var fd = new FormData();
                                 fd.append('file', file);
+                                if (fileType) fd.append('file_type', fileType);
                                 $.ajax({
                                     type: "POST",
                                     url: ATTACHMENT_UPLOAD_TMPL.replace('DBNAME_PLACEHOLDER', currentDbName),

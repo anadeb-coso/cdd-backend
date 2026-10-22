@@ -3842,11 +3842,13 @@ def copy_shared_task_data(task_id, source_administrative_level_id, target_admini
         logger.warning("copy_shared_task_data: tâche %s introuvable", task_id)
         return
 
-    mode_paths = group_share_paths_by_mode(task.form).get(mode) or []
+    # Champs ET pièces jointes partagés dans ce mode (les pièces jointes sous
+    # la clé form_design.attachment_share_key).
+    mode_paths = group_share_paths_by_mode(task.form, task.attachments).get(mode) or []
     if not mode_paths:
         return
 
-    full_task_share = all_fields_shared(task.form, mode=mode)
+    full_task_share = all_fields_shared(task.form, mode=mode, attachments=task.attachments)
 
     source_record = find_task_share_record(
         task_id, project_id, source_administrative_level_id, prefer_field='share_values',
@@ -3950,8 +3952,15 @@ def _copy_shared_task_data_to_target(nsc, task, target_administrative_level_id, 
     # cible — une tâche déjà `completed`/`validated` (par son propre
     # facilitateur ou par un partage précédent) reçoit quand même la
     # nouvelle valeur des champs partagés, comme demandé.
+    from dashboard.process_manager.tasks.form_design import merge_attachment_share_values
+
     merged_response = merge_share_values(task.form, doc.get('form_response') or [], values)
     updates = {"form_response": merged_response}
+    # Pièces jointes partagées : le fichier (déjà en ligne) remplace celui du
+    # slot de même nom de la tâche cible.
+    merged_attachments = merge_attachment_share_values(task.attachments, doc.get('attachments'), values)
+    if merged_attachments is not None:
+        updates["attachments"] = merged_attachments
     if source_administrative_level_id is not None:
         history_entry = _share_history_entry(
             action, source_administrative_level_id, source_label, source_facilitator, values.keys(),

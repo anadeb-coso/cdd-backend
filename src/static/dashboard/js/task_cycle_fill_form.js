@@ -897,6 +897,8 @@
     noFileYet: 'Aucun fichier',
     uploading: 'Envoi en cours…',
     uploadError: "Échec de l'envoi du fichier.",
+    wrongFileType: "Ce type de fichier n'est pas accepté pour cette pièce jointe.",
+    acceptedFiles: 'Fichiers acceptés : ',
     removeFile: 'Retirer le fichier',
     saveDraft: 'Enregistrer le brouillon',
     // Recherche dans les listes (select2) et filtre des cases à cocher.
@@ -1163,6 +1165,27 @@
 
   /* --------------------------------------------------------------- E5 : pièces jointes */
 
+  // Types de fichier d'une pièce jointe (form_design.ATTACHMENT_FILE_TYPES) :
+  // filtre `accept` du sélecteur + extensions vérifiées avant l'envoi.
+  var ATTACHMENT_FILE_TYPES = {
+    photo: { label: 'photo', accept: 'image/*', ext: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp'] },
+    pdf: { label: 'PDF', accept: '.pdf,application/pdf', ext: ['pdf'] },
+    word: { label: 'Word', accept: '.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: ['doc', 'docx'] },
+    pdf_word: { label: 'PDF, Word', accept: '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: ['pdf', 'doc', 'docx'] },
+    other: { label: '', accept: '', ext: null }
+  };
+
+  function attachmentFileAllowed(fileType, file) {
+    var def = ATTACHMENT_FILE_TYPES[fileType];
+    if (!def || !def.ext) return true;
+    var name = String((file && file.name) || '');
+    var ext = name.indexOf('.') >= 0 ? name.split('.').pop().toLowerCase() : '';
+    if (def.ext.indexOf(ext) >= 0) return true;
+    // photo sans extension reconnue : on se fie au type MIME annoncé par le navigateur
+    return fileType === 'photo' && /^image\//.test(String((file && file.type) || ''));
+  }
+
+
   FillFormController.prototype.renderAttachments = function () {
     if (!this.attachmentSlots.length) { this.$attachmentsArea.empty(); return; }
     var self = this;
@@ -1190,21 +1213,36 @@
       $row.append($status);
 
       var $input = $('<input type="file" class="form-control-file">');
-      var accept = slot.type === 'photos' ? 'image/*' : (slot.type === 'video' ? 'video/*' : (slot.type === 'audio' ? 'audio/*' : ''));
-      if (accept) $input.attr('accept', accept);
+      // Type de fichier du slot (Task.attachments[i].file_type) ; ancien slot sans file_type : type libre.
+      var fileType = ATTACHMENT_FILE_TYPES[slot.file_type] ? slot.file_type : null;
+      if (fileType && ATTACHMENT_FILE_TYPES[fileType].accept) {
+        $input.attr('accept', ATTACHMENT_FILE_TYPES[fileType].accept);
+        $row.append($('<div class="small text-muted mb-1"></div>').text(self.i18n.acceptedFiles + ATTACHMENT_FILE_TYPES[fileType].label));
+      } else if (!fileType && slot.type === 'photos') {
+        $input.attr('accept', 'image/*');
+      }
       var $spin = $('<span class="ml-2" style="display:none;"><i class="fas fa-sync-alt fa-spin"></i> ' + esc(self.i18n.uploading) + '</span>');
 
       $input.on('change', function () {
         var file = this.files && this.files[0];
         if (!file) return;
         if (!self.uploadFile) return;
+        if (fileType && !attachmentFileAllowed(fileType, file)) {
+          alert(self.i18n.wrongFileType);
+          this.value = '';
+          return;
+        }
         $spin.show();
         self.uploadFile(file, function (url, name) {
           $spin.hide();
           if (!url) { alert(self.i18n.uploadError); return; }
-          self.state.attachments[i] = { name: slot.name, attachment: { uri: url, name: name || file.name } };
+          // On garde les autres clés du slot déjà enregistrées (ordre, réglages synchronisés…).
+          self.state.attachments[i] = $.extend({}, self.state.attachments[i] || {}, {
+            name: slot.name, order: i, type: file.type || (self.state.attachments[i] || {}).type,
+            attachment: { uri: url, name: name || file.name }
+          });
           self.renderAttachments();
-        });
+        }, fileType);
       });
       $row.append($input).append($spin);
       $wrap.append($row);
@@ -1215,6 +1253,7 @@
 
   window.TCFillForm = {
     parsePageFields: parsePageFields,
-    FillFormController: FillFormController
+    FillFormController: FillFormController,
+    attachmentFileAllowed: attachmentFileAllowed
   };
 })(typeof window !== 'undefined' ? window : this, typeof jQuery !== 'undefined' ? jQuery : null);

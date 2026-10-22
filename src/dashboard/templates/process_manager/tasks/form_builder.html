@@ -19,8 +19,8 @@
                 <option value="validator_only">{% translate "Validator only" %}</option>
             </select>
             <button id="tfb-share-mode-apply-all" type="button" class="btn btn-outline-secondary btn-sm"
-                    title="{% translate 'Apply this mode to all fields of the task' %}">
-                {% translate "Apply to all fields" %}
+                    title="{% translate 'Apply this mode to all fields and attachments of the task' %}">
+                {% translate "Apply to all fields and attachments" %}
             </button>
         </label>
         <a href="{% url 'dashboard:process_manager:tasks:task_form_builder_export' task.id %}"
@@ -118,7 +118,7 @@
 
     {{ task_form|json_script:"tfb-form-json" }}
     {{ task.visibility_condition|json_script:"tfb-vc-json" }}
-    {{ task.attachments|json_script:"tfb-attachments-json" }}
+    {{ task_attachments|json_script:"tfb-attachments-json" }}
     <script id="tfb-config" type="application/json">
     {
         "formJson": __FORM_JSON__,

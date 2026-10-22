@@ -22,6 +22,7 @@ from dashboard.process_manager.tasks.form_design import (
     validate_form_design,
     validate_visibility_condition,
     validate_attachments,
+    attachment_file_type,
     form_design_to_xlsform,
     xlsform_to_form_design,
     choices_to_xlsx,
@@ -595,6 +596,12 @@ class TaskFormBuilderView(PageMixin, _TaskScopedMixin, generic.TemplateView):
         ctx['class_object'] = 'Task'
         ctx['task'] = task
         ctx['task_form'] = task.form or []
+        # Pièces jointes avec leur type de fichier effectif (déduit du nom pour
+        # les slots créés avant le choix explicite du type).
+        ctx['task_attachments'] = [
+            dict(slot, file_type=attachment_file_type(slot)) if isinstance(slot, dict) else slot
+            for slot in (task.attachments or [])
+        ]
         ctx['title'] = gettext_lazy('Form builder')
         # Modale sync_tasks : superutilisateurs uniquement.
         if self.request.user.is_superuser:

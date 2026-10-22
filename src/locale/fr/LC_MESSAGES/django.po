@@ -4945,3 +4945,737 @@ msgstr "Téléphone"
 #: usermanager/templates/profile.html
 msgid "Change password"
 msgstr "Modifier le mot de passe"
+
+#: .\authentication\accounts.py:126
+msgid "The new password is required."
+msgstr "Le nouveau mot de passe est obligatoire."
+
+#: .\authentication\accounts.py:134
+msgid "The password must contain at most 16 characters."
+msgstr "Le mot de passe doit contenir au plus 16 caractères."
+
+#: .\authentication\accounts.py:140
+msgid "The new password must be different from the current one."
+msgstr "Le nouveau mot de passe doit être différent de l'actuel."
+
+#: .\authentication\accounts.py:296
+msgid "Incorrect identifiers"
+msgstr "Identifiants incorrects"
+
+#: .\authentication\accounts.py:298
+msgid "Your password has already been changed."
+msgstr "Votre mot de passe a déjà été changé."
+
+#: .\authentication\accounts.py:332
+msgid "DCC Web"
+msgstr "DCC Web"
+
+#: .\authentication\accounts.py:332 .\authentication\accounts.py:335
+#: .\authentication\accounts.py:337
+msgid "e-mail address"
+msgstr "adresse e-mail"
+
+#: .\authentication\accounts.py:334
+msgid "DCC mobile application"
+msgstr "Application mobile DCC"
+
+#: .\authentication\accounts.py:335
+msgid "MGP Web and mobile application"
+msgstr "MGP Web et application mobile"
+
+#: .\authentication\accounts.py:337
+msgid "SIG Web"
+msgstr "SIG Web"
+
+#: .\authentication\accounts.py:344
+msgid "Your account has been created"
+msgstr "Votre compte a été créé"
+
+#: .\authentication\accounts.py:348
+#: .\dashboard\facilitators\localities_notify.py:45
+msgid "Hello"
+msgstr "Bonjour"
+
+#: .\authentication\accounts.py:349
+#: .\dashboard\facilitators\localities_notify.py:46
+msgid "Mr./Mrs."
+msgstr "M./Mme"
+
+#: .\authentication\middleware.py:174 .\authentication\views.py:46
+msgid "You must change your password before your first login."
+msgstr "Vous devez changer votre mot de passe avant votre première connexion."
+
+#: .\authentication\models.py:554
+msgid "Excel import"
+msgstr "Import Excel"
+
+#: .\authentication\models.py:610
+msgid "Password change requirement"
+msgstr "Changement de mot de passe obligatoire"
+
+#: .\authentication\models.py:611
+msgid "Password change requirements"
+msgstr "Changements de mot de passe obligatoires"
+
+#: .\cdd\templates\mail\send\account_credentials.html:28
+#: .\cdd\templates\mail\send\account_credentials.txt:3
+msgid ""
+"Your facilitator account has been created on the COSO platforms. Here are "
+"your login details:"
+msgstr ""
+"Votre compte de facilitateur a été créé sur les plateformes COSO. Voici vos "
+"identifiants de connexion :"
+
+#: .\cdd\templates\mail\send\account_credentials.html:28
+#: .\cdd\templates\mail\send\account_credentials.txt:3
+msgid ""
+"Your user account has been created on the COSO platforms. Here are your "
+"login details:"
+msgstr ""
+"Votre compte d'utilisateur a été créé sur les plateformes COSO. Voici vos "
+"identifiants de connexion :"
+
+#: .\cdd\templates\mail\send\account_credentials.html:34
+#: .\cdd\templates\mail\send\account_credentials.txt:9
+msgid ""
+"You will have to change this password at your first login. The new password "
+"applies to all the platforms (DCC, MGP and SIG)."
+msgstr ""
+"Vous devrez changer ce mot de passe à votre première connexion. Le nouveau "
+"mot de passe s'appliquera à toutes les plateformes (DCC, MGP et SIG)."
+
+#: .\cdd\templates\mail\send\account_credentials.html:37
+#: .\cdd\templates\mail\send\account_credentials.txt:11
+msgid "log in with your"
+msgstr "connexion avec votre"
+
+#: .\cdd\templates\mail\send\account_credentials.html:41
+#: .\cdd\templates\mail\send\account_credentials.txt:13
+msgid "Your localities"
+msgstr "Vos localités"
+
+#: .\cdd\templates\mail\send\account_credentials.html:46
+#: .\cdd\templates\mail\send\account_credentials.txt:16
+msgid "Please do not share these login details with anyone."
+msgstr "Ne communiquez ces identifiants à personne."
+
+#: .\cdd\templates\mail\send\localities_change.html:27
+#: .\cdd\templates\mail\send\localities_change.txt:3
+msgid "Your localities have been updated:"
+msgstr "Vos localités ont été mises à jour :"
+
+#: .\cdd\templates\mail\send\localities_change.html:34
+#: .\cdd\templates\mail\send\localities_change.txt:8
+msgid "Villages added"
+msgstr "Villages ajoutés"
+
+#: .\cdd\templates\mail\send\localities_change.html:35
+#: .\cdd\templates\mail\send\localities_change.txt:9
+msgid "Villages removed"
+msgstr "Villages retirés"
+
+#: .\cdd\templates\mail\send\localities_change.html:36
+#: .\cdd\templates\mail\send\localities_change.txt:10
+msgid "Current villages"
+msgstr "Villages actuels"
+
+#: .\cdd\templates\mail\send\localities_change.html:40
+#: .\cdd\templates\mail\send\localities_change.txt:12
+msgid "For any question, please contact your supervisor."
+msgstr "Pour toute question, contactez votre superviseur."
+
+#: .\dashboard\authentication\account_results.py:11
+msgid "MGP account created"
+msgstr "Compte MGP créé"
+
+#: .\dashboard\authentication\account_results.py:13
+msgid ""
+"An MGP account already existed with this e-mail address: left unchanged"
+msgstr ""
+"Un compte MGP existait déjà avec cette adresse e-mail : il n'a pas été "
+"modifié"
+
+#: .\dashboard\authentication\account_results.py:15
+#, python-format
+msgid "MGP account not created (%(detail)s)"
+msgstr "Compte MGP non créé (%(detail)s)"
+
+#: .\dashboard\authentication\account_results.py:25
+#, python-format
+msgid "Account of %(name)s created: login details sent to %(email)s."
+msgstr "Compte de %(name)s créé : identifiants envoyés à %(email)s."
+
+#: .\dashboard\authentication\forms.py:55
+#: .\dashboard\facilitators\forms.py:129
+#: .\dashboard\facilitators\imports.py:216
+msgid "An account (user or facilitator) already uses this e-mail address."
+msgstr ""
+"Un compte (utilisateur ou facilitateur) utilise déjà cette adresse e-mail."
+
+#: .\dashboard\authentication\forms.py:61
+#: .\dashboard\facilitators\forms.py:159
+msgid "The last name and the first name(s) must contain letters."
+msgstr "Le nom et le ou les prénoms doivent contenir des lettres."
+
+#: .\dashboard\authentication\forms.py:81
+msgid "8 to 16 letters and digits, with at least one letter and one digit."
+msgstr "8 à 16 lettres et chiffres, avec au moins une lettre et un chiffre."
+
+#: .\dashboard\authentication\forms.py:82
+msgid "New password confirmation"
+msgstr "Confirmation du nouveau mot de passe"
+
+#: .\dashboard\authentication\views_first_login.py:49
+msgid ""
+"Your password has been changed. It is now valid on all the platforms (DCC, "
+"MGP and SIG)."
+msgstr ""
+"Votre mot de passe a été changé. Il est désormais valable sur toutes les "
+"plateformes (DCC, MGP et SIG)."
+
+#: .\dashboard\authentication\views_localities.py:170
+msgid "The user has been notified by e-mail."
+msgstr "L'utilisateur a été prévenu par e-mail."
+
+#: .\dashboard\facilitators\forms.py:132
+msgid "Last name"
+msgstr "Nom"
+
+#: .\dashboard\facilitators\forms.py:133
+msgid "First name(s)"
+msgstr "Prénom(s)"
+
+#: .\dashboard\facilitators\forms.py:135
+msgid ""
+"The login details are sent to this address. Without e-mail, no MGP account "
+"is created and the login details are displayed once after the creation."
+msgstr ""
+"Les identifiants sont envoyés à cette adresse. Sans e-mail, aucun compte MGP"
+" n'est créé et les identifiants sont affichés une seule fois après la "
+"création."
+
+#: .\dashboard\facilitators\imports.py:105
+msgid ""
+"The file could not be read: please use an Excel file (.xlsx) built from the "
+"template."
+msgstr ""
+"Le fichier n'a pas pu être lu : utilisez un fichier Excel (.xlsx) construit "
+"à partir du modèle."
+
+#: .\dashboard\facilitators\imports.py:119
+#, python-format
+msgid "Missing column(s) in the file: %(columns)s."
+msgstr "Colonne(s) absente(s) du fichier : %(columns)s."
+
+#: .\dashboard\facilitators\imports.py:129
+#, python-format
+msgid "Too many rows (more than %(n)s): please split the file."
+msgstr "Trop de lignes (plus de %(n)s) : découpez le fichier."
+
+#: .\dashboard\facilitators\imports.py:132
+msgid "The file contains no data row."
+msgstr "Le fichier ne contient aucune ligne de données."
+
+#: .\dashboard\facilitators\imports.py:202
+msgid "The last name and the first name are required."
+msgstr "Le nom et le prénom sont obligatoires."
+
+#: .\dashboard\facilitators\imports.py:204
+#, python-format
+msgid "Unknown facilitator type « %(value)s » (expected FC or FT)."
+msgstr "Type de facilitateur « %(value)s » inconnu (FC ou FT attendu)."
+
+#: .\dashboard\facilitators\imports.py:206
+#, python-format
+msgid "Unknown sex « %(value)s » (expected M or F): left empty."
+msgstr "Sexe « %(value)s » inconnu (M ou F attendu) : laissé vide."
+
+#: .\dashboard\facilitators\imports.py:211
+msgid "Invalid e-mail address."
+msgstr "Adresse e-mail invalide."
+
+#: .\dashboard\facilitators\imports.py:214
+msgid "This e-mail address is already used by a previous row of the file."
+msgstr ""
+"Cette adresse e-mail est déjà utilisée par une ligne précédente du fichier."
+
+#: .\dashboard\facilitators\imports.py:218
+msgid ""
+"No e-mail address: no MGP account, the login details will be displayed after"
+" the creation."
+msgstr ""
+"Pas d'adresse e-mail : pas de compte MGP, les identifiants seront affichés "
+"après la création."
+
+#: .\dashboard\facilitators\imports.py:221
+msgid "A facilitator with the same name already exists."
+msgstr "Un facilitateur du même nom existe déjà."
+
+#: .\dashboard\facilitators\imports.py:223
+msgid "Same name as a previous row of the file."
+msgstr "Même nom qu'une ligne précédente du fichier."
+
+#: .\dashboard\facilitators\imports.py:297
+#, python-format
+msgid ""
+"Village « %(name)s » found, but some of its parent levels have another name "
+"in the DCC."
+msgstr ""
+"Village « %(name)s » trouvé, mais certains de ses niveaux parents portent un"
+" autre nom dans le DCC."
+
+#: .\dashboard\facilitators\imports.py:300
+#, python-format
+msgid ""
+"Several villages « %(name)s » match this row: please check the region, "
+"prefecture, commune and canton."
+msgstr ""
+"Plusieurs villages « %(name)s » correspondent à cette ligne : vérifiez la "
+"région, la préfecture, la commune et le canton."
+
+#: .\dashboard\facilitators\imports.py:317
+#, python-format
+msgid ""
+"Village « %(village)s » not found in the DCC: the villages of the CVD « "
+"%(cvd)s » are used."
+msgstr ""
+"Village « %(village)s » introuvable dans le DCC : les villages du CVD « "
+"%(cvd)s » sont utilisés."
+
+#: .\dashboard\facilitators\imports.py:322
+#, python-format
+msgid "Village « %(name)s » not found in the DCC."
+msgstr "Village « %(name)s » introuvable dans le DCC."
+
+#: .\dashboard\facilitators\imports.py:324
+#, python-format
+msgid "Did you mean: %(names)s?"
+msgstr "Vouliez-vous dire : %(names)s ?"
+
+#: .\dashboard\facilitators\imports.py:375
+#, python-format
+msgid ""
+"Facilitator « %(label)s » found by name/phone, not by the e-mail address "
+"%(email)s."
+msgstr ""
+"Facilitateur « %(label)s » trouvé par son nom ou son téléphone, pas par "
+"l'adresse e-mail %(email)s."
+
+#: .\dashboard\facilitators\imports.py:378
+#, python-format
+msgid ""
+"Facilitator « %(label)s » not found in the DCC (create the account first)."
+msgstr ""
+"Facilitateur « %(label)s » introuvable dans le DCC (créez d'abord son "
+"compte)."
+
+#: .\dashboard\facilitators\imports.py:381
+#, python-format
+msgid "Several facilitators match « %(label)s »."
+msgstr "Plusieurs facilitateurs correspondent à « %(label)s »."
+
+#: .\dashboard\facilitators\imports.py:385
+#, python-format
+msgid "The facilitator « %(label)s » is inactive."
+msgstr "Le facilitateur « %(label)s » est inactif."
+
+#: .\dashboard\facilitators\imports.py:413
+#, python-format
+msgid "« %(name)s » is not registered as a %(role)s in the DCC."
+msgstr "« %(name)s » n'est pas enregistré comme %(role)s dans le DCC."
+
+#: .\dashboard\facilitators\imports.py:421
+msgid "No facilitator (FC or FT) on this row."
+msgstr "Aucun facilitateur (FC ou FT) sur cette ligne."
+
+#: .\dashboard\facilitators\localities_notify.py:41
+msgid "Update of your localities"
+msgstr "Mise à jour de vos localités"
+
+#: .\dashboard\facilitators\views.py:1282
+#, python-format
+msgid "MGP account not updated (%s)."
+msgstr "Compte MGP non mis à jour (%s)."
+
+#: .\dashboard\facilitators\views.py:1330
+#: .\dashboard\facilitators\views_localities.py:179
+msgid "The facilitator has been notified by e-mail."
+msgstr "Le facilitateur a été prévenu par e-mail."
+
+#: .\dashboard\facilitators\views_import.py:32
+#: .\dashboard\facilitators\views_import.py:39
+msgid "Excel file (.xlsx)"
+msgstr "Fichier Excel (.xlsx)"
+
+#: .\dashboard\facilitators\views_import.py:34
+#: .\dashboard\templates\facilitators\import_facilitators.html:31
+msgid "Projects"
+msgstr "Projets"
+
+#: .\dashboard\facilitators\views_import.py:40
+msgid "Type of localities"
+msgstr "Type de localités"
+
+#: .\dashboard\facilitators\views_import.py:41
+msgid ""
+"Initial localities (assignment villages of the current project and cycle)"
+msgstr ""
+"Localités initiales (villages d'affectation du projet et du cycle en cours)"
+
+#: .\dashboard\facilitators\views_import.py:45
+msgid ""
+"Replace the current localities of each facilitator of the file (otherwise "
+"the villages of the file are added)"
+msgstr ""
+"Remplacer les localités actuelles de chaque facilitateur du fichier (sinon, "
+"les villages du fichier sont ajoutés)"
+
+#: .\dashboard\facilitators\views_import.py:72
+#: .\dashboard\facilitators\views_import.py:76
+#: .\dashboard\facilitators\views_import.py:139
+#: .\dashboard\templates\facilitators\list.html:179
+msgid "Import facilitators"
+msgstr "Importer des AC & FT"
+
+#: .\dashboard\facilitators\views_import.py:112
+#: .\dashboard\facilitators\views_import.py:250
+msgid ""
+"The preview has expired or has been modified: please upload the file again."
+msgstr ""
+"L'aperçu a expiré ou a été modifié : téléversez de nouveau le fichier."
+
+#: .\dashboard\facilitators\views_import.py:120
+#: .\dashboard\facilitators\views_import.py:133
+#, python-format
+msgid "Row %(line)s (%(name)s): %(errors)s"
+msgstr "Ligne %(line)s (%(name)s) : %(errors)s"
+
+#: .\dashboard\facilitators\views_import.py:141
+#, python-format
+msgid "%(n)s account(s) created."
+msgstr "%(n)s compte(s) créé(s)."
+
+#: .\dashboard\facilitators\views_import.py:150
+#: .\dashboard\facilitators\views_import.py:154
+#: .\dashboard\templates\facilitators\list.html:189
+msgid "Import localities"
+msgstr "Importer des localités"
+
+#: .\dashboard\facilitators\views_import.py:200
+msgid ""
+"Assignment villages already filled in: only an administrator can modify "
+"them."
+msgstr ""
+"Villages d'affectation déjà renseignés : seul un administrateur peut les "
+"modifier."
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:40
+msgid "Sex"
+msgstr "Sexe"
+
+#: .\dashboard\templates\authentication\accounts_created.html:14
+msgid ""
+"Some login details could not be sent by e-mail: they are displayed only on "
+"this page. Note them now and give them to the persons concerned; they will "
+"have to change their password at their first login."
+msgstr ""
+"Certains identifiants n'ont pas pu être envoyés par e-mail : ils ne sont "
+"affichés que sur cette page. Notez-les maintenant et transmettez-les aux "
+"personnes concernées ; elles devront changer leur mot de passe à leur "
+"première connexion."
+
+#: .\dashboard\templates\authentication\accounts_created.html:28
+msgid "Login details e-mail"
+msgstr "E-mail des identifiants"
+
+#: .\dashboard\templates\authentication\accounts_created.html:29
+#: .\dashboard\templates\facilitators\import_assignments.html:107
+msgid "MGP"
+msgstr "MGP"
+
+#: .\dashboard\templates\authentication\accounts_created.html:39
+msgid "sent by e-mail"
+msgstr "envoyé par e-mail"
+
+#: .\dashboard\templates\authentication\accounts_created.html:42
+#: .\dashboard\templates\facilitators\import_assignments.html:123
+msgid "Not sent"
+msgstr "Non envoyé"
+
+#: .\dashboard\templates\authentication\accounts_created.html:43
+#: .\dashboard\templates\facilitators\import_assignments.html:123
+msgid "No e-mail"
+msgstr "Pas d'e-mail"
+
+#: .\dashboard\templates\authentication\accounts_created.html:54
+#: .\dashboard\templates\facilitators\import_assignments.html:134
+msgid "Back"
+msgstr "Retour"
+
+#: .\dashboard\templates\authentication\create.html:33
+msgid ""
+"The username (first name.last name) and the password are generated "
+"automatically and sent by e-mail; the user will have to change the password "
+"at the first login."
+msgstr ""
+"Le nom d'utilisateur (prénom.nom) et le mot de passe sont générés "
+"automatiquement et envoyés par e-mail ; l'utilisateur devra changer son mot "
+"de passe à la première connexion."
+
+#: .\dashboard\templates\authentication\first_login_password.html:11
+msgid "Change your password"
+msgstr "Changez votre mot de passe"
+
+#: .\dashboard\templates\authentication\first_login_password.html:25
+msgid ""
+"Welcome! For your security, please choose your own password before going "
+"further. It will be valid on all the platforms (DCC, MGP and SIG)."
+msgstr ""
+"Bienvenue ! Pour votre sécurité, choisissez votre propre mot de passe avant "
+"d'aller plus loin. Il sera valable sur toutes les plateformes (DCC, MGP et "
+"SIG)."
+
+#: .\dashboard\templates\authentication\first_login_password.html:35
+msgid "Change my password"
+msgstr "Changer mon mot de passe"
+
+#: .\dashboard\templates\authentication\first_login_password.html:38
+msgid "Log out"
+msgstr "Se déconnecter"
+
+#: .\dashboard\templates\facilitators\create.html:32
+msgid ""
+"The username (first name.last name) and the password are generated "
+"automatically and sent by e-mail; the facilitator will have to change the "
+"password at the first login. The facilitator is also created on the MGP."
+msgstr ""
+"Le nom d'utilisateur (prénom.nom) et le mot de passe sont générés "
+"automatiquement et envoyés par e-mail ; le facilitateur devra changer son "
+"mot de passe à la première connexion. Le facilitateur est aussi créé sur le "
+"MGP."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:12
+msgid ""
+"One row per village (region, prefecture, commune, canton, village, CVD) with"
+" the community facilitator (FC) and the technical facilitator (FT) who "
+"follow it; facilitators are found by e-mail address, otherwise by name and "
+"phone."
+msgstr ""
+"Une ligne par village (région, préfecture, commune, canton, village, CVD) "
+"avec le facilitateur communautaire (FC) et le facilitateur technique (FT) "
+"qui le suivent ; les facilitateurs sont retrouvés par leur adresse e-mail, "
+"sinon par leur nom et leur téléphone."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:13
+msgid ""
+"Same computation as the « Localities » page of a facilitator: a village of a"
+" CVD brings all the villages of the CVD; a facilitator without stabilization"
+" localities receives his initial localities as stabilization localities; the"
+" stabilization localities are sent to the MGP and the facilitator is "
+"notified by e-mail."
+msgstr ""
+"Même calcul que la page « Localités » d'un facilitateur : un village d'un "
+"CVD apporte tous les villages du CVD ; un facilitateur sans localités de "
+"stabilisation reçoit ses localités initiales comme localités de "
+"stabilisation ; les localités de stabilisation sont envoyées au MGP et le "
+"facilitateur est prévenu par e-mail."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:16
+msgid "Initial localities are recorded for the current project and cycle:"
+msgstr ""
+"Les localités initiales sont enregistrées pour le projet et le cycle en "
+"cours :"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:19
+#: .\dashboard\templates\facilitators\import_facilitators.html:15
+msgid "Download the template"
+msgstr "Télécharger le modèle"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:33
+msgid "Rows of the file"
+msgstr "Lignes du fichier"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:35
+#: .\dashboard\templates\facilitators\import_assignments.html:36
+#: .\dashboard\templates\facilitators\import_facilitators.html:37
+msgid "Row"
+msgstr "Ligne"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:45
+msgid "Initial localities"
+msgstr "Localités initiales"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:46
+msgid "replacement"
+msgstr "remplacement"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:46
+msgid "addition"
+msgstr "ajout"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:47
+#, python-format
+msgid "%(counter)s facilitator will be updated."
+msgid_plural "%(counter)s facilitators will be updated."
+msgstr[0] "%(counter)s facilitateur sera mis à jour."
+msgstr[1] "%(counter)s facilitateurs seront mis à jour."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:54
+msgid "Role"
+msgstr "Rôle"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:55
+msgid "Villages in the file"
+msgstr "Villages du fichier"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:56
+#: .\dashboard\templates\facilitators\import_assignments.html:105
+msgid "Villages before → after"
+msgstr "Villages avant → après"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:73
+msgid "Will be updated"
+msgstr "Sera mis à jour"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:73
+#: .\dashboard\templates\facilitators\import_assignments.html:118
+msgid "No change"
+msgstr "Aucun changement"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:74
+msgid "No stabilization localities: the initial localities are copied there."
+msgstr ""
+"Pas de localités de stabilisation : les localités initiales y sont copiées."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:87
+msgid "Save these localities?"
+msgstr "Enregistrer ces localités ?"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:90
+msgid "The facilitators in error or without change are ignored."
+msgstr "Les facilitateurs en erreur ou sans changement sont ignorés."
+
+#: .\dashboard\templates\facilitators\import_assignments.html:99
+msgid "Result"
+msgstr "Résultat"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:108
+msgid "E-mail"
+msgstr "E-mail"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:119
+msgid "Saved"
+msgstr "Enregistré"
+
+#: .\dashboard\templates\facilitators\import_assignments.html:128
+msgid "Nothing to save."
+msgstr "Rien à enregistrer."
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:12
+msgid ""
+"One row per facilitator: last name, first name, sex (M or F), phone number, "
+"e-mail address and type (FC or FT)."
+msgstr ""
+"Une ligne par facilitateur : nom, prénom, sexe (M ou F), numéro de "
+"téléphone, adresse e-mail et type (FC ou FT)."
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:13
+msgid ""
+"Each valid row creates a facilitator as the « Create Facilitator » form "
+"does: username (first name.last name) and password generated and sent by "
+"e-mail, MGP account when there is an e-mail address, password to change at "
+"the first login."
+msgstr ""
+"Chaque ligne valide crée un facilitateur comme le formulaire « Créer un "
+"facilitateur » : nom d'utilisateur (prénom.nom) et mot de passe générés et "
+"envoyés par e-mail, compte MGP s'il y a une adresse e-mail, mot de passe à "
+"changer à la première connexion."
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:30
+#, python-format
+msgid "%(counter)s facilitator will be created."
+msgid_plural "%(counter)s facilitators will be created."
+msgstr[0] "%(counter)s facilitateur sera créé."
+msgstr[1] "%(counter)s facilitateurs seront créés."
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:61
+msgid "Will be created"
+msgstr "Sera créé"
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:61
+msgid "MGP account too"
+msgstr "compte MGP aussi"
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:75
+msgid "Create these accounts and send their login details by e-mail?"
+msgstr "Créer ces comptes et envoyer leurs identifiants par e-mail ?"
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:76
+msgid "Confirm the creation"
+msgstr "Confirmer la création"
+
+#: .\dashboard\templates\facilitators\import_facilitators.html:78
+msgid "The rows in error are ignored."
+msgstr "Les lignes en erreur sont ignorées."
+
+#: .\authentication\api\auth\login.py
+#: .\authentication\api\platform_token.py
+msgid "Your session has expired. Please log in again."
+msgstr "Votre session a expiré. Veuillez vous reconnecter."
+
+#: .\authentication\models.py
+msgid "Platform access token"
+msgstr "Jeton de session (DCC, SIG, MGP)"
+
+#: .\authentication\models.py
+msgid "Platform access tokens"
+msgstr "Jetons de session (DCC, SIG, MGP)"
+
+#: .\dashboard\templates\authentication\components\modal_all_users.html
+msgid "Roles"
+msgstr "Rôles"
+
+#: .\dashboard\templates\authentication\components\modal_all_users.html
+msgid "Accounts"
+msgstr "Comptes"
+
+#: .\dashboard\authentication\users_stats.py
+msgid "Mobile"
+msgstr "Mobile"
+
+#: .\dashboard\authentication\users_stats.py
+msgid "Web"
+msgstr "Web"
+
+#: .\dashboard\authentication\users_stats.py
+msgid "Mobile and web"
+msgstr "Mobile et web"
+
+#: .\dashboard\templates\authentication\components\stats.html
+msgid "Complete list"
+msgstr "Liste complète"
+
+#: .\dashboard	emplates\process_manager	asks\_form_builder_i18n.html
+msgid "PDF"
+msgstr "PDF"
+
+#: .\dashboard	emplates\process_manager	asks\_form_builder_i18n.html
+msgid "Word"
+msgstr "Word"
+
+#: .\dashboard	emplates\process_manager	asks\_form_builder_i18n.html
+msgid "PDF or Word"
+msgstr "PDF ou Word"
+
+#: .\dashboard	emplates\process_manager	asksorm_builder.html
+msgid "Apply this mode to all fields and attachments of the task"
+msgstr "Appliquer ce mode à tous les champs et à toutes les pièces jointes de la tâche"
+
+#: .\dashboard	emplates\process_manager	asksorm_builder.html
+msgid "Apply to all fields and attachments"
+msgstr "Appliquer à tous les champs et pièces jointes"
+
+#: .\dashboardacilitatorsunctions.py
+#, python-format
+msgid "Attachment: %(name)s"
+msgstr "Pièce jointe : %(name)s"

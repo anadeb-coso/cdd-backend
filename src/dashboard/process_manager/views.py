@@ -185,7 +185,9 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             canton_headquarters_village_ids, copy_shared_task_data,
             find_task_share_record, upsert_task_share_record,
         )
-        from dashboard.process_manager.tasks.form_design import group_share_paths_by_mode
+        from dashboard.process_manager.tasks.form_design import (
+            group_share_paths_by_mode, extract_share_values, extract_attachment_share_values,
+        )
 
         task_sql_id = task.get('sql_id')
         source_adl = task.get('administrative_level_id')
@@ -196,9 +198,16 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         except TaskModel.DoesNotExist:
             return
 
-        modes_present = group_share_paths_by_mode(task_model.form)
+        modes_present = group_share_paths_by_mode(task_model.form, task_model.attachments)
         if not modes_present:
             return
+
+        # Valeurs à copier lues sur la tâche validée elle-même (champs + pièces
+        # jointes déjà en ligne) : plus à jour que l'instantané pris à
+        # l'achèvement mobile (fichiers synchronisés après coup) et présentes
+        # aussi pour une tâche remplie depuis le web.
+        doc_values = extract_share_values(task_model.form, task.get('form_response') or [])
+        doc_values.update(extract_attachment_share_values(task_model.attachments, task.get('attachments')))
 
         project_id = request.session.get('project_id')
         cycle_id = request.session.get('cycle_id')
@@ -259,6 +268,8 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
         merged_stored = dict(stored_targets)
         merged_stored.update(targets_by_mode)
         source_defaults = {'status': TaskShareRecord.STATUS_VALIDATED, 'share_targets': merged_stored}
+        if doc_values:
+            source_defaults['share_values'] = doc_values
         if cycle_id is not None:
             source_defaults['cycle_id'] = cycle_id
         upsert_task_share_record(task_sql_id, project_id, source_adl, defaults=source_defaults)
@@ -268,7 +279,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 for mode, targets in targets_by_mode.items():
                     copy_shared_task_data(
                         task_sql_id, source_adl, targets, project_id, cycle_id, mode,
-                        validated_by=validated_by,
+                        share_values=doc_values or None, validated_by=validated_by,
                     )
             finally:
                 for conn in connections.all():
