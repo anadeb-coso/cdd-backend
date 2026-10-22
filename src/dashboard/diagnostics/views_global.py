@@ -1,4 +1,5 @@
 from multiprocessing import context
+from dashboard.authentication.users_stats import users_statistics
 from django.views.generic import FormView, View as GenericView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -51,42 +52,9 @@ class DashboardDiagnosticsCDDView(PageMixin, LoginRequiredMixin, FormView):
         context['list_fields'] = ["phase", "activity", "task", "region", "prefecture", "commune", "canton", "village"]
         
         # Infos Generales
-        context['community_facilitators'] = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='community_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True
-            )
-        )
-        context['community_facilitators_count'] = context['community_facilitators'].count()
-        context['technical_facilitators'] = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='technical_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True
-            )
-        )
-        context['technical_facilitators_count'] = context['technical_facilitators'].count()
-        context['supervisors'] = User.objects.filter(
-            groups__name__in=['Supervisor'],
-            is_active=True
-        )
-        context['supervisors_count'] = context['supervisors'].count()
-        context['CDDSpecialists'] = User.objects.filter(
-            groups__name__in=['CDDSpecialist'],
-            is_active=True
-        )
-        context['CDDSpecialists_count'] = context['CDDSpecialists'].count()
-        context['others_users'] = User.objects.filter(
-            is_active=True,
-        ).exclude(
-            groups__name__in=['Supervisor', 'CDDSpecialist']
-        )
-        context['others_users_count'] = context['others_users'].count()
-        
-        context['total_users'] = context['community_facilitators_count'] + context['technical_facilitators_count'] + context['supervisors_count'] + context['CDDSpecialists_count'] + context['others_users_count']
+        # Utilisateurs de tous les projets : une personne n'est comptée qu'une fois (compte facilitateur et compte web
+        # d'une même personne), cf. dashboard/authentication/users_stats.py
+        context.update(users_statistics())
 
 
         aggregated_status = AggregatedStatus.objects.filter(

@@ -72,7 +72,7 @@
             <div class="card h-75">
                 <div class="card-body" >
                     <p>{% translate "Total Users" %}</p>
-                    <p class="text-bold" style="font-size: 1.7em;">{{ object.total_users }}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" data-toggle="modal" data-target="#card-item-all-users" title="{% translate 'Complete list' %}">{{ object.total_users }}</p>
                 </div>
             </div>
         </div>
@@ -151,7 +151,7 @@
             <div class="card h-75">
                 <div class="card-body" >
                     <p>{% translate "Total Users" %}</p>
-                    <p class="text-bold" style="font-size: 1.7em;">{{ object.global_total_users }}</p>
+                    <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" data-toggle="modal" data-target="#card-item-global-all-users" title="{% translate 'Complete list' %}">{{ object.global_total_users }}</p>
                 </div>
             </div>
         </div>
@@ -163,6 +163,10 @@
 
 {% include "authentication/components/modals_users_list.html" %}
 {% include "authentication/components/modals_for_global_users_list.html" %}
+{% translate "Total Users" as all_users_title %}
+{% include "authentication/components/modal_all_users.html" with modal_id="card-item-all-users" table_id="table-all-users" people=object.all_people title=all_users_title %}
+{% translate "Total Users" as all_users_title %}
+{% include "authentication/components/modal_all_users.html" with modal_id="card-item-global-all-users" table_id="table-global-all-users" people=object.global_all_people title=all_users_title %}
 
 
 <script type="text/javascript">

@@ -1,4 +1,5 @@
 from multiprocessing import context
+from dashboard.authentication.users_stats import users_statistics
 from django.views.generic import FormView, View as GenericView, ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
@@ -89,49 +90,20 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
         cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
         cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
 
-        community_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='community_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True,
-                projects__id=[self.request.session.get('project_id')]
-            )
-        )
-        community_facilitators_count = community_facilitators.count()
-        technical_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='technical_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True,
-                projects__id=[self.request.session.get('project_id')]
-            )
-        )
-        technical_facilitators_count = technical_facilitators.count()
-        # `prefetch_related('groups')` : le template affiche le groupe de chaque utilisateur
-        # (filtre `get_group_high`), sans requête par utilisateur.
-        supervisors = User.objects.filter(
-            groups__name__in=['Supervisor'],
-            is_active=True,
-            projects__in=[self.request.session.get('project_id')]
-        ).prefetch_related('groups')
-        supervisors_count = supervisors.count()
-        CDDSpecialists = User.objects.filter(
-            groups__name__in=['CDDSpecialist'],
-            is_active=True,
-            projects__in=[self.request.session.get('project_id')]
-        ).prefetch_related('groups')
-        CDDSpecialists_count = CDDSpecialists.count()
-        others_users = User.objects.filter(
-            projects__in=[self.request.session.get('project_id')],
-            is_active=True,
-        ).exclude(
-            groups__name__in=['Supervisor', 'CDDSpecialist']
-        ).prefetch_related('groups')
-        others_users_count = others_users.count()
-        
-        total_users = community_facilitators_count + technical_facilitators_count + supervisors_count + CDDSpecialists_count + others_users_count
+        # Utilisateurs : une personne n'est comptée qu'une fois (compte facilitateur et compte web d'une même
+        # personne), cf. dashboard/authentication/users_stats.py
+        users_stats = users_statistics(self.request.session.get('project_id'))
+        community_facilitators = users_stats['community_facilitators']
+        community_facilitators_count = users_stats['community_facilitators_count']
+        technical_facilitators = users_stats['technical_facilitators']
+        technical_facilitators_count = users_stats['technical_facilitators_count']
+        supervisors = users_stats['supervisors']
+        supervisors_count = users_stats['supervisors_count']
+        CDDSpecialists = users_stats['CDDSpecialists']
+        CDDSpecialists_count = users_stats['CDDSpecialists_count']
+        others_users = users_stats['others_users']
+        others_users_count = users_stats['others_users_count']
+        total_users = users_stats['total_users']
 
 
         aggregated_status_project = AggregatedStatus.objects.filter(
@@ -190,6 +162,7 @@ class DiagnosticsStatsTableView(LoginRequiredMixin, ListView):
             "others_users": others_users,
             "others_users_count": others_users_count,
             "total_users": total_users,
+            "all_people": users_stats['all_people'],
             "nbr_tasks_completed": nbr_tasks_completed,
             "nbr_tasks": nbr_tasks,
             "nbr_tasks_validated": nbr_tasks_validated,

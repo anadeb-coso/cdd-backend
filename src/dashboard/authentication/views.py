@@ -9,6 +9,8 @@ from dashboard.mixins import PageMixin
 from authentication.permissions import AdminPermissionRequiredMixin
 from authentication.middleware import FACILITATOR_GROUP_NAMES
 from dashboard.authentication.forms import CreateUserForm, UpdateUserForm
+from dashboard.authentication.account_results import accounts_created_response
+from authentication.accounts import generate_password, generate_username, require_password_change, send_account_credentials
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import Http404
@@ -20,6 +22,7 @@ from process_manager.models import Project
 import grm_client
 from dashboard.facilitators.functions import update_facilitators_stats
 from dashboard.facilitators.localities import with_stabilization_localities
+from dashboard.authentication.users_stats import users_statistics
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject
 
@@ -117,109 +120,12 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
     context_object_name = 'object'
 
     def get_queryset(self):
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name'))
-
-        # Infos Generales
-
-        community_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='community_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True,
-                projects__id=[self.request.session.get('project_id')]
-            )
-        )
-        community_facilitators_count = community_facilitators.count()
-        technical_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='technical_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True,
-                projects__id=[self.request.session.get('project_id')]
-            )
-        )
-        technical_facilitators_count = technical_facilitators.count()
-        supervisors = User.objects.filter(
-            groups__name__in=['Supervisor'],
-            is_active=True,
-            projects__in=[self.request.session.get('project_id')]
-        )
-        supervisors_count = supervisors.count()
-        CDDSpecialists = User.objects.filter(
-            groups__name__in=['CDDSpecialist'],
-            is_active=True,
-            projects__in=[self.request.session.get('project_id')]
-        )
-        CDDSpecialists_count = CDDSpecialists.count()
-        others_users = User.objects.filter(
-            projects__in=[self.request.session.get('project_id')],
-            is_active=True,
-        ).exclude(
-            groups__name__in=['Supervisor', 'CDDSpecialist']
-        )
-        others_users_count = others_users.count()
-        
-        total_users = community_facilitators_count + technical_facilitators_count + supervisors_count + CDDSpecialists_count + others_users_count
-        
-
-        global_community_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='community_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True
-            )
-        )
-        global_community_facilitators_count = global_community_facilitators.count()
-        global_technical_facilitators = FacilitatorRepository().find_by_criteria(
-            criteria=FacilitatorCriteria(
-                facilitator_type='technical_facilitator',
-                develop_mode=False,
-                training_mode=False,
-                active=True
-            )
-        )
-        global_technical_facilitators_count = global_technical_facilitators.count()
-        global_supervisors = User.objects.filter(
-            groups__name__in=['Supervisor'],
-            is_active=True
-        )
-        global_supervisors_count = global_supervisors.count()
-        global_CDDSpecialists = User.objects.filter(
-            groups__name__in=['CDDSpecialist'],
-            is_active=True
-        )
-        global_CDDSpecialists_count = global_CDDSpecialists.count()
-        global_others_users = User.objects.filter(
-            is_active=True,
-        ).exclude(
-            groups__name__in=['Supervisor', 'CDDSpecialist']
-        )
-        global_others_users_count = global_others_users.count()
-        
-        global_total_users = global_community_facilitators_count + global_technical_facilitators_count + global_supervisors_count + global_CDDSpecialists_count + global_others_users_count
-        
-
-        # facilitators = update_facilitators_stats(
-        #     community_facilitators, 
-        #     [],
-        #     self.request.session.get('project_id'), 
-        #     self.request.session.get('cycle_id'),
-        #     self.request.session.get('project_couch_id'),
-        #     project_mis
-        # )
-        facilitators = community_facilitators
-        # global_facilitators = update_facilitators_stats(
-        #     global_community_facilitators, 
-        #     [],
-        #     self.request.session.get('project_id'), 
-        #     self.request.session.get('cycle_id'),
-        #     self.request.session.get('project_couch_id'),
-        #     project_mis
-        # )
-        global_facilitators = global_community_facilitators
+        # Infos Generales : une personne n'est comptée qu'une fois (compte facilitateur et compte web d'une même
+        # personne), cf. dashboard/authentication/users_stats.py
+        stats = users_statistics(self.request.session.get('project_id'))
+        global_stats = users_statistics()
+        community_facilitators = stats['community_facilitators']
+        global_community_facilitators = global_stats['community_facilitators']
 
         # Localités de stabilisation lues dans CDD (copie envoyée par le GRM) : par email pour les
         # facilitateurs communautaires (les documents de l'API GRM n'avaient pas `administrative_regions_objects`,
@@ -227,38 +133,18 @@ class UsersDiagnosticsView(LoginRequiredMixin, generic.ListView):
         facilitators_stabilized_all_docs = {
             f.email: f for f in with_stabilization_localities(list(community_facilitators) + list(global_community_facilitators))
         }
-        technical_facilitators_stabilized = with_stabilization_localities(technical_facilitators)
-        global_technical_facilitators_stabilized = with_stabilization_localities(global_technical_facilitators)
-        
+        technical_facilitators_stabilized = with_stabilization_localities(stats['technical_facilitators'])
+        global_technical_facilitators_stabilized = with_stabilization_localities(global_stats['technical_facilitators'])
+
         # End Infos Generales
 
         return {
+            **stats,
+            **{f'global_{key}': value for key, value in global_stats.items()},
             "facilitators_stabilized_all_docs": facilitators_stabilized_all_docs,
-            "community_facilitators": community_facilitators,
-            "community_facilitators_count": community_facilitators_count,
-            "technical_facilitators": technical_facilitators,
-            "technical_facilitators_count": technical_facilitators_count,
-            "supervisors": supervisors,
-            "supervisors_count": supervisors_count,
-            "CDDSpecialists": CDDSpecialists,
-            "CDDSpecialists_count": CDDSpecialists_count,
-            "others_users": others_users,
-            "others_users_count": others_users_count,
-            "total_users": total_users,
-            "global_community_facilitators": global_community_facilitators,
-            "global_community_facilitators_count": global_community_facilitators_count,
-            "global_technical_facilitators": global_technical_facilitators,
-            "global_technical_facilitators_count": global_technical_facilitators_count,
-            "global_supervisors": global_supervisors,
-            "global_supervisors_count": global_supervisors_count,
-            "global_CDDSpecialists": global_CDDSpecialists,
-            "global_CDDSpecialists_count": global_CDDSpecialists_count,
-            "global_others_users": global_others_users,
-            "global_others_users_count": global_others_users_count,
-            "global_total_users": global_total_users,
-            "facilitators": facilitators,
+            "facilitators": community_facilitators,
             "technical_facilitators_stabilized": technical_facilitators_stabilized,
-            "global_facilitators": global_facilitators,
+            "global_facilitators": global_community_facilitators,
             "global_technical_facilitators_stabilized": global_technical_facilitators_stabilized
         }
     
@@ -290,6 +176,7 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
     
     def get_context_data(self, **kwargs):
         ctx = super(CreateUpdateUserFormView, self).get_context_data(**kwargs)
+        ctx['is_creation'] = not self.id
         if self.id:
             form = UpdateUserForm(instance=User.objects.get(id=self.id))
             ctx['form'] = form
@@ -328,7 +215,16 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             # (`User.objects.using('mis').create(...)`) recréait le compte qui venait d'être
             # enregistré : IntegrityError (identifiant en double), page d'erreur, et compte laissé
             # sans groupes ni projets.
-            instance = form.save()
+            password = None
+            if self.id:
+                instance = form.save()
+            else:
+                # Création : identifiant prénom.nom et mot de passe initial générés (envoyés par e-mail ci-dessous).
+                instance = form.save(commit=False)
+                instance.username = generate_username(instance.first_name, instance.last_name)
+                password = generate_password()
+                instance.set_password(password)
+                instance.save()
             instance.groups.set(groups)
             instance.user_permissions.set(user_permissions)
 
@@ -349,6 +245,18 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
                     facilitator.save()
                 except:
                     pass
+
+            if password is not None:
+                # Mot de passe à changer à la première connexion (DCC, SIG ; MGP s'il y a un compte de même e-mail).
+                require_password_change(email=instance.email, user=instance, created_by=request.user)
+                full_name = f"{instance.last_name} {instance.first_name}".strip()
+                row = {
+                    'kind': 'user', 'name': full_name, 'email': instance.email, 'username': instance.username,
+                    'mail_sent': send_account_credentials(full_name, instance.email, instance.username, password),
+                    'mgp_status': None,
+                }
+                row['password'] = None if row['mail_sent'] else password
+                return accounts_created_response(request, [row], reverse('dashboard:authentication:users'), gettext_lazy('Create User'))
 
             return redirect('dashboard:authentication:users')
         return super(CreateUpdateUserFormView, self).get(request, *args, **kwargs)

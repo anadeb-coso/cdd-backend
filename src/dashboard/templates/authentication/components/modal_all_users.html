@@ -1,0 +1,107 @@
+{% load static i18n custom_tags %}
+{% comment %}
+Liste complète des utilisateurs (clic sur « Nombre total d'utilisateurs ») : chaque personne une fois, avec ses rôles
+et ses comptes (mobile = facilitateur, web = utilisateur). Paramètres : modal_id, table_id, people
+(dashboard/authentication/users_stats.py::users_statistics), title.
+{% endcomment %}
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content">
+
+        <div class="modal-header">
+            <h5 class="modal-title">{{ title }} ({{ people|length }})</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-body table-responsive">
+
+                <div class="input-group mb-3 search-bar">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <input class="form-control" id="{{ table_id }}-search" placeholder="{% translate 'Search by name' %}...">
+                </div>
+
+                <table id="{{ table_id }}" class="table-bordered w-100">
+                    <thead>
+                    <tr>
+                        <th>{% translate 'Name' %}</th>
+                        <th>{% translate 'Username' %}</th>
+                        <th>{% translate 'Email' %}</th>
+                        <th>{% translate 'Tel' %}</th>
+                        <th>{% translate 'Roles' %}</th>
+                        <th>{% translate 'Accounts' %}</th>
+                        <th>{% translate 'Action' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for person in people %}
+                        <tr>
+                            <td align="left">{{ person.name }}</td>
+                            <td>{{ person.username }}</td>
+                            <td>{{ person.email|default:"" }}</td>
+                            <td>{{ person.phone|default:"" }}</td>
+                            <td>{{ person.roles|join:", " }}</td>
+                            <td>{{ person.accounts_label }}</td>
+                            <td>
+                                {% if person.facilitator %}
+                                <a href="{% url 'dashboard:facilitators:detail' person.facilitator.no_sql_db_name %}" target="_blank"
+                                    class="btn btn-info btn-xs" title="{% translate 'See profile' %}">
+                                    <i class="fa fa-user"></i>
+                                </a>
+                                {% if user|can_edit_facilitator %}
+                                <a href="{% url 'dashboard:facilitators:update' person.facilitator.pk %}" target="_blank"
+                                    class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% endif %}
+                                {% if user|is_admin %}
+                                {% for user_obj in person.users %}
+                                <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" target="_blank"
+                                    class="btn btn-secondary btn-xs" title="{% translate 'Edit' %} ({{ user_obj.username }})">
+                                    <i class="fa fa-user-cog"></i>
+                                </a>
+                                {% endfor %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        {% get_current_language as lang %}
+        const tableId = "{{ table_id }}";
+        if ($.fn.DataTable.isDataTable(`#${tableId}`)) {
+            $(`#${tableId}`).DataTable().destroy();
+        }
+        const table = $(`#${tableId}`).DataTable({
+            autoWidth: false,
+            responsive: true,
+            scrollX: false,
+            language: {
+                url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}')
+            },
+            dom: 'Blrtip',
+            buttons: ['copy', 'excel', 'pdf', 'colvis'],
+            lengthMenu: [10, 20, 30, 40, 50, 100, 200, 500],
+            pageLength: 20,
+            order: []
+        });
+        $(`#${tableId}-search`).on('keyup', function () {
+            table.search($(this).val()).draw();
+        });
+    });
+</script>

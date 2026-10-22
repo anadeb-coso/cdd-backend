@@ -152,7 +152,7 @@
                         <div class="card h-75">
                             <div class="card-body" >
                                 <p>{% translate "Total Users" %}</p>
-                                <p class="text-bold" style="font-size: 1.7em;">{{ total_users }}</p>
+                                <p class="text-bold" style="font-size: 1.7em; cursor: pointer; text-decoration: underline;" data-toggle="modal" data-target="#card-item-all-users" title="{% translate 'Complete list' %}">{{ total_users }}</p>
                             </div>
                         </div>
                     </div>
@@ -657,6 +657,8 @@ padding: 0;
     </script>
 
 
+{% translate "Total Users" as all_users_title %}
+{% include "authentication/components/modal_all_users.html" with modal_id="card-item-all-users" table_id="table-all-users" people=all_people title=all_users_title %}
 {% endblock %}
 {% block select2 %}
     <script type="text/javascript">
