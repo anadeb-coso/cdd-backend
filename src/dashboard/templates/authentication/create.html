@@ -27,6 +27,12 @@
             <div class="card">
                 <form method="post">{% csrf_token %}
                     <div class="card-body">
+                        {% if is_creation %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            {% translate "The username (first name.last name) and the password are generated automatically and sent by e-mail; the user will have to change the password at the first login." %}
+                        </div>
+                        {% endif %}
                         <div class="row">
                             {% for field in form %}
                                 <div class="col-6">

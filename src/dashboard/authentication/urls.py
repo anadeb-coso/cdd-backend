@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from dashboard.authentication.forms import EmailAuthenticationForm
-from dashboard.authentication import views, views_localities, views_supervisors
+from dashboard.authentication import views, views_first_login, views_localities, views_supervisors
 
 app_name = 'authentication'
 urlpatterns = [
@@ -11,6 +11,7 @@ urlpatterns = [
         template_name='authentication/login.html',
         redirect_authenticated_user=True), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('first-login-password/', views_first_login.FirstLoginPasswordView.as_view(), name='first_login_password'),
     path('users/', views.UsersListView.as_view(), name='users'),
     path('user-create/', views.CreateUpdateUserFormView.as_view(), name='user_create'),
     path('user/<slug:id>/update/', views.CreateUpdateUserFormView.as_view(), name='user_update'),

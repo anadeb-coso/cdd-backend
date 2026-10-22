@@ -92,6 +92,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Mot de passe initial à changer à la première connexion (cf. authentication/middleware.py) — avant la
+    # restriction des Facilitator ci-dessous, pour que la redirection vers le changement passe en premier.
+    'authentication.middleware.PasswordChangeRequiredMiddleware',
     # Restreint un Facilitator connecté au Web DCC aux 8 menus autorisés (cf.
     # authentication/middleware.py) — doit suivre AuthenticationMiddleware (request.user).
     'authentication.middleware.FacilitatorMenuAccessMiddleware',

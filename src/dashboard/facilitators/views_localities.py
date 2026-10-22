@@ -13,24 +13,23 @@ from django.utils.html import escape, format_html
 from django.utils.translation import gettext, gettext_lazy
 from django.views import generic
 
-import grm_client
 from authentication.models import Facilitator
 from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.mixins import PageMixin
-from dashboard.utils import search_facilitators_db_with_villages_stabilized, sync_geographicalunits_with_cvd_on_facilittor
 from no_sql_client import NoSQLClient
 from process_manager.models import Cycle, Project
 from subprojects.models import Project as MisProject
 
 from authentication.models import LocalityHistory
 from .localities import (
-    AdministrativeTree, LocalitiesChange, apply_administrative_levels, can_assign_user_localities, can_edit_assignment,
-    can_edit_localities, can_view_localities_history, schedule_administrative_levels_documents_moves,
+    AdministrativeTree, LocalitiesChange, can_assign_user_localities, can_edit_assignment,
+    can_edit_localities, can_view_localities_history,
 )
+from .localities_apply import apply_facilitator_localities
 from .localities_history import (
-    change_datetime, event_rows, facilitator_state, last_change_at, min_change_date, parse_change_date, presence_periods,
-    record_facilitator_changes,
+    change_datetime, event_rows, last_change_at, min_change_date, parse_change_date, presence_periods,
 )
+from .localities_notify import notify_localities_change
 
 SECTIONS = ('assignment', 'stabilization', 'additional')
 
@@ -160,53 +159,24 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
         return redirect('dashboard:facilitators:localities', pk=self.facilitator.pk)
 
     def _apply(self, change, changed_at):
-        facilitator = self.facilitator
         session = self.request.session
-        before = facilitator_state(facilitator)
         history = dict(changed_by=self.request.user, project_id=session.get('project_id'), changed_at=changed_at)
-
-        if change.assignment_changed:
-            _administrative_levels, administrative_levels_new, administrative_levels_remove = apply_administrative_levels(
-                facilitator, change.old_levels, change.new_administrative_levels_elements(),
-                change.project_cdd, change.cycle_cdd, change.project_mis.id if change.project_mis else 1,
-                session.get('project_name'),
-            )
-            facilitator.administrative_levels = _administrative_levels
-            facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
-            facilitator.simple_save()
-            if self.doc:
-                # `update_doc_uncontrolled` : une liste vidée doit aussi l'être dans CouchDB.
-                NoSQLClient().update_doc_uncontrolled(self.facilitator_db, self.doc['_id'], {"administrative_levels": _administrative_levels})
-            schedule_administrative_levels_documents_moves(facilitator.no_sql_db_name, administrative_levels_new, administrative_levels_remove,
-                                                           kept_administrative_levels=_administrative_levels)
-            sync_geographicalunits_with_cvd_on_facilittor(
-                session.get('project_id'), facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name
-            )
-            record_facilitator_changes(facilitator, before, 'localities_page', sections=['assignment'], **history)
-
-        if change.stabilization_changed:
-            facilitator.main_administrative_id = change.new_main
-            facilitator.stabilization_administrative_choices = change.new_stabilization_choices
-            facilitator.stabilization_administrative_ids = change.new_stabilization
-            facilitator.additional_administrative_choices = change.new_additional_choices
-            facilitator.additional_administrative_ids = change.new_additional
-            facilitator.simple_save()
-            record_facilitator_changes(facilitator, before, 'localities_page', sections=['stabilization', 'additional'], **history)
-            try:
-                # Bases CouchDB des facilitateurs affectés à ces villages (même traitement que l'envoi du GRM).
-                search_facilitators_db_with_villages_stabilized(session.get('project_name'), no_sql_db=facilitator.no_sql_db_name)
-            except Exception as exc:
-                messages.warning(self.request, gettext_lazy("Access to other facilitators' databases not updated: %s") % exc)
-
-            ok, detail = grm_client.update_localities_on_grm(
-                facilitator.email, change.new_main, change.new_stabilization_choices, change.new_additional_choices,
-            )
+        result = apply_facilitator_localities(
+            change, self.facilitator, self.facilitator_db, self.doc, session.get('project_id'), session.get('project_name'),
+            history, 'localities_page',
+        )
+        if result['databases_error']:
+            messages.warning(self.request, gettext_lazy("Access to other facilitators' databases not updated: %s") % result['databases_error'])
+        if result['grm'] is not None:
+            ok, detail = result['grm']
             if ok:
                 messages.success(self.request, gettext_lazy("Localities saved and sent to the GRM."))
             else:
                 messages.warning(self.request, gettext_lazy("Localities saved in CDD but not sent to the GRM (%s).") % detail)
         else:
             messages.success(self.request, gettext_lazy("Localities saved."))
+        if notify_localities_change(self.facilitator, result['events'], tree=self.tree):
+            messages.info(self.request, gettext_lazy("The facilitator has been notified by e-mail."))
 
 
 class LocalitiesHistoryMixin:

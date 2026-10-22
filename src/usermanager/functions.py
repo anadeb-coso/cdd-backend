@@ -43,21 +43,21 @@ import re
 def validate_password(password):
     # Vérifier si le mot de passe contient uniquement des lettres et des chiffres
     if not re.fullmatch("[A-Za-z0-9]+", password):
-        return _("The password must contain only letters and numbers.")
+        return False, _("The password must contain only letters and numbers.")
     
     # Vérifier la longueur (au moins 8 caractères)
     if len(password) < 8:
-        return _("The password must contain at least 8 characters.")
+        return False, _("The password must contain at least 8 characters.")
     
     # Vérifier si le mot de passe contient au moins une lettre
     if not re.search("[A-Za-z]", password):
-        return _("The password must contain at least one letter.")
+        return False, _("The password must contain at least one letter.")
     
     # Vérifier si le mot de passe contient au moins un chiffre
     if not re.search("[0-9]", password):
-        return _("The password must contain at least one digit.")
+        return False, _("The password must contain at least one digit.")
     
-    return True
+    return True, "_"
 
 
 def user_manager_email_notification(user, mail_type, motif, deadline):

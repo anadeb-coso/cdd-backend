@@ -20,6 +20,7 @@ from dashboard.facilitators.localities import (
 from dashboard.facilitators.localities_history import (
     change_datetime, event_rows, last_change_at, min_change_date, parse_change_date, record_user_changes, user_state,
 )
+from dashboard.facilitators.localities_notify import notify_localities_change
 from dashboard.mixins import PageMixin
 
 SECTIONS = ('intervention', 'additional')
@@ -143,7 +144,7 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
         record.additional_village_ids = change.new_additional
         record.updated_by = self.request.user
         record.save()
-        record_user_changes(self.account, before, record, 'user_localities_page', changed_by=self.request.user, changed_at=changed_at)
+        events = record_user_changes(self.account, before, record, 'user_localities_page', changed_by=self.request.user, changed_at=changed_at)
 
         zone_after = supervisor_canton_ids(self.account) if supervisor else None
         if supervisor and (zone_before is None or set(zone_before) != set(zone_after or [])):
@@ -165,3 +166,5 @@ class UserLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateView):
             messages.success(self.request, gettext_lazy("Localities saved and sent to the GRM."))
         else:
             messages.warning(self.request, gettext_lazy("Localities saved in CDD but not sent to the GRM (%s).") % detail)
+        if notify_localities_change(self.account, events, tree=self.tree):
+            messages.info(self.request, gettext_lazy("The user has been notified by e-mail."))

@@ -1,0 +1,13 @@
+{% load i18n %}{% autoescape off %}{{ greeting }} {{ all_sex }} {{ user_full_name }},
+
+{% trans "Your localities have been updated:" %}
+{% for row in rows %}
+{{ row.section }}
+{% if row.whole_country %}{% trans "Whole country (TOGO)" %}
+{% else %}{% if row.main %}{% trans "Main level" %} : {{ row.main }}
+{% endif %}{% if row.added %}{% if row.first_definition %}{% trans "Villages" %}{% else %}{% trans "Villages added" %}{% endif %} ({{ row.added|length }}) : {{ row.added|join:", " }}
+{% endif %}{% if row.removed %}{% trans "Villages removed" %} ({{ row.removed|length }}) : {{ row.removed|join:", " }}
+{% endif %}{% if not row.first_definition %}{% trans "Current villages" %} ({{ row.villages|length }}) : {% if row.villages %}{{ row.villages|join:", " }}{% else %}{% trans "None" %}{% endif %}
+{% endif %}{% endif %}{% endfor %}
+{% trans "For any question, please contact your supervisor." %}
+{% endautoescape %}

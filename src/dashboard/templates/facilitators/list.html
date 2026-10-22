@@ -171,6 +171,24 @@
                     </a>
                 </div>
                 <div class="float-right mb-3">&nbsp;&nbsp;</div>
+                <div class="float-right mb-3">
+                    <a href="{% url 'dashboard:facilitators:import_facilitators' %}"
+                       class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        {% translate "Import facilitators" %}
+                    </a>
+                </div>
+                <div class="float-right mb-3">&nbsp;&nbsp;</div>
+            {% endif %}
+            {% if user|can_edit_localities %}
+                <div class="float-right mb-3">
+                    <a href="{% url 'dashboard:facilitators:import_assignments' %}"
+                       class="btn btn-primary btn-sm rounded-xl">
+                        <i class="fas fa-file-excel mr-2"></i>
+                        {% translate "Import localities" %}
+                    </a>
+                </div>
+                <div class="float-right mb-3">&nbsp;&nbsp;</div>
             {% endif %}
             <div class="float-right mb-3">
                 <a href="{% url 'dashboard:facilitators:stabilized_list' %}{% if type_of_facilitator_list %}?type_of_facilitator_list={{ type_of_facilitator_list }}{% endif %}"

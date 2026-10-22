@@ -1,0 +1,58 @@
+{% extends 'layouts/base.html' %}
+{% load i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if summary %}<div class="alert alert-success">{{ summary }}</div>{% endif %}
+            {% for error in errors %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
+            {% if passwords_shown %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    {% translate "Some login details could not be sent by e-mail: they are displayed only on this page. Note them now and give them to the persons concerned; they will have to change their password at their first login." %}
+                </div>
+            {% endif %}
+            {% if rows %}
+            <div class="card">
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>{% translate "Name" %}</th>
+                                <th>{% translate "Type" %}</th>
+                                <th>{% translate "E-mail address" %}</th>
+                                <th>{% translate "Username" %}</th>
+                                <th>{% translate "Password" %}</th>
+                                <th>{% translate "Login details e-mail" %}</th>
+                                <th>{% translate "MGP" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td>{{ row.name }}</td>
+                                    <td>{% if row.facilitator_type %}{{ row.facilitator_type }}{% else %}{% translate "User" %}{% endif %}</td>
+                                    <td>{{ row.email|default:"-" }}</td>
+                                    <td><code>{{ row.username }}</code></td>
+                                    <td>{% if row.password %}<code>{{ row.password }}</code>{% else %}<span class="text-muted">{% translate "sent by e-mail" %}</span>{% endif %}</td>
+                                    <td>
+                                        {% if row.mail_sent %}<span class="badge badge-success">{% translate "Sent" %}</span>
+                                        {% elif row.email %}<span class="badge badge-danger">{% translate "Not sent" %}</span>
+                                        {% else %}<span class="badge badge-secondary">{% translate "No e-mail" %}</span>{% endif %}
+                                    </td>
+                                    <td>{{ row.mgp_label|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            <a href="{{ back_url }}" class="btn btn-primary btn-sm rounded-xl">
+                <i class="fa fa-arrow-left mr-2"></i>{% translate "Back" %}
+            </a>
+        </div>
+    </div>
+{% endblock content %}

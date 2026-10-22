@@ -144,16 +144,25 @@ def user_state(record):
 
 def record_facilitator_changes(facilitator, before, source, sections=None, **kwargs):
     """Compare `before` (= `facilitator_state` avant modification) à l'état actuel et enregistre chaque
-    section modifiée."""
+    section modifiée. Renvoie les lignes d'historique créées (pour le mail au facilitateur)."""
     after = facilitator_state(facilitator)
+    events = []
     for section in sections or after.keys():
-        record_localities_change(section, source, after[section], before[section], facilitator=facilitator, **kwargs)
+        event = record_localities_change(section, source, after[section], before[section], facilitator=facilitator, **kwargs)
+        if event is not None:
+            events.append(event)
+    return events
 
 
 def record_user_changes(account, before, record, source, **kwargs):
+    """Même chose pour les localités d'intervention d'un utilisateur ; renvoie les lignes créées."""
     after = user_state(record)
+    events = []
     for section in ('intervention', 'intervention_additional'):
-        record_localities_change(section, source, after[section], before[section], user=account, **kwargs)
+        event = record_localities_change(section, source, after[section], before[section], user=account, **kwargs)
+        if event is not None:
+            events.append(event)
+    return events
 
 
 # ---------------------------------------------------------------------------------------------

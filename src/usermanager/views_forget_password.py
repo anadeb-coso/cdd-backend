@@ -26,6 +26,7 @@ from cdd.call_objects_from_other_db import mis_objects_call, grm_objects_call, c
 from usermanager.functions import encoder_email
 import grm_client
 from authentication.models import Facilitator
+from authentication.accounts import mark_password_changed_for_email
 
 
 def reset_password_ask_email(request):
@@ -131,7 +132,7 @@ class RestResetPassword(APIView):
 
             msg = _("An error has occurred...")
 
-            is_validate_password = validate_password(password_new)
+            is_validate_password, msg_validate_password = validate_password(password_new)
             validation_code = ValidationCode.objects.filter(code=confirm_code)
 
             if not email:
@@ -147,7 +148,7 @@ class RestResetPassword(APIView):
             elif not validation_code.filter(validation_code_ending_datetime__gt=timezone.now(), already_use=False).exists():
                 msg = _("Code already used")
             elif not is_validate_password:
-                msg = is_validate_password
+                msg = msg_validate_password
             else:
                 cdd_user = cdd_objects_call.filter_objects(User, email=email, is_active=True).first()
                 mis_user = mis_objects_call.filter_objects(User, email=email, is_active=True).first()
@@ -177,6 +178,8 @@ class RestResetPassword(APIView):
                 msg = _('The password has been successfully reset.')
                 ok = True
                 validation_code.update(already_use=True)
+                # Un nouveau mot de passe choisi ici vaut aussi pour le changement imposé à la 1re connexion.
+                mark_password_changed_for_email(email, 'password_reset')
 
             # messages.add_message(request, messages.INFO, msg, extra_tags='info')
 

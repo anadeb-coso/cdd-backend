@@ -37,6 +37,8 @@ ALLOWED_NAMESPACE_PREFIXES = [
 ALLOWED_VIEW_NAMES = {
     "dashboard:authentication:login",
     "dashboard:authentication:logout",
+    # Changement obligatoire du mot de passe initial (PasswordChangeRequiredMiddleware ci-dessous).
+    "dashboard:authentication:first_login_password",
     # Sélection de projet : PageMixin.dispatch (dashboard/mixins.py) y redirige TOUT utilisateur
     # authentifié sans projet en session, Facilitator inclus — la bloquer créerait une boucle.
     "dashboard:process_manager:list",
@@ -125,3 +127,50 @@ class ZoneChangeLogoutMiddleware:
             messages.warning(request, gettext("Your intervention localities have been changed: please log in again."))
             return redirect(settings.LOGIN_URL)
         return self.get_response(request)
+
+
+# ---------------------------------------------------------------------------------------------
+# Mot de passe initial à changer à la première connexion (authentication/accounts.py)
+# ---------------------------------------------------------------------------------------------
+
+# Posé dans la session une fois vérifié qu'aucun changement n'est en attente (une seule requête SQL par session).
+PASSWORD_CHANGE_CHECKED_SESSION_KEY = 'password_change_checked'
+PASSWORD_CHANGE_EXEMPT_VIEW_NAMES = {
+    "dashboard:authentication:first_login_password",
+    "dashboard:authentication:login",
+    "dashboard:authentication:logout",
+}
+
+
+class PasswordChangeRequiredMiddleware:
+    """Tant que le mot de passe initial d'un compte créé dans le DCC n'a été changé sur aucune plateforme, toute
+    page du dashboard renvoie vers le changement obligatoire. Comme FacilitatorMenuAccessMiddleware, seul le
+    namespace `dashboard` est concerné (pas les API du mobile, qui refusent la connexion elles-mêmes). Doit
+    suivre AuthenticationMiddleware et précéder FacilitatorMenuAccessMiddleware."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        user = getattr(request, "user", None)
+        if user is None or not user.is_authenticated or request.session.get(PASSWORD_CHANGE_CHECKED_SESSION_KEY):
+            return None
+        match = request.resolver_match
+        if match is None or tuple(match.namespaces[:1]) != ("dashboard",) or match.view_name in PASSWORD_CHANGE_EXEMPT_VIEW_NAMES:
+            return None
+
+        from django.http import JsonResponse
+        from django.shortcuts import redirect
+        from django.utils.translation import gettext
+        from authentication.accounts import password_change_required
+
+        if not password_change_required(account=user):
+            request.session[PASSWORD_CHANGE_CHECKED_SESSION_KEY] = True
+            return None
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"detail": gettext("You must change your password before your first login."),
+                                 "password_change_required": True}, status=403)
+        return redirect("dashboard:authentication:first_login_password")

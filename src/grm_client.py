@@ -249,6 +249,56 @@ def _group_villages_by_parent(rows):
     return list(objects.values())
 
 
+def create_facilitator_on_grm(email, first_name, last_name, phone, facilitator_type, password_hash, is_active,
+                              administrative_id=None, administrative_ids=None, additional_administrative_ids=None):
+    """Crée sur le MGP le compte d'un facilitateur créé dans le DCC (le MGP ne crée jamais de facilitateur dans le
+    DCC) : même e-mail, même mot de passe (empreinte, le compte n'a donc pas à être activé par code), groupe
+    CommunityFacilitator/TechnicalFacilitator, profil d'agent et localités de stabilisation. Un compte MGP de même
+    e-mail déjà existant est laissé tel quel (statut 'exists'). Renvoie (ok, détail)."""
+    return _post_facilitator({
+        'create': True,
+        'email': email,
+        'first_name': first_name or '',
+        'last_name': last_name or '',
+        'phone': phone or '',
+        'facilitator_type': facilitator_type,
+        'password_hash': password_hash,
+        'is_active': bool(is_active),
+        'administrative_id': administrative_id,
+        'administrative_ids': [str(_id) for _id in (administrative_ids or [])],
+        'additional_administrative_ids': [str(_id) for _id in (additional_administrative_ids or [])],
+    })
+
+
+def update_facilitator_identity_on_grm(previous_email, email, first_name, last_name, phone):
+    """Nouvel e-mail, nom ou téléphone d'un facilitateur modifié dans le DCC, reportés sur son compte MGP (trouvé par
+    l'ancien e-mail). Rien d'autre n'est modifié. Renvoie (ok, détail) ; ok False + "no GRM account" s'il n'en a pas."""
+    return _post_facilitator({
+        'create': False,
+        'previous_email': previous_email,
+        'email': email,
+        'first_name': first_name or '',
+        'last_name': last_name or '',
+        'phone': phone or '',
+    })
+
+
+def _post_facilitator(data):
+    try:
+        response = requests.post(
+            f"{settings.GRM_URL_BASE}/api/service/users/facilitator/", json=data,
+            # plus long que _TIMEOUT : à la création, le GRM renvoie les localités à CDD avant de répondre
+            headers=_headers(), timeout=90,
+        )
+    except requests.RequestException as exc:
+        return False, str(exc)
+    if response.status_code == 404:
+        return False, "no GRM account"
+    if response.status_code != 200:
+        return False, f"HTTP {response.status_code}"
+    return True, response.json()
+
+
 def set_grm_user_password(email, new_password):
     """Pousse un changement de mot de passe vers le compte GRM (`auth.User`) correspondant,
     pour garder les comptes CDD et GRM synchronisés — remplace l'ancienne écriture directe dans

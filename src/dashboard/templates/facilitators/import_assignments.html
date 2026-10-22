@@ -1,0 +1,138 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if expired %}<div class="alert alert-warning">{{ expired }}</div>{% endif %}
+
+            <div class="card">
+                <div class="card-body">
+                    <p>
+                        {% translate "One row per village (region, prefecture, commune, canton, village, CVD) with the community facilitator (FC) and the technical facilitator (FT) who follow it; facilitators are found by e-mail address, otherwise by name and phone." %}
+                        {% translate "Same computation as the « Localities » page of a facilitator: a village of a CVD brings all the villages of the CVD; a facilitator without stabilization localities receives his initial localities as stabilization localities; the stabilization localities are sent to the MGP and the facilitator is notified by e-mail." %}
+                    </p>
+                    <p>
+                        {% translate "Initial localities are recorded for the current project and cycle:" %}
+                        <b>{{ project_name|default:"-" }}</b> / <b>{{ cycle_name|default:"-" }}</b>.
+                    </p>
+                    <p><a href="{{ template_url }}"><i class="fas fa-file-excel mr-1"></i>{% translate "Download the template" %}</a></p>
+                    <form method="post" enctype="multipart/form-data">{% csrf_token %}
+                        {% bootstrap_field form.file %}
+                        {% bootstrap_field form.mode %}
+                        {% bootstrap_field form.replace %}
+                        <button type="submit" class="btn btn-primary btn-sm rounded-xl">
+                            <i class="fas fa-search mr-1"></i>{% translate "Preview" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% if line_errors or line_warnings %}
+                <div class="card">
+                    <div class="card-header"><b>{% translate "Rows of the file" %}</b></div>
+                    <div class="card-body">
+                        {% for line, error in line_errors %}<div class="text-danger">{% translate "Row" %} {{ line }} : {{ error }}</div>{% endfor %}
+                        {% for line, warning in line_warnings %}<div class="text-warning">{% translate "Row" %} {{ line }} : {{ warning }}</div>{% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if preview %}
+                <div class="card">
+                    <div class="card-header">
+                        <b>{% translate "Preview" %}</b> :
+                        {% if mode == 'initial' %}{% translate "Initial localities" %}{% else %}{% translate "Stabilization localities" %}{% endif %}
+                        — {% if replace %}{% translate "replacement" %}{% else %}{% translate "addition" %}{% endif %}
+                        — {% blocktranslate count counter=changed_count %}{{ counter }} facilitator will be updated.{% plural %}{{ counter }} facilitators will be updated.{% endblocktranslate %}
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Facilitator" %}</th>
+                                    <th>{% translate "Role" %}</th>
+                                    <th>{% translate "Villages in the file" %}</th>
+                                    <th>{% translate "Villages before → after" %}</th>
+                                    <th>{% translate "Added" %}</th>
+                                    <th>{% translate "Removed" %}</th>
+                                    <th>{% translate "Status" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview %}
+                                    <tr class="{% if row.errors %}table-danger{% elif not row.changed %}text-muted{% endif %}">
+                                        <td><a href="{% url 'dashboard:facilitators:localities' row.facilitator.pk %}" target="_blank">{{ row.facilitator.name }}</a><br><small>{{ row.facilitator.email|default:"" }}</small></td>
+                                        <td>{{ row.roles }}</td>
+                                        <td>{{ row.file_villages }}</td>
+                                        <td>{{ row.section.before }} → <b>{{ row.section.after }}</b></td>
+                                        <td class="text-success">{% if row.section.added_count %}+{{ row.section.added_count }} : {{ row.section.added }}{% else %}-{% endif %}</td>
+                                        <td class="text-danger">{% if row.section.removed_count %}-{{ row.section.removed_count }} : {{ row.section.removed }}{% else %}-{% endif %}</td>
+                                        <td>
+                                            {% for error in row.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                                            {% if not row.errors %}{% if row.changed %}<div class="text-success">{% translate "Will be updated" %}</div>{% else %}<div>{% translate "No change" %}</div>{% endif %}{% endif %}
+                                            {% if row.replicated %}<div class="small">{% translate "No stabilization localities: the initial localities are copied there." %}</div>{% endif %}
+                                            {% for warning in row.warnings %}<div class="text-muted small">{{ warning }}</div>{% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if payload %}
+                        <div class="card-footer">
+                            <form method="post">{% csrf_token %}
+                                <input type="hidden" name="payload" value="{{ payload }}">
+                                <button type="submit" class="btn btn-success btn-sm rounded-xl"
+                                        onclick="return confirm('{% translate "Save these localities?" %}');">
+                                    <i class="fas fa-check mr-1"></i>{% translate "Confirm" %}
+                                </button>
+                                <span class="text-muted ml-2">{% translate "The facilitators in error or without change are ignored." %}</span>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if results is not None %}
+                <div class="card">
+                    <div class="card-header"><b>{% translate "Result" %}</b></div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Facilitator" %}</th>
+                                    <th>{% translate "Villages before → after" %}</th>
+                                    <th>{% translate "Status" %}</th>
+                                    <th>{% translate "MGP" %}</th>
+                                    <th>{% translate "E-mail" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in results %}
+                                    <tr>
+                                        <td><a href="{% url 'dashboard:facilitators:localities' row.facilitator.pk %}" target="_blank">{{ row.facilitator.name }}</a></td>
+                                        <td>{% if row.section %}{{ row.section.before }} → <b>{{ row.section.after }}</b>{% endif %}</td>
+                                        <td>
+                                            {% if row.errors %}{% for error in row.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                                            {% elif row.unchanged %}{% translate "No change" %}
+                                            {% else %}<span class="text-success">{% translate "Saved" %}</span>{% endif %}
+                                            {% if row.databases_error %}<div class="text-warning small">{{ row.databases_error }}</div>{% endif %}
+                                        </td>
+                                        <td>
+                                            {% if row.grm %}{% if row.grm.0 %}<span class="text-success">{% translate "Sent" %}</span>{% elif row.grm.0 is None %}{% translate "No e-mail" %}{% else %}<span class="text-danger">{% translate "Not sent" %} ({{ row.grm.1 }})</span>{% endif %}{% else %}-{% endif %}
+                                        </td>
+                                        <td>{% if row.mail_sent %}<span class="text-success">{% translate "Sent" %}</span>{% else %}-{% endif %}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="5">{% translate "Nothing to save." %}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <a href="{% url 'dashboard:facilitators:list' %}" class="btn btn-primary btn-sm rounded-xl"><i class="fa fa-arrow-left mr-2"></i>{% translate "Back" %}</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

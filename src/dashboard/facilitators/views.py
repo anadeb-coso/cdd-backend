@@ -1,4 +1,3 @@
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.cache import cache
 from django.db.models import Count
@@ -13,7 +12,7 @@ from django.contrib.auth.models import User
 import itertools
 from django.db.models import Q
 
-from process_manager.models import Phase, Activity, Project, ProcessAddOrRemoveADL, Cycle
+from process_manager.models import Phase, Activity, Project, Cycle
 from authentication.models import Facilitator
 from dashboard.facilitators.forms import FacilitatorForm, FilterTaskForm, UpdateFacilitatorForm, FilterFacilitatorForm
 from dashboard.mixins import AJAXRequestMixin, PageMixin, JSONResponseMixin
@@ -40,7 +39,15 @@ from authentication.functions import get_assign_adl_by_facilitatr, get_assigns_a
 from dashboard.tasks import sync_celery_tasks_re
 from .repository.db_facilitator_repository import FacilitatorRepository
 from .localities import apply_administrative_levels, keep_other_projects_levels, schedule_administrative_levels_documents_moves
-from .localities_history import facilitator_state, record_facilitator_changes, record_localities_change
+from .localities_history import facilitator_state, record_facilitator_changes
+from .creation import create_facilitator
+from .localities_apply import replicate_assignment_to_stabilization, send_stabilization_to_grm
+from .localities_notify import notify_localities_change
+from authentication.accounts import split_full_name
+from dashboard.utils import search_facilitators_db_with_villages_stabilized
+from django.contrib import messages
+import grm_client
+from dashboard.authentication.account_results import accounts_created_response
 from .repository.facilitator_criteria import FacilitatorCriteria
 from subprojects.models import Project as MisProject
 from cdd.views_manage_url_parse import redirect_user_to_login, redirect_to_an_url
@@ -1093,150 +1100,19 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
 
     def form_valid(self, form):
         data = form.cleaned_data
-        password = make_password(data['password1'], salt=None, hasher='default')
-        facilitator = Facilitator(username=data['username'], password=password, active=True)
-        facilitator.name = data['name']
-        facilitator.email = data['email']
-        facilitator.phone = data['phone']
-        facilitator.sex = data['sex']
-        facilitator.facilitator_type = data['facilitator_type']
-        facilitator.save(replicate_design=False)
-
-        project_cdd = Project.objects.get(id=self.request.session.get('project_id'))
-        cycle_cdd = Cycle.objects.get(id=self.request.session.get('cycle_id'), project_id=self.request.session.get('project_id'))
-
-        project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
-        project_mis_id = project_mis.id if project_mis else 1
-
-        _administrative_levels = []
-        if 'administrative_levels' in data and data['administrative_levels']:
-            for elt in data['administrative_levels']:
-                administrativelevel_obj = administrativelevels_models.AdministrativeLevel.objects.using('mis').get(id=int(elt['id']))
-                if administrativelevel_obj.cvd and administrativelevel_obj.cvd.headquarters_village and str(administrativelevel_obj.cvd.headquarters_village.id) == elt['id']:
-                    elt['is_headquarters_village'] = True
-
-                if project_mis and project_mis.administrative_levels.filter(id=int(elt['id'])).exists():
-                    elt["project_id"] = project_cdd.couch_id
-                    elt["project_name"] = project_cdd.name
-                    elt["cycle_id"] = cycle_cdd.couch_id
-                    elt["cycle_name"] = cycle_cdd.name
-
-                _administrative_levels.append(elt)
-
-        #Assign ADL
-        for adl in _administrative_levels:
-            _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True).first()
-            
-            if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
-                    try:
-                        assign = AssignAdministrativeLevelToFacilitator()
-                        assign.administrative_level_id = int(adl['id'])
-                        assign.facilitator_id = facilitator.id
-                        assign.project_id = project_mis_id
-                        assign.save(using='mis')
-                    except Exception as exc:
-                        print(exc)
-        #End Assign ADL
-
-        # Connexion Web DCC : crée/relie le `User` de ce facilitator AVANT de
-        # construire `doc` ci-dessous, pour que `doc["email"]` parte avec
-        # l'email éventuellement corrigé (collision avec un `User` existant)
-        # plutôt que la valeur brute soumise dans le formulaire.
-        ensure_facilitator_user(facilitator)
-
-        doc = {
-            "name": data['name'],
-            "email": facilitator.email,
-            "phone": data['phone'],
-            "sex": data['sex'],
-            "facilitator_type": data['facilitator_type'],
-            "administrative_levels": _administrative_levels,
-            "type": "facilitator",
-            "develop_mode": facilitator.develop_mode,
-            "training_mode": facilitator.training_mode,
-            "sql_id": int(facilitator.pk),
-            "project_id": self.request.session.get('project_couch_id'),
-            "project_name": self.request.session.get('project_name'),
-            "projects_ids": [
-                p.couch_id for p in data['projects'] 
-            ] if 'projects' in data and data['projects'] else [],
-            "projects_names": [
-                p.name for p in data['projects'] 
-            ] if 'projects' in data and data['projects'] else []
-        }
-
-        facilitator.administrative_levels = _administrative_levels
-        facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
-        facilitator.simple_save()
-        record_localities_change(
-            'assignment', 'facilitator_creation', {'villages': facilitator.administrative_levels_ids}, {'villages': []},
-            facilitator=facilitator, changed_by=self.request.user, project_id=self.request.session.get('project_id'),
+        session = self.request.session
+        # Identifiant prénom.nom et mot de passe générés, compte MGP, mot de passe à changer à la première
+        # connexion et mail des identifiants : cf. dashboard/facilitators/creation.py (commun avec l'import Excel).
+        creation = create_facilitator(
+            last_name=data['last_name'], first_names=data['first_name'], email=data['email'], phone=data['phone'],
+            sex=data['sex'], facilitator_type=data['facilitator_type'], projects=data.get('projects') or [],
+            created_by=self.request.user, project_id=session.get('project_id'), cycle_id=session.get('cycle_id'),
+            project_couch_id=session.get('project_couch_id'), project_name=session.get('project_name'),
+            administrative_levels=data.get('administrative_levels') or [],
         )
-
-
-        nsc = NoSQLClient()
-        facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
-        nsc.create_document(facilitator_database, doc)
-
-
-        # clear_facilitator_docs_by_administrativelevels_and_save_to_backup_db(
-        #     "backup_db_facilitators_docs", facilitator.no_sql_db_name,
-        #     [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-        # ) #Copy backup db docs (for villages added that removed on facilitator before) to facilitator db and clear docs on backup
-
-        process_adls = [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-        if process_adls:
-            process_add_or_remove_adl = ProcessAddOrRemoveADL(
-                name = f"backup_db_facilitators_docs_{facilitator.no_sql_db_name}",
-                move_from = "backup_db_facilitators_docs",
-                move_to = facilitator.no_sql_db_name,
-                administrative_levels = process_adls,
-                query_action = "create"
-            )
-            process_add_or_remove_adl.save()
-
-
-        sync_geographicalunits_with_cvd_on_facilittor(
-            self.request.session.get('project_id'),
-            facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name
-        ) #Rebuild Unit and CVD infos on facilitator doc
-
-        # sync_tasks(
-        #     self.request.session.get('project_id'),
-        #     facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name,
-        #     administrativelevel_ids=[d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-        # ) #Sync the tasks for the new villages
-        
-        if 'projects' in data and data['projects']:
-            for p in data['projects']:
-                p.facilitators.add(facilitator)
-                p.save()
-
-        # Donne au User web de ce facilitator accès aux mêmes projets (Project.users),
-        # une fois Project.facilitators à jour ci-dessus (ensure_facilitator_user a
-        # tourné plus haut, AVANT cette boucle, donc trop tôt pour le faire lui-même).
-        sync_facilitator_user_projects(facilitator)
-
-        if 'projects' in data and data['projects']:
-            for p in data['projects']:
-                try:
-                    nsc_database = nsc.get_db("process_design")
-                    project = nsc_database.get_query_result({"_id": p.couch_id})[0]
-
-                    fc_project = facilitator_database.get_query_result(
-                        {"type": "project", "name": project[0]['name']}
-                    )[0]
-
-                    # check if the project exists
-                    if not fc_project:
-                        # create the project on the facilitator database
-                        nsc.create_document(facilitator_database, project[0])
-                except:
-                    pass
-
-
-
-        return super().form_valid(form)
+        return accounts_created_response(
+            self.request, [creation.as_row()], str(self.success_url), gettext_lazy('Create Facilitator'),
+        )
 
 
 
@@ -1326,7 +1202,8 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
 
     def form_valid(self, form):
         data = form.cleaned_data
-        localities_before = facilitator_state(Facilitator.objects.get(pk=self.facilitator.pk))
+        previous = Facilitator.objects.get(pk=self.facilitator.pk)
+        localities_before = facilitator_state(previous)
         facilitator = form.save(commit=False)
         facilitator.name = data['name']
         facilitator.email = data['email']
@@ -1373,10 +1250,36 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         facilitator.administrative_levels = _administrative_levels
         facilitator.administrative_levels_ids = [int(_adl['id']) for _adl in _administrative_levels]
         facilitator.simple_save()
-        record_facilitator_changes(
+        events = record_facilitator_changes(
             facilitator, localities_before, 'facilitator_form', sections=['assignment'],
             changed_by=self.request.user, project_id=self.request.session.get('project_id'),
         )
+
+        # Sans stabilisation : les villages d'affectation y sont répliqués, puis envoyés au MGP (même règle que la
+        # page « Localités »).
+        if replicate_assignment_to_stabilization(facilitator):
+            events += record_facilitator_changes(
+                facilitator, localities_before, 'facilitator_form', sections=['stabilization'],
+                changed_by=self.request.user, project_id=self.request.session.get('project_id'),
+            )
+            try:
+                search_facilitators_db_with_villages_stabilized(self.request.session.get('project_name'), no_sql_db=facilitator.no_sql_db_name)
+            except Exception as exc:
+                print(exc)
+            ok, detail = send_stabilization_to_grm(facilitator)
+            if ok:
+                messages.success(self.request, gettext_lazy("Localities saved and sent to the GRM."))
+            elif ok is False:
+                messages.warning(self.request, gettext_lazy("Localities saved in CDD but not sent to the GRM (%s).") % detail)
+
+        # Nouvel e-mail, nom ou téléphone : reportés sur le compte MGP (retrouvé par l'ancien e-mail).
+        if previous.email and (previous.email, previous.name, previous.phone) != (facilitator.email, facilitator.name, facilitator.phone):
+            last_name, first_names = split_full_name(facilitator.name)
+            ok, detail = grm_client.update_facilitator_identity_on_grm(
+                previous.email, facilitator.email, first_names, last_name, facilitator.phone,
+            )
+            if ok is False and detail != "no GRM account":
+                messages.warning(self.request, gettext_lazy("MGP account not updated (%s).") % detail)
 
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)
@@ -1422,6 +1325,9 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         # une fois Project.facilitators à jour ci-dessus (même raison que dans
         # CreateFacilitatorView.form_valid).
         sync_facilitator_user_projects(facilitator)
+
+        if notify_localities_change(facilitator, events):
+            messages.info(self.request, gettext_lazy("The facilitator has been notified by e-mail."))
 
         return redirect('dashboard:facilitators:list')
 

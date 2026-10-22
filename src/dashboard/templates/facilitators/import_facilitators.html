@@ -1,0 +1,86 @@
+{% extends 'layouts/base.html' %}
+{% load bootstrap4 i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-12">
+            {% if expired %}<div class="alert alert-warning">{{ expired }}</div>{% endif %}
+
+            <div class="card">
+                <div class="card-body">
+                    <p>
+                        {% translate "One row per facilitator: last name, first name, sex (M or F), phone number, e-mail address and type (FC or FT)." %}
+                        {% translate "Each valid row creates a facilitator as the « Create Facilitator » form does: username (first name.last name) and password generated and sent by e-mail, MGP account when there is an e-mail address, password to change at the first login." %}
+                    </p>
+                    <p><a href="{{ template_url }}"><i class="fas fa-file-excel mr-1"></i>{% translate "Download the template" %}</a></p>
+                    <form method="post" enctype="multipart/form-data">{% csrf_token %}
+                        {% bootstrap_field form.file %}
+                        {% bootstrap_field form.projects %}
+                        <button type="submit" class="btn btn-primary btn-sm rounded-xl">
+                            <i class="fas fa-search mr-1"></i>{% translate "Preview" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% if preview %}
+                <div class="card">
+                    <div class="card-header">
+                        <b>{% translate "Preview" %}</b> :
+                        {% blocktranslate count counter=valid_count %}{{ counter }} facilitator will be created.{% plural %}{{ counter }} facilitators will be created.{% endblocktranslate %}
+                        {% if projects %}({% translate "Projects" %} : {% for p in projects %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}){% endif %}
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Row" %}</th>
+                                    <th>{% translate "Name" %}</th>
+                                    <th>{% translate "Type" %}</th>
+                                    <th>{% translate "Sex" %}</th>
+                                    <th>{% translate "Phone" %}</th>
+                                    <th>{% translate "E-mail address" %}</th>
+                                    <th>{% translate "Username" %}</th>
+                                    <th>{% translate "Status" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview %}
+                                    <tr class="{% if row.errors %}table-danger{% elif row.warnings %}table-warning{% endif %}">
+                                        <td>{{ row.line }}</td>
+                                        <td>{{ row.last_name }} {{ row.first_name }}</td>
+                                        <td>{{ row.facilitator_type_code }}</td>
+                                        <td>{{ row.sex|default:"-" }}</td>
+                                        <td>{{ row.phone|default:"-" }}</td>
+                                        <td>{{ row.email|default:"-" }}</td>
+                                        <td>{% if row.username %}<code>{{ row.username }}</code>{% else %}-{% endif %}</td>
+                                        <td>
+                                            {% if row.errors %}
+                                                {% for error in row.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                                            {% else %}
+                                                <div class="text-success">{% translate "Will be created" %}{% if row.email %} — {% translate "MGP account too" %}{% endif %}</div>
+                                            {% endif %}
+                                            {% for warning in row.warnings %}<div class="text-muted small">{{ warning }}</div>{% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if payload %}
+                        <div class="card-footer">
+                            <form method="post">{% csrf_token %}
+                                <input type="hidden" name="payload" value="{{ payload }}">
+                                <button type="submit" class="btn btn-success btn-sm rounded-xl"
+                                        onclick="return confirm('{% translate "Create these accounts and send their login details by e-mail?" %}');">
+                                    <i class="fas fa-check mr-1"></i>{% translate "Confirm the creation" %}
+                                </button>
+                                <span class="text-muted ml-2">{% translate "The rows in error are ignored." %}</span>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

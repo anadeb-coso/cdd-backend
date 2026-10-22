@@ -25,6 +25,7 @@ from cdd.call_objects_from_other_db import mis_objects_call, grm_objects_call, c
 from usermanager.functions import encoder_email
 import grm_client
 from authentication.models import Facilitator
+from authentication.accounts import mark_password_changed_for_email
 
 
 class RestSendChangePasswordCode(APIView):
@@ -88,7 +89,7 @@ class RestChangePassword(APIView):
             
             if email and confirm_code and current_password and password_new and password_new_confirm:
 
-                is_validate_password = validate_password(password_new)
+                is_validate_password, msg_validate_password = validate_password(password_new)
                 validation_code = ValidationCode.objects.filter(code=confirm_code)
 
                 if not validation_code:
@@ -98,7 +99,7 @@ class RestChangePassword(APIView):
                 elif not validation_code.filter(validation_code_ending_datetime__gt=timezone.now(), already_use=False).exists():
                     msg = _("Code already used")
                 elif not is_validate_password:
-                    msg = is_validate_password
+                    msg = msg_validate_password
                 elif password_new != password_new_confirm:
                     msg = _("The password must be the same as the previous one.")
                 else:
@@ -174,6 +175,8 @@ class RestChangePassword(APIView):
                         msg = _('The password has been successfully changed.')
                         ok = True
                         validation_code.update(already_use=True)
+                        # Un changement fait ici vaut aussi pour le changement imposé à la 1re connexion.
+                        mark_password_changed_for_email(email, 'profile')
 
 
             else:

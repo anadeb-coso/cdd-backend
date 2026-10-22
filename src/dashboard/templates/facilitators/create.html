@@ -27,18 +27,20 @@
             <div class="card">
                 <form method="post">{% csrf_token %}
                     <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            {% translate "The username (first name.last name) and the password are generated automatically and sent by e-mail; the facilitator will have to change the password at the first login. The facilitator is also created on the MGP." %}
+                        </div>
                         <div class="row">
                             <div class="col-6">
-                                {% bootstrap_field form.name %}
+                                {% bootstrap_field form.last_name %}
+                                {% bootstrap_field form.first_name %}
                                 {% bootstrap_field form.email %}
                                 {% bootstrap_field form.phone %}
-                                {% bootstrap_field form.sex %}
-                                {% bootstrap_field form.facilitator_type %}
                             </div>
                             <div class="col-6">
-                                {% bootstrap_field form.username %}
-                                {% bootstrap_field form.password1 %}
-                                {% bootstrap_field form.password2 %}
+                                {% bootstrap_field form.sex %}
+                                {% bootstrap_field form.facilitator_type %}
                                 {% bootstrap_field form.projects %}
                             </div>
                         </div>

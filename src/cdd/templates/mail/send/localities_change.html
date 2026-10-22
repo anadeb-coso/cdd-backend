@@ -1,0 +1,47 @@
+{% load i18n %}<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .email-container { max-width: 750px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .header { background-color: rgb(12, 160, 34); color: white; text-align: center; padding: 20px; }
+        .header h1 { margin: 0; font-size: 22px; }
+        .content { padding: 20px; color: #333; }
+        .content h2 { font-size: 18px; color: rgb(12, 160, 34); margin-bottom: 4px; }
+        .content p { line-height: 1.6; margin: 4px 0; }
+        .added { color: #1b7a2a; }
+        .removed { color: #b02a2a; }
+        .footer { background-color: #f4f4f4; text-align: center; color: #999; padding: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <h1>{{ title }}</h1>
+    </div>
+    <div class="content">
+        <p>{{ greeting }} {{ all_sex }} {{ user_full_name }},</p>
+        <p>{% trans "Your localities have been updated:" %}</p>
+        {% for row in rows %}
+            <h2>{{ row.section }}</h2>
+            {% if row.whole_country %}
+                <p><b>{% trans "Whole country (TOGO)" %}</b></p>
+            {% else %}
+                {% if row.main %}<p><b>{% trans "Main level" %}</b> : {{ row.main }}</p>{% endif %}
+                {% if row.added %}<p class="added"><b>{% if row.first_definition %}{% trans "Villages" %}{% else %}{% trans "Villages added" %}{% endif %} ({{ row.added|length }})</b> : {{ row.added|join:", " }}</p>{% endif %}
+                {% if row.removed %}<p class="removed"><b>{% trans "Villages removed" %} ({{ row.removed|length }})</b> : {{ row.removed|join:", " }}</p>{% endif %}
+                {% if not row.first_definition %}<p><b>{% trans "Current villages" %} ({{ row.villages|length }})</b> : {% if row.villages %}{{ row.villages|join:", " }}{% else %}{% trans "None" %}{% endif %}</p>{% endif %}
+            {% endif %}
+        {% endfor %}
+        <br />
+        <p>{% trans "For any question, please contact your supervisor." %}</p>
+    </div>
+    <div class="footer">
+        <p>&copy; {{ current_year }} Projet de Cohésion Sociale des régions nord du Golfe de Guinée. Tous droits réservés.</p>
+    </div>
+</div>
+</body>
+</html>
