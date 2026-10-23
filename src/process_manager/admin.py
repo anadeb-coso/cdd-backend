@@ -1,4 +1,6 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.utils.translation import gettext_lazy as _
+from dashboard.process_manager.forms import ProjectFullForm
 from django import forms
 from .models import *
 # Register your models here.
@@ -89,44 +91,16 @@ class FacilitatorDeploymentAdmin(admin.ModelAdmin):
         return super().get_queryset(request) #.select_related('user')
 
 
-class ProjectForm(forms.ModelForm):
-    class Meta:
-        model = Project
-        exclude = FORM_FIELDS_TO_EXCLUDE
-
-    def clean_facilitators(self):
-        parent = self.cleaned_data['parent']
-        facilitators = self.cleaned_data['facilitators']
-
-        if not facilitators:
-            facilitators = parent.facilitators.all()
-        
-        return facilitators
-    
-    def clean_users(self):
-        parent = self.cleaned_data['parent']
-        users = self.cleaned_data['users']
-
-        if not users:
-            users = parent.users.all()
-        
-        return users
-
-    # def save(self, commit=True):
-    #     instance = super(ProjectForm, self).save(commit=False)
-        
-    #     instance = Project.objects.get(id=instance.id)
-        
-    #     if instance.id and instance.parent:
-    #         instance.users.add(*instance.parent.users.all())
-    #         instance.facilitators.add(*instance.parent.facilitators.all())
-    #         instance = instance.save_and_return_object()
-
-    #     return instance
-
-
 class ProjectAdmin(admin.ModelAdmin):
-    form = ProjectForm
+    # Formulaire complet partagé avec la page « Projets » du Web DCC (dashboard/process_manager/forms.py) : statut,
+    # financeurs et niveaux administratifs (COSOMIS) en plus des facilitateurs et des utilisateurs. L'ancien
+    # formulaire reprenait les facilitateurs/utilisateurs du parent quand la liste était vide, et plantait sans
+    # parent ; c'est désormais la case « Lier aussi ceux du projet parent ».
+    form = ProjectFullForm
+    fieldsets = (
+        (None, {'fields': ('name', 'description', 'parent', 'status', 'financiers', 'administrative_levels')}),
+        (_('Facilitators and users'), {'fields': ('facilitators', 'users', 'inherit_from_parent')}),
+    )
     list_display = (
         'id',
         'name',
@@ -137,12 +111,24 @@ class ProjectAdmin(admin.ModelAdmin):
         'name',
         'description',
     )
-    
-    # raw_id_fields = (
-    #     'facilitators',
-    #     'users',
-    # )
-    filter_horizontal  = ['facilitators', 'users']
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # sélecteur à deux listes (les champs déclarés par le formulaire ne passent pas par filter_horizontal) ;
+        # copie : ces champs sont partagés avec le formulaire de la page « Projets »
+        import copy
+        from django.contrib.admin.widgets import FilteredSelectMultiple
+        for name in ('facilitators', 'users', 'financiers', 'administrative_levels'):
+            field = form.base_fields[name] = copy.deepcopy(form.base_fields[name])
+            field.widget = FilteredSelectMultiple(field.label, False)
+        return form
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.save_links(form.instance)
+        if form.inherited['facilitators'] or form.inherited['users']:
+            messages.info(request, _("%(facilitators)s facilitator(s) and %(users)s user(s) of the parent project were "
+                                     "also linked.") % form.inherited)
 
 
 

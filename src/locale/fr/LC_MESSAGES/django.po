@@ -5679,3 +5679,73 @@ msgstr "Appliquer à tous les champs et pièces jointes"
 #, python-format
 msgid "Attachment: %(name)s"
 msgstr "Pièce jointe : %(name)s"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Financiers"
+msgstr "Financeurs"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Parent project"
+msgstr "Projet parent"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Facilitators working on this project (they see it in the DCC mobile app)."
+msgstr "Facilitateurs qui travaillent sur ce projet (ils le voient dans l'application mobile du DCC)."
+
+#: .\dashboard\process_manager\forms.py
+msgid "Users who can select this project in the DCC and COSOMIS."
+msgstr "Utilisateurs qui peuvent choisir ce projet dans le DCC et dans COSOMIS."
+
+#: .\dashboard\process_manager\forms.py
+msgid "Also link the facilitators and users of the parent project"
+msgstr "Lier aussi les facilitateurs et les utilisateurs du projet parent"
+
+#: .\dashboard\process_manager\forms.py
+msgid "The villages of the chosen cantons and the parents of the chosen levels are added automatically; the cycles of the project follow these levels."
+msgstr "Les villages des cantons choisis et les parents des niveaux choisis sont ajoutés automatiquement ; les cycles du projet suivent ces niveaux."
+
+#: .\dashboard\process_manager\forms.py
+msgid "Facilitators and users"
+msgstr "Facilitateurs et utilisateurs"
+
+#: .\dashboard\process_manager\forms.py
+#, python-format
+msgid "%(facilitators)s facilitator(s) and %(users)s user(s) of the parent project were also linked."
+msgstr "%(facilitators)s facilitateur(s) et %(users)s utilisateur(s) du projet parent ont aussi été liés."
+
+#: .\dashboard\process_manager\forms.py
+#, python-format
+msgid "The project %(name)s has been saved."
+msgstr "Le projet %(name)s a été enregistré."
+
+#: .\dashboard\process_manager\forms.py
+msgid "Active"
+msgstr "Actif"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Suspended"
+msgstr "Suspendu"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Abandoned"
+msgstr "Abandonné"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Administrative Levels"
+msgstr "Niveaux administratifs"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Update the project"
+msgstr "Modifier le projet"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Create a project"
+msgstr "Créer un projet"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Back to the project selection"
+msgstr "Retour à la sélection du projet"
+
+#: .\dashboard\process_manager\forms.py
+msgid "Create or update a project"
+msgstr "Créer ou modifier un projet"

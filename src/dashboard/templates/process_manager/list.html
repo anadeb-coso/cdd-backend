@@ -63,6 +63,13 @@
                         </p>
                       {% endfor %}
                     {% endblock %}
+                  {% if user.is_superuser %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'dashboard:process_manager:project_create' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-folder-plus mr-1"></i>{% translate "Create or update a project" %}
+                        </a>
+                    </div>
+                  {% endif %}
 
         </div>
         <!-- /.login-card-body -->

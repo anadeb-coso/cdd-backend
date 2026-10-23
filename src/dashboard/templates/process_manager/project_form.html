@@ -1,0 +1,87 @@
+{% load bootstrap4 static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/fontawesome-free/css/all.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/select2/css/select2.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}"/>
+    <link rel="stylesheet" href="{% static 'css/cdd.css' %}"/>
+    <link href="{% static 'css/fonts.css' %}" rel="stylesheet">
+    <style>
+        body { background: #f4f6f9; }
+        .project-page { max-width: 1100px; margin: 30px auto; padding: 0 16px; }
+        .project-page .help-block, .project-page small.form-text { color: #495057 !important; }
+        .project-list a { display: block; padding: 6px 10px; border-bottom: 1px solid #eee; color: #24323d; }
+        .project-list a.active { background: #e8f7f1; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="project-page">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fas fa-folder-open mr-2"></i>{{ title }}{% if project %} : {{ project.name }}{% endif %}</h4>
+        <a href="{% url 'dashboard:process_manager:list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i>{% translate "Back to the project selection" %}
+        </a>
+    </div>
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %}">{{ message }}</div>
+    {% endfor %}
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <div class="card-header py-2"><strong>{% translate "Projects" %}</strong></div>
+                <div class="card-body p-0 project-list">
+                    <a href="{% url 'dashboard:process_manager:project_create' %}" class="{% if not project %}active{% endif %}">
+                        <i class="fas fa-plus mr-1"></i>{% translate "Create a project" %}
+                    </a>
+                    {% for p in projects %}
+                        <a href="{% url 'dashboard:process_manager:project_update' p.pk %}" class="{% if project and p.pk == project.pk %}active{% endif %}">
+                            {{ p.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {% bootstrap_form_errors form type='non_fields' %}
+                        {% bootstrap_field form.name %}
+                        {% bootstrap_field form.description %}
+                        <div class="row">
+                            <div class="col-md-6">{% bootstrap_field form.parent %}</div>
+                            <div class="col-md-6">{% bootstrap_field form.status %}</div>
+                        </div>
+                        {% bootstrap_field form.financiers %}
+                        {% bootstrap_field form.administrative_levels %}
+                        <hr>
+                        <h6 class="text-bold">{% translate "Facilitators and users" %}</h6>
+                        {% bootstrap_field form.facilitators %}
+                        {% bootstrap_field form.users %}
+                        {% bootstrap_field form.inherit_from_parent %}
+                        <button type="submit" class="btn btn-primary float-right">
+                            <i class="fas fa-save mr-1"></i>{% translate "Save" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{% static 'AdminLTE/plugins/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'AdminLTE/plugins/select2/js/select2.full.min.js' %}"></script>
+<script>
+    $(function () {
+        $('.project-page select').select2({ theme: 'bootstrap4', width: '100%' });
+    });
+</script>
+</body>
+</html>

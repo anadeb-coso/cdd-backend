@@ -1,10 +1,13 @@
 from django.urls import path, include
 
-from dashboard.process_manager import views
+from dashboard.process_manager import views, views_projects
 
 app_name = 'process_manager'
 urlpatterns = [
     path('select-project/', views.ProjectListView.as_view(), name='list'),
+    # Création / modification d'un projet (superutilisateurs), cf. views_projects.py
+    path('projects/create/', views_projects.ProjectFormView.as_view(), name='project_create'),
+    path('projects/<int:pk>/update/', views_projects.ProjectFormView.as_view(), name='project_update'),
     path('get-choices-for-next-phases-activities-tasks', views.GetChoicesForNextPhaseActivitiesTasksView.as_view(),
          name='get_choices_for_next_phases_activities_tasks'),
     path('get-choices-for-next-phases-activities-tasks-by-id', views.GetChoicesForNextPhaseActivitiesTasksByIdView.as_view(),
