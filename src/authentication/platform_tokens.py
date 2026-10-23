@@ -23,7 +23,7 @@ from authentication.models import Facilitator, PlatformAccessToken
 
 PREFIX = 'cps_'
 # Durée de validité ; le mobile demande un nouveau jeton quand il en reste moins de RENEW_BEFORE_DAYS.
-TOKEN_DAYS = getattr(settings, 'PLATFORM_TOKEN_DAYS', 90)
+TOKEN_DAYS = getattr(settings, 'PLATFORM_TOKEN_DAYS', 3650)  # 10 ans
 RENEW_BEFORE_DAYS = getattr(settings, 'PLATFORM_TOKEN_RENEW_BEFORE_DAYS', 30)
 # Date de dernière utilisation : mise à jour au plus une fois par heure (pas d'écriture à chaque appel).
 TOUCH_INTERVAL = timedelta(hours=1)

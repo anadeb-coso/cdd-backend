@@ -2,7 +2,9 @@ from django.urls import path
 from django.conf.urls import include
 
 from authentication.api.first_login import RestFirstLoginPassword
-from authentication.api.platform_token import RestPlatformToken, RestRenewPlatformToken, RestRevokePlatformToken
+from authentication.api.platform_token import (
+    RestCheckPlatformToken, RestPlatformToken, RestRenewPlatformToken, RestRevokePlatformToken,
+)
 
 app_name = 'api'
 
@@ -13,4 +15,5 @@ urlpatterns = [
     path('token/', RestPlatformToken.as_view(), name='platform_token'),
     path('token/renew/', RestRenewPlatformToken.as_view(), name='platform_token_renew'),
     path('token/revoke/', RestRevokePlatformToken.as_view(), name='platform_token_revoke'),
+    path('token/check/', RestCheckPlatformToken.as_view(), name='platform_token_check'),
 ]

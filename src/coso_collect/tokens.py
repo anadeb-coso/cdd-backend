@@ -18,7 +18,7 @@ from authentication.identity import is_active, is_facilitator
 from authentication.models import Facilitator
 
 SALT = 'coso_collect.api.token'
-MAX_AGE = 60 * 60 * 24 * 30  # 30 jours ; le mobile en redemande un avec ses identifiants à l'expiration
+MAX_AGE = 60 * 60 * 24 * 3650  # 10 ans ; le mobile en redemande un avec son jeton de session à l'expiration
 
 
 def _fingerprint(account):

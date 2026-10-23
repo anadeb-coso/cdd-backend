@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.accounts import password_change_required
-from authentication.platform_tokens import issue_token, renew_token, revoke_token, token_payload
+from authentication.platform_tokens import account_from_token, issue_token, renew_token, revoke_token, token_payload
 from authentication.serializers import UserAuthSerializer
 
 
@@ -51,6 +51,21 @@ class RestRenewPlatformToken(APIView):
                 'token_invalid': True,
             }, status=status.HTTP_401_UNAUTHORIZED)
         return Response(token_payload(*renewed), status=status.HTTP_200_OK)
+
+
+class RestCheckPlatformToken(APIView):
+    """Le jeton est-il encore valide ? Demandé par le mobile quand un autre serveur (MGP, SIG) refuse une requête :
+    la fenêtre « Session expirée » ne s'ouvre que si le DCC confirme que la session n'est plus valable (et non, par
+    exemple, quand la personne n'a simplement pas de compte sur le MGP). Toujours 200."""
+    authentication_classes = ()
+    permission_classes = ()
+    throttle_classes = ()
+
+    def post(self, request, *args, **kwargs):
+        serializer = _TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'valid': account_from_token(serializer.validated_data['token'], touch=False) is not None},
+                        status=status.HTTP_200_OK)
 
 
 class RestRevokePlatformToken(APIView):
