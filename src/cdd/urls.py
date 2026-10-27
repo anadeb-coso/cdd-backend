@@ -50,6 +50,8 @@ urlpatterns = [
     path('download-from-url/', download_from_url, name='download_from_url'),
     path('convert-pdf-to-word/', convert_pdf_to_word, name='convert_pdf_to_word'),
     path('convert-word-to-pdf/', convert_word_to_pdf, name='convert_word_to_pdf'),
+    # Documents générés à partir d'une tâche (profil de village Word / PDF, web et mobile)
+    path('documents/', include('dashboard.documents.urls')),
 ]
 
 urlpatterns += i18n_patterns(

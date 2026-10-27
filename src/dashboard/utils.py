@@ -545,6 +545,7 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     # (ActivityDetail.tsx / TaskDetail.tsx).
                     _fc_task['groups_collectors'] = list(task_model.groups_collectors.values_list("name", flat=True))
                     _fc_task['non_blocking'] = task_model.non_blocking
+                    _fc_task['generated_document'] = task_model.generated_document  # Word / PDF générable
                     _fc_task['visibility_condition'] = task_model.visibility_condition
 
                     _fc_task['attachments'] = new_task.get("attachments")

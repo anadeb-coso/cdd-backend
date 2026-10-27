@@ -462,6 +462,18 @@ class Task(BaseModel):
     # l'est pas).
     non_blocking = models.BooleanField(default=False)
 
+    # Document que l'on peut générer (Word / PDF) à partir des réponses de la tâche, sur le web
+    # et le mobile (dashboard/documents). "" = aucun.
+    GENERATED_DOCUMENT_VILLAGE_PROFILE = "village_profile"
+    GENERATED_DOCUMENT_CHOICES = [
+        ("", "—"),
+        (GENERATED_DOCUMENT_VILLAGE_PROFILE, "Profil de village (questionnaire communautaire)"),
+    ]
+    generated_document = models.CharField(
+        max_length=50, blank=True, default="", choices=GENERATED_DOCUMENT_CHOICES,
+        verbose_name="Document généré",
+    )
+
     # Visibilité conditionnelle de LA TÂCHE ENTIÈRE (liste des tâches mobile,
     # ActivityDetail.tsx), pilotée par la réponse d'un champ d'une AUTRE
     # tâche du même projet — configuré dans le Générateur de formulaire
@@ -532,6 +544,7 @@ class Task(BaseModel):
             # façon que share_mode par create_task_all_facilitators.
             "groups_collectors": list(self.groups_collectors.values_list("name", flat=True)),
             "non_blocking": self.non_blocking,
+            "generated_document": self.generated_document,
             "visibility_condition": self.visibility_condition,
         }
         nsc = NoSQLClient()
@@ -563,6 +576,7 @@ class Task(BaseModel):
                 new_document['share_mode'] = self.share_mode
                 new_document['groups_collectors'] = list(self.groups_collectors.values_list("name", flat=True))
                 new_document['non_blocking'] = self.non_blocking
+                new_document['generated_document'] = self.generated_document
                 new_document['visibility_condition'] = self.visibility_condition
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
         #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)

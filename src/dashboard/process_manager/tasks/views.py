@@ -726,6 +726,11 @@ class TaskFormBuilderSaveView(_TaskScopedMixin, generic.View):
         )
         task.form = clean
         task.share_mode = share_mode
+        # Document Word / PDF générable : modifié seulement s'il est envoyé (anciens clients inchangés)
+        if 'generated_document' in payload:
+            generated_document = payload.get('generated_document') or ''
+            if generated_document in dict(Task.GENERATED_DOCUMENT_CHOICES):
+                task.generated_document = generated_document
         task.visibility_condition = visibility_condition
         if attachments_provided:
             task.attachments = attachments
@@ -960,7 +965,10 @@ class TaskFormDatasetSheetView(_TaskScopedMixin, generic.View):
         if not uploaded:
             return JsonResponse({'ok': False, 'errors': ['Aucun fichier.']}, status=400)
         try:
-            columns, rows = read_sheet_table(uploaded)
+            # Remplissage automatique : nombre maximal de lignes choisi dans le générateur
+            from dashboard.process_manager.tasks.form_design import autofill_max_rows
+            limit = autofill_max_rows({'maxRows': request.POST.get('limit')}) if request.POST.get('limit') else None
+            columns, rows = read_sheet_table(uploaded, limit) if limit else read_sheet_table(uploaded)
         except Exception as exc:  # noqa: BLE001 - message utilisateur
             return JsonResponse(
                 {'ok': False, 'errors': [f'Lecture impossible : {exc}']}, status=422,

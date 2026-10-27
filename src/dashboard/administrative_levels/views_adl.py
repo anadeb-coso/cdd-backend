@@ -913,6 +913,12 @@ class AdministrativeLevelDetailView(FacilitatorMixin, PageMixin, LoginRequiredMi
         context['breadcrumb'] = False
         context['facilitator_db_name'] = self.facilitator_db_name
         context['administrative_level_id'] = self.request.GET.get('administrative_level')
+        # Profil de village Word / PDF : tâche du projet de la session qui le permet
+        from process_manager.models import Task as _Task
+        context['village_profile_task_id'] = _Task.objects.filter(
+            project_id=self.request.session.get('project_id'),
+            generated_document=_Task.GENERATED_DOCUMENT_VILLAGE_PROFILE,
+        ).order_by('id').values_list('id', flat=True).first()
         last_activity_date = "0000-00-00 00:00:00"
         total_tasks_completed = 0
         total_tasks_uncompleted = 0

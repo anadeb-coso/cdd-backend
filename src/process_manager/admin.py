@@ -172,8 +172,10 @@ class TaskAdmin(admin.ModelAdmin):
         'name',
         'project',
         'non_blocking',
+        'generated_document',
         'visibility_condition',
     )
+    list_filter = ('generated_document',)
     search_fields = (
         'id',
         'name',

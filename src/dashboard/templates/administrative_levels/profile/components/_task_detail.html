@@ -51,6 +51,22 @@
         {% if task.completed_date and task.completed_date != "0000-00-00 00:00:00" %}{{ task.completed_date }}{% else %}-{% endif %}
     </p>
 
+    {% if generated_document == "village_profile" %}
+    {# Profil de village rempli à partir des réponses de la tâche (Word / PDF) #}
+    <div class="alert alert-light border d-flex flex-wrap align-items-center py-2 mb-3">
+        <i class="fas fa-file-alt text-primary mr-2"></i>
+        <span class="mr-auto">{% translate "Village profile generated from the answers of this task" %}</span>
+        <a class="btn btn-primary btn-sm mr-1 my-1" target="_blank" rel="noopener"
+           href="{% url 'documents:village_profile_download' %}?db={{ facilitator_db_name|urlencode }}&doc={{ cid|urlencode }}&administrative_level={{ task.administrative_level_id|urlencode }}&task={{ task.sql_id }}&format=docx">
+            <i class="fas fa-file-word mr-1"></i>Word
+        </a>
+        <a class="btn btn-danger btn-sm my-1" target="_blank" rel="noopener"
+           href="{% url 'documents:village_profile_download' %}?db={{ facilitator_db_name|urlencode }}&doc={{ cid|urlencode }}&administrative_level={{ task.administrative_level_id|urlencode }}&task={{ task.sql_id }}&format=pdf">
+            <i class="fas fa-file-pdf mr-1"></i>PDF
+        </a>
+    </div>
+    {% endif %}
+
     {% include "facilitators/task_form.html" %}
 
     {% if task.old_forms and task.old_forms|length != 0 %}

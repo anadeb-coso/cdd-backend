@@ -230,6 +230,20 @@
 <div class="card">
     <div class="col-12 pt-4">
         {% include 'administrative_levels/profile/components/profile-header.html' %}
+        {% if village_profile_task_id and administrative_level_id %}
+        {# Profil de village rempli à partir de la tâche « Établissement du profil du village » #}
+        <div class="d-flex flex-wrap align-items-center justify-content-end mt-2">
+            <span class="text-muted small mr-2"><i class="fas fa-file-alt mr-1"></i>{% translate "Village profile" %} :</span>
+            <a class="btn btn-primary btn-sm mr-1 my-1" target="_blank" rel="noopener"
+               href="{% url 'documents:village_profile_download' %}?db={{ facilitator_db_name|urlencode }}&administrative_level={{ administrative_level_id|urlencode }}&task={{ village_profile_task_id }}&format=docx">
+                <i class="fas fa-file-word mr-1"></i>Word
+            </a>
+            <a class="btn btn-danger btn-sm my-1" target="_blank" rel="noopener"
+               href="{% url 'documents:village_profile_download' %}?db={{ facilitator_db_name|urlencode }}&administrative_level={{ administrative_level_id|urlencode }}&task={{ village_profile_task_id }}&format=pdf">
+                <i class="fas fa-file-pdf mr-1"></i>PDF
+            </a>
+        </div>
+        {% endif %}
         <hr />
         {% with  dict_administrative_levels_with_infos|get:"villages" as villages %}
         <div class="row m-2">

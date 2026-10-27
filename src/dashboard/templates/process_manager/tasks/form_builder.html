@@ -23,6 +23,13 @@
                 {% translate "Apply to all fields and attachments" %}
             </button>
         </label>
+        <label class="mb-0" title="{% translate 'Word / PDF document that facilitators and the dashboard can generate from the answers of this task' %}">
+            <i class="fa fa-file-alt mr-1"></i> {% translate "Generated document" %}
+            <select id="tfb-generated-document" class="form-control form-control-sm d-inline-block" style="width:auto;">
+                <option value="" {% if not task.generated_document %}selected{% endif %}>{% translate "None" %}</option>
+                <option value="village_profile" {% if task.generated_document == "village_profile" %}selected{% endif %}>{% translate "Village profile (community questionnaire)" %}</option>
+            </select>
+        </label>
         <a href="{% url 'dashboard:process_manager:tasks:task_form_builder_export' task.id %}"
            class="btn btn-outline-secondary btn-sm rounded-xl">
             <i class="fa fa-file-excel mr-1"></i> {% translate "Export XLSForm" %}
@@ -155,16 +162,16 @@
             );
         })();
     </script>
-    <script src="{% static 'dashboard/js/task_form_builder.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v=autofill2"></script>
     {% comment %}
         Moteur de remplissage réel (menu web "Tâches (cycle DCC)"), réutilisé
         tel quel pour l'onglet "Aperçu" ci-dessus (renderPreview) -- même
         rendu qu'un facilitateur verrait réellement, pas un résumé texte.
     {% endcomment %}
-    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=autofill2"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=2"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=autofill2"></script>
 
     <script>
         // --- Modale « Synchroniser la tâche » : POST vers sync_tasks (exécuté en thread côté serveur) ---

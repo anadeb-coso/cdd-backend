@@ -390,9 +390,16 @@ def build_task_detail_context(request, task_doc, no_sql_db_name):
         'facilitator_db_name': no_sql_db_name,
         'history': build_task_history(task_doc),
         'share_picker': None,
+        'generated_document': '',
     }
     if not task_doc:
         return context
+    # Document Word / PDF générable à partir des réponses (ex. profil de village)
+    try:
+        context['generated_document'] = Task.objects.filter(id=int(task_doc.get('sql_id'))).values_list(
+            'generated_document', flat=True).first() or ''
+    except (TypeError, ValueError):
+        pass
 
     sql_id = task_doc.get('sql_id')
     source_adl = task_doc.get('administrative_level_id')
