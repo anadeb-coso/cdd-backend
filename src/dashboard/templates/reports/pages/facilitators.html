@@ -28,6 +28,13 @@
         .fstatus-tabs .nav-tabs .nav-link.active { color: #007bff; }
         .fstatus-tabs .tab-pane-inner { min-height: 140px; padding-top: .25rem; }
         .fstatus-tabs .tab-loading-area > h5 { font-weight: 600; }
+
+        /* Textes d'aide plus lisibles (le gris Bootstrap #6c757d en petit corps manquait de contraste) :
+           vaut pour toute la page, onglets chargés compris. */
+        .content-wrapper .text-muted { color: #3f4a56 !important; }
+        .content-wrapper p.small, .content-wrapper .small.text-muted { font-size: .875rem; line-height: 1.45; }
+        .content-wrapper .filter-group-label { color: #4a5560; }
+        .fstatus-tabs .nav-tabs .nav-link { color: #4a5560; }
     </style>
 {% endblock extracss %}
 
@@ -89,6 +96,31 @@
                         </div>
                         <div class="col-12 col-md-4 task-filter">
                             {% bootstrap_field form_task.task show_label=False %}
+                        </div>
+
+                        <div class="col-12 mt-2" id="excluded-localities">
+                            <span class="filter-group-label">{% translate "Villages / CVD not to take into account" %}</span>
+                            <div class="d-flex flex-wrap align-items-start">
+                                <div class="flex-grow-1 mr-2 mb-2" style="min-width: 260px;">
+                                    <select id="excluded_localities" class="form-control" multiple></select>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="file" id="excluded_localities_file" accept=".xlsx" class="d-none">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" id="excluded_localities_import">
+                                        <i class="fas fa-file-import mr-1"></i>{% translate "Import from Excel" %}
+                                    </button>
+                                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'dashboard:reports:excel_csv:excluded_localities_template' %}">
+                                        <i class="fas fa-file-download mr-1"></i>{% translate "Excel template" %}
+                                    </a>
+                                    <button type="button" class="btn btn-link btn-sm text-danger" id="excluded_localities_clear">
+                                        {% translate "Empty the list" %}
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block">
+                                {% translate "Applies to the “FC situation (by task)” exports. Tasks being followed per CVD, excluding a village excludes its whole CVD. The list is kept in this browser." %}
+                            </small>
+                            <div id="excluded_localities_report" class="small mt-1"></div>
                         </div>
                     </div>
                 </div>
@@ -175,6 +207,90 @@
 
 {% block javascript %}
     {{ block.super }}
+
+    <script type="text/javascript">
+        // Villages / CVD exclus des situations : liste gardée dans ce navigateur, envoyée avec les exports
+        // (paramètre `excluded`, clés « cvd:<id> » / « village:<id> »).
+        (function () {
+            const STORAGE_KEY = 'reports_excluded_localities';
+            const select = () => $('#excluded_localities');
+
+            function save() {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(select().val() || [])); } catch (e) {}
+            }
+
+            function addOptions(items) {
+                const $select = select();
+                const values = new Set($select.val() || []);
+                items.forEach(function (item) {
+                    if (!$select.find('option[value="' + item.id + '"]').length) {
+                        $select.append(new Option(item.text, item.id, false, false));
+                    }
+                    values.add(item.id);
+                });
+                $select.val(Array.from(values)).trigger('change');
+            }
+
+            window.getExcludedLocalities = function () {
+                return (select().val() || []).join(',');
+            };
+
+            $(function () {
+                select().select2({
+                    placeholder: "{% translate 'Search a village or a CVD…' %}",
+                    width: '100%',
+                    minimumInputLength: 2,
+                    ajax: {
+                        url: "{% url 'dashboard:reports:excel_csv:excluded_localities_search' %}",
+                        dataType: 'json',
+                        delay: 300,
+                        data: function (params) { return {q: params.term}; }
+                    }
+                }).on('change', save);
+
+                let stored = [];
+                try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) {}
+                if (stored.length) {
+                    $.getJSON("{% url 'dashboard:reports:excel_csv:excluded_localities_labels' %}", {keys: stored.join(',')},
+                        function (data) { addOptions(data.results); });
+                }
+
+                $('#excluded_localities_import').on('click', function () { $('#excluded_localities_file').click(); });
+                $('#excluded_localities_file').on('change', function () {
+                    const file = this.files[0];
+                    if (!file) return;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const $report = $('#excluded_localities_report').html('<i class="fas fa-spinner fa-spin"></i>');
+                    $.ajax({
+                        type: 'POST',
+                        url: "{% url 'dashboard:reports:excel_csv:excluded_localities_import' %}",
+                        data: formData, processData: false, contentType: false,
+                        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                        success: function (data) {
+                            addOptions(data.results);
+                            let html = '<span class="text-success">' + data.results.length + ' {% translate "village(s) / CVD added." %}</span>';
+                            if (data.errors.length) {
+                                html += '<div class="text-danger">' + data.errors.length + ' {% translate "line(s) ignored:" %}<ul class="mb-0">' +
+                                    data.errors.map(e => '<li>{% translate "Line" %} ' + e.line + ' : ' + $('<div>').text(e.error).html() + '</li>').join('') +
+                                    '</ul></div>';
+                            }
+                            $report.html(html);
+                        },
+                        error: function (xhr) {
+                            const message = (xhr.responseJSON && xhr.responseJSON.error) || ("Error " + xhr.status);
+                            $report.html('<span class="text-danger"></span>').find('span').text(message);
+                        },
+                        complete: function () { $('#excluded_localities_file').val(''); }
+                    });
+                });
+                $('#excluded_localities_clear').on('click', function () {
+                    select().empty().trigger('change');
+                    $('#excluded_localities_report').empty();
+                });
+            });
+        })();
+    </script>
     
     <script src="{% static 'AdminLTE/plugins/chart.js/Chart.js' %}"></script>
     <script src="{% static 'js/csrfSafeMethodAjax.js' %}?v=2"></script>

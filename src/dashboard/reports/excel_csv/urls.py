@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.reports.excel_csv import views
+from dashboard.reports.excel_csv import views, excluded_localities
 
 app_name = 'excel_csv'
 urlpatterns = [
@@ -16,5 +16,11 @@ urlpatterns = [
     path('facilitators-status-excel-csv/', views.GetFacilitatorStatusExcelCSVRport.as_view(), name="app_excel_csv_facilitators_status_p"),
 
     path('facilitators-status-fc-situation-excel-csv/', views.GetFCSituationExcelCSVReport.as_view(), name="app_excel_csv_fc_situation"),
+    path('facilitators-status-fc-situation-aggregated-excel-csv/', views.GetFCSituationExcelCSVReport.as_view(source="aggregated"), name="app_excel_csv_fc_situation_aggregated"),
 
+    # Villages / CVD à ne pas prendre en compte dans les situations (/reports/facilitators-status)
+    path('excluded-localities/search/', excluded_localities.ExcludedLocalitiesSearchView.as_view(), name="excluded_localities_search"),
+    path('excluded-localities/labels/', excluded_localities.ExcludedLocalitiesLabelsView.as_view(), name="excluded_localities_labels"),
+    path('excluded-localities/template/', excluded_localities.ExcludedLocalitiesTemplateView.as_view(), name="excluded_localities_template"),
+    path('excluded-localities/import/', excluded_localities.ExcludedLocalitiesImportView.as_view(), name="excluded_localities_import"),
 ]

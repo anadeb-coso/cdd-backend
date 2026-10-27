@@ -15,6 +15,7 @@ from .functions import (
 )
 from .facilitators_status import get_facilitator_status_excel_csv_under_file_excel_or_csv
 from .fc_situation import build_fc_situation_workbook
+from .excluded_localities import excluded_headquarters_village_ids
 
 
 
@@ -276,6 +277,8 @@ class GetFCSituationExcelCSVReport(PageMixin, LoginRequiredMixin, TemplateView):
             'title': title
         },
     ]
+    # "couchdb" : bases des facilitateurs ; "aggregated" : AggregatedStatus (dernière synchronisation)
+    source = "couchdb"
 
     def _get_ids_list(self, elt):
         if isinstance(elt, str):
@@ -322,7 +325,8 @@ class GetFCSituationExcelCSVReport(PageMixin, LoginRequiredMixin, TemplateView):
                 "ids_task": self._get_ids_list(request.GET.get('id_task')),
                 "cdd_project_names": project_names,
                 "three_priorities_rule": three_priorities_rule,
-            })
+                "excluded_hq_ids": excluded_headquarters_village_ids(request.GET.get('excluded')),
+            }, source=self.source)
         except Exception as exc:
             print(exc)
             messages.info(request, gettext_lazy("An error has occurred..."))

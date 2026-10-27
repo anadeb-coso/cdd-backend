@@ -32,6 +32,23 @@
                         <div class="card h-100 border shadow-none">
                             <div class="card-body d-flex flex-column">
                                 <h6 class="text-bold mb-2">
+                                    <i class="fas fa-database text-primary mr-2"></i>{% translate "FC situation (by task, aggregated statuses)" %}
+                                </h6>
+                                <p class="text-muted small flex-grow-1">
+                                    {% translate "Same workbook, built from the aggregated task statuses (last synchronization) instead of the facilitators' databases: faster. The 3-priorities rule is not applied." %}
+                                </p>
+                                <a href="{% url 'dashboard:reports:excel_csv:app_excel_csv_fc_situation_aggregated' %}" data-filename="fc_situation_aggregated.xlsx"
+                                   class="btn btn-primary btn-sm align-self-start report-download-btn reports_fc_situation" id="app_excel_csv_fc_situation_aggregated">
+                                    <i class="fas fa-file-excel mr-2"></i>{% translate "Download" %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-4 mb-3">
+                        <div class="card h-100 border shadow-none">
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="text-bold mb-2">
                                     <i class="fas fa-map-marked-alt text-primary mr-2"></i>{% translate "Priorities & PAV situation" %}
                                 </h6>
                                 <p class="text-muted small flex-grow-1">
@@ -252,7 +269,11 @@
                     url += `&facilitator_db_name=` + val_facilitator;
                 }
 
-                window.reportDownloadUI.ajaxDownload(url, "fc_situation.xlsx",
+                if (window.getExcludedLocalities && window.getExcludedLocalities()) {
+                    url += `&excluded=` + encodeURIComponent(window.getExcludedLocalities());
+                }
+
+                window.reportDownloadUI.ajaxDownload(url, $btn.data('filename') || "fc_situation.xlsx",
                     function () { window.reportDownloadUI.end(true); },
                     function () {
                         alert("Erreur lors du téléchargement du fichier.");

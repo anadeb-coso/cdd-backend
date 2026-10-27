@@ -34,6 +34,7 @@ from dashboard.facilitators.repository.db_facilitator_repository import Facilita
 from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCriteria
 from dashboard.statistics.functions_reports import append_elt, get_cvd_index, get_task_by_task_ids
 from dashboard.statistics.utils import normaliser_chaine
+from cdd.constants import PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION
 
 
 # --- Constantes -----------------------------------------------------------------
@@ -331,6 +332,57 @@ def _fetch_facilitator_task_docs(facilitator, project_couch_ids, cycle_couch_id_
     ]
 
 
+def _drop_tasks_without_subproject(task_docs_by_project, projects):
+    """Retire les tâches des phases après la planification (préparation, consultation, mise en œuvre, clôture du
+    sous-projet) des villages sièges sans sous-projet : elles ne comptent ni comme faites ni dans le total, même règle
+    que les AggregatedStatus (`SoftAggregatedStatusConsiderationManager`)."""
+    from dashboard.tasks import villages_ids_with_subproject
+
+    for project in projects:
+        docs = task_docs_by_project.get(project.name)
+        if not docs:
+            continue
+        needs_subproject = set(
+            Task.objects.filter(project=project)
+            .exclude(phase__name__in=PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION)
+            .values_list("id", flat=True)
+        )
+        if not needs_subproject:
+            continue
+        with_subproject = villages_ids_with_subproject(project.name)
+        task_docs_by_project[project.name] = [
+            doc for doc in docs
+            if _to_int(doc.get("sql_id")) not in needs_subproject
+            or _to_int(doc.get("administrative_level_id")) in with_subproject
+        ]
+
+
+def _task_docs_from_aggregated_status(projects, params, all_sql_ids):
+    """Équivalent de la lecture CouchDB, lu dans les AggregatedStatus (lignes village × tâche, sans facilitateur) des
+    villages sièges : un pseudo-document par (tâche, village siège). Le gestionnaire par défaut écarte déjà les tâches
+    après la planification des villages sans sous-projet."""
+    from process_manager.models import AggregatedStatus
+
+    session_cycle = Cycle.objects.filter(couch_id=params.get("session_cycle_couch_id")).first() if params.get("session_cycle_couch_id") else None
+    hq_ids = set(mis_objects_call.filter_objects(CVD, headquarters_village__isnull=False).values_list("headquarters_village_id", flat=True))
+    task_docs_by_project = {}
+    for project in projects:
+        cycle = Cycle.objects.filter(project=project, order=session_cycle.order).first() if session_cycle else None
+        cycle = cycle or Cycle.objects.filter(project=project).order_by("-order").first()
+        rows = AggregatedStatus.objects.filter(
+            project=project, facilitator=None, task__isnull=False, administrative_level_id__in=hq_ids,
+            **({"cycle": cycle} if cycle else {}), **({"task_id__in": all_sql_ids} if all_sql_ids else {}),
+        ).values_list("task_id", "administrative_level_id", "total_tasks_completed", "total_tasks_validated", "total_tasks_invalidated")
+        task_docs_by_project[project.name] = [
+            {
+                "type": "task", "project_name": project.name, "sql_id": task_id, "administrative_level_id": adl_id,
+                "completed": bool(completed), "validated": True if validated else (False if invalidated else None),
+            }
+            for task_id, adl_id, completed, validated, invalidated in rows
+        ]
+    return task_docs_by_project
+
+
 # --- Feuille FC_SITUATION --------------------------------------------------
 
 def _dedup_task_status_by_project(task_docs_by_project):
@@ -357,7 +409,7 @@ def _dedup_task_status_by_project(task_docs_by_project):
 
 
 def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name, task_status_by_project,
-                               include_stabilization=True):
+                               include_stabilization=True, excluded_hq_ids=frozenset()):
     """Feuille « une ligne par FC ».
 
     `include_stabilization=True` (feuille FC_SITUATION) : périmètre = CVD initialement affectés
@@ -365,7 +417,9 @@ def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name
     `include_stabilization=False` (feuille FC_SITUATION_V_INIT) : périmètre restreint aux seuls
     CVD initialement affectés (villages sièges d'affectation), stabilisation exclue.
     """
-    hq_ids_by_project = _headquarters_village_ids_by_project(project_names)
+    hq_ids_by_project = {
+        name: ids - excluded_hq_ids for name, ids in _headquarters_village_ids_by_project(project_names).items()
+    }  # CVD exclus par l'utilisateur : ni comptés ni dans les colonnes « CVD »
     all_hq_ids = set().union(*hq_ids_by_project.values()) if hq_ids_by_project else set()
 
     columns = ["FC", "CVD initialement affectés"]
@@ -626,7 +680,11 @@ def _build_cvd_sheets(project, cvd_status, three_priorities_rule, geo_cache):
 
 # --- Orchestration --------------------------------------------------------
 
-def build_fc_situation_workbook(params):
+class _SkipBackup(Exception):
+    pass
+
+
+def build_fc_situation_workbook(params, source="couchdb"):
     """Construit le classeur et renvoie son chemin relatif (sous `media/`).
 
     Clés attendues dans `params` :
@@ -634,7 +692,11 @@ def build_fc_situation_workbook(params):
         session_cycle_couch_id, cycle_id,
         type, ids_administrativelevel, facilitator_dbs_name,
         ids_phase, ids_activity, ids_task,
-        cdd_project_names (optionnel), three_priorities_rule (optionnel, auto sinon).
+        cdd_project_names (optionnel), three_priorities_rule (optionnel, auto sinon),
+        excluded_hq_ids (optionnel : villages sièges des CVD à ne pas prendre en compte).
+
+    `source="aggregated"` : statuts lus dans les AggregatedStatus au lieu des bases CouchDB (rapide, à jour de la
+    dernière synchronisation). Les priorités saisies n'y figurant pas, la règle « au moins 3 priorités » est ignorée.
     """
     nsc = NoSQLClient(timeout=_FC_COUCHDB_TIMEOUT)
 
@@ -656,6 +718,10 @@ def build_fc_situation_workbook(params):
     #    de stabilisation) qu'aux feuilles CVD.
     task_docs_by_project = {name: [] for name in project_names}
     project_couch_ids = [project_couch_id_by_name[n] for n in project_names]
+    if source == "aggregated":
+        three_priorities_rule = False
+        task_docs_by_project.update(_task_docs_from_aggregated_status(projects, params, all_sql_ids))
+        cvd_universe_facilitators = []  # rien à lire dans CouchDB
 
     # Un aller-retour CouchDB par FC (x par projet) : indépendants et en lecture seule,
     # on les parallélise pour ne pas dépasser le délai du proxy/load-balancer AWS
@@ -674,6 +740,8 @@ def build_fc_situation_workbook(params):
                         task_docs_by_project[doc["project_name"]].append(doc)
 
     try:
+        if source == "aggregated":
+            raise _SkipBackup()
         backup_db = nsc.get_db("backup_db_facilitators_docs")
         backup_rows = backup_db.all_docs(include_docs=True)["rows"]
         cycle_couch_ids = set(cycle_couch_id_by_project.values())
@@ -690,19 +758,30 @@ def build_fc_situation_workbook(params):
         ):
             if doc.get("project_name") in task_docs_by_project:
                 task_docs_by_project[doc["project_name"]].append(doc)
+    except _SkipBackup:  # source AggregatedStatus : pas de sauvegarde CouchDB à lire
+        pass
     except Exception as exc:  # noqa: BLE001
         print(f"[fc_situation] backup_db KO: {exc}")
+
+    # Tâches après la planification des villages sans sous-projet : hors comptage
+    _drop_tasks_without_subproject(task_docs_by_project, projects)
+    # Villages / CVD exclus par l'utilisateur (villages sièges) : hors de toutes les feuilles
+    excluded_hq_ids = frozenset(params.get("excluded_hq_ids") or ())
+    if excluded_hq_ids:
+        for name, docs in task_docs_by_project.items():
+            task_docs_by_project[name] = [d for d in docs if _to_int(d.get("administrative_level_id")) not in excluded_hq_ids]
 
     # 2) Feuille FC_SITUATION (une ligne par FC), comptée sur le pool global
     dedup_task_status = _dedup_task_status_by_project(task_docs_by_project)
     fc_situation_df = _build_fc_situation_sheet(
         fc_situation_facilitators, project_names, scope_by_project_name, dedup_task_status,
+        excluded_hq_ids=excluded_hq_ids,
     )
     # 2bis) Feuille FC_SITUATION_V_INIT : même chose, mais restreinte aux seuls CVD initialement
     # affectés (villages sièges d'affectation), stabilisation exclue.
     fc_situation_v_init_df = _build_fc_situation_sheet(
         fc_situation_facilitators, project_names, scope_by_project_name, dedup_task_status,
-        include_stabilization=False,
+        include_stabilization=False, excluded_hq_ids=excluded_hq_ids,
     )
 
     cvd_status = _collect_cvd_status(task_docs_by_project, three_priorities_rule)
@@ -724,7 +803,7 @@ def build_fc_situation_workbook(params):
     if not os.path.exists("media/utils/exports"):
         os.makedirs("media/utils/exports")
     file_path = (
-        f"utils/exports/fc_situation_"
+        f"utils/exports/fc_situation_{'aggregated_' if source == 'aggregated' else ''}"
         f"{datetime.today().replace(microsecond=0).strftime('%Y%m%d_%H%M%S')}.xlsx"
     )
     with pd.ExcelWriter("media/" + file_path) as writer:

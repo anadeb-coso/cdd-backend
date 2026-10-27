@@ -533,7 +533,7 @@ def sync_aggregated_status_from_tasks(tasks, project_id, cycle_id, administrativ
             a.total_tasks_invalidated_unreview_completed = 0
             a.total_tasks_invalidated_unreview_in_pending = 0
 
-            if villages_ids_have_subproject:
+            if villages_ids_have_subproject is not None:
                 if int(ad_id) in villages_ids_have_subproject:
                     a.its_adl_has_sub_project = True
                 else:
@@ -594,7 +594,17 @@ def sync_aggregated_status_from_tasks(tasks, project_id, cycle_id, administrativ
         bulk_objects_create_or_update(AggregatedStatus, tasks_bucket_update, type_bulk="update", fields=['total_tasks_completed', 'total_tasks', 'total_tasks_validated', 'total_tasks_waiting_validation', 'total_tasks_invalidated', 'total_tasks_invalidated_review', 'total_tasks_invalidated_unreview',  'total_tasks_invalidated_review_completed', 'total_tasks_invalidated_review_in_pending', 'total_tasks_invalidated_unreview', 'total_tasks_invalidated_unreview_completed', 'total_tasks_invalidated_unreview_in_pending', 'last_activity', 'its_adl_has_sub_project', 'updated_date'])
 
 
-def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=None, villages_ids_have_subproject=[]):
+def villages_ids_with_subproject(project_name):
+    """Villages couverts par un sous-projet (non supprimé) du projet : les tâches des phases après la planification
+    n'y sont comptées que là (cf. `SoftAggregatedStatusConsiderationManager`)."""
+    from subprojects.models import Subproject
+    return {
+        int(v) for sp in mis_objects_call.filter_objects(Subproject, projects__name__in=[project_name]).exclude(infrastructure_deleted=True)
+        for v in sp.get_villages_ids()
+    }
+
+
+def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_db=None, villages_ids_have_subproject=None):
     project = Project.objects.get(id=project_id)
     cycle = Cycle.objects.get(id=cycle_id)
     project_mis = mis_objects_call.filter_objects(MisProject, name=project.name)
@@ -602,8 +612,11 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis_id)
     cycle_mis_id = cycle_mis.first().id if cycle_mis.exists() else None
     now = timezone.now()
-    # Testé pour chaque (tâche, village) : un set plutôt qu'une liste.
-    villages_ids_have_subproject = set(villages_ids_have_subproject)
+    # Testé pour chaque (tâche, village) : un set plutôt qu'une liste. Non fourni : calculé ici, sinon les tâches
+    # après la planification des villages sans sous-projet seraient comptées (indicateur laissé vide).
+    if villages_ids_have_subproject is None:
+        villages_ids_have_subproject = villages_ids_with_subproject(project.name)
+    villages_ids_have_subproject = {int(v) for v in villages_ids_have_subproject}
 
     nsc = NoSQLClient()
     count_facilitator = 0
