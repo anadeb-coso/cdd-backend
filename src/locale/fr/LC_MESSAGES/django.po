@@ -5749,3 +5749,162 @@ msgstr "Retour à la sélection du projet"
 #: .\dashboard\process_manager\forms.py
 msgid "Create or update a project"
 msgstr "Créer ou modifier un projet"
+
+msgid "FC situation (by task, aggregated statuses)"
+msgstr "Situation des FC (par tâche, statuts agrégés)"
+
+msgid "Same workbook, built from the aggregated task statuses (last synchronization) instead of the facilitators' databases: faster. The 3-priorities rule is not applied."
+msgstr "Même classeur, construit à partir des statuts agrégés des tâches (dernière synchronisation) au lieu des bases des facilitateurs : plus rapide. La règle des 3 priorités n'est pas appliquée."
+
+msgid "Filters changed: click Apply to update the table."
+msgstr "Filtres modifiés : cliquez sur Appliquer pour mettre à jour le tableau."
+
+msgid "Villages / CVD not to take into account"
+msgstr "Villages / CVD à ne pas prendre en compte"
+
+msgid "Import from Excel"
+msgstr "Importer un fichier Excel"
+
+msgid "Excel template"
+msgstr "Modèle Excel"
+
+msgid "Empty the list"
+msgstr "Vider la liste"
+
+msgid "Applies to the “FC situation (by task)” exports. Tasks being followed per CVD, excluding a village excludes its whole CVD. The list is kept in this browser."
+msgstr "S'applique aux exports « Situation des FC (par tâche) ». Les tâches étant suivies par CVD, exclure un village exclut tout son CVD. La liste est gardée dans ce navigateur."
+
+msgid "Search a village or a CVD…"
+msgstr "Rechercher un village ou un CVD…"
+
+msgid "village(s) / CVD added."
+msgstr "village(s) / CVD ajouté(s)."
+
+msgid "line(s) ignored:"
+msgstr "ligne(s) ignorée(s) :"
+
+msgid "Line"
+msgstr "Ligne"
+
+msgid "ID %(id)s not found"
+msgstr "ID %(id)s introuvable"
+
+msgid "Name or ID is required"
+msgstr "Le nom ou l'ID est obligatoire"
+
+msgid "“%(name)s” not found"
+msgstr "« %(name)s » introuvable"
+
+msgid "“%(name)s” is ambiguous: specify the canton or the ID"
+msgstr "« %(name)s » est ambigu : précisez le canton ou l'ID"
+
+msgid "No file sent."
+msgstr "Aucun fichier envoyé."
+
+msgid "The file could not be read: use the Excel template."
+msgstr "Le fichier n'a pas pu être lu : utilisez le modèle Excel."
+
+msgid "Unexpected columns: use the Excel template (TYPE, ID, NOM, CANTON)."
+msgstr "Colonnes inattendues : utilisez le modèle Excel (TYPE, ID, NOM, CANTON)."
+
+msgid "TYPE must be “Village” or “CVD”"
+msgstr "TYPE doit valoir « Village » ou « CVD »"
+
+msgid "Invalid ID"
+msgstr "ID invalide"
+
+msgid "Auto-fill"
+msgstr "Remplissage auto"
+
+msgid "When the trigger field is filled in, the target fields take the value of their column in the row whose key matches. A “locked” target cannot be changed by the user; an “editable” target receives a suggested value that the user can change."
+msgstr "Quand le champ déclencheur est rempli, les champs cibles prennent la valeur de leur colonne dans la ligne dont la clé correspond. Une cible « verrouillée » ne peut pas être modifiée par l'utilisateur ; une cible « modifiable » reçoit une valeur proposée qu'il peut changer."
+
+msgid "Add an auto-fill"
+msgstr "Ajouter un remplissage automatique"
+
+msgid "Trigger field"
+msgstr "Champ déclencheur"
+
+msgid "Trigger on another page: the target fields are filled in when this page is opened."
+msgstr "Déclencheur sur une autre page : les champs cibles sont remplis à l'ouverture de cette page."
+
+msgid "Trigger in a repeat group: each row is filled in from its own value."
+msgstr "Déclencheur dans un groupe répétable : chaque ligne est remplie à partir de sa propre valeur."
+
+msgid "Maximum number of rows"
+msgstr "Nombre maximal de lignes"
+
+msgid "Rows beyond this are ignored. Limit: 50,000 (the form is sent to the phones)."
+msgstr "Au-delà, les lignes sont ignorées. Plafond : 50 000 (le formulaire est envoyé aux téléphones)."
+
+msgid "Values coming from"
+msgstr "Valeurs provenant de"
+
+msgid "List entered here"
+msgstr "Liste saisie ici"
+
+msgid "Database table"
+msgstr "Table de la base"
+
+msgid "matching row(s)"
+msgstr "ligne(s) de correspondance"
+
+msgid "No matching rows."
+msgstr "Aucune ligne de correspondance."
+
+msgid "Automatically filled fields"
+msgstr "Champs remplis automatiquement"
+
+msgid "editable"
+msgstr "modifiable"
+
+msgid "locked"
+msgstr "verrouillé"
+
+msgid "Load data first to choose the columns."
+msgstr "Chargez d'abord des données pour choisir les colonnes."
+
+msgid "Add a target field"
+msgstr "Ajouter un champ cible"
+
+msgid "Delete this auto-fill"
+msgstr "Supprimer ce remplissage"
+
+msgid "Key column (compared with the value of the trigger field)"
+msgstr "Colonne clé (comparée à la valeur du champ déclencheur)"
+
+msgid "Columns to use"
+msgstr "Colonnes à reprendre"
+
+msgid "Choose the key column and at least one column."
+msgstr "Choisissez la colonne clé et au moins une colonne."
+
+msgid "First row = column names; one column is the key, the others feed the target fields."
+msgstr "1re ligne = noms des colonnes ; une colonne sert de clé, les autres alimentent les champs cibles."
+
+msgid "Key (trigger value)"
+msgstr "Clé (valeur du déclencheur)"
+
+msgid "Add a column"
+msgstr "Ajouter une colonne"
+
+msgid "column"
+msgstr "colonne"
+
+msgid "Village profile generated from the answers of this task"
+msgstr "Profil de village rempli avec les réponses de cette tâche"
+
+msgid "Generated document"
+msgstr "Document généré"
+
+msgid "Word / PDF document that facilitators and the dashboard can generate from the answers of this task"
+msgstr "Document Word / PDF que les facilitateurs et le tableau de bord peuvent générer à partir des réponses de cette tâche"
+
+msgid "Village profile (community questionnaire)"
+msgstr "Profil de village (questionnaire communautaire)"
+
+msgid "No village profile can be generated for this task."
+msgstr "Aucun profil de village ne peut être généré pour cette tâche."
+
+msgid "Invalid request."
+msgstr "Requête invalide."
