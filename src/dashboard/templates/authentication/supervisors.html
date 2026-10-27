@@ -178,6 +178,35 @@
                         </a>
                     </div>
                 </div>
+                <div class="p-2 row task-filters">
+                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                        <select id="filter_phases" class="form-control" multiple>
+                            {% for phase in filter_phases %}
+                                <option value="{{ phase.key }}">{{ phase.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                        <select id="filter_activities" class="form-control" multiple>
+                            {% for activity in filter_activities %}
+                                <option value="{{ activity.key }}" data-phase="{{ activity.phase }}">{{ activity.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                        <select id="filter_tasks" class="form-control" multiple>
+                            {% for task in filter_tasks %}
+                                <option value="{{ task.key }}" data-phase="{{ task.phase }}" data-activity="{{ task.activity }}">{{ task.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="px-2 pb-2 d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-sm" id="apply_filters">
+                        <i class="fas fa-filter mr-1"></i>{% translate "Apply" %}
+                    </button>
+                    <small class="text-muted ml-2 d-none" id="filters_pending">{% translate "Filters changed: click Apply to update the table." %}</small>
+                </div>
             </div>
 
             <div class="card">
@@ -212,80 +241,112 @@
         let id_village = $('#id_village');
 
 
-        function loadSupervisors(type_field = "") {
-            if ($("#id_" + type_field).val() || type_field == "all") {
-                {% comment %}
-                    let cascade_url = "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}";
-                    ajax_request_cascade_administrative_level(cascade_url, "id_region");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_prefecture");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_commune");
-                    ajax_request_cascade_administrative_level(cascade_url, "id_canton"); {% endcomment %}
-
-                $(".supervisors-filter select").attr('disabled', true);
-                $.ajax({
-                    type: 'GET',
-                    url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
-                    data: {
-                        parent_id: $("#id_" + type_field).val()
-                    },
-                    success: function (data) {
-                        if (type_field == "region") {
-                            set_datas_administrative_level(id_prefecture, data.prefectures);
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "prefecture") {
-                            set_datas_administrative_level(id_commune, data.communes);
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "commune") {
-                            set_datas_administrative_level(id_canton, data.cantons);
-                            set_datas_administrative_level(id_village, data.villages);
-                        } else if (type_field == "canton") {
-                            set_datas_administrative_level(id_village, data.villages);
-                        }
-
-                    },
-                    error: function (data) {
-                        alert(error_server_message + "Error " + data.status);
-                        $(".supervisors-filter select").attr('disabled', false);
+        // Choix proposés aux niveaux inférieurs quand un niveau géographique change (sans recharger le tableau)
+        function updateGeoChoices(type_field) {
+            if (!$("#id_" + type_field).val()) return;
+            $(".supervisors-filter select").attr('disabled', true);
+            $.ajax({
+                type: 'GET',
+                url: "{% url 'dashboard:administrative_levels:get_choices_for_next_administrative_level_all' %}",
+                data: {parent_id: $("#id_" + type_field).val()},
+                success: function (data) {
+                    if (type_field == "region") {
+                        set_datas_administrative_level(id_prefecture, data.prefectures);
+                        set_datas_administrative_level(id_commune, data.communes);
+                        set_datas_administrative_level(id_canton, data.cantons);
+                        set_datas_administrative_level(id_village, data.villages);
+                    } else if (type_field == "prefecture") {
+                        set_datas_administrative_level(id_commune, data.communes);
+                        set_datas_administrative_level(id_canton, data.cantons);
+                        set_datas_administrative_level(id_village, data.villages);
+                    } else if (type_field == "commune") {
+                        set_datas_administrative_level(id_canton, data.cantons);
+                        set_datas_administrative_level(id_village, data.villages);
+                    } else if (type_field == "canton") {
+                        set_datas_administrative_level(id_village, data.villages);
                     }
-                }).done(function () {
-                        $(".supervisors-filter select").attr('disabled', false);
-                    }
-                );
-
-
-                spin.show();
-                supervisors.html('');
-                $.ajax({
-                    type: "GET",
-                    url: "{% url 'dashboard:authentication:supervisors_list' %}",
-                    data: {
-                        id_region: id_region.val(),
-                        id_prefecture: id_prefecture.val(),
-                        id_commune: id_commune.val(),
-                        id_canton: id_canton.val(),
-                        id_village: id_village.val(),
-                        type_field: type_field
-                    },
-                    success: function (response) {
-                        spin.hide();
-
-                        supervisors.html(response);
-                    },
-                    error: function (data) {
-                        spin.hide();
-                        alert(error_server_message + "Error " + data.status);
-                    }
-                });
-
-            }
-
-
+                },
+                error: function (data) {
+                    alert(error_server_message + "Error " + data.status);
+                }
+            }).always(function () {
+                $(".supervisors-filter select").attr('disabled', false);
+            });
         }
 
-        loadSupervisors("all");
+        // Niveau géographique appliqué : le plus fin choisi
+        function currentGeoType() {
+            for (const level of ["village", "canton", "commune", "prefecture", "region"]) {
+                if ($("#id_" + level).val()) return level;
+            }
+            return "all";
+        }
+
+        // Chargement du tableau : uniquement au démarrage, sur « Appliquer » et sur « Effacer tous les filtres »
+        function loadSupervisors() {
+            $('#filters_pending').addClass('d-none');
+            spin.show();
+            supervisors.html('');
+            $.ajax({
+                type: "GET",
+                url: "{% url 'dashboard:authentication:supervisors_list' %}",
+                data: {
+                    id_region: id_region.val(),
+                    id_prefecture: id_prefecture.val(),
+                    id_commune: id_commune.val(),
+                    id_canton: id_canton.val(),
+                    id_village: id_village.val(),
+                    type_field: currentGeoType(),
+                    phases: ($('#filter_phases').val() || []).join(','),
+                    activities: ($('#filter_activities').val() || []).join(','),
+                    tasks: ($('#filter_tasks').val() || []).join(',')
+                },
+                success: function (response) {
+                    spin.hide();
+                    supervisors.html(response);
+                },
+                error: function (data) {
+                    spin.hide();
+                    alert(error_server_message + "Error " + data.status);
+                }
+            });
+        }
+
+        function markFiltersPending() {
+            $('#filters_pending').removeClass('d-none');
+        }
+
+        loadSupervisors();
+
+        // Phases / activités / tâches : choix multiples en cascade (une liste ne propose que ce qui relève des choix
+        // de la précédente) ; le tableau n'est rechargé qu'au clic sur « Appliquer ».
+        const allActivityOptions = $('#filter_activities option').clone();
+        const allTaskOptions = $('#filter_tasks option').clone();
+
+        function refreshTaskFilterOptions() {
+            const phases = $('#filter_phases').val() || [];
+            const keptActivities = $('#filter_activities').val() || [];
+            const activitySelect = $('#filter_activities').empty();
+            allActivityOptions.each(function () {
+                if (!phases.length || phases.includes(String($(this).data('phase')))) activitySelect.append($(this).clone());
+            });
+            activitySelect.val(keptActivities.filter(v => activitySelect.find('option[value="' + v + '"]').length)).trigger('change.select2');
+
+            const activities = activitySelect.val() || [];
+            const keptTasks = $('#filter_tasks').val() || [];
+            const taskSelect = $('#filter_tasks').empty();
+            allTaskOptions.each(function () {
+                const okPhase = !phases.length || phases.includes(String($(this).data('phase')));
+                const okActivity = !activities.length || activities.includes(String($(this).data('activity')));
+                if (okPhase && okActivity) taskSelect.append($(this).clone());
+            });
+            taskSelect.val(keptTasks.filter(v => taskSelect.find('option[value="' + v + '"]').length)).trigger('change.select2');
+        }
+
+        $('.task-filters select').on('change', function () {
+            if (this.id !== 'filter_tasks') refreshTaskFilterOptions();
+            markFiltersPending();
+        });
 
         $('.supervisors-filter select').on('change', function () {
             type_field = "";
@@ -297,13 +358,21 @@
                     }
                 } {% endcomment %}
             }
-            loadSupervisors(type_field);
+            updateGeoChoices(type_field);
+            markFiltersPending();
+        });
+
+        $("#apply_filters").on("click", function () {
+            loadSupervisors();
         });
 
         $("#clear_all_filters").on("click", function () {
             $('.supervisors-filter input').val('');
             $('.supervisors-filter select').val(null).trigger('change.select2');
-            loadSupervisors("all");
+            $('#filter_phases').val(null).trigger('change.select2');
+            $('#filter_activities').val(null);
+            refreshTaskFilterOptions();
+            loadSupervisors();
         });
 
     </script>
@@ -334,6 +403,10 @@
             placeholder: "{% translate 'Village' %}",
             allowClear: true,
         });
+
+        $("#filter_phases").select2({placeholder: "{% translate 'Phases' %}", allowClear: true, width: '100%'});
+        $("#filter_activities").select2({placeholder: "{% translate 'Activities' %}", allowClear: true, width: '100%'});
+        $("#filter_tasks").select2({placeholder: "{% translate 'Tasks' %}", allowClear: true, width: '100%'});
 
         $('b[role="presentation"]').hide();
         $('.select2-selection__arrow').append(

@@ -10,8 +10,9 @@ from dashboard.facilitators.forms import FilterFacilitatorForm
 from dashboard.mixins import PageMixin
 import grm_client
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
-from process_manager.models import AggregatedStatus, Project
+from process_manager.models import AggregatedStatus, Project, Task
 from cdd.functions import list_with_and
+from dashboard.statistics.utils import normaliser_chaine
 from administrativelevels.models import AdministrativeLevel
 from cdd.call_objects_from_other_db import mis_objects_call
 from dashboard.facilitators.localities import user_localities_copy
@@ -32,7 +33,54 @@ def _stats(row):
     return stats
 
 
-def attach_cantons_details(supervisors, projects):
+def _keys_param(request, name):
+    """Clés d'un filtre à choix multiples (`name=a,b` ou `name=a&name=b`)."""
+    values = request.GET.getlist(name) or request.GET.getlist(f'{name}[]')
+    return {v.strip() for value in values for v in str(value).split(',') if v.strip()}
+
+
+def _task_keys(task):
+    """Clés (phase, activité, tâche) d'une tâche, par NOM normalisé : une même phase / activité / tâche porte un
+    identifiant différent dans chaque projet (COSO, FA-COSO…), le nom permet de les réunir."""
+    phase = normaliser_chaine(task.phase.name)
+    activity = f"{phase}|{normaliser_chaine(task.activity.name)}"
+    return phase, activity, f"{activity}|{normaliser_chaine(task.name)}"
+
+
+def supervisor_filter_tasks(user):
+    """Tâches des projets de l'utilisateur (ceux comptés sur /supervisors/), dans l'ordre du processus."""
+    return Task.objects.filter(project__users__in=[user.id]).select_related('phase', 'activity').distinct().order_by(
+        'phase__order', 'activity__order', 'order', 'id')
+
+
+def supervisors_filter_choices(user):
+    """Choix des filtres phases / activités / tâches, une entrée par nom (tous projets confondus)."""
+    phases, activities, tasks = {}, {}, {}
+    for task in supervisor_filter_tasks(user):
+        phase_key, activity_key, task_key = _task_keys(task)
+        phases.setdefault(phase_key, {'key': phase_key, 'name': task.phase.name})
+        activities.setdefault(activity_key, {'key': activity_key, 'name': task.activity.name, 'phase': phase_key})
+        tasks.setdefault(task_key, {'key': task_key, 'name': task.name, 'phase': phase_key, 'activity': activity_key})
+    return list(phases.values()), list(activities.values()), list(tasks.values())
+
+
+def supervisors_task_filter(request):
+    """Filtre des lignes AggregatedStatus selon les phases / activités / tâches choisies sur /supervisors/.
+    Sans choix : lignes de synthèse (`task=None`). Avec choix : lignes par tâche des tâches retenues, dans TOUS les
+    projets de l'utilisateur (rapprochées par nom) ; les lignes de synthèse d'un village ou d'un canton sont exactement
+    la somme de ses lignes par tâche."""
+    phases, activities, tasks = (_keys_param(request, n) for n in ('phases', 'activities', 'tasks'))
+    if not (phases or activities or tasks):
+        return {'task': None}
+    ids = []
+    for task in supervisor_filter_tasks(request.user):
+        phase_key, activity_key, task_key = _task_keys(task)
+        if (not phases or phase_key in phases) and (not activities or activity_key in activities) and (not tasks or task_key in tasks):
+            ids.append(task.id)
+    return {'task_id__in': ids}
+
+
+def attach_cantons_details(supervisors, projects, task_filter=None):
     """Situation par canton, puis par village siège, de chaque superviseur pour chaque projet et cycle (déroulé d'un
     projet puis d'un canton sur /supervisors/, comme /diagnostics/adl-tasks) : `supervisor['cantons_details'][projet]
     [cycle]` = cantons de sa zone avec leurs villages sièges (un par CVD : leurs chiffres s'additionnent pour donner
@@ -57,7 +105,7 @@ def attach_cantons_details(supervisors, projects):
     stats = {
         (row['administrative_level_id'], row['cycle_id']): row
         for row in AggregatedStatus.objects.filter(
-            facilitator=None, task=None, administrative_level_id__in=level_ids, cycle_id__in=list(cycles),
+            facilitator=None, administrative_level_id__in=level_ids, cycle_id__in=list(cycles), **(task_filter or {'task': None}),
         ).values('administrative_level_id', 'cycle_id').annotate(**{field: Sum(field) for field in STATS_FIELDS})
     } if level_ids and cycles else {}
 
@@ -120,6 +168,9 @@ class SupervisrosListView(PageMixin, LoginRequiredMixin, generic.ListView):
         context['region_id'] = self.request.GET.get('region_id')
         agg = AggregatedStatus.objects.filter(project_id=self.request.session.get('project_id'), cycle_id=self.request.session.get('cycle_id'), task__isnull=False, facilitator=None).order_by('-updated_date').first()
         context['last_update'] = agg.updated_date if agg else None
+
+        # Choix des filtres phases / activités / tâches : par nom, sur tous les projets de l'utilisateur
+        context['filter_phases'], context['filter_activities'], context['filter_tasks'] = supervisors_filter_choices(self.request.user)
         
         return context
     
@@ -198,6 +249,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                 ]
 
         projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
+        task_filter = supervisors_task_filter(self.request)
 
         for supervisor in supervisors:
             grm_client.attach_administrative_regions_objects(supervisor)
@@ -233,8 +285,8 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                     project_id__in=[p.id for p in projects],
                     cycle_id__in=[c.id for p in projects for c in p.cycle_set.all()],
                     facilitator=None,
-                    task=None,
-                    administrative_level_id__in=[int(_id) for _id in cantons_stabilized_ids]
+                    administrative_level_id__in=[int(_id) for _id in cantons_stabilized_ids],
+                    **task_filter
                 ).distinct()
                 .values("project_id", "cycle_id")
                 .annotate(
@@ -302,7 +354,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                 )/supervisor['total_tasks_completed'])*100) if supervisor['total_tasks_completed'] else 0))
             )
             
-        attach_cantons_details(supervisors, projects)
+        attach_cantons_details(supervisors, projects, task_filter)
         return supervisors
 
     def get_queryset(self):
