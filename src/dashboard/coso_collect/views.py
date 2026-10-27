@@ -338,7 +338,10 @@ class BuilderDatasetSheetView(LoginRequiredMixin, FormAdminMixin, generic.View):
         if not uploaded:
             return JsonResponse({'ok': False, 'errors': [_('No file.')]}, status=400)
         try:
-            columns, rows = read_sheet_table(uploaded)
+            # Remplissage automatique : nombre maximal de lignes choisi dans le générateur
+            from dashboard.process_manager.tasks.form_design import autofill_max_rows
+            limit = autofill_max_rows({'maxRows': request.POST.get('limit')}) if request.POST.get('limit') else None
+            columns, rows = read_sheet_table(uploaded, limit) if limit else read_sheet_table(uploaded)
         except Exception as exc:  # noqa: BLE001 - message utilisateur
             return JsonResponse({'ok': False, 'errors': [str(exc)]}, status=422)
         return JsonResponse({'ok': True, 'columns': columns, 'rows': rows, 'count': len(rows)})

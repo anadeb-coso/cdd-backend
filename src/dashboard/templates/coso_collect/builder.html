@@ -101,12 +101,12 @@
                 .replace("__TITLE_TEMPLATE_JSON__", function () { return titleJson; });
         })();
     </script>
-    <script src="{% static 'dashboard/js/task_form_builder.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v=autofill2"></script>
     {# Moteur de remplissage réel, réutilisé pour l'onglet « Aperçu ». #}
-    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=autofill2"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=2"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=autofill2"></script>
 {% endblock javascript %}
 
 {% block select2 %}{% endblock select2 %}

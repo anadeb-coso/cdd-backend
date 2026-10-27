@@ -167,7 +167,7 @@
       children: []
     };
   }
-  function newPage() { return { id: uid(), nodes: [], rules: [], calculate: [], messages: {} }; }
+  function newPage() { return { id: uid(), nodes: [], rules: [], calculate: [], autofill: [], messages: {} }; }
 
   // Ordre d'affichage : `options.order` d'abord (l'ordre stocké par
   // PostgreSQL/jsonb ne conserve PAS l'ordre des clés d'objet), puis les clés
@@ -195,6 +195,7 @@
       });
       page.rules = (pg.rules || []).map(ruleFromStored);
       page.calculate = (pg.calculate || []).map(function (c) { return { target: c.target || "", expr: c.expr || "" }; });
+      page.autofill = (pg.autofill || []).map(autofillFromStored);
       applyStoredMessages(page.nodes, pg.messages || {});
       applyShareFields(page.nodes, "", pg.share || []);
       applyChoicesFromFields(page.nodes, "", pg.choicesFrom || []);
@@ -399,6 +400,8 @@
       var calc = page.calculate.filter(function (c) { return c.target && c.expr; })
         .map(function (c) { return { target: c.target, expr: c.expr }; });
       if (calc.length) out.calculate = calc;
+      var autofill = (page.autofill || []).map(compileAutofill).filter(Boolean);
+      if (autofill.length) out.autofill = autofill;
       var msgs = {};
       page.nodes.forEach(function (n) { collectMessages(n, msgs); });
       if (Object.keys(msgs).length) out.messages = msgs;
@@ -826,7 +829,7 @@
     var card = el("div", { class: "tfb-card tfb-col-right" });
     var tabs = el("div", { class: "tfb-tabs" });
     [["field", t("tab_field", "Champ")], ["rules", t("tab_rules", "Règles")],
-     ["calc", t("tab_calc", "Calculs")], ["attachments", t("tab_attachments", "Pièces jointes")],
+     ["calc", t("tab_calc", "Calculs")], ["autofill", t("tab_autofill", "Remplissage auto")], ["attachments", t("tab_attachments", "Pièces jointes")],
      ["preview", t("tab_preview", "Aperçu")], ["json", "JSON"]].filter(function (tb) {
       return !(IS_COLLECT && tb[0] === "attachments");
     }).forEach(function (tb) {
@@ -837,6 +840,7 @@
     if (state.tab === "field") pane.appendChild(renderFieldEditor());
     else if (state.tab === "rules") pane.appendChild(renderRulesEditor());
     else if (state.tab === "calc") pane.appendChild(renderCalcEditor());
+    else if (state.tab === "autofill") pane.appendChild(renderAutofillEditor());
     else if (state.tab === "attachments") pane.appendChild(renderAttachmentsEditor());
     else if (state.tab === "preview") pane.appendChild(renderPreview());
     else pane.appendChild(renderJsonEditor());
@@ -2117,6 +2121,308 @@
     return box;
   }
 
+  /* ------------------------------------------------- remplissage automatique */
+  // `page.autofill` : quand le champ « déclencheur » change, les champs cibles
+  // reçoivent la valeur de leur colonne dans la ligne dont la CLÉ vaut la valeur
+  // saisie. Les lignes sont figées dans le formulaire (utilisables hors ligne sur
+  // mobile) ; elles viennent d'une table autorisée, d'un fichier Excel ou d'une
+  // liste saisie ici. Chaque cible est modifiable (valeur proposée) ou verrouillée.
+  var AUTOFILL_TARGET_TYPES = { text: 1, integer: 1, decimal: 1, select_one: 1, date: 1, datetime: 1, time: 1 };
+  var AUTOFILL_SOURCE_TYPES = { text: 1, integer: 1, decimal: 1, select_one: 1, date: 1 };
+  var AUTOFILL_KINDS = [
+    ["list", t("af_kind_list", "Liste saisie ici")],
+    ["db", t("af_kind_db", "Table de la base")],
+    ["excel", t("af_kind_excel", "Fichier Excel")]
+  ];
+
+  function newAutofill() {
+    return { source: "", kind: "list", table: "", keyColumn: "", columns: [], filters: [], maxRows: AUTOFILL_DEFAULT_ROWS,
+             file: "", rows: [], targets: [], _sheet: null };
+  }
+  function autofillFromStored(a) {
+    var meta = (a && a._source) || {};
+    var rows = ((a && a.rows) || []).map(function (r) { return { k: String(r.k), d: Object.assign({}, r.d || {}) }; });
+    var cols = Array.isArray(meta.columns) && meta.columns.length ? meta.columns.slice() : [];
+    if (!cols.length) rows.forEach(function (r) { Object.keys(r.d).forEach(function (c) { if (cols.indexOf(c) === -1) cols.push(c); }); });
+    return {
+      source: (a && a.source) || "", kind: meta.kind || "list", table: meta.table || "",
+      keyColumn: meta.keyColumn || "", columns: cols, filters: meta.filters || [],
+      maxRows: (a && a.maxRows) || meta.maxRows || AUTOFILL_DEFAULT_ROWS,
+      file: meta.file || "", rows: rows, _sheet: null,
+      targets: ((a && a.targets) || []).map(function (x) {
+        return { path: x.path || "", column: x.column || "", editable: x.editable !== false };
+      })
+    };
+  }
+  function compileAutofill(a) {
+    if (!a.source) return null;
+    var targets = (a.targets || []).filter(function (x) { return x.path && x.column && x.path !== a.source; })
+      .map(function (x) { return { path: x.path, column: x.column, editable: x.editable !== false }; });
+    var seen = {}, rows = [];
+    (a.rows || []).forEach(function (r) {
+      var k = String(r.k == null ? "" : r.k).trim();
+      if (!k || seen[k]) return;
+      seen[k] = 1;
+      rows.push({ k: k, d: r.d || {} });
+    });
+    var maxRows = autofillMaxRows(a);
+    rows = rows.slice(0, maxRows);
+    if (!targets.length || !rows.length) return null;
+    var out = {
+      source: a.source, rows: rows, targets: targets,
+      _source: { kind: a.kind, table: a.table || "", keyColumn: a.keyColumn || "", columns: a.columns || [],
+                 filters: keptFilters(a.filters), file: a.file || "" }
+    };
+    if (maxRows !== AUTOFILL_DEFAULT_ROWS) out.maxRows = maxRows;
+    return out;
+  }
+  var AUTOFILL_DEFAULT_ROWS = 5000, AUTOFILL_HARD_ROWS = 50000;
+  function autofillMaxRows(a) {
+    var n = parseInt(a && a.maxRows, 10);
+    if (isNaN(n) || n < 1) n = AUTOFILL_DEFAULT_ROWS;
+    return Math.min(n, AUTOFILL_HARD_ROWS);
+  }
+  // Groupe répétable traversé par `path` dans `nodes` ("" si aucun, null si plusieurs niveaux).
+  function repeatListIn(nodes, path) {
+    var parts = path.split("."), found = "";
+    for (var i = 0; i < parts.length - 1; i++) {
+      var n = (nodes || []).filter(function (x) { return x.key === parts[i]; })[0];
+      if (!n) return null;
+      if (n.type === "repeat") { if (found) return null; found = parts.slice(0, i + 1).join("."); }
+      nodes = n.children;
+    }
+    return found;
+  }
+  // Déclencheurs possibles : champs de cette page (répétables compris) et des autres pages (hors répétable).
+  function autofillSourcePaths() {
+    var acc = currentPagePaths().filter(function (p) {
+      return AUTOFILL_SOURCE_TYPES[p.type] && repeatListIn(state.pages[state.active].nodes, p.path) !== null;
+    });
+    state.pages.forEach(function (pg, i) {
+      if (i === state.active) return;
+      fieldPaths(pg.nodes, "", []).forEach(function (f) {
+        if (!AUTOFILL_SOURCE_TYPES[f.type] || repeatListIn(pg.nodes, f.path) !== "") return;
+        acc.push({ path: "$" + i + "." + f.path, label: "P" + (i + 1) + " · " + f.label, type: f.type });
+      });
+    });
+    return acc;
+  }
+  // Cibles possibles : champs de cette page ; si le déclencheur est dans un répétable, seulement ce répétable.
+  function autofillTargetPaths(a) {
+    var nodes = state.pages[state.active].nodes;
+    var list = a.source && a.source.charAt(0) !== "$" ? repeatListIn(nodes, a.source) : "";
+    return currentPagePaths().filter(function (p) {
+      if (!AUTOFILL_TARGET_TYPES[p.type] || p.path === a.source) return false;
+      var targetList = repeatListIn(nodes, p.path);
+      // déclencheur dans un répétable : même répétable ; sinon toute cible (répétable : toutes les lignes)
+      return targetList !== null && (!list || targetList === list);
+    });
+  }
+
+  function renderAutofillEditor() {
+    var page = state.pages[state.active];
+    page.autofill = page.autofill || [];
+    var box = el("div");
+    box.appendChild(el("p", { class: "tfb-muted", text: t("af_help",
+      "Quand le champ déclencheur est rempli, les champs cibles prennent la valeur de leur colonne dans la ligne dont la clé correspond. " +
+      "Une cible « verrouillée » ne peut pas être modifiée par l'utilisateur ; une cible « modifiable » reçoit une valeur proposée qu'il peut changer.") }));
+    page.autofill.forEach(function (a, i) {
+      box.appendChild(renderAutofillItem(page, a, i));
+    });
+    box.appendChild(btn("+ " + t("af_add", "Ajouter un remplissage automatique"), function () {
+      page.autofill.push(newAutofill()); render();
+    }, "btn-primary btn-sm"));
+    return box;
+  }
+
+  function renderAutofillItem(page, a, i) {
+    var card = el("div", { class: "tfb-calc" });
+    card.appendChild(fieldRow(t("af_source", "Champ déclencheur"),
+      selectPaths(autofillSourcePaths(), a.source, function (v) { a.source = v; render(); })));
+    if (a.source && a.source.charAt(0) === "$") {
+      card.appendChild(el("div", { class: "tfb-muted", text: t("af_cross_page_hint",
+        "Déclencheur sur une autre page : les champs cibles sont remplis à l'ouverture de cette page.") }));
+    } else if (a.source && repeatListIn(state.pages[state.active].nodes, a.source)) {
+      card.appendChild(el("div", { class: "tfb-muted", text: t("af_repeat_hint",
+        "Déclencheur dans un groupe répétable : chaque ligne est remplie à partir de sa propre valeur.") }));
+    }
+    card.appendChild(fieldRow(t("af_max_rows", "Nombre maximal de lignes"), textInput(a.maxRows, function (v) { a.maxRows = v; })));
+    card.appendChild(el("div", { class: "tfb-muted", text: t("af_max_rows_hint",
+      "Au-delà, les lignes sont ignorées. Plafond : 50 000 (le formulaire est envoyé aux téléphones).") }));
+    card.appendChild(fieldRow(t("af_kind", "Valeurs provenant de"), selectFrom(AUTOFILL_KINDS, a.kind, function (v) {
+      a.kind = v; render();
+    })));
+    if (a.kind === "db") card.appendChild(renderAutofillDb(a));
+    else if (a.kind === "excel") card.appendChild(renderAutofillExcel(a));
+    else card.appendChild(renderAutofillList(a));
+
+    card.appendChild(el("div", { class: a.rows.length ? "tfb-ok" : "tfb-muted", style: "padding:6px 8px",
+      text: a.rows.length ? a.rows.length + " " + t("af_rows", "ligne(s) de correspondance") : t("af_no_rows", "Aucune ligne de correspondance.") }));
+    card.appendChild(renderAutofillTargets(a));
+    card.appendChild(btn("✕ " + t("af_delete", "Supprimer ce remplissage"), function () {
+      page.autofill.splice(i, 1); render();
+    }, "btn-danger btn-sm"));
+    return card;
+  }
+
+  function renderAutofillTargets(a) {
+    var box = el("div", { class: "tfb-field-row" }, [el("label", { text: t("af_targets", "Champs remplis automatiquement") })]);
+    var paths = autofillTargetPaths(a);
+    var cols = (a.columns || []).filter(function (c) { return c !== a.keyColumn; });
+    (a.targets || []).forEach(function (x, j) {
+      box.appendChild(el("div", { class: "tfb-cond-row" }, [
+        selectPaths(paths, x.path, function (v) { x.path = v; }),
+        colSelect(cols, x.column, function (v) { x.column = v; }, true),
+        selectFrom([["1", t("af_editable", "modifiable")], ["0", t("af_locked", "verrouillé")]], x.editable === false ? "0" : "1",
+          function (v) { x.editable = v === "1"; }),
+        btn("✕", function () { a.targets.splice(j, 1); render(); }, "btn-danger btn-sm")
+      ]));
+    });
+    if (!cols.length) box.appendChild(el("div", { class: "tfb-muted", text: t("af_need_columns", "Chargez d'abord des données pour choisir les colonnes.") }));
+    box.appendChild(btn("+ " + t("af_add_target", "Ajouter un champ cible"), function () {
+      a.targets.push({ path: "", column: "", editable: true }); render();
+    }, "btn-secondary btn-sm"));
+    return box;
+  }
+
+  function renderAutofillDb(a) {
+    ensureDsMeta();
+    var box = el("div");
+    var tables = ((state.dsMeta || {}).tables || []).map(function (x) { return [x.table, x.table]; });
+    box.appendChild(fieldRow(t("f_ds_table", "Table"), selectFrom([["", "—"]].concat(tables), a.table, function (v) {
+      a.table = v; a.keyColumn = ""; a.columns = []; render();
+    })));
+    if (!a.table) return box;
+    var cols = tableColumns(a.table);
+    box.appendChild(fieldRow(t("af_key_column", "Colonne clé (comparée à la valeur du champ déclencheur)"),
+      colSelect(cols, a.keyColumn, function (v) { a.keyColumn = v; render(); }, true)));
+    var pick = el("div", { class: "tfb-inline", style: "flex-wrap:wrap" });
+    cols.filter(function (c) { return c !== a.keyColumn; }).forEach(function (c) {
+      pick.appendChild(checkbox(a.columns.indexOf(c) !== -1, function (on) {
+        a.columns = a.columns.filter(function (x) { return x !== c; });
+        if (on) a.columns.push(c);
+      }, c));
+    });
+    box.appendChild(fieldRow(t("af_columns", "Colonnes à reprendre"), pick));
+    var holder = { source: a };
+    box.appendChild(renderDsFilters(holder, cols));
+    box.appendChild(btn("⟳ " + t("ds_load", "Charger / rafraîchir depuis la base"), function () {
+      if (!a.keyColumn || !a.columns.length) { flash(t("af_need_key", "Choisissez la colonne clé et au moins une colonne."), false); return; }
+      fetch(CFG.urls.datasource_preview, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": CFG.csrfToken },
+        body: JSON.stringify({ kind: "db_rows", table: a.table, key_column: a.keyColumn, columns: a.columns,
+                               filters: keptFilters(a.filters), limit: autofillMaxRows(a) })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) { flash((j.errors || [t("load_failed", "Échec du chargement.")])[0], false); return; }
+          a.rows = j.rows || [];
+          render();
+          flash(t("rows_loaded", "lignes chargées") + " : " + a.rows.length +
+            (j.truncated ? " (" + t("truncated_warn", "tronqué — ajoutez des filtres") + ")" : ""), !j.truncated);
+        })
+        .catch(function () { flash(t("network_err", "Erreur réseau."), false); });
+    }, "btn-primary btn-sm"));
+    return box;
+  }
+
+  function renderAutofillExcel(a) {
+    var box = el("div");
+    var fileInput = el("input", {
+      type: "file", accept: ".xlsx,.xls", style: "display:none",
+      onchange: function () {
+        var file = this.files[0]; this.value = "";
+        if (!file) return;
+        var fd = new FormData(); fd.append("file", file); fd.append("limit", autofillMaxRows(a));
+        fetch(CFG.urls.dataset_sheet, { method: "POST", headers: { "X-CSRFToken": CFG.csrfToken }, body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (!j.ok) { flash((j.errors || [t("load_failed", "Échec du chargement.")])[0], false); return; }
+            a.file = file.name;
+            a._sheet = { columns: j.columns || [], rows: j.rows || [] };
+            if (a._sheet.columns.indexOf(a.keyColumn) === -1) a.keyColumn = a._sheet.columns[0] || "";
+            applyAutofillSheet(a);
+            render();
+          })
+          .catch(function () { flash(t("network_err", "Erreur réseau."), false); });
+      }
+    });
+    box.appendChild(el("div", {}, [
+      btn("⭳ " + t("excel_pick", "Choisir un fichier Excel"), function () { fileInput.click(); }, "btn-outline-secondary btn-sm"),
+      fileInput,
+      a.file ? el("span", { class: "tfb-muted", text: "  " + a.file }) : null
+    ]));
+    box.appendChild(el("div", { class: "tfb-muted", text: t("af_excel_help",
+      "1re ligne = noms des colonnes ; une colonne sert de clé, les autres alimentent les champs cibles.") }));
+    if (a._sheet && a._sheet.columns.length) {
+      box.appendChild(fieldRow(t("af_key_column", "Colonne clé (comparée à la valeur du champ déclencheur)"),
+        colSelect(a._sheet.columns, a.keyColumn, function (v) { a.keyColumn = v; applyAutofillSheet(a); render(); }, false)));
+    }
+    return box;
+  }
+  function applyAutofillSheet(a) {
+    var cols = a._sheet.columns.filter(function (c) { return c !== a.keyColumn; });
+    var seen = {};
+    a.columns = cols;
+    a.rows = [];
+    a._sheet.rows.forEach(function (row) {
+      var k = String(row[a.keyColumn] == null ? "" : row[a.keyColumn]).trim();
+      if (!k || seen[k]) return;
+      seen[k] = 1;
+      var d = {};
+      cols.forEach(function (c) { d[c] = row[c] == null ? "" : row[c]; });
+      a.rows.push({ k: k, d: d });
+    });
+  }
+
+  function renderAutofillList(a) {
+    var box = el("div");
+    a.keyColumn = "";
+    var table = el("table", { class: "table table-sm table-bordered mb-1", style: "font-size:.85rem" });
+    var head = el("tr", {}, [el("th", { text: t("af_key", "Clé (valeur du déclencheur)") })]);
+    a.columns.forEach(function (c, ci) {
+      head.appendChild(el("th", {}, [
+        textInput(c, function (v) {
+          var nv = v.trim(), old = a.columns[ci];
+          if (!nv || (nv !== old && a.columns.indexOf(nv) !== -1)) return;
+          a.columns[ci] = nv;
+          a.rows.forEach(function (r) { r.d[nv] = r.d[old]; if (nv !== old) delete r.d[old]; });
+          a.targets.forEach(function (x) { if (x.column === old) x.column = nv; });
+        }),
+        btn("✕", function () {
+          var gone = a.columns.splice(ci, 1)[0];
+          a.rows.forEach(function (r) { delete r.d[gone]; });
+          a.targets.forEach(function (x) { if (x.column === gone) x.column = ""; });
+          render();
+        }, "btn-link btn-sm text-danger")
+      ]));
+    });
+    head.appendChild(el("th"));
+    table.appendChild(head);
+    a.rows.forEach(function (r, ri) {
+      var tr = el("tr", {}, [el("td", {}, [textInput(r.k, function (v) { r.k = v; })])]);
+      a.columns.forEach(function (c, ci) {
+        // par position : la colonne a pu être renommée depuis le dernier rendu
+        tr.appendChild(el("td", {}, [textInput(r.d[c], function (v) { r.d[a.columns[ci]] = v; })]));
+      });
+      tr.appendChild(el("td", {}, [btn("✕", function () { a.rows.splice(ri, 1); render(); }, "btn-link btn-sm text-danger")]));
+      table.appendChild(tr);
+    });
+    box.appendChild(el("div", { style: "overflow-x:auto" }, [table]));
+    box.appendChild(el("div", { class: "tfb-inline" }, [
+      btn("+ " + t("af_add_column", "Ajouter une colonne"), function () {
+        var name = t("af_column", "colonne") + (a.columns.length + 1);
+        while (a.columns.indexOf(name) !== -1) name += "_";
+        a.columns.push(name); render();
+      }, "btn-secondary btn-sm"),
+      btn("+ " + t("af_add_row", "Ajouter une ligne"), function () {
+        a.rows.push({ k: "", d: {} }); render();
+      }, "btn-secondary btn-sm")
+    ]));
+    return box;
+  }
+
   /* --------------------------------------------------------------- preview */
   // Aperçu RÉEL et COMPLET (pas un résumé texte) : réutilise tel quel le
   // moteur de remplissage du menu web "Tâches (cycle DCC)"
@@ -2392,6 +2698,9 @@
         form: form, share_mode: state.shareMode || "none",
         visibility_condition: state.visibilityCondition, attachments: state.attachments
       };
+    // Document Word / PDF générable (Task.generated_document), si le sélecteur est présent
+    var generatedDocEl = document.getElementById("tfb-generated-document");
+    if (generatedDocEl && !IS_COLLECT) payload.generated_document = generatedDocEl.value;
     fetch(CFG.urls.save, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CFG.csrfToken },

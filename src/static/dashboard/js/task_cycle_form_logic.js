@@ -76,7 +76,8 @@
     return !!(
       page &&
       ((Array.isArray(page.rules) && page.rules.length) ||
-        (Array.isArray(page.calculate) && page.calculate.length))
+        (Array.isArray(page.calculate) && page.calculate.length) ||
+        (Array.isArray(page.autofill) && page.autofill.length))
     );
   }
 
@@ -227,6 +228,7 @@
         node.editable = false;
         node.disabled = true;
       });
+      markAutofillLocked(page, options);
     }
 
     if (!Array.isArray(page.rules) || !page.rules.length) {
@@ -577,6 +579,274 @@
       .map(function (c) { return c.target; });
   }
 
+  /* ============================================== remplissage automatique */
+
+  // `page.autofill = [{ source, rows: [{k, d: {colonne: valeur}}], targets: [{path, column, editable}] }]`,
+  // porté par la page des CIBLES. Quand la valeur du champ `source` change, chaque cible reçoit la valeur
+  // de sa colonne dans la ligne dont la clé `k` vaut cette valeur (vide si aucune ligne).
+  //  - `source` sur une AUTRE page : "$<index>.<chemin>" (lu dans toutes les réponses) ;
+  //  - groupe répétable : source et cibles dans le MÊME répétable ("rep.champ"), appliqué ligne par ligne ;
+  //    source HORS répétable : une cible dans un répétable est remplie sur toutes ses lignes ;
+  //  - cible `editable: false` = verrouillée : toujours recalculée et affichée désactivée ;
+  //  - cible modifiable : réécrite seulement quand la source change (la saisie est conservée).
+  function autofillItems(page) {
+    if (!page || !Array.isArray(page.autofill)) return [];
+    return page.autofill.filter(function (a) {
+      return a && a.source && Array.isArray(a.rows) && Array.isArray(a.targets);
+    });
+  }
+
+  function _autofillKey(v) {
+    if (v == null) return '';
+    if (Array.isArray(v)) return v.length ? _autofillKey(v[0]) : '';
+    if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString();
+    if (typeof v === 'object') return '';
+    return String(v).trim();
+  }
+
+  // Index des lignes par clé (calculé une fois par entrée).
+  function _autofillRow(item, key) {
+    if (key === '') return null;
+    if (!item.__index) {
+      var exact = {}, lower = {};
+      (item.rows || []).forEach(function (r) {
+        var k = String(r.k).trim();
+        if (!(k in exact)) exact[k] = r;
+        if (!(k.toLowerCase() in lower)) lower[k.toLowerCase()] = r;
+      });
+      Object.defineProperty(item, '__index', { value: { exact: exact, lower: lower }, enumerable: false });
+    }
+    return item.__index.exact[key] || item.__index.lower[key.toLowerCase()] || null;
+  }
+
+  function _schemaAtPath(page, path) {
+    var schema = page && page.page;
+    var parts = String(path).split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (schema && schema.type === 'array' && schema.items) schema = schema.items;
+      if (!schema || !schema.properties) return null;
+      schema = schema.properties[parts[i]];
+    }
+    return schema || null;
+  }
+
+  // "rep.champ" -> { list: "rep", inner: "champ" } si le chemin traverse un groupe répétable.
+  function _repeatSplit(page, path) {
+    var schema = page && page.page, parts = String(path).split('.');
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (!schema || !schema.properties) return null;
+      schema = schema.properties[parts[i]];
+      if (schema && schema.type === 'array') {
+        return { list: parts.slice(0, i + 1).join('.'), inner: parts.slice(i + 1).join('.') };
+      }
+    }
+    return null;
+  }
+
+  // "27/10/2026", "2026-10-27", "2026-10-27 08:30:00" -> Date (ou null)
+  function _autofillDate(raw) {
+    if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+    var s = String(raw).trim(), m = /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:[ T](\d{1,2}):(\d{2}))?/.exec(s);
+    var d = m
+      ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0))
+      : new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + 'T00:00:00.000Z' : s.replace(' ', 'T'));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // Valeur de la table -> valeur du champ cible selon son type (undefined si inutilisable).
+  function _autofillValue(raw, schema, dateAsObject) {
+    if (raw == null || raw === '') return undefined;
+    var tp = schema && schema.type;
+    if (tp === 'integer' || tp === 'number') {
+      var n = typeof raw === 'number' ? raw : Number(String(raw).replace(',', '.').replace(/\s/g, ''));
+      if (isNaN(n)) return undefined;
+      return tp === 'integer' ? Math.round(n) : n;
+    }
+    if (tp === 'boolean') {
+      if (typeof raw === 'boolean') return raw;
+      var b = String(raw).trim().toLowerCase();
+      if (['1', 'true', 'vrai', 'oui', 'yes', 'o', 'y'].indexOf(b) !== -1) return true;
+      if (['0', 'false', 'faux', 'non', 'no', 'n'].indexOf(b) !== -1) return false;
+      return undefined;
+    }
+    var fmt = schema && schema.format;
+    if (fmt === 'date' || fmt === 'datetime' || fmt === 'time') {
+      var d = _autofillDate(raw);
+      if (!d) return undefined;
+      return dateAsObject ? d : d.toISOString();
+    }
+    if (schema && Array.isArray(schema.enum)) {
+      var sv = String(raw).trim();
+      return schema.enum.map(String).indexOf(sv) !== -1 ? sv : undefined;
+    }
+    if (schema && schema.enum && typeof schema.enum === 'object') {
+      var key = String(raw).trim();
+      return Object.prototype.hasOwnProperty.call(schema.enum, key) ? key : undefined;
+    }
+    return String(raw);
+  }
+
+  function _sameValue(a, b) {
+    if (a instanceof Date || b instanceof Date) {
+      var ta = a instanceof Date ? a.getTime() : (a ? new Date(a).getTime() : NaN);
+      var tb = b instanceof Date ? b.getTime() : (b ? new Date(b).getTime() : NaN);
+      return (isNaN(ta) && isNaN(tb)) || ta === tb;
+    }
+    if ((a == null || a === '') && (b == null || b === '')) return true;
+    return a === b;
+  }
+
+  // Mise à jour sans effet de bord : copie seulement les objets le long du chemin.
+  function _setPathCopy(root, path, value) {
+    var parts = String(path).split('.');
+    var top = Object.assign({}, root), cur = top;
+    for (var k = 0; k < parts.length - 1; k++) {
+      var child = cur[parts[k]];
+      cur[parts[k]] = child && typeof child === 'object' && !Array.isArray(child) ? Object.assign({}, child) : {};
+      cur = cur[parts[k]];
+    }
+    cur[parts[parts.length - 1]] = value;
+    return top;
+  }
+
+  // Une cible dans `obj` (chemin `path`) selon le mode (cf. _applyTargets).
+  function _applyOne(page, t, obj, path, row, mode, dateAsObject) {
+    var locked = t.editable === false;
+    var cur = resolvePath(obj || {}, path);
+    if (!locked) {
+      if (mode === 'same') return obj;
+      if (mode === 'unknown' && (!row || !isEmpty(cur))) return obj;
+    }
+    var next = row ? _autofillValue((row.d || {})[t.column], _schemaAtPath(page, t.path), dateAsObject) : undefined;
+    if (_sameValue(cur, next)) return obj;
+    return _setPathCopy(obj || {}, path, next);
+  }
+
+  /**
+   * Applique les cibles d'une entrée à `obj` (la page, ou une ligne de répétable via `innerOf`).
+   * mode : "changed" (source modifiée : tout réécrire), "unknown" (état précédent inconnu :
+   * cibles modifiables remplies seulement si vides), "same" (seules les verrouillées).
+   * Déclencheur HORS répétable et cible DANS un répétable : la cible est remplie sur chaque
+   * ligne ; une ligne ajoutée depuis `prevObj` est traitée en "unknown" (remplie si vide).
+   */
+  function _applyTargets(page, item, obj, key, mode, dateAsObject, innerOf, prevObj) {
+    var row = _autofillRow(item, key), out = obj;
+    item.targets.forEach(function (t) {
+      if (!t || !t.path || !t.column) return;
+      if (innerOf) {
+        var inner = innerOf(t.path);
+        if (inner) out = _applyOne(page, t, out, inner, row, mode, dateAsObject);
+        return;
+      }
+      var split = _repeatSplit(page, t.path);
+      if (!split) {
+        out = _applyOne(page, t, out, t.path, row, mode, dateAsObject);
+        return;
+      }
+      var list = resolvePath(out || {}, split.list);
+      if (!Array.isArray(list) || !list.length) return;
+      var prevList = prevObj ? resolvePath(prevObj, split.list) : null;
+      var newList = null;
+      list.forEach(function (rowVal, i) {
+        var rowMode = mode;
+        if (mode === 'same' && prevObj && (!Array.isArray(prevList) || i >= prevList.length)) rowMode = 'unknown';
+        var updated = _applyOne(page, t, rowVal || {}, split.inner, row, rowMode, dateAsObject);
+        if (updated !== (rowVal || {})) {
+          if (!newList) newList = list.slice();
+          newList[i] = updated;
+        }
+      });
+      if (newList) out = _setPathCopy(out || {}, split.list, newList);
+    });
+    return out;
+  }
+
+  /**
+   * COPIE de `values` avec les champs remplis automatiquement.
+   * `prevValues` : valeurs avant le changement (null au rendu : seules les cibles verrouillées sont
+   * recalculées pour une source de la même page). `dateAsObject` : true sur mobile (objets Date),
+   * false sur le web (chaînes ISO). `ctx` : { allResponses, memo } — `memo` (objet gardé par l'écran)
+   * retient la dernière clé appliquée pour une source d'une autre page.
+   */
+  function applyAutofill(page, prevValues, values, dateAsObject, ctx) {
+    var items = autofillItems(page);
+    if (!items.length) return values;
+    ctx = ctx || {};
+    var out = values || {};
+    items.forEach(function (item, idx) {
+      // 1) source sur une autre page
+      if (item.source.charAt(0) === '$') {
+        var key = _autofillKey(resolveField(item.source, out, ctx.allResponses));
+        var memo = ctx.memo, mk = item.source + '>' + item.targets.map(function (t) { return t && t.path; }).join(',');
+        var mode = memo && Object.prototype.hasOwnProperty.call(memo, mk)
+          ? (memo[mk] !== key ? 'changed' : 'same') : 'unknown';
+        if (memo) memo[mk] = key;
+        out = _applyTargets(page, item, out, key, mode, dateAsObject, null, prevValues);
+        return;
+      }
+      // 2) groupe répétable : ligne par ligne
+      var split = _repeatSplit(page, item.source);
+      if (split) {
+        var list = resolvePath(out, split.list);
+        if (!Array.isArray(list) || !list.length) return;
+        var prevList = prevValues ? resolvePath(prevValues, split.list) : null;
+        var prefix = split.list + '.';
+        var innerOf = function (p) { return p.indexOf(prefix) === 0 ? p.slice(prefix.length) : null; };
+        var newList = null;
+        list.forEach(function (rowVal, i) {
+          var k = _autofillKey(resolvePath(rowVal || {}, split.inner));
+          var m = 'same';
+          if (prevValues) {
+            var prevRow = Array.isArray(prevList) ? prevList[i] : undefined;
+            if (_autofillKey(resolvePath(prevRow || {}, split.inner)) !== k) m = 'changed';
+          }
+          var updated = _applyTargets(page, item, rowVal || {}, k, m, dateAsObject, innerOf);
+          if (updated !== (rowVal || {})) {
+            if (!newList) newList = list.slice();
+            newList[i] = updated;
+          }
+        });
+        if (newList) out = _setPathCopy(out, split.list, newList);
+        return;
+      }
+      // 3) même page
+      var k2 = _autofillKey(resolvePath(out, item.source));
+      var m2 = prevValues != null && k2 !== _autofillKey(resolvePath(prevValues, item.source)) ? 'changed' : 'same';
+      out = _applyTargets(page, item, out, k2, m2, dateAsObject, null, prevValues);
+    });
+    return out === (values || {}) ? values : out;
+  }
+
+  /** Désactive à l'affichage les cibles verrouillées (répétables compris). */
+  function markAutofillLocked(page, options) {
+    autofillItems(page).forEach(function (item) {
+      item.targets.forEach(function (t) {
+        if (!t || !t.path || t.editable !== false) return;
+        var split = _repeatSplit(page, t.path), node;
+        if (split) {
+          var listNode = optionNodeAtPath(options, split.list);
+          listNode.item = listNode.item || {};
+          node = optionNodeAtPath(listNode.item, split.inner);
+        } else {
+          node = optionNodeAtPath(options, t.path);
+        }
+        node.editable = false;
+        node.disabled = true;
+      });
+    });
+  }
+
+  /** Chemins des cibles verrouillées. */
+  function autofillLockedTargets(page) {
+    var acc = [];
+    autofillItems(page).forEach(function (item) {
+      item.targets.forEach(function (t) {
+        if (t && t.path && t.editable === false && acc.indexOf(t.path) === -1) acc.push(t.path);
+      });
+    });
+    return acc;
+  }
+
   /* ================================================================ export */
 
   window.TCFormLogic = {
@@ -592,6 +862,9 @@
     markRequiredErrors: markRequiredErrors,
     applyCalculations: applyCalculations,
     calculatedTargets: calculatedTargets,
+    applyAutofill: applyAutofill,
+    autofillLockedTargets: autofillLockedTargets,
+    markAutofillLocked: markAutofillLocked,
     cloneDeepKeepFns: cloneDeepKeepFns,
     coerceValueToSchema: coerceValueToSchema,
     resolvePath: resolvePath,

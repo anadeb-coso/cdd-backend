@@ -1004,7 +1004,11 @@
   FillFormController.prototype.handleFieldChange = function (path, val) {
     var page = this.currentPage();
     var values = this.state.values[this.pageIndex];
+    // Valeurs AVANT ce changement : le remplissage automatique ne réécrit les champs
+    // modifiables que si le champ déclencheur a vraiment changé.
+    var prevValues = L.applyAutofill ? JSON.parse(JSON.stringify(values || {})) : null;
     L.setPath(values, path, val);
+    if (L.applyAutofill) values = L.applyAutofill(page, prevValues, values, false, this.autofillContext());
     values = L.applyCalculations(page, values);
     // Vide la valeur d'un select "enfant de cascade" (dataset+cascadeFrom) dont
     // le parent vient de changer et dont l'option choisie n'existe plus dans la
@@ -1038,9 +1042,23 @@
     this.ensureExternalDocs(page, function () { self._renderNow(); });
   };
 
+  /** Contexte du remplissage automatique : réponses de toutes les pages (source sur une
+   * autre page) + mémoire de la dernière clé appliquée, gardée par le contrôleur. */
+  FillFormController.prototype.autofillContext = function () {
+    this._autofillMemo = this._autofillMemo || {};
+    return { allResponses: this.state.values, memo: this._autofillMemo };
+  };
+
   FillFormController.prototype._renderNow = function () {
     var page = this.currentPage();
     var values = this.state.values[this.pageIndex] || {};
+    // Remplissage automatique à l'affichage : cibles verrouillées, et source d'une autre
+    // page modifiée depuis le dernier passage (valeurs gardées dans l'état -> enregistrées).
+    if (L.applyAutofill && Array.isArray(page.autofill) && page.autofill.length) {
+      values = L.applyAutofill(page, null, values, false, this.autofillContext());
+      values = L.applyCalculations(page, values);
+      this.state.values[this.pageIndex] = values;
+    }
     var dynOptions = this.buildFullDynOptions(page, values);
     var fields = parsePageFields(page);
 

@@ -14,6 +14,9 @@ consommée par ``tcomb-json-schema`` / ``tcomb-form-native`` côté mobile :
         # --- extensions rétro-compatibles (toutes optionnelles) ---
         "rules":     [ { "when": <cond>, "then": [ {"action": <act>, "target": <path>} ] } ],
         "calculate": [ { "target": <path>, "expr": "<expression arithmétique>" } ],
+        "autofill":  [ { "source": <path>, "rows": [ {"k": "<clé>", "d": {<colonne>: <valeur>}} ],
+                         "targets": [ {"path": <path>, "column": "<colonne>", "editable": <bool>} ],
+                         "_source": {<métadonnée du builder : table / Excel / liste>} } ],
         "messages":  { <name>: { "required": "...", "range": "...",
                                  "regex": "...", "type": "..." } }
     }
@@ -35,6 +38,7 @@ XLSForm (feuilles ``survey`` / ``choices`` / ``settings``).
 import ast
 import copy
 import io
+import json
 
 CONDITION_OPERATORS = {
     "eq", "ne", "in", "nin", "gt", "gte", "lt", "lte",
@@ -173,6 +177,14 @@ def validate_form_design(form):
 
         # -- calculate : erreurs bloquantes ------------------------------
         _validate_calculate(page.get("calculate", []) or [], properties, prefix, errors)
+
+        # -- autofill : remplissage automatique d'autres champs selon la valeur
+        # d'un champ (table de correspondance figée). Élagué silencieusement.
+        if "autofill" in page:
+            calc_targets = {c.get("target") for c in (page.get("calculate") or []) if isinstance(c, dict)}
+            page["autofill"] = clean_autofill(page.get("autofill"), properties, calc_targets, form, p_index)
+            if not page["autofill"]:
+                page.pop("autofill")
 
         # -- messages : on élague les champs absents ---------------------
         msgs = page.get("messages")
@@ -969,6 +981,131 @@ def _validate_condition(cond, form, page_index, prefix, errors):
             errors.append(f"{prefix} : champ de condition inconnu '{field}'.")
 
 
+# ---------------------------------------------------------------------------
+# Remplissage automatique (`page.autofill`) : quand le champ `source` change, les
+# champs `targets` reçoivent la valeur de leur colonne dans la ligne dont la clé
+# `k` vaut la valeur du champ source. Les lignes sont FIGÉES dans le formulaire
+# (comme `dataset` des listes de choix) : le mobile les applique hors ligne.
+# Cible `editable: false` = verrouillée (toujours égale à la table) ; sinon la
+# valeur proposée reste modifiable et n'est réécrite qu'au changement de la source.
+# ---------------------------------------------------------------------------
+AUTOFILL_ROW_CAP = 5000          # nombre maximal de lignes par défaut (réglable par entrée : `maxRows`)
+AUTOFILL_ROW_HARD_CAP = 50000    # plafond absolu (taille du formulaire envoyé aux téléphones)
+AUTOFILL_TARGET_TYPES = {"string", "integer", "number", "boolean"}
+
+
+def _repeat_list_path(path, properties):
+    """Chemin du groupe répétable traversé par ``path`` ("rep" pour "rep.champ"), ``""`` s'il n'y en a
+    pas, ``None`` si le chemin traverse plusieurs répétables (non géré)."""
+    props, found = properties, ""
+    parts = path.split(".")
+    for i, part in enumerate(parts[:-1]):
+        prop = props.get(part) if isinstance(props, dict) else None
+        if not isinstance(prop, dict):
+            return None
+        if prop.get("type") == "array":
+            if found:
+                return None
+            found = ".".join(parts[:i + 1])
+        props = _sub_properties(prop) or {}
+    return found
+
+
+def _autofill_scalar(value):
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    return str(value)
+
+
+def autofill_max_rows(entry):
+    try:
+        value = int((entry or {}).get("maxRows") or AUTOFILL_ROW_CAP)
+    except (TypeError, ValueError):
+        value = AUTOFILL_ROW_CAP
+    return max(1, min(value, AUTOFILL_ROW_HARD_CAP))
+
+
+def clean_autofill(raw, properties, calc_targets=frozenset(), form=None, page_index=None):
+    """Liste ``autofill`` nettoyée (entrées invalides retirées, jamais d'erreur bloquante).
+
+    Source : champ simple de la page ("champ", "groupe.champ"), d'une AUTRE page ("$<index>.<chemin>"),
+    ou d'un groupe répétable ("rep.champ" : cibles alors dans le même répétable, ligne par ligne).
+    Une source hors répétable peut viser des champs d'un répétable : remplis sur toutes les lignes."""
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        source = entry.get("source")
+        if not isinstance(source, str) or not source:
+            continue
+        if source.startswith("$"):
+            head, _sep, rest = source[1:].partition(".")
+            if not head.isdigit() or not rest or form is None:
+                continue
+            src_index = int(head)
+            if not (0 <= src_index < len(form)) or src_index == page_index:
+                continue
+            src_props = ((form[src_index] or {}).get("page") or {}).get("properties") or {}
+            source_prop = _resolve_local_prop(rest, src_props)
+            if _repeat_list_path(rest, src_props) != "":
+                continue
+            source_list = ""
+        else:
+            source_prop = _resolve_local_prop(source, properties)
+            source_list = _repeat_list_path(source, properties)
+            if source_list is None:
+                continue
+        # un champ simple (texte, nombre, choix unique…), pas un choix multiple ni un groupe
+        if not isinstance(source_prop, dict) or source_prop.get("type") in ("object", "array"):
+            continue
+
+        max_rows = autofill_max_rows(entry)
+        rows, seen_keys = [], set()
+        for row in entry.get("rows") or []:
+            if len(rows) >= max_rows:
+                break
+            if not isinstance(row, dict) or row.get("k") in (None, ""):
+                continue
+            key = str(row["k"]).strip()
+            data = row.get("d") if isinstance(row.get("d"), dict) else {}
+            if not key or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            rows.append({"k": key, "d": {str(c): _autofill_scalar(v) for c, v in data.items()}})
+
+        targets, seen_targets = [], {source}
+        for target in entry.get("targets") or []:
+            if not isinstance(target, dict):
+                continue
+            path, column = target.get("path"), target.get("column")
+            if not isinstance(path, str) or path in seen_targets or path in calc_targets:
+                continue
+            if not isinstance(column, str) or not column.strip():
+                continue
+            prop = _resolve_local_prop(path, properties)
+            if not isinstance(prop, dict) or prop.get("type") not in AUTOFILL_TARGET_TYPES:
+                continue
+            # source dans un répétable : cibles dans le même répétable (ligne par ligne) ;
+            # source hors répétable : cible libre (dans un répétable, remplie sur toutes les lignes)
+            target_list = _repeat_list_path(path, properties)
+            if target_list is None or (source_list and target_list != source_list):
+                continue
+            seen_targets.add(path)
+            targets.append({"path": path, "column": column.strip(), "editable": target.get("editable") is not False})
+
+        if not rows or not targets:
+            continue
+        clean = {"source": source, "rows": rows, "targets": targets}
+        if max_rows != AUTOFILL_ROW_CAP:
+            clean["maxRows"] = max_rows
+        if isinstance(entry.get("_source"), dict):
+            clean["_source"] = entry["_source"]
+        out.append(clean)
+    return out
+
+
 def _validate_calculate(calculate, properties, prefix, errors):
     if not isinstance(calculate, list):
         errors.append(f"{prefix} : 'calculate' doit être une liste.")
@@ -1123,7 +1260,112 @@ def form_design_to_xlsform(form, form_title="form", instance_name=None):
             )
         survey.append(["end group", page_name, "", "", "", "", "", "", ""])
 
+    _autofill_to_sheets(wb, form)
     return _workbook_bytes(wb)
+
+
+# Remplissage automatique (`page.autofill`) : pas d'équivalent XLSForm -> deux feuilles dédiées,
+# ignorées par les autres outils XLSForm et relues par `xlsform_to_form_design`.
+#   autofill      : une ligne par champ cible (id, page, source, target, column, editable, max_rows, …)
+#   autofill_data : table de correspondance au format long (id, key, column, value)
+AUTOFILL_SHEET_COLUMNS = ["id", "page", "source", "target", "column", "editable", "max_rows",
+                          "kind", "table", "key_column", "file", "filters"]
+AUTOFILL_DATA_COLUMNS = ["id", "key", "column", "value"]
+
+
+def _autofill_to_sheets(wb, form):
+    entries = [(p_index, n, a) for p_index, page in enumerate(form or [])
+               for n, a in enumerate((page or {}).get("autofill") or []) if isinstance(a, dict)]
+    if not entries:
+        return
+    head = wb.create_sheet("autofill")
+    head.append(AUTOFILL_SHEET_COLUMNS)
+    data = wb.create_sheet("autofill_data")
+    data.append(AUTOFILL_DATA_COLUMNS)
+    for p_index, n, a in entries:
+        item_id = f"p{p_index + 1}_{n + 1}"
+        meta = a.get("_source") if isinstance(a.get("_source"), dict) else {}
+        for t in a.get("targets") or []:
+            head.append([
+                item_id, p_index + 1, a.get("source", ""), t.get("path", ""), t.get("column", ""),
+                "no" if t.get("editable") is False else "yes", a.get("maxRows") or AUTOFILL_ROW_CAP,
+                meta.get("kind", "list"), meta.get("table", ""), meta.get("keyColumn", ""), meta.get("file", ""),
+                json.dumps(meta.get("filters") or [], ensure_ascii=False),
+            ])
+        for row in a.get("rows") or []:
+            for column, value in (row.get("d") or {}).items():
+                data.append([item_id, row.get("k"), column, value])
+
+
+def _json_list(raw):
+    try:
+        value = json.loads(raw) if isinstance(raw, str) and raw.strip() else []
+    except ValueError:
+        return []
+    return value if isinstance(value, list) else []
+
+
+def _autofill_from_sheets(wb, pages):
+    """Ajoute à ``pages`` les entrées ``autofill`` des feuilles dédiées (si présentes)."""
+    if "autofill" not in wb.sheetnames:
+        return
+    items, order = {}, []
+    for r in _sheet_rows(wb["autofill"]):
+        item_id = str(r.get("id") or "").strip()
+        if not item_id:
+            continue
+        try:
+            page_number = int(float(r.get("page") or 1))
+        except (TypeError, ValueError):
+            continue
+        if item_id not in items:
+            order.append(item_id)
+            items[item_id] = {
+                "page": page_number, "source": str(r.get("source") or "").strip(), "rows": {}, "columns": [],
+                "targets": [], "maxRows": r.get("max_rows"),
+                "_source": {"kind": str(r.get("kind") or "list"), "table": str(r.get("table") or ""),
+                            "keyColumn": str(r.get("key_column") or ""), "file": str(r.get("file") or ""),
+                            "filters": _json_list(r.get("filters"))},
+            }
+        target, column = str(r.get("target") or "").strip(), str(r.get("column") or "").strip()
+        if target and column:
+            items[item_id]["targets"].append({
+                "path": target, "column": column,
+                "editable": str(r.get("editable") or "yes").strip().lower() not in ("no", "non", "false", "0"),
+            })
+    if "autofill_data" in wb.sheetnames:
+        ws = wb["autofill_data"]
+        it = ws.iter_rows(values_only=True)
+        header = [str(h or "").strip() for h in next(it, [])]
+        pos = {name: header.index(name) for name in AUTOFILL_DATA_COLUMNS if name in header}
+        if len(pos) == len(AUTOFILL_DATA_COLUMNS):
+            for rec in it:
+                item = items.get(str(rec[pos["id"]] or "").strip())
+                key = rec[pos["key"]]
+                column = str(rec[pos["column"]] or "").strip()
+                if not item or key in (None, "") or not column:
+                    continue
+                key = str(key).strip()
+                if isinstance(key, str) and key.endswith(".0") and key[:-2].lstrip("-").isdigit():
+                    key = key[:-2]  # identifiants numériques relus en décimal par Excel
+                item["rows"].setdefault(key, {})[column] = rec[pos["value"]]
+                if column not in item["columns"]:
+                    item["columns"].append(column)
+    for item_id in order:
+        item = items[item_id]
+        if not (1 <= item["page"] <= len(pages)):
+            continue
+        entry = {
+            "source": item["source"], "targets": item["targets"],
+            "rows": [{"k": k, "d": d} for k, d in item["rows"].items()],
+            "_source": dict(item["_source"], columns=item["columns"]),
+        }
+        if item["maxRows"] not in (None, ""):
+            try:
+                entry["maxRows"] = int(float(item["maxRows"]))
+            except (TypeError, ValueError):
+                pass
+        pages[item["page"] - 1].setdefault("autofill", []).append(entry)
 
 
 def _emit_survey_row(survey, choices, choice_lists, name, prop, opts,
@@ -1391,6 +1633,7 @@ def xlsform_to_form_design(file_obj):
         if ps["calculate"]:
             page["calculate"] = ps["calculate"]
         pages.append(page)
+    _autofill_from_sheets(wb, pages)
     return pages
 
 
@@ -1637,7 +1880,18 @@ ALLOWED_DATASOURCE_TABLES = {
     "administrativelevels_administrativelevel",
     "administrativelevels_geographicalunit",
     "administrativelevels_cvd",
-    "subprojects_subproject"
+    "subprojects_subproject",
+    "subprojects_subprojectsector",
+    "subprojects_subprojecttyperegroup",
+    "subprojects_subprojecttype",
+    "subprojects_workstype",
+    "subprojects_subprojecttypedesignation",
+    "subprojects_project",
+    "subprojects_cycler",
+    "subprojects_component",
+    "subprojects_categoryida",
+    "subprojects_financier",
+    "subprojects_step",
 }
 _SENSITIVE_COLUMN_TOKENS = (
     "password", "passwd", "token", "secret", "hash", "salt",
@@ -1698,6 +1952,8 @@ def query_datasource(spec, row_cap=_DATASOURCE_ROW_CAP):
         return _query_admin_levels(spec, row_cap)
     if kind == "db":
         return _query_db_table(spec, row_cap)
+    if kind == "db_rows":
+        return _query_db_rows(spec, AUTOFILL_ROW_HARD_CAP)
     raise ValueError(f"Source inconnue : {kind!r}")
 
 
@@ -1848,6 +2104,97 @@ def _query_db_table(spec, row_cap):
             "p": "" if d.get("p") is None else str(d.get("p", "")),
         })
     return rows, len(fetched) >= limit
+
+
+def _query_db_rows(spec, row_cap):
+    """Table de correspondance du remplissage automatique : ``(rows, truncated)`` avec
+    ``rows = [{"k": <clé>, "d": {colonne: valeur}}]`` (une ligne par clé, la première l'emporte)."""
+    from django.db import DatabaseError, connection
+    from psycopg2 import sql as _sql
+
+    table = spec.get("table")
+    if table not in ALLOWED_DATASOURCE_TABLES:
+        raise ValueError(f"Table non autorisée : {table!r}")
+    cols = set(_table_columns(table))
+    if not cols:
+        raise ValueError(f"Table introuvable : {table!r}")
+    key_col = _require_column(spec.get("key_column"), cols)
+    columns = []
+    for c in spec.get("columns") or []:
+        c = _require_column(c, cols)
+        if c not in columns:
+            columns.append(c)
+    if not columns:
+        raise ValueError("Choisissez au moins une colonne à reprendre.")
+
+    where_sql, params = [], []
+    for f in (spec.get("filters") or []):
+        col, op = f.get("column"), f.get("op", "eq")
+        sval = "" if f.get("value") is None else str(f.get("value")).strip()
+        if col not in cols:
+            continue
+        ident = _sql.Identifier(col)
+        if op in _DATASOURCE_NULL_OPS or (op in ("eq", "ne") and sval.lower() in ("none", "null")):
+            is_null = op == "isnull" or op == "eq"
+            where_sql.append(_sql.SQL("{} IS NULL" if is_null else "{} IS NOT NULL").format(ident))
+            continue
+        if op not in DATASOURCE_OPS or sval == "":
+            continue
+        if op == "contains":
+            where_sql.append(_sql.SQL("{}::text ILIKE %s").format(ident))
+            params.append(f"%{sval}%")
+        elif op == "in":
+            items = [x.strip() for x in sval.split(",") if x.strip()]
+            if items:
+                where_sql.append(_sql.SQL("{}::text IN %s").format(ident))
+                params.append(tuple(items))
+        else:
+            where_sql.append(_sql.SQL("{} " + DATASOURCE_OPS[op] + " %s").format(ident))
+            params.append(sval)
+    where_sql.append(_sql.SQL("{} IS NOT NULL").format(_sql.Identifier(key_col)))
+
+    try:
+        limit = max(1, min(int(spec.get("limit") or row_cap), row_cap))
+    except (TypeError, ValueError):
+        limit = row_cap
+    query = _sql.SQL("SELECT {key}, {sel} FROM {tbl} WHERE {whr} ORDER BY {key} LIMIT {lim}").format(
+        key=_sql.Identifier(key_col),
+        sel=_sql.SQL(", ").join(_sql.Identifier(c) for c in columns),
+        tbl=_sql.Identifier(table),
+        whr=_sql.SQL(" AND ").join(where_sql),
+        lim=_sql.Literal(limit + 1),
+    )
+    connection.ensure_connection()
+    try:
+        with connection.cursor() as cur:
+            cur.execute(query.as_string(connection.connection), params)
+            fetched = cur.fetchall()
+    except DatabaseError as exc:
+        raise ValueError(
+            "Requête refusée par la base (vérifiez les filtres / le type des colonnes) : "
+            + str(exc).splitlines()[0]
+        ) from exc
+
+    rows, seen = [], set()
+    for rec in fetched[:limit]:
+        key = str(rec[0]).strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        rows.append({"k": key, "d": {c: _autofill_scalar(_json_value(v)) for c, v in zip(columns, rec[1:])}})
+    return rows, len(fetched) > limit
+
+
+def _json_value(value):
+    """Valeur SQL -> valeur JSON (dates en ISO, décimaux en nombre)."""
+    import datetime
+    import decimal
+
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return value.isoformat()
+    if isinstance(value, decimal.Decimal):
+        return float(value)
+    return value
 
 
 def read_sheet_table(file_obj, limit=_DATASOURCE_ROW_CAP):
