@@ -1,296 +1,289 @@
-{% load bootstrap4 static i18n custom_tags %}
+{% extends profile_layout %}
+{% load static i18n custom_tags %}
+{% comment %}
+Page Profil de l'utilisateur connecté. Avec une session Web DCC de la même personne : gabarit du tableau de bord
+(barre du haut + sidebar) ; sinon (arrivée depuis le SIG ou le MGP) : gabarit autonome profile_standalone.html.
+{% endcomment %}
 
-<!DOCTYPE html>
-{% get_current_language as CURRENT_LANGUAGE %}
-<html lang="{{ CURRENT_LANGUAGE }}">
-
-<head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta name="description" content=""/>
-    <meta name="author" content=""/>
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
-    <link rel="mask-icon" href="{% static 'images/safari-pinned-tab.svg' %}" color="#5bbad5">
-    <meta name="msapplication-TileColor" content="#da532c">
-    <title>{% translate 'Profile' %}</title>
-
-    <!-- Google Font: Source Sans Pro -->
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback" />
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/fontawesome-free/css/all.min.css' %}" />
-    <!-- icheck bootstrap -->
-    <link rel="stylesheet" href="{% static 'AdminLTE/plugins/icheck-bootstrap/icheck-bootstrap.min.css' %}" />
-    <!-- Theme style -->
-    <link rel="stylesheet" href="{% static 'css/cdd.css' %}" />
-    <link href="{% static 'css/fonts.css' %}" rel="stylesheet">
-
+{% block extracss %}
     <style>
-        body{
-            margin-top:20px;
-            color: #1a202c;
-            text-align: left;
-            background-color: #e2e8f0;    
+        :root {
+            --pf-green: #1a9e6e;
+            --pf-green-dark: #146c4b;
+            --pf-green-soft: #e3f6ee;
+            --pf-text: #212529;
+            --pf-muted: #495057;
+            --pf-border: #e5e9ee;
         }
-        .main-body {
-            padding: 15px;
+        .pf-standalone { color: var(--pf-text); background-color: #eef2f5; font-size: 14px; }
+        .pf-page { max-width: 1180px; margin: 0 auto; padding: 20px 16px 40px; }
+        .pf-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .pf-back { color: var(--pf-green-dark); font-weight: 600; }
+        .pf-back:hover { color: var(--pf-green); text-decoration: none; }
+        .pf-card {
+            background: #fff; border-radius: 12px; border: 1px solid var(--pf-border);
+            box-shadow: 0 2px 8px rgba(16, 24, 40, .05); margin-bottom: 20px; overflow: hidden;
         }
-        .card {
-            box-shadow: 0 1px 3px 0 rgba(0,0,0,.1), 0 1px 2px 0 rgba(0,0,0,.06);
+        .pf-card-title {
+            display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 20px;
+            font-size: 15px; font-weight: 700; color: var(--pf-text); border-bottom: 1px solid var(--pf-border);
         }
-        
-        .card {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            word-wrap: break-word;
-            background-color: #fff;
-            background-clip: border-box;
-            border: 0 solid rgba(0,0,0,.125);
-            border-radius: .25rem;
+        .pf-card-title i { color: var(--pf-green); width: 18px; text-align: center; }
+        .pf-card-title .pf-count {
+            margin-left: auto; background: var(--pf-green-soft); color: var(--pf-green-dark);
+            border-radius: 999px; padding: 1px 10px; font-size: 12px;
         }
-        
-        .card-body {
-            flex: 1 1 auto;
-            min-height: 1px;
-            padding: 1rem;
+        .pf-card-body { padding: 16px 20px; }
+
+        /* En-tête */
+        .pf-hero-banner { height: 120px; background: linear-gradient(120deg, #146c4b 0%, #1a9e6e 55%, #4cc79a 100%); }
+        .pf-hero-body { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px; padding: 0 24px 20px; margin-top: -60px; }
+        .pf-avatar {
+            width: 132px; height: 132px; border-radius: 50%; border: 5px solid #fff; background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .12); flex-shrink: 0;
         }
-        
-        .gutters-sm {
-            margin-right: -8px;
-            margin-left: -8px;
+        .pf-identity { flex: 1; min-width: 220px; padding-bottom: 4px; }
+        .pf-identity h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--pf-text); }
+        .pf-identity .pf-sub { color: var(--pf-muted); }
+        .pf-badge {
+            display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 12px;
+            font-size: 12px; font-weight: 600; background: var(--pf-green-soft); color: var(--pf-green-dark); margin: 2px 4px 2px 0;
         }
-        
-        .gutters-sm>.col, .gutters-sm>[class*=col-] {
-            padding-right: 8px;
-            padding-left: 8px;
+        .pf-badge.pf-badge-strong { background: var(--pf-green); color: #fff; }
+        .pf-badge.pf-badge-gray { background: #eef1f4; color: var(--pf-muted); }
+        .pf-hero-actions { padding-bottom: 6px; }
+        .pf-btn {
+            display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 8px; padding: 9px 16px;
+            font-weight: 600; background: var(--pf-green); color: #fff; cursor: pointer;
         }
-        .mb-3, .my-3 {
-            margin-bottom: 1rem!important;
+        .pf-btn:hover { background: var(--pf-green-dark); color: #fff; }
+
+        /* Listes clé / valeur */
+        .pf-info { list-style: none; margin: 0; padding: 0; }
+        .pf-info li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--pf-border); }
+        .pf-info li:last-child { border-bottom: 0; }
+        .pf-info .pf-key { width: 42%; color: var(--pf-muted); display: flex; align-items: center; gap: 8px; }
+        .pf-info .pf-key i { width: 16px; text-align: center; color: var(--pf-green); }
+        .pf-info .pf-value { flex: 1; font-weight: 600; word-break: break-word; }
+
+        /* Plateformes */
+        .pf-platforms { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .pf-platform {
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+            border: 1px solid var(--pf-border); background: #fafbfc; color: #6b737b;
         }
-        
-        .bg-gray-300 {
-            background-color: #e2e8f0;
+        .pf-platform i.pf-pi { font-size: 18px; width: 22px; text-align: center; }
+        .pf-platform.pf-on { background: var(--pf-green-soft); border-color: #bfe8d6; color: var(--pf-green-dark); font-weight: 600; }
+        .pf-platform .pf-state { margin-left: auto; font-size: 13px; }
+
+        /* Projets */
+        .pf-projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+        .pf-project { border: 1px solid var(--pf-border); border-left: 4px solid var(--pf-green); border-radius: 10px; padding: 14px; }
+        .pf-project h3 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+        .pf-project p { color: var(--pf-muted); margin: 0 0 8px; font-size: 13px; }
+        .pf-project .pf-cycles { margin-top: 6px; }
+        .pf-empty { color: var(--pf-muted); text-align: center; padding: 18px 0; }
+        .pf-empty i { display: block; font-size: 28px; color: #c3cad1; margin-bottom: 8px; }
+
+        .pf-security { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+        .pf-security .pf-lock {
+            width: 42px; height: 42px; border-radius: 10px; background: var(--pf-green-soft); color: var(--pf-green-dark);
+            display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
         }
-        .h-100 {
-            height: 100%!important;
-        }
-        .shadow-none {
-            box-shadow: none!important;
-        }
-        .a-password, .a-password:hover{
-            color:#333
-          }
-        .div-a-password {
-            margin-top: 11px;
-            margin-left: 7px;
+        .pf-security:hover .pf-lock { background: var(--pf-green); color: #fff; }
+
+        .a-password, .a-password:hover { color: #333 }
+        .div-a-password { margin-top: 11px; margin-left: 7px; }
+
+        @media (max-width: 575px) {
+            .pf-hero-body { justify-content: center; text-align: center; }
+            .pf-platforms { grid-template-columns: 1fr; }
+            .pf-info .pf-key { width: 45%; }
         }
     </style>
-</head>
+{% endblock %}
 
-<body >
-    
+{% block content %}
+{% if data.user.object %}
+{% with d=data.details obj=data.user.object %}
+    <div class="pf-page">
 
-    {% if data.user.object %}
-    <div>
-
-    <div class="container">
-        <div class="main-body">
-          
-            <div class="alert-div-content">
-                <span id="popup-messages-content">
-                    {% include 'common/messages.html' %}
-                </span>
+            <div class="pf-topbar">
+                <a class="pf-back" href="{{ data.previous_url }}"><i class="fas fa-arrow-left mr-1"></i> {% translate "Return" %}</a>
+                <span class="text-secondary"><i class="far fa-calendar-alt mr-1"></i>{% now "d/m/Y" %}</span>
             </div>
 
-              <!-- Breadcrumb -->
-              <nav aria-label="breadcrumb" class="main-breadcrumb">
-                <ol class="breadcrumb ml-auto">
-                  <li class="breadcrumb-item"><a href="{{ data.previous_url }}">{% translate "Return" %}</a></li>
-                  {% comment %} <li class="breadcrumb-item"><a href="javascript:void(0)">User</a></li>
-                  <li class="breadcrumb-item active" aria-current="page">User Profile</li> {% endcomment %}
-                  
-                    {% comment %} {%  if OTHER_LANGUAGES %}
-                      {% include 'layouts/language_dropdown.html' %}
-                    {% endif %} {% endcomment %}
-                </ol>
-              </nav>
-              <!-- /Breadcrumb -->
-        
-              <div class="row gutters-sm">
-                <div class="col-md-4 mb-3">
-                  <div class="card">
-                    <div class="card-body">
-                      <div class="d-flex flex-column align-items-center text-center">
-                        <img src="https://bootdey.com/img/Content/avatar/avatar7.png" alt="Admin" class="rounded-circle" width="150">
-                        <div class="mt-3">
-                          <h4>{% if data.user.object.name %}{{ data.user.object.name }}{% else %}{{ data.user.object.first_name }} {{ data.user.object.last_name }}{% endif %}</h4>
-                          <p class="text-secondary mb-1">{{ data.user.object|get_group_high }}</p>
-                          <p class="text-secondary mb-1">{{ data.user.object.email }}</p>
-                          {% comment %} <p class="text-muted font-size-sm">Bay Area, San Francisco, CA</p>
-                          <button class="btn btn-primary">Follow</button>
-                          <button class="btn btn-outline-primary">Message</button> {% endcomment %}
-                        </div>
-                      </div>
+            <!-- En-tête -->
+            <div class="pf-card">
+                <div class="pf-hero-banner"></div>
+                <div class="pf-hero-body">
+                    <img src="{{ d.avatar }}" alt="{% translate 'Profile picture' %}" class="pf-avatar">
+                    <div class="pf-identity">
+                        <h1>
+                            {% if d.civility %}<span class="text-secondary font-weight-normal">{{ d.civility }}</span> {% endif %}
+                            {% if obj.name %}{{ obj.name }}{% else %}{{ obj.first_name }} {{ obj.last_name }}{% endif %}
+                        </h1>
+                        <div class="pf-sub mb-2"><i class="far fa-envelope mr-1"></i>{{ obj.email }}</div>
+                        <span class="pf-badge pf-badge-strong"><i class="fas fa-user-shield"></i>{{ obj|get_group_high }}</span>
+                        {% if d.facilitator_type %}<span class="pf-badge"><i class="fas fa-hands-helping"></i>{{ d.facilitator_type }}</span>{% endif %}
+                        {% if d.user.is_superuser %}<span class="pf-badge"><i class="fas fa-crown"></i>{% translate "Super administrator" %}</span>{% endif %}
                     </div>
-                  </div>
-                  <div class="card mt-3">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap modify-password" 
-                            {% comment %} data-toggle="modal" data-target="#id_modal_modify_password" {% endcomment %}
-                             style="cursor:pointer;">
-                            <h6 class="mb-0">
-                              <svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock mr-2 icon-inline">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                              </svg>
-                              {% comment %} {% translate "Password" %} {% endcomment %}
-                            </h6>
-                            <span class="text-secondary">{% translate "Change password" %}</span>
-                            <div class="overlay" id="spin-modify-password" style="display: none;">
-                                <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-                            </div>
-                          </li>
-                          
-                      {% comment %} <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                        <h6 class="mb-0"><svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-globe mr-2 icon-inline"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>Website</h6>
-                        <span class="text-secondary">https://bootdey.com</span>
-                      </li>
-                      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                        <h6 class="mb-0"><svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github mr-2 icon-inline"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>Github</h6>
-                        <span class="text-secondary">bootdey</span>
-                      </li>
-                      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                        <h6 class="mb-0"><svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter mr-2 icon-inline text-info"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>Twitter</h6>
-                        <span class="text-secondary">@bootdey</span>
-                      </li>
-                      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                        <h6 class="mb-0"><svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-instagram mr-2 icon-inline text-danger"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>Instagram</h6>
-                        <span class="text-secondary">bootdey</span>
-                      </li>
-                      <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
-                        <h6 class="mb-0"><svg xmlns="#" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook mr-2 icon-inline text-primary"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>Facebook</h6>
-                        <span class="text-secondary">bootdey</span>
-                      </li> {% endcomment %}
-                    </ul>
-                  </div>
+                    <div class="pf-hero-actions">
+                        <button type="button" class="pf-btn modify-password">
+                            <i class="fas fa-key"></i> {% translate "Change password" %}
+                        </button>
+                    </div>
                 </div>
-                <div class="col-md-8">
-                  <div class="card mb-3">
-                    <div class="card-body">
-                      <div class="row">
-                        <div class="col-sm-3">
-                          <h6 class="mb-0">{% translate "Full Name" %}</h6>
+            </div>
+
+            <div class="row">
+                <!-- Colonne gauche -->
+                <div class="col-lg-5">
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-id-card"></i>{% translate "Personal information" %}</h2>
+                        <div class="pf-card-body">
+                            <ul class="pf-info">
+                                <li><span class="pf-key"><i class="fas fa-user"></i>{% translate "Full Name" %}</span>
+                                    <span class="pf-value">{% if obj.name %}{{ obj.name }}{% else %}{{ obj.first_name }} {{ obj.last_name }}{% endif %}</span></li>
+                                {% if d.civility %}
+                                <li><span class="pf-key"><i class="fas fa-venus-mars"></i>{% translate "Sex" %}</span>
+                                    <span class="pf-value">{% if d.gender == 'female' %}{% translate "Female" %}{% elif d.gender == 'male' %}{% translate "Male" %}{% else %}{{ d.civility }}{% endif %}</span></li>
+                                {% endif %}
+                                <li><span class="pf-key"><i class="fas fa-at"></i>{% translate "Email" %}</span>
+                                    <span class="pf-value">{{ obj.email|default:"-" }}</span></li>
+                                <li><span class="pf-key"><i class="fas fa-phone"></i>{% translate "Phone" %}</span>
+                                    <span class="pf-value">{% if obj.phone %}{{ obj.phone }}{% elif obj.phone_number %}{{ obj.phone_number }}{% elif d.facilitator.phone %}{{ d.facilitator.phone }}{% else %}-{% endif %}</span></li>
+                                <li><span class="pf-key"><i class="fas fa-user-tag"></i>{% translate "Username" %}</span>
+                                    <span class="pf-value">{{ d.usernames|join:", "|default:"-" }}</span></li>
+                                {% if d.facilitator %}
+                                <li><span class="pf-key"><i class="fas fa-barcode"></i>{% translate "Facilitator code" %}</span>
+                                    <span class="pf-value">{{ d.facilitator.code }}</span></li>
+                                {% endif %}
+                            </ul>
                         </div>
-                        <div class="col-sm-9 text-secondary">
-                            {{ data.user.object.first_name }} {{ data.user.object.last_name }}
+                    </div>
+
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-th-large"></i>{% translate "Platform access" %}</h2>
+                        <div class="pf-card-body">
+                            <div class="pf-platforms">
+                                {% for p in d.platforms %}
+                                <div class="pf-platform {% if p.active %}pf-on{% endif %}">
+                                    <i class="fas {{ p.icon }} pf-pi"></i>
+                                    <span>{{ p.name }}</span>
+                                    <span class="pf-state">{% if p.active %}<i class="fas fa-check-circle"></i>{% else %}<i class="far fa-circle"></i>{% endif %}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
-                      </div>
-                      <hr>
-                      <div class="row">
-                        <div class="col-sm-3">
-                          <h6 class="mb-0">{% translate "Email" %}</h6>
+                    </div>
+
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-users-cog"></i>{% translate "Roles" %}<span class="pf-count">{{ d.groups|length }}</span></h2>
+                        <div class="pf-card-body">
+                            {% for group in d.groups %}
+                                <span class="pf-badge">{% translate group %}</span>
+                            {% empty %}
+                                <span class="text-secondary">{% translate "No role assigned" %}</span>
+                            {% endfor %}
                         </div>
-                        <div class="col-sm-9 text-secondary">
-                            {{ data.user.object.email }}
+                    </div>
+
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-shield-alt"></i>{% translate "Security" %}</h2>
+                        <div class="pf-card-body">
+                            <div class="pf-security modify-password">
+                                <span class="pf-lock"><i class="fas fa-lock"></i></span>
+                                <div>
+                                    <div class="font-weight-bold">{% translate "Change password" %}</div>
+                                    <div class="text-secondary" style="font-size: 13px;">{% translate "A confirmation code will be sent to your e-mail address." %}</div>
+                                </div>
+                                <div class="overlay ml-auto" id="spin-modify-password" style="display: none;">
+                                    <i class="fas fa-sync-alt fa-spin text-success"></i>
+                                </div>
+                            </div>
                         </div>
-                      </div>
-                      <hr>
-                      {% if data.user.object.phone or data.user.object.phone_number %}
-                      <div class="row">
-                        <div class="col-sm-3">
-                          <h6 class="mb-0">{% translate "Phone" %}</h6>
-                        </div>
-                        <div class="col-sm-9 text-secondary">
-                            {% if data.user.object.phone %}
-                                {{ data.user.object.phone }}
-                            {% elif data.user.object.phone_number %}
-                                {{ data.user.object.phone_number }}
+                    </div>
+                </div>
+
+                <!-- Colonne droite -->
+                <div class="col-lg-7">
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-project-diagram"></i>{% translate "My projects" %}<span class="pf-count">{{ d.projects|length }}</span></h2>
+                        <div class="pf-card-body">
+                            {% if d.projects %}
+                            <div class="pf-projects">
+                                {% for project in d.projects %}
+                                <div class="pf-project">
+                                    <h3>{{ project.name }}</h3>
+                                    {% if project.parent %}<p><i class="fas fa-level-up-alt mr-1"></i>{{ project.parent }}</p>{% endif %}
+                                    {% if project.description %}<p>{{ project.description|truncatechars:140 }}</p>{% endif %}
+                                    {% for role in project.roles %}<span class="pf-badge pf-badge-strong">{{ role }}</span>{% endfor %}
+                                    {% if project.status %}<span class="pf-badge pf-badge-gray">{{ project.status }}</span>{% endif %}
+                                    {% if project.cycles %}
+                                    <div class="pf-cycles">
+                                        <small class="text-secondary d-block mb-1"><i class="fas fa-sync-alt mr-1"></i>{% translate "Cycles" %}</small>
+                                        {% for cycle in project.cycles %}<span class="pf-badge pf-badge-gray">{{ cycle }}</span>{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="pf-empty"><i class="far fa-folder-open"></i>{% translate "You are not assigned to any project yet." %}</div>
                             {% endif %}
                         </div>
-                      </div>
-                      <hr>
-                      {% endif %}
-                      {% comment %} <div class="row">
-                        <div class="col-sm-12">
-                          <a class="btn btn-info " target="__blank" href="#">Edit</a>
-                        </div>
-                      </div> {% endcomment %}
                     </div>
-                  </div>
-    
-                  <div class="row gutters-sm">
-                    {% comment %} <div class="col-sm-6 mb-3">
-                      <div class="card h-100">
-                        <div class="card-body">
-                          <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Project Status</h6>
-                          <small>Web Design</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Website Markup</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 72%" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>One Page</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 89%" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Mobile Template</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Backend API</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 66%" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
+
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-map-marker-alt"></i>{% translate "Area of intervention" %}</h2>
+                        <div class="pf-card-body">
+                            {% if d.zone and d.zone.labels %}
+                                {% for label in d.zone.labels %}<span class="pf-badge"><i class="fas fa-map-pin"></i>{{ label }}</span>{% endfor %}
+                                {% if d.zone.additional %}
+                                <div class="mt-2">
+                                    <small class="text-secondary d-block mb-1">{% translate "Villages" %}</small>
+                                    {% for label in d.zone.additional %}<span class="pf-badge pf-badge-gray">{{ label }}</span>{% endfor %}
+                                </div>
+                                {% endif %}
+                                {% if d.zone.villages %}
+                                <div class="mt-2 text-secondary"><i class="fas fa-home mr-1"></i>{% blocktranslate count counter=d.zone.villages %}{{ counter }} village{% plural %}{{ counter }} villages{% endblocktranslate %}</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="pf-empty"><i class="fas fa-map"></i>{% translate "No locality assigned." %}</div>
+                            {% endif %}
                         </div>
-                      </div>
-                    </div> {% endcomment %}
-                    {% comment %} <div class="col-sm-6 mb-3">
-                      <div class="card h-100">
-                        <div class="card-body">
-                          <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Project Status</h6>
-                          <small>Web Design</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Website Markup</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 72%" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>One Page</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 89%" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Mobile Template</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                          <small>Backend API</small>
-                          <div class="progress mb-3" style="height: 5px">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 66%" aria-valuenow="66" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
+                    </div>
+
+                    <div class="pf-card">
+                        <h2 class="pf-card-title"><i class="fas fa-user-clock"></i>{% translate "Account" %}</h2>
+                        <div class="pf-card-body">
+                            <ul class="pf-info">
+                                {% if d.user %}
+                                <li><span class="pf-key"><i class="far fa-calendar-plus"></i>{% translate "Member since" %}</span>
+                                    <span class="pf-value">{{ d.user.date_joined|date:"d/m/Y" }}</span></li>
+                                <li><span class="pf-key"><i class="fas fa-sign-in-alt"></i>{% translate "Last login" %}</span>
+                                    <span class="pf-value">{{ d.user.last_login|date:"d/m/Y H:i"|default:"-" }}</span></li>
+                                {% endif %}
+                                <li><span class="pf-key"><i class="fas fa-toggle-on"></i>{% translate "Status" %}</span>
+                                    <span class="pf-value"><span class="pf-badge pf-badge-strong"><i class="fas fa-check"></i>{% translate "Active" %}</span></span></li>
+                                {% if d.facilitator %}
+                                <li><span class="pf-key"><i class="fas fa-mobile-alt"></i>{% translate "Mobile mode" %}</span>
+                                    <span class="pf-value">{% if d.facilitator.training_mode %}{% translate "Test mode" %}{% else %}{% translate "Production" %}{% endif %}</span></li>
+                                {% endif %}
+                            </ul>
                         </div>
-                      </div>
-                    </div> {% endcomment %}
-                  </div>
-    
-    
-    
+                    </div>
                 </div>
-              </div>
-    
             </div>
-        </div>
 
+    </div>
+{% endwith %}
+{% endif %}
+{% endblock %}
 
-
-
+{% block modals %}
+{% if data.user.object %}
         <div class="modal fade" id="id_modal_modify_password" tabindex="-1" role="dialog"
             aria-labelledby="UploadTitle" aria-hidden="true">
             <div class="modal-dialog modal-dialog modal-lg" role="document">
@@ -392,32 +385,14 @@
 
             </div>
         </div>
-
-
-        
-
-    </div>
 {% endif %}
+<div id="formModal" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
+{% endblock %}
 
+{% block select2 %}{% endblock %}
 
-    <div id="formModal" class="modal" role="dialog" aria-hidden="true" data-backdrop="static"></div>
-
-    <script src="{% static 'AdminLTE/plugins/moment/moment.min.js' %}"></script>
-    <!-- jQuery -->
-    <script src="{% static 'AdminLTE/plugins/jquery/jquery.min.js' %}"></script>
-    <!-- Bootstrap 4 -->
-    <script src="{% static 'AdminLTE/plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <!-- Tempusdominus Bootstrap 4 -->
-    <script src="{% static 'AdminLTE/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.min.js' %}"></script>
-    <!-- AdminLTE App -->
-    <script src="{% static 'AdminLTE/dist/js/adminlte.js' %}"></script>
-    <!-- Django Translation -->
-    <script src="{% static 'js/setLanguajeDjangoTranslation.js' %}"></script>
-
-    <script src="{% static 'js/utils.js' %}"></script>
-    <script src="{% static 'js/disableOnSubmit.js' %}"></script>
-    <script src="{% static 'js/slugify.js' %}"></script>
-    
+{% block javascript %}
+{{ block.super }}
     <script src="{% static 'js/csrfSafeMethodAjax.js' %}?v=2"></script>
     <script src="{% static 'js/formAjaxSubmit.js' %}"></script>
 
@@ -637,7 +612,4 @@
         }); 
 
     </script>
-
-
-  </body>
-</html>
+{% endblock %}

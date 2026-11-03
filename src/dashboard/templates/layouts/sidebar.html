@@ -290,14 +290,10 @@
         <nav class="mt-2" id="nav-profile">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
                 <li class="nav-item">
-                    <form action="{% url 'profile' %}" method="POST">
-                        {% csrf_token %}
-                        <button
-                            class="nav-link">
-                            <i class="nav-icon fa fa-user"></i>
-                            <p>{% translate "Profile" %}</p>
-                        </button>
-                    </form>
+                    <a href="{% url 'profile' %}" class="nav-link {% if active_level1 == 'profile' %}active{% endif %}">
+                        <i class="nav-icon fa fa-user"></i>
+                        <p>{% translate "Profile" %}</p>
+                    </a>
                 </li>
             </ul>
         </nav>

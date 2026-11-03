@@ -5908,3 +5908,197 @@ msgstr "Aucun profil de village ne peut être généré pour cette tâche."
 
 msgid "Invalid request."
 msgstr "Requête invalide."
+
+msgid "(outside the group)"
+msgstr "(hors du groupe)"
+
+msgid "User profile"
+msgstr "Profil de l'utilisateur"
+
+msgid "Your password has been reset"
+msgstr "Votre mot de passe a été réinitialisé"
+
+msgid ""
+"Your password has been reset by an administrator. Here are your new login "
+"details:"
+msgstr ""
+"Votre mot de passe a été réinitialisé par un administrateur. Voici vos "
+"nouveaux identifiants de connexion :"
+
+msgid "MGP account"
+msgstr "Compte MGP"
+
+msgid "Last login"
+msgstr "Dernière connexion"
+
+msgid "Date joined"
+msgstr "Date de création"
+
+msgid "Groups"
+msgstr "Groupes"
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "No"
+msgstr "Non"
+
+msgid "Unknown"
+msgstr "Inconnu"
+
+msgid "Superuser"
+msgstr "Superutilisateur"
+
+msgid "First name"
+msgstr "Prénom"
+
+msgid "Never"
+msgstr "Jamais"
+
+msgid "Facilitator account"
+msgstr "Compte facilitateur"
+
+msgid "changed on"
+msgstr "changé le"
+
+msgid "To be changed at the next login"
+msgstr "À changer à la prochaine connexion"
+
+msgid "Changed by the user"
+msgstr "Changé par l'utilisateur"
+
+msgid "Last password sent on"
+msgstr "Dernier mot de passe envoyé le"
+
+msgid "Reset the password and send it by e-mail"
+msgstr "Réinitialiser le mot de passe et l'envoyer par e-mail"
+
+msgid ""
+"Generate a new password for this user and send it by e-mail? The current "
+"password will no longer work."
+msgstr ""
+"Générer un nouveau mot de passe pour cet utilisateur et le lui envoyer par "
+"e-mail ? Le mot de passe actuel ne fonctionnera plus."
+
+msgid ""
+"A new password is generated, applied to the DCC, SIG and MGP, and sent to"
+msgstr ""
+"Un nouveau mot de passe est généré, appliqué au DCC, au SIG et au MGP, puis "
+"envoyé à"
+
+msgid "The user will have to change it at the next login."
+msgstr "L'utilisateur devra le changer à sa prochaine connexion."
+
+msgid "This user has no e-mail address: the new password cannot be sent."
+msgstr ""
+"Cet utilisateur n'a pas d'adresse e-mail : le nouveau mot de passe ne peut "
+"pas être envoyé."
+
+msgid "Create the MGP account"
+msgstr "Créer le compte MGP"
+
+msgid "To change your own password, use your Profile page."
+msgstr "Pour changer votre propre mot de passe, utilisez votre page Profil."
+
+msgid "No e-mail address: no MGP account can be created."
+msgstr "Pas d'adresse e-mail : aucun compte MGP ne peut être créé."
+
+msgid "Password reset: the new password has been sent to %(email)s."
+msgstr ""
+"Mot de passe réinitialisé : le nouveau mot de passe a été envoyé à "
+"%(email)s."
+
+msgid ""
+"Password reset, but the e-mail could not be sent. New password (shown once):"
+" %(password)s"
+msgstr ""
+"Mot de passe réinitialisé, mais l'e-mail n'a pas pu être envoyé. Nouveau mot"
+" de passe (affiché une seule fois) : %(password)s"
+
+msgid "The MGP password could not be updated."
+msgstr "Le mot de passe MGP n'a pas pu être mis à jour."
+
+msgid "MGP account updated."
+msgstr "Compte MGP mis à jour."
+
+msgid "An MGP account already uses this e-mail address."
+msgstr "Un compte MGP utilise déjà cette adresse e-mail."
+
+
+# Page Profil (usermanager/templates/profile.html)
+msgid "Profile picture"
+msgstr "Photo de profil"
+
+msgid "Super administrator"
+msgstr "Super administrateur"
+
+msgid "Personal information"
+msgstr "Informations personnelles"
+
+msgid "Female"
+msgstr "Féminin"
+
+msgid "Male"
+msgstr "Masculin"
+
+msgid "Facilitator code"
+msgstr "Code facilitateur"
+
+msgid "Platform access"
+msgstr "Accès aux plateformes"
+
+msgid "No role assigned"
+msgstr "Aucun rôle attribué"
+
+msgid "Security"
+msgstr "Sécurité"
+
+msgid "A confirmation code will be sent to your e-mail address."
+msgstr "Un code de confirmation sera envoyé à votre adresse e-mail."
+
+msgid "My projects"
+msgstr "Mes projets"
+
+msgid "Cycles"
+msgstr "Cycles"
+
+msgid "You are not assigned to any project yet."
+msgstr "Vous n'êtes encore rattaché à aucun projet."
+
+msgid "Area of intervention"
+msgstr "Zone d'intervention"
+
+msgid "No locality assigned."
+msgstr "Aucune localité attribuée."
+
+msgid "Account"
+msgstr "Compte"
+
+msgid "Member since"
+msgstr "Membre depuis"
+
+msgid "Mobile mode"
+msgstr "Mode mobile"
+
+msgid "Test mode"
+msgstr "Mode test"
+
+msgid "Production"
+msgstr "Production"
+
+msgid "Web DCC"
+msgstr "Web DCC"
+
+msgid "Mobile DCC"
+msgstr "Mobile DCC"
+
+msgid "SIG (COSOMIS)"
+msgstr "SIG (COSOMIS)"
+
+msgid "MGP (GRM)"
+msgstr "MGP (GRM)"
+
+msgid "%(counter)s village"
+msgid_plural "%(counter)s villages"
+msgstr[0] "%(counter)s village"
+msgstr[1] "%(counter)s villages"

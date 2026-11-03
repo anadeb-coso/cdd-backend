@@ -270,6 +270,27 @@ def create_facilitator_on_grm(email, first_name, last_name, phone, facilitator_t
     })
 
 
+def create_user_on_grm(email, first_name, last_name, phone, groups, password_hash, is_active,
+                       administrative_id=None, administrative_ids=None, additional_administrative_ids=None):
+    """Crée sur le MGP le compte d'un utilisateur du DCC (non facilitateur) : même e-mail, même mot de passe
+    (empreinte), ses groupes qui existent sur le MGP et, s'il en a, ses localités d'intervention. Un compte MGP de
+    même e-mail déjà existant est laissé tel quel (statut 'exists'). Renvoie (ok, détail)."""
+    return _post_facilitator({
+        'create': True,
+        'account_type': 'user',
+        'email': email,
+        'first_name': first_name or '',
+        'last_name': last_name or '',
+        'phone': phone or '',
+        'groups': list(groups or []),
+        'password_hash': password_hash,
+        'is_active': bool(is_active),
+        'administrative_id': administrative_id,
+        'administrative_ids': [str(_id) for _id in (administrative_ids or [])],
+        'additional_administrative_ids': [str(_id) for _id in (additional_administrative_ids or [])],
+    })
+
+
 def update_facilitator_identity_on_grm(previous_email, email, first_name, last_name, phone):
     """Nouvel e-mail, nom ou téléphone d'un facilitateur modifié dans le DCC, reportés sur son compte MGP (trouvé par
     l'ancien e-mail). Rien d'autre n'est modifié. Renvoie (ok, détail) ; ok False + "no GRM account" s'il n'en a pas."""

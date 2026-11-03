@@ -286,6 +286,8 @@
 
   function _cascadePath(prefix, cascadeFrom) {
     if (!cascadeFrom) return null;
+    // "/clé" : champ à la racine de la page (parent de cascade hors du groupe, générateur de formulaire)
+    if (cascadeFrom.charAt(0) === '/') return cascadeFrom.slice(1);
     if (cascadeFrom.charAt(0) === '$' || cascadeFrom.indexOf('.') !== -1) return cascadeFrom;
     return prefix ? prefix + '.' + cascadeFrom : cascadeFrom;
   }

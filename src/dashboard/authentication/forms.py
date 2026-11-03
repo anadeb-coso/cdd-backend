@@ -71,6 +71,28 @@ class UpdateUserForm(forms.ModelForm):
             'is_superuser', 'is_staff', 'is_active', 'groups', 'user_permissions'
         )
 
+    def clean_email(self):
+        """Nouvel e-mail : libre dans le DCC (hors ce compte et son facilitateur lié) et sur le MGP (hors son propre
+        compte MGP), puisqu'il y est reporté."""
+        from django.db.models import Q
+        from authentication.accounts import grm_account
+        from authentication.models import Facilitator
+
+        email = (self.cleaned_data.get('email') or '').strip()
+        previous = (self.initial.get('email') or '').strip()
+        if not email or email.lower() == previous.lower():
+            return email
+        own_facilitators = Q(user_id=self.instance.pk)
+        if previous:
+            own_facilitators |= Q(email__iexact=previous)
+        if (User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists()
+                or Facilitator.objects.filter(email__iexact=email).exclude(own_facilitators).exists()):
+            raise forms.ValidationError(_('An account (user or facilitator) already uses this e-mail address.'), code='email_in_use')
+        new_mgp = grm_account(email)
+        if new_mgp and (not previous or (grm_account(previous) or {}).get('id') != new_mgp['id']):
+            raise forms.ValidationError(_('An MGP account already uses this e-mail address.'), code='email_in_use_mgp')
+        return email
+
 
 class FirstLoginPasswordForm(forms.Form):
     """Changement du mot de passe initial à la première connexion (cf. authentication/accounts.py)."""

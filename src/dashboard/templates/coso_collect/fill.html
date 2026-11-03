@@ -40,10 +40,10 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=autofill2"></script>
+    <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=cascade1"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=autofill2"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=cascade1"></script>
     <script>
     (function () {
         var FORM_ID = {{ collect_form.pk }};

@@ -1280,6 +1280,14 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             )
             if ok is False and detail != "no GRM account":
                 messages.warning(self.request, gettext_lazy("MGP account not updated (%s).") % detail)
+        # Pas encore de compte MGP (facilitateur créé avant la création automatique, ou MGP alors injoignable) : créé.
+        from authentication.mgp_accounts import create_account_on_mgp, mgp_account_exists
+        if mgp_account_exists(facilitator.email) is False:
+            mgp_status, mgp_detail = create_account_on_mgp(facilitator)
+            if mgp_status == 'created':
+                messages.info(self.request, gettext_lazy("MGP account created"))
+            elif mgp_status == 'error':
+                messages.warning(self.request, gettext_lazy("MGP account not created (%(detail)s)") % {'detail': mgp_detail})
 
         nsc = NoSQLClient()
         nsc.update_doc(self.facilitator_db, self.doc['_id'], doc)

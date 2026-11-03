@@ -36,6 +36,9 @@ DEBUG = env.bool('DEBUG', False)
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', list, ['localhost'])
 
+# Bump to force browsers to reload cdd.css after a style change.
+VERSION_CUSTOM = env('VERSION_CUSTOM', default='2026.11.02.3')
+
 
 # Application definition
 

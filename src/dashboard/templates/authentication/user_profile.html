@@ -1,0 +1,120 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n custom_tags %}
+
+{% block content %}
+<style>
+    .profile-table th { width: 260px; font-weight: 600; color: #495057; }
+    .profile-table td, .profile-table th { padding: .45rem .75rem; vertical-align: top; }
+    .profile-note { font-size: 12px; color: #6c757d; }
+</style>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fa fa-user mr-1"></i><b>{{ account_name }}</b>
+                    {% if account.is_superuser %}<span class="badge badge-dark ml-1">{% translate "Superuser" %}</span>{% endif %}
+                    {% if account.is_active %}<span class="badge badge-success ml-1">{% translate "Active" %}</span>
+                    {% else %}<span class="badge badge-danger ml-1">{% translate "Inactive" %}</span>{% endif %}
+                </h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm profile-table mb-0">
+                    <tr><th>{% translate "Last name" %}</th><td>{{ account.last_name|default:"-" }}</td></tr>
+                    <tr><th>{% translate "First name" %}</th><td>{{ account.first_name|default:"-" }}</td></tr>
+                    <tr><th>{% translate "Username" %}</th><td>{{ account.username }}</td></tr>
+                    <tr><th>{% translate "Email" %}</th><td>{{ account.email|default:"-" }}</td></tr>
+                    <tr><th>{% translate "Groups" %}</th><td>{% for group in groups %}<span class="badge badge-secondary mr-1">{{ group }}</span>{% empty %}-{% endfor %}</td></tr>
+                    <tr><th>{% translate "Projects" %}</th><td>{% for project in projects %}{{ project }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}</td></tr>
+                    <tr><th>{% translate "Date joined" %}</th><td>{{ account.date_joined|date:"d/m/Y H:i" }}</td></tr>
+                    <tr><th>{% translate "Last login" %}</th><td>{{ account.last_login|date:"d/m/Y H:i"|default:_("Never") }}</td></tr>
+                    <tr>
+                        <th>{% translate "Password" %}</th>
+                        <td>
+                            {% if password_change_pending %}
+                                <span class="badge badge-warning">{% translate "To be changed at the next login" %}</span>
+                            {% else %}
+                                <span class="badge badge-light border">{% translate "Changed by the user" %}</span>
+                            {% endif %}
+                            {% if last_requirement %}
+                                <div class="profile-note">
+                                    {% translate "Last password sent on" %} {{ last_requirement.created_at|date:"d/m/Y H:i" }}{% if last_requirement.created_by %} {% translate "by" %} {{ last_requirement.created_by.last_name }} {{ last_requirement.created_by.first_name }}{% endif %}{% if last_requirement.changed_at %} — {% translate "changed on" %} {{ last_requirement.changed_at|date:"d/m/Y H:i" }}{% endif %}
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>{% translate "MGP account" %}</th>
+                        <td>
+                            {% if mgp_account is True %}<span class="badge badge-success">{% translate "Yes" %}</span>
+                            {% elif mgp_account is False %}<span class="badge badge-danger">{% translate "No" %}</span>
+                            {% else %}<span class="profile-note">{% translate "Unknown" %}</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% if facilitator %}
+                    <tr>
+                        <th>{% translate "Facilitator account" %}</th>
+                        <td>
+                            <a href="{% url 'dashboard:facilitators:old_detail' facilitator.pk %}" target="_blank">{{ facilitator.name }}</a>
+                            <span class="profile-note">({{ facilitator.get_facilitator_type_display|default:facilitator.facilitator_type }} — {{ facilitator.username }})</span>
+                            <a href="{% url 'dashboard:facilitators:localities' facilitator.pk %}" target="_blank" class="ml-2" title="{% translate 'Localities' %}"><i class="fas fa-map-marker-alt"></i></a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <th>{% translate "Intervention localities" %}</th>
+                        <td>
+                            {{ zone }}
+                            {% if user|can_assign_localities_of:account %}
+                                <a href="{% url 'dashboard:authentication:user_localities' account.pk %}" target="_blank" class="ml-2" title="{% translate 'Intervention localities' %}"><i class="fas fa-map-marker-alt"></i></a>
+                            {% endif %}
+                            {% if localities_record %}<div class="profile-note">{% translate "updated on" %} {{ localities_record.updated_at|date:"d/m/Y H:i" }}</div>{% endif %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><b>{% translate "Actions" %}</b></h3></div>
+            <div class="card-body">
+                <a href="{% url 'dashboard:authentication:user_update' account.pk %}" class="btn btn-primary btn-sm btn-block rounded-xl">
+                    <i class="fa fa-edit mr-1"></i>{% translate "Edit" %}
+                </a>
+                {% if can_manage %}
+                    <form method="post" action="{% url 'dashboard:authentication:user_account_action' account.pk %}" class="mt-2"
+                          onsubmit="return confirm('{% translate "Generate a new password for this user and send it by e-mail? The current password will no longer work." as msg %}{{ msg|escapejs }}');">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset_password">
+                        <button type="submit" class="btn btn-warning btn-sm btn-block rounded-xl" {% if not account.email %}disabled{% endif %}>
+                            <i class="fa fa-key mr-1"></i>{% translate "Reset the password and send it by e-mail" %}
+                        </button>
+                    </form>
+                    <p class="profile-note mt-1 mb-0">
+                        {% if account.email %}
+                            {% translate "A new password is generated, applied to the DCC, SIG and MGP, and sent to" %} {{ account.email }}. {% translate "The user will have to change it at the next login." %}
+                        {% else %}
+                            {% translate "This user has no e-mail address: the new password cannot be sent." %}
+                        {% endif %}
+                    </p>
+                    {% if mgp_account is False and account.email %}
+                    <form method="post" action="{% url 'dashboard:authentication:user_account_action' account.pk %}" class="mt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_mgp">
+                        <button type="submit" class="btn btn-info btn-sm btn-block rounded-xl">
+                            <i class="fa fa-user-plus mr-1"></i>{% translate "Create the MGP account" %}
+                        </button>
+                    </form>
+                    {% endif %}
+                {% elif account.pk == user.pk %}
+                    <p class="profile-note mt-2 mb-0">{% translate "To change your own password, use your Profile page." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

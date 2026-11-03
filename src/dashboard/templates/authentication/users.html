@@ -207,6 +207,10 @@
                                         {% if user|is_admin or user|can_assign_user_localities %}
                                         <td>
                                             {% if user|is_admin %}
+                                            <a href="{% url 'dashboard:authentication:user_profile' user_obj.pk %}"
+                                                class="btn btn-secondary btn-xs" title="{% translate 'Profile' %}">
+                                                <i class="fa fa-user"></i>
+                                            </a>
                                             <a href="{% url 'dashboard:authentication:user_update' user_obj.pk %}" 
                                                 class="btn btn-primary btn-xs" title="{% translate 'Edit' %}">
                                                 <i class="fa fa-edit"></i>

@@ -11,6 +11,8 @@
 
                 <h6 class="filter-group-label">{% translate "Consolidated reports" %}</h6>
                 <div class="row task-situation-reports">
+
+                    {% if not user|has_group:"Supervisor" %}
                     <div class="col-12 col-lg-4 mb-3">
                         <div class="card h-100 border shadow-none">
                             <div class="card-body d-flex flex-column">
@@ -27,6 +29,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
 
                     <div class="col-12 col-lg-4 mb-3">
                         <div class="card h-100 border shadow-none">

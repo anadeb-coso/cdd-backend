@@ -89,7 +89,8 @@
                             {% csrf_token %}
                             {% for key, value in submitted.items %}{% if value is not None %}<input type="hidden" name="{{ key }}_ids" value="{{ value }}">{% endif %}{% endfor %}
                             <input type="hidden" name="change_date" value="{{ change_date }}">
-                            <button type="submit" name="confirm" value="1" class="btn btn-success btn-sm rounded-xl">
+                            <input type="hidden" name="confirm" value="1">{# disableOnSubmit.js désactive le bouton : son name/value ne serait pas envoyé #}
+                            <button type="submit" class="btn btn-success btn-sm rounded-xl">
                                 {% translate "Confirm and save" %}
                             </button>
                             <span class="localities-note ml-2">{% translate "The localities are also copied to the GRM account with the same email." %}</span>

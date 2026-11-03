@@ -20,6 +20,7 @@ from dashboard.facilitators.repository.facilitator_criteria import FacilitatorCr
 from authentication.models import Facilitator
 from process_manager.models import Project
 import grm_client
+from authentication.mgp_accounts import create_account_on_mgp, create_user_on_mgp, mgp_account_exists
 from dashboard.facilitators.functions import update_facilitators_stats
 from dashboard.facilitators.localities import with_stabilization_localities
 from dashboard.authentication.users_stats import users_statistics
@@ -199,10 +200,12 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
         facilitator = None
         facilitator_email = None
 
+        previous_identity = None
         if self.id:
             user = User.objects.get(id=self.id)
             form = UpdateUserForm(request.POST, instance=user)
             facilitator_email = user.email
+            previous_identity = (user.email, user.first_name, user.last_name)
         else:
             form = CreateUserForm(request.POST)
         if form.is_valid():
@@ -237,7 +240,9 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             # Modification : le facilitateur de même e-mail (ancienne adresse) suit le compte.
             if self.id:
                 try:
-                    facilitator = Facilitator.objects.get(email=facilitator_email)
+                    # facilitateur lié (lien, sinon ancien e-mail) : suit le compte, e-mail compris
+                    facilitator = Facilitator.objects.filter(user=instance).first() or Facilitator.objects.get(email__iexact=facilitator_email)
+                    facilitator.email = instance.email
                     facilitator.password = instance.password
                     facilitator.username = instance.username
                     facilitator.name = f"{instance.last_name} {instance.first_name}"
@@ -245,6 +250,7 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
                     facilitator.save()
                 except:
                     pass
+                self._sync_mgp_identity(instance, previous_identity)
 
             if password is not None:
                 # Mot de passe à changer à la première connexion (DCC, SIG ; MGP s'il y a un compte de même e-mail).
@@ -253,13 +259,37 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
                 row = {
                     'kind': 'user', 'name': full_name, 'email': instance.email, 'username': instance.username,
                     'mail_sent': send_account_credentials(full_name, instance.email, instance.username, password),
-                    'mgp_status': None,
                 }
+                # Compte MGP de même e-mail et même mot de passe (groupes communs aux deux plateformes).
+                row['mgp_status'], row['mgp_detail'] = create_user_on_mgp(instance)
                 row['password'] = None if row['mail_sent'] else password
                 return accounts_created_response(request, [row], reverse('dashboard:authentication:users'), gettext_lazy('Create User'))
 
             return redirect('dashboard:authentication:users')
         return super(CreateUpdateUserFormView, self).get(request, *args, **kwargs)
+
+    def _sync_mgp_identity(self, instance, previous_identity):
+        """Modification : nouvel e-mail ou nom reporté sur le compte MGP (trouvé par l'ancien e-mail) ; sans compte
+        MGP, il est créé. Message d'avertissement seulement en cas d'échec."""
+        previous_email, first_name, last_name = previous_identity or (None, None, None)
+        if not (instance.email or '').strip():
+            return
+        if previous_email and (previous_email, first_name, last_name) != (instance.email, instance.first_name, instance.last_name):
+            ok, detail = grm_client.update_facilitator_identity_on_grm(
+                previous_email, instance.email, instance.first_name, instance.last_name, None,
+            )
+            if ok:
+                messages.success(self.request, gettext_lazy("MGP account updated."))
+                return
+            if detail != "no GRM account":
+                messages.warning(self.request, gettext_lazy("MGP account not updated (%s).") % detail)
+                return
+        if mgp_account_exists(instance.email) is False:
+            status, detail = create_account_on_mgp(instance)
+            if status == 'created':
+                messages.info(self.request, gettext_lazy("MGP account created"))
+            elif status == 'error':
+                messages.warning(self.request, gettext_lazy("MGP account not created (%(detail)s)") % {'detail': detail})
 
 
 class DeleteUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionRequiredMixin, generic.TemplateView):

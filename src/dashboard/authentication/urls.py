@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from dashboard.authentication.forms import EmailAuthenticationForm
-from dashboard.authentication import views, views_first_login, views_localities, views_supervisors
+from dashboard.authentication import views, views_first_login, views_localities, views_profile, views_supervisors
 
 app_name = 'authentication'
 urlpatterns = [
@@ -16,6 +16,8 @@ urlpatterns = [
     path('user-create/', views.CreateUpdateUserFormView.as_view(), name='user_create'),
     path('user/<slug:id>/update/', views.CreateUpdateUserFormView.as_view(), name='user_update'),
     path('user/<slug:id>/delete/', views.DeleteUserFormView.as_view(), name='user_delete'),
+    path('user/<int:id>/profile/', views_profile.UserProfileView.as_view(), name='user_profile'),
+    path('user/<int:id>/account-action/', views_profile.UserAccountActionView.as_view(), name='user_account_action'),
     path('user/<int:id>/localities/', views_localities.UserLocalitiesView.as_view(), name='user_localities'),
     
     path('get-users-diagnostics-view', views.UsersDiagnosticsView.as_view(), name='get_users_diagnostics_view'),

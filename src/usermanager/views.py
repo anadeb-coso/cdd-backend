@@ -17,9 +17,93 @@ from django.utils import translation
 from cdd.call_objects_from_other_db import mis_objects_call, grm_objects_call, cdd_objects_call
 from cdd.functions import get_validation_code
 from usermanager.functions import encoder_email
+from usermanager.profile_details import build_profile_details
 
 from django.views.decorators.csrf import csrf_exempt
 from authentication.models import Facilitator
+
+def render_profile(request, email, redirection_url=None, previous_url=None):
+    """Profile page of the person of this e-mail (accounts on the DCC, SIG and MGP). Shared by the POST to
+    `/user-manager/` and the GET of `/profile/` (logged-in DCC user)."""
+    data = {}
+    data['email'] = email
+
+    cdd_user = cdd_objects_call.filter_objects(User, email=email, is_active=True).first()
+    mis_user = mis_objects_call.filter_objects(User, email=email, is_active=True).first()
+    cdd_facilitator = cdd_objects_call.filter_objects(Facilitator, email=email, active=True).first()
+
+    grm_user = {}
+    with connections['grm'].cursor() as cursor:
+        try:
+            cursor.execute(
+                """
+                SELECT id, username, first_name, last_name, email, password, phone_number, is_superuser
+                FROM authentication_user
+                WHERE email = %s AND is_active = TRUE
+                """,
+                [email],
+            )
+
+            count = 0
+            for row in cursor.fetchall():
+                grm_user['id'] = row[0]
+                grm_user['username'] = row[1]
+                grm_user['first_name'] = row[2]
+                grm_user['last_name'] = row[3]
+                grm_user['email'] = row[4]
+                grm_user['password'] = row[5]
+                grm_user['phone_number'] = row[6]
+                grm_user['is_superuser'] = row[7]
+                count += 1
+
+            # Groupes MGP : rôle affiché sur la page (filtre `get_group_high`) pour un
+            # compte qui n'existe que sur le MGP.
+            if grm_user:
+                cursor.execute(
+                    """
+                    SELECT g.name
+                    FROM auth_group g
+                    JOIN authentication_user_groups ug ON ug.group_id = g.id
+                    WHERE ug.user_id = %s
+                    """,
+                    [grm_user['id']],
+                )
+                grm_user['groups'] = [row[0] for row in cursor.fetchall()]
+
+        except Exception as exc:
+            logging.exception(exc)
+
+    data['user'] = {'exists': {}, 'objects': {}, 'object': None}
+    data['user']['exists']['cdd'] = cdd_user is not None
+    data['user']['exists']['cdd_facilitator'] = cdd_facilitator is not None
+    data['user']['exists']['mis'] = mis_user is not None
+    data['user']['exists']['grm'] = grm_user not in ({}, None)
+
+    data['user']['objects']['cdd'] = cdd_user
+    data['user']['objects']['cdd_facilitator'] = cdd_facilitator
+    data['user']['objects']['mis'] = mis_user
+    data['user']['objects']['grm'] = grm_user
+
+
+    data['user']['object'] = cdd_user if cdd_user else (mis_user if mis_user else (grm_user if grm_user else cdd_facilitator))
+    data['encoder_email'] = encoder_email(email)
+    data['details'] = build_profile_details(cdd_user, cdd_facilitator, mis_user, grm_user)
+
+    request.session['redirection_url_origin_after_user_manage'] = redirection_url
+    data['redirection_url_origin_after_user_manage'] = redirection_url
+
+    data['previous_url'] = previous_url or f"{request.scheme}://{request.get_host()}"
+
+    # Sidebar du Web DCC seulement si la session DCC est celle de la même personne (sinon : arrivée
+    # depuis le SIG ou le MGP, page autonome).
+    same_person = request.user.is_authenticated and (request.user.email or '').strip().lower() == email.strip().lower()
+    return render(request, 'profile.html', {
+        'data': data,
+        'profile_layout': 'layouts/base.html' if same_person else 'profile_standalone.html',
+        'title': _('Profile'),
+        'active_level1': 'profile',
+    })
+
 
 # @csrf_exempt
 def user_manager(request):
@@ -33,74 +117,8 @@ def user_manager(request):
         email = request.POST.get('email', None)
         
         if email:
-            data['email'] = email
-
-            cdd_user = cdd_objects_call.filter_objects(User, email=email, is_active=True).first()
-            mis_user = mis_objects_call.filter_objects(User, email=email, is_active=True).first()
-            cdd_facilitator = cdd_objects_call.filter_objects(Facilitator, email=email, active=True).first()
-
-            grm_user = {}
-            with connections['grm'].cursor() as cursor:
-                try:
-                    cursor.execute(
-                        """
-                        SELECT id, username, first_name, last_name, email, password, phone_number, is_superuser
-                        FROM authentication_user
-                        WHERE email = %s AND is_active = TRUE
-                        """,
-                        [email],
-                    )
-
-                    count = 0
-                    for row in cursor.fetchall():
-                        grm_user['id'] = row[0]
-                        grm_user['username'] = row[1]
-                        grm_user['first_name'] = row[2]
-                        grm_user['last_name'] = row[3]
-                        grm_user['email'] = row[4]
-                        grm_user['password'] = row[5]
-                        grm_user['phone_number'] = row[6]
-                        grm_user['is_superuser'] = row[7]
-                        count += 1
-
-                    # Groupes MGP : rôle affiché sur la page (filtre `get_group_high`) pour un
-                    # compte qui n'existe que sur le MGP.
-                    if grm_user:
-                        cursor.execute(
-                            """
-                            SELECT g.name
-                            FROM auth_group g
-                            JOIN authentication_user_groups ug ON ug.group_id = g.id
-                            WHERE ug.user_id = %s
-                            """,
-                            [grm_user['id']],
-                        )
-                        grm_user['groups'] = [row[0] for row in cursor.fetchall()]
-
-                except Exception as exc:
-                    logging.exception(exc)
-            
-            data['user'] = {'exists': {}, 'objects': {}, 'object': None}
-            data['user']['exists']['cdd'] = cdd_user is not None
-            data['user']['exists']['cdd_facilitator'] = cdd_facilitator is not None
-            data['user']['exists']['mis'] = mis_user is not None
-            data['user']['exists']['grm'] = grm_user not in ({}, None)
-
-            data['user']['objects']['cdd'] = cdd_user
-            data['user']['objects']['cdd_facilitator'] = cdd_facilitator
-            data['user']['objects']['mis'] = mis_user
-            data['user']['objects']['grm'] = grm_user
-
-
-            data['user']['object'] = cdd_user if cdd_user else (mis_user if mis_user else (grm_user if grm_user else cdd_facilitator))
-            data['encoder_email'] = encoder_email(email)
-
-            request.session['redirection_url_origin_after_user_manage'] = request.POST.get('redirection_url', None)
-            data['redirection_url_origin_after_user_manage'] = request.POST.get('redirection_url', None)
-            
-            data['previous_url'] = request.POST.get('previous_url', f"{request.scheme}://{request.get_host()}")
-
-            return render(request, 'profile.html', {'data': data})
+            return render_profile(request, email, request.POST.get('redirection_url', None),
+                                  request.POST.get('previous_url', None))
         
     elif request.method == "GET" and request.session.get('redirection_url_origin_after_user_manage'):
         redirection_url = request.session.get('redirection_url_origin_after_user_manage')

@@ -111,22 +111,14 @@ class DeleteObjectFormView(AJAXRequestMixin, ModalFormMixin, LoginRequiredMixin,
 
 @login_required
 def profile(request):
+    """Profile page of the logged-in user, opened with a GET (sidebar link); a POST (old link) is redirected to it."""
+    from django.shortcuts import redirect
+
+    from usermanager.views import render_profile
+
     if request.method == 'POST':
-        scheme = request.scheme
-        domain = request.get_host()
-        full_url = f"{scheme}://{domain}"
+        return redirect('profile')
 
-        previous_url = request.headers.get('Referer', full_url)
-
-        post_data = {
-            'email': request.user.email,
-            'code': get_validation_code(request.user.email),
-            'redirection_url': full_url,
-            'previous_url': previous_url
-        }
-        return render(request, 'post_redirect.html', {
-            'url': f"{settings.CDD_URL_BASE}/{get_language()}/user-manager/",
-            'redirection_url': full_url,
-            'post_data': post_data
-        })
-    raise Http404
+    full_url = f"{request.scheme}://{request.get_host()}"
+    return render_profile(request, request.user.email, redirection_url=full_url,
+                          previous_url=request.headers.get('Referer', full_url))

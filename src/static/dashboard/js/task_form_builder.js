@@ -821,6 +821,14 @@
       el("span", { class: "tfb-dropzone-hint", text: " " + (parent ? t("drop_into_group", "… ou déposer un champ ici pour l'ajouter au groupe") : t("drop_into_page", "… ou déposer un champ ici")) })
     ]);
     makeDropTarget(box, "zone", list);
+    if (parent) {
+      // Dans un groupe, cette zone est DANS la carte du groupe : sans ceci, un clic sur la liste des types
+      // remontait au onclick de la carte (sélection du groupe + render()), qui détruisait la liste avant le choix.
+      ["click", "mousedown", "mouseup"].forEach(function (ev) { box.addEventListener(ev, function (e) { e.stopPropagation(); }); });
+      // la carte du groupe est draggable : ne pas démarrer un glisser depuis la liste
+      sel.addEventListener("dragstart", function (e) { e.preventDefault(); e.stopPropagation(); });
+      box.setAttribute("draggable", "false");
+    }
     return box;
   }
 
@@ -1238,10 +1246,37 @@
       : t("no_rows_loaded", "Aucune donnée chargée.");
     return el("div", { class: c ? "tfb-ok" : "tfb-muted", style: "padding:6px 8px", text: txt });
   }
+  // Parents de cascade possibles : les champs de choix du même groupe (clé simple, relative au groupe) ET ceux
+  // situés HORS du groupe — dans un autre groupe : chemin pointé (absolu depuis la page) ; à la racine de la page :
+  // "/clé" (absolu, cf. `_cascadePath` des moteurs web et mobile). Les champs d'un AUTRE groupe répétable sont
+  // exclus (on ne peut pas désigner une ligne).
+  function cascadeParentCandidates(n, siblings) {
+    var isSelect = function (s) { return s.type === "select_one" || s.type === "select_multiple" || s.type === "select_multiple_check"; };
+    var out = (siblings || []).filter(function (s) { return s.id !== n.id && isSelect(s); })
+      .map(function (s) { return [s.key, (s.label || s.key) + " {" + s.key + "}"]; });
+    var sameGroup = {};
+    (siblings || []).forEach(function (s) { sameGroup[s.id] = 1; });
+    var nested = !!(siblings && siblings !== state.pages[state.active].nodes);
+    if (!nested) return out;
+    (function walk(nodes, prefix) {
+      (nodes || []).forEach(function (s) {
+        var path = (prefix ? prefix + "." : "") + s.key;
+        if (s.id === n.id || !s.key) return;
+        if (CONTAINER_TYPES[s.type]) {
+          // ne pas descendre dans un groupe répétable, sauf celui qui contient le champ (déjà couvert par les frères)
+          if (s.type !== "repeat") walk(s.children, path);
+          return;
+        }
+        if (sameGroup[s.id] || !isSelect(s)) return;
+        var value = prefix ? path : "/" + s.key;
+        out.push([value, "↑ " + (s.label || s.key) + " {" + (prefix ? path : s.key) + "} " + t("cascade_outside_group", "(hors du groupe)")]);
+      });
+    })(state.pages[state.active].nodes, "");
+    return out;
+  }
   function cascadeParentRow(n, siblings) {
-    var opts = (siblings || []).filter(function (s) {
-      return s.id !== n.id && (s.type === "select_one" || s.type === "select_multiple" || s.type === "select_multiple_check");
-    }).map(function (s) { return [s.key, (s.label || s.key) + " {" + s.key + "}"]; });
+    var opts = cascadeParentCandidates(n, siblings);
+    if (n.cascadeFrom && !opts.some(function (o) { return o[0] === n.cascadeFrom; })) opts.push([n.cascadeFrom, n.cascadeFrom]);
     return fieldRow(
       t("f_cascade_from", "Champ parent (cascade)"),
       selectFrom([["", t("cascade_none", "— aucun (niveau racine) —")]].concat(opts), n.cascadeFrom, function (v) { n.cascadeFrom = v; refreshTree(); })

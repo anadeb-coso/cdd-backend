@@ -335,13 +335,16 @@ def platform_links(facilitator=False):
         links.append((_("MGP Web and mobile application"), settings.GRM_URL_BASE, _("e-mail address")))
     else:
         links.append((_("SIG Web"), settings.MIS_URL_BASE, _("e-mail address")))
+        links.append((_("MGP Web and mobile application"), settings.GRM_URL_BASE, _("e-mail address")))
     return [{'name': name, 'url': url, 'login_with': login_with} for name, url, login_with in links]
 
 
-def send_account_credentials(full_name, email, username, password, facilitator=False, sex=None, localities=None):
+def send_account_credentials(full_name, email, username, password, facilitator=False, sex=None, localities=None,
+                             reset=False):
     """Mail de bienvenue : adresse e-mail, nom d'utilisateur et mot de passe initial (à changer à la première
-    connexion), plateformes accessibles et, pour un facilitateur, ses localités."""
-    title = _("Your account has been created")
+    connexion), plateformes accessibles et, pour un facilitateur, ses localités. `reset` : même mail après une
+    réinitialisation du mot de passe par un administrateur."""
+    title = _("Your password has been reset") if reset else _("Your account has been created")
     context = {
         'subject': title,
         'title': title,
@@ -355,6 +358,7 @@ def send_account_credentials(full_name, email, username, password, facilitator=F
         'platforms': platform_links(facilitator),
         'localities': localities or [],
         'current_year': datetime.now().year,
+        'reset': reset,
     }
     subject = f"[COSO Apps : {datetime.now().strftime('%Y-%m-%d')}] {title}"
     return send_mail_to(subject, 'mail/send/account_credentials', context, [email])
