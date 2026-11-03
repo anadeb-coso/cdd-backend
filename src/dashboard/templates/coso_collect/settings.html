@@ -25,6 +25,12 @@
                 <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
                 {{ form.description }}
             </div>
+            <div class="form-group">
+                <label for="{{ form.rank.id_for_label }}">{{ form.rank.label }}</label>
+                {{ form.rank }}
+                {% for e in form.rank.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                <small class="form-text text-muted">{{ form.rank.help_text }}</small>
+            </div>
 
             <h6 class="cc-section-title mt-4">{% translate "Access" %}</h6>
             <div class="form-group">
@@ -202,13 +208,23 @@
         <p class="text-muted small">{% translate "No administrator yet: only you (and the superusers) manage this form." %}</p>
     {% endif %}
 
-    <form method="post" action="{% url 'dashboard:coso_collect:admins' collect_form.pk %}" class="form-inline mt-3" style="gap:.5rem;">
+    <form method="post" action="{% url 'dashboard:coso_collect:admins' collect_form.pk %}" class="mt-3 cc-add-admins">
         {% csrf_token %}
         <input type="hidden" name="action" value="add">
-        <label for="{{ add_admin_form.user.id_for_label }}" class="small text-muted">{{ add_admin_form.user.label }}</label>
-        <div style="min-width:280px;">{{ add_admin_form.user }}</div>
+        <div class="font-weight-bold mb-2"><i class="fas fa-user-plus mr-1"></i>{% translate "Add administrators" %}</div>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="{{ add_admin_form.users.id_for_label }}" class="small text-muted">{{ add_admin_form.users.label }}</label>
+                {{ add_admin_form.users }}
+            </div>
+            <div class="form-group col-md-6">
+                <label for="{{ add_admin_form.groups.id_for_label }}" class="small text-muted">{{ add_admin_form.groups.label }}</label>
+                {{ add_admin_form.groups }}
+                <small class="form-text text-muted">{% translate "All the members of the groups chosen are added (except superusers, the creator and the current administrators)." %}</small>
+            </div>
+        </div>
         <button class="btn btn-outline-primary btn-sm rounded-xl"><i class="fas fa-user-plus mr-1"></i>{% translate "Add" %}</button>
-        <small class="text-muted w-100">{% translate "The new administrator first receives the reading of the data only." %}</small>
+        <small class="text-muted d-block mt-1">{% translate "The new administrators first receive the reading of the data only." %}</small>
     </form>
 </div>
 {{ right_requires|json_script:"cc-right-requires" }}

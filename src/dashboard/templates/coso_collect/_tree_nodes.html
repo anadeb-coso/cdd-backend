@@ -23,11 +23,15 @@
             <div class="cc-field-label">{{ n.label }}</div>
             <div class="cc-field-value">
                 {% if n.media %}
-                    {% if n.media.is_image and n.media.url %}
-                        <a href="{{ n.media.url }}" target="_blank" rel="noopener"><img src="{{ n.media.url }}" alt="{{ n.media.name }}" class="img-thumbnail" style="max-height:220px;"></a>
-                        <div class="small"><a href="{{ n.media.url }}?download=1">{{ n.media.name }}</a></div>
+                    {% if n.media.kind == 'image' and n.media.url %}
+                        <a href="javascript:void(0)" class="cc-thumb-view" title="{% translate 'View full size' %}"><img src="{{ n.media.url }}" alt="{{ n.media.name }}" class="img-thumbnail" style="max-height:220px;"></a>
+                        <div class="small d-flex align-items-center" style="gap:.5rem;">{{ n.media.name }} {% include "coso_collect/_attachment_actions.html" with url=n.media.url kind=n.media.kind name=n.media.name %}</div>
                     {% elif n.media.url %}
-                        <a href="{{ n.media.url }}" target="_blank" rel="noopener"><i class="fas fa-paperclip mr-1"></i>{{ n.media.name }}</a>
+                        <span class="d-inline-flex align-items-center" style="gap:.5rem;">
+                            {% if n.media.kind == 'pdf' %}<i class="fas fa-file-pdf text-danger"></i>{% elif n.media.kind == 'word' %}<i class="fas fa-file-word text-primary"></i>{% else %}<i class="fas fa-paperclip"></i>{% endif %}
+                            {{ n.media.name }}
+                            {% include "coso_collect/_attachment_actions.html" with url=n.media.url kind=n.media.kind name=n.media.name %}
+                        </span>
                     {% else %}
                         <span class="cc-empty">{{ n.media.name }} ({% translate "not yet received" %})</span>
                     {% endif %}

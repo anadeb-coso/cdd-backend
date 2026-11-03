@@ -82,6 +82,38 @@ def convert_pdf_to_docx_bytes(source_url):
                 pass
 
 
+def pdf_bytes_to_docx_bytes(pdf_bytes):
+    """Document Word (octets) d'un PDF donné en octets (pdf2docx). Lève ``DocConversionError``."""
+    try:
+        from pdf2docx import Converter
+    except ImportError:
+        raise DocConversionError(
+            "La conversion PDF -> Word n'est pas disponible sur ce serveur "
+            "(dépendance Python 'pdf2docx' manquante)."
+        )
+    work_dir = tempfile.mkdtemp()
+    try:
+        pdf_path = os.path.join(work_dir, "document.pdf")
+        docx_path = os.path.join(work_dir, "document.docx")
+        with open(pdf_path, "wb") as fh:
+            fh.write(pdf_bytes)
+        cv = Converter(pdf_path)
+        try:
+            cv.convert(docx_path)
+        finally:
+            cv.close()
+        if not os.path.exists(docx_path):
+            raise DocConversionError("La conversion PDF -> Word a échoué (aucun fichier produit).")
+        with open(docx_path, "rb") as fh:
+            return fh.read()
+    except DocConversionError:
+        raise
+    except Exception as exc:
+        raise DocConversionError(f"La conversion PDF -> Word a échoué : {exc}")
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
 def _soffice_binary():
     """Chemin de l'exécutable LibreOffice headless, ou ``None`` si introuvable
     (PATH, puis emplacements d'installation standard Windows/Linux)."""

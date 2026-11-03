@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -87,3 +87,8 @@
     </div>
 </div>
 {% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% include "coso_collect/_attachment_viewer.html" %}
+{% endblock %}

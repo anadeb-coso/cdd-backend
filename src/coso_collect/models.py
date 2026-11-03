@@ -52,6 +52,9 @@ class CollectForm(models.Model):
     # Un seul enregistrement par personne (comptes web + facilitateur de la même personne confondus) : une
     # fois le sien démarré, on le reprend au lieu d'en créer un autre. Par défaut : plusieurs.
     single_submission = models.BooleanField(default=False, verbose_name=_('Only one record per person'))
+    # Classement (optionnel) : les listes web et mobile montrent les formulaires du plus petit au plus grand ;
+    # ceux sans classement viennent ensuite (ordre habituel : les plus récents d'abord).
+    rank = models.PositiveIntegerField(null=True, blank=True, verbose_name=_('Ranking'))
 
     access_scope = models.CharField(max_length=20, choices=ACCESS_SCOPES, default=ACCESS_ALL,
                                     verbose_name=_('Who can fill in this form'))
@@ -84,6 +87,11 @@ class CollectForm(models.Model):
     @property
     def is_open(self):
         return self.status == self.STATUS_PUBLISHED
+
+
+def ranked_order(*then):
+    """Tri des listes de formulaires : classement croissant (sans classement en dernier), puis `then`."""
+    return [models.F('rank').asc(nulls_last=True), *then]
 
 
 class CollectFormAdmin(models.Model):

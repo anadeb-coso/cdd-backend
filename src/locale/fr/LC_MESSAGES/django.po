@@ -6102,3 +6102,83 @@ msgid "%(counter)s village"
 msgid_plural "%(counter)s villages"
 msgstr[0] "%(counter)s village"
 msgstr[1] "%(counter)s villages"
+
+# COSOCollect : classement, administrateurs multiples / par groupe
+msgid "Ranking"
+msgstr "Classement"
+
+msgid "Optional"
+msgstr "Facultatif"
+
+msgid "Optional. Forms are listed on the web and on the mobile from the smallest ranking to the largest; forms without a ranking come after them."
+msgstr "Facultatif. Les formulaires sont listés sur le web et le mobile du plus petit classement au plus grand ; ceux sans classement viennent après."
+
+msgid "User groups"
+msgstr "Groupes d'utilisateurs"
+
+msgid "Add administrators"
+msgstr "Ajouter des administrateurs"
+
+msgid "All the members of the groups chosen are added (except superusers, the creator and the current administrators)."
+msgstr "Tous les membres des groupes choisis sont ajoutés (sauf les superutilisateurs, le créateur et les administrateurs actuels)."
+
+msgid "The new administrators first receive the reading of the data only."
+msgstr "Les nouveaux administrateurs reçoivent d'abord la seule lecture des données."
+
+msgid "Choose at least one user or one group."
+msgstr "Choisissez au moins un utilisateur ou un groupe."
+
+msgid "Choose users or groups whose members are not yet administrators of this form."
+msgstr "Choisissez des utilisateurs ou des groupes dont les membres ne sont pas encore administrateurs de ce formulaire."
+
+msgid "Nobody added: the users chosen (or the members of the groups chosen) are already administrators, the creator, superusers or inactive accounts."
+msgstr "Personne n'a été ajouté : les utilisateurs choisis (ou les membres des groupes choisis) sont déjà administrateurs, sont le créateur, des superutilisateurs ou des comptes inactifs."
+
+#, python-format
+msgid "%(count)s administrators added to this form: tick the rights to grant."
+msgstr "%(count)s administrateurs ajoutés à ce formulaire : cochez les droits à accorder."
+
+
+# COSOCollect : suppression multiple
+msgid "Delete the selection"
+msgstr "Supprimer la sélection"
+
+msgid "Select all the records of this page"
+msgstr "Sélectionner tous les enregistrements de cette page"
+
+#, python-format
+msgid "Delete the %(count)s selected record(s) and their files permanently? This cannot be undone."
+msgstr "Supprimer définitivement les %(count)s enregistrement(s) sélectionné(s) et leurs fichiers ? Cette action est irréversible."
+
+msgid "Select at least one record to delete."
+msgstr "Sélectionnez au moins un enregistrement à supprimer."
+
+#, python-format
+msgid "%(count)s record(s) deleted."
+msgstr "%(count)s enregistrement(s) supprimé(s)."
+
+
+# COSOCollect : réouverture multiple
+msgid "Reopen the selection"
+msgstr "Rouvrir la sélection"
+
+#, python-format
+msgid "Reopen for modification the %(count)s selected record(s)? Only the records sent and not yet reopened are concerned; their authors will be able to modify them again."
+msgstr "Rouvrir à la modification les %(count)s enregistrement(s) sélectionné(s) ? Seuls les enregistrements envoyés et pas encore rouverts sont concernés ; leurs auteurs pourront de nouveau les modifier."
+
+msgid "Select at least one record to reopen."
+msgstr "Sélectionnez au moins un enregistrement à rouvrir."
+
+#, python-format
+msgid "%(count)s record(s) reopened for modification by their author."
+msgstr "%(count)s enregistrement(s) rouvert(s) à la modification par leur auteur."
+
+#, python-format
+msgid "%(count)s record(s) left unchanged: not sent yet or already reopened."
+msgstr "%(count)s enregistrement(s) inchangé(s) : pas encore envoyé(s) ou déjà rouvert(s)."
+
+
+# COSOCollect : visionneuse des pièces jointes
+msgid "Word document shown converted to PDF: the conversion can take a few seconds."
+msgstr "Document Word affiché converti en PDF : la conversion peut prendre quelques secondes."
+

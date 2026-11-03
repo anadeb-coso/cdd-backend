@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -55,11 +55,35 @@
     </div>
 </form>
 
+{% if rights.delete_records or rights.reopen_records %}
+<form method="post" id="cc-bulk">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+</form>
+<div class="d-flex align-items-center mb-2 cc-bulk-bar" style="gap:.5rem;">
+    <span class="small text-muted"><span id="cc-selected-count">0</span> {% translate "selected" %}</span>
+    {% if rights.reopen_records %}
+    <button type="submit" form="cc-bulk" class="btn btn-sm btn-outline-warning cc-bulk-btn"
+            formaction="{% url 'dashboard:coso_collect:reopen_submissions' collect_form.pk %}"
+            data-confirm="{% translate 'Reopen for modification the %(count)s selected record(s)? Only the records sent and not yet reopened are concerned; their authors will be able to modify them again.' %}" disabled>
+        <i class="fas fa-lock-open mr-1"></i>{% translate "Reopen the selection" %}
+    </button>
+    {% endif %}
+    {% if rights.delete_records %}
+    <button type="submit" form="cc-bulk" class="btn btn-sm btn-outline-danger cc-bulk-btn"
+            formaction="{% url 'dashboard:coso_collect:delete_submissions' collect_form.pk %}"
+            data-confirm="{% translate 'Delete the %(count)s selected record(s) and their files permanently? This cannot be undone.' %}" disabled>
+        <i class="fas fa-trash mr-1"></i>{% translate "Delete the selection" %}
+    </button>
+    {% endif %}
+</div>
+{% endif %}
 <div class="card cc-card">
     <div class="table-responsive">
-        <table class="table table-hover table-sm mb-0 cc-table">
+        <table class="table table-hover table-sm mb-0 cc-table cc-data-table">
             <thead class="thead-light">
                 <tr>
+                    {% if rights.delete_records or rights.reopen_records %}<th style="width:28px;"><input type="checkbox" id="cc-select-all" title="{% translate 'Select all the records of this page' %}"></th>{% endif %}
                     <th>#</th>
                     <th><a href="?{{ sort_query }}&amp;sort={% if sort == 'title' %}-title{% else %}title{% endif %}">{% translate "Combined title" %} <i class="fas fa-sort"></i></a></th>
                     <th>{% translate "Status" %}</th>
@@ -74,6 +98,7 @@
             {% for row in rows %}
                 {% with s=row.submission %}
                 <tr>
+                    {% if rights.delete_records or rights.reopen_records %}<td><input type="checkbox" class="cc-select" name="uuids" value="{{ s.uuid }}" form="cc-bulk"></td>{% endif %}
                     <td class="text-muted">{{ page_obj.start_index|add:forloop.counter0 }}</td>
                     <td class="cc-title-cell"><a href="{% url 'dashboard:coso_collect:submission' s.uuid %}">{{ s.title|default:s.uuid }}</a></td>
                     <td class="text-nowrap">{% include "coso_collect/_submission_status.html" with submission=s %}</td>
@@ -111,7 +136,7 @@
                 </tr>
                 {% endwith %}
             {% empty %}
-                <tr><td colspan="{{ columns|length|add:7 }}" class="text-muted">{% translate "No record matches." %}</td></tr>
+                <tr><td colspan="{{ columns|length|add:8 }}" class="text-muted">{% translate "No record matches." %}</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -119,3 +144,28 @@
 </div>
 {% include "coso_collect/_pagination.html" %}
 {% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% if rights.delete_records or rights.reopen_records %}
+    <script>
+        $(function () {
+            var $boxes = $(".cc-select"), $all = $("#cc-select-all"), $btns = $(".cc-bulk-btn");
+            function refresh() {
+                var n = $boxes.filter(":checked").length;
+                $("#cc-selected-count").text(n);
+                $btns.prop("disabled", n === 0);
+                $all.prop("checked", n > 0 && n === $boxes.length).prop("indeterminate", n > 0 && n < $boxes.length);
+            }
+            $all.on("change", function () { $boxes.prop("checked", this.checked); refresh(); });
+            $boxes.on("change", refresh);
+            // Confirmation propre à chaque bouton (réouverture / suppression).
+            $btns.on("click", function (e) {
+                var n = $boxes.filter(":checked").length;
+                if (n === 0 || !confirm($(this).data("confirm").replace("%(count)s", n))) { e.preventDefault(); }
+            });
+            refresh();
+        });
+    </script>
+    {% endif %}
+{% endblock %}

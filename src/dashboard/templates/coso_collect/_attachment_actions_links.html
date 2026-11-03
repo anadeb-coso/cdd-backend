@@ -1,0 +1,18 @@
+{% load i18n %}<span class="cc-file-actions">
+    {% if view_url %}
+    <a href="javascript:void(0)" class="js-cc-view" title="{% translate 'View full size' %}"
+       data-view-url="{{ view_url }}" data-kind="{{ kind }}" data-name="{{ name }}"
+       data-download-url="{{ url }}?download=1"
+       {% if kind == 'pdf' %}data-convert-url="{{ url }}?convert=docx" data-convert-label="{% translate 'Convert to Word' %}"
+       {% elif kind == 'word' %}data-convert-url="{{ url }}?convert=pdf" data-convert-label="{% translate 'Convert to PDF' %}"{% endif %}>
+        <i class="fas fa-expand"></i>
+    </a>
+    <a href="{{ view_url }}" target="_blank" rel="noopener" title="{% translate 'Open in a new tab' %}"><i class="fas fa-external-link-alt"></i></a>
+    {% endif %}
+    <a href="{{ url }}?download=1" title="{% translate 'Download' %}"><i class="fas fa-download"></i></a>
+    {% if kind == 'pdf' %}
+    <a href="{{ url }}?convert=docx" title="{% translate 'Convert to Word' %}"><i class="fas fa-file-word"></i></a>
+    {% elif kind == 'word' %}
+    <a href="{{ url }}?convert=pdf" title="{% translate 'Convert to PDF' %}"><i class="fas fa-file-pdf"></i></a>
+    {% endif %}
+</span>

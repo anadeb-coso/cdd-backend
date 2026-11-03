@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -41,17 +41,20 @@
 <div class="cc-gallery">
     {% for a in page_obj %}
         <div class="cc-gallery-item">
-            {% if a.is_image %}
-                <a href="{{ a.url }}" target="_blank" rel="noopener" class="cc-gallery-thumb" style="background-image:url('{{ a.url }}');" title="{{ a.name }}"></a>
+            {% if a.kind == 'image' %}
+                <a href="javascript:void(0)" class="cc-gallery-thumb cc-thumb-view" style="background-image:url('{{ a.url }}');" title="{% translate 'View full size' %}"></a>
             {% else %}
-                <a href="{{ a.url }}" target="_blank" rel="noopener" class="cc-gallery-thumb" title="{{ a.name }}"><i class="far fa-file-alt"></i></a>
+                <a href="javascript:void(0)" class="cc-gallery-thumb {% if a.kind != 'other' %}cc-thumb-view{% endif %}" title="{% if a.kind != 'other' %}{% translate 'View full size' %}{% else %}{{ a.name }}{% endif %}">
+                    {% if a.kind == 'pdf' %}<i class="fas fa-file-pdf text-danger"></i>{% elif a.kind == 'word' %}<i class="fas fa-file-word text-primary"></i>{% else %}<i class="far fa-file-alt"></i>{% endif %}
+                </a>
             {% endif %}
             <div class="cc-gallery-meta">
                 <div class="cc-gallery-title"><a href="{% url 'dashboard:coso_collect:submission' a.submission.uuid %}">{{ a.submission.title|truncatechars:60 }}</a></div>
                 <div>{{ a.field_label }}</div>
+                <div class="text-truncate" title="{{ a.name }}">{{ a.name }}</div>
                 <div class="d-flex justify-content-between align-items-center">
                     <span>{{ a.created_at|date:"d/m/Y H:i" }} · {{ a.size|filesizeformat }}</span>
-                    <a href="{{ a.url }}?download=1" title="{% translate 'Download' %}"><i class="fas fa-download"></i></a>
+                    {% include "coso_collect/_attachment_actions.html" with url=a.url kind=a.kind name=a.name %}
                 </div>
             </div>
         </div>
@@ -62,3 +65,8 @@
     <p class="text-muted">{% translate "No photo or document has been received for this form." %}</p>
 {% endif %}
 {% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% include "coso_collect/_attachment_viewer.html" %}
+{% endblock %}

@@ -22,7 +22,7 @@ from authentication.identity import is_facilitator
 from authentication.platform_tokens import account_from_token as account_from_platform_token, is_platform_token
 
 from . import access
-from .models import CollectAttachment, CollectForm, CollectSubmission
+from .models import CollectAttachment, CollectForm, CollectSubmission, ranked_order
 from .services import CollectError, as_uuid, save_submission, store_attachment, submission_payload
 from .titles import parse_iso
 from .tokens import api_view, authenticate_credentials, issue_token, MAX_AGE
@@ -45,6 +45,7 @@ def form_summary(form, counts=None):
         'status': form.status,
         'close_message': form.close_message,
         'single_submission': form.single_submission,
+        'rank': form.rank,
         'published_at': form.published_at and form.published_at.isoformat(),
         'closed_at': form.closed_at and form.closed_at.isoformat(),
         'updated_at': form.updated_at and form.updated_at.isoformat(),
@@ -100,7 +101,7 @@ def _my_counts(account, form_ids):
 @api_view
 def forms_view(request):
     account = request.collect_account
-    forms = list(access.fillable_forms(account).order_by('-published_at', '-updated_at'))
+    forms = list(access.fillable_forms(account).order_by(*ranked_order('-published_at', '-updated_at')))
     counts = _my_counts(account, [f.pk for f in forms])
     return JsonResponse({'ok': True, 'forms': [form_summary(f, counts.get(f.pk, {})) for f in forms]})
 

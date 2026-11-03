@@ -5,6 +5,22 @@ from .fields import form_fields, leaf_fields, resolve
 from .titles import parse_iso
 
 
+WORD_EXTENSIONS = ('.doc', '.docx', '.odt', '.rtf')
+
+
+def media_kind(name, mime='', is_photo=False):
+    """'image', 'pdf', 'word' ou 'other' (pour la visionneuse et les actions Télécharger / Convertir)."""
+    name = (name or '').lower()
+    mime = (mime or '').lower()
+    if is_photo or mime.startswith('image/'):
+        return 'image'
+    if mime == 'application/pdf' or name.endswith('.pdf'):
+        return 'pdf'
+    if 'word' in mime or 'opendocument.text' in mime or name.endswith(WORD_EXTENSIONS):
+        return 'word'
+    return 'other'
+
+
 def _display_value(field, value):
     ftype = field['type']
     if value is None or value == '' or value == []:
@@ -43,6 +59,7 @@ def build_tree(form_pages, data, attachment_url):
                 'name': value.get('name') or '',
                 'url': attachment_url(attachment_id) if attachment_id else '',
                 'is_image': field['type'] == 'photo' or mime.startswith('image/'),
+                'kind': media_kind(value.get('name'), mime, field['type'] == 'photo'),
                 'size': value.get('size'),
             }
         elif field['type'] == 'geopoint' and isinstance(value, dict):

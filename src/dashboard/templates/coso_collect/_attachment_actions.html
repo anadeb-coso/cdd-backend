@@ -1,0 +1,9 @@
+{% load i18n %}{% comment %}
+    Actions d'une pièce jointe COSOCollect (comme /administrative-levels/documents/) : voir en grand (visionneuse
+    _attachment_viewer.html), ouvrir dans un nouvel onglet, télécharger, convertir (PDF -> Word / Word -> PDF).
+    Paramètres : url (vue protégée de la pièce jointe), kind ('image' | 'pdf' | 'word' | 'other'), name.
+    Un document Word est affiché converti en PDF (aucun service externe : les fichiers ne sont pas publics).
+{% endcomment %}
+{% if kind == 'word' %}{% with view_url=url|add:"?convert=pdf&inline=1" %}{% include "coso_collect/_attachment_actions_links.html" %}{% endwith %}
+{% elif kind == 'other' %}{% with view_url="" %}{% include "coso_collect/_attachment_actions_links.html" %}{% endwith %}
+{% else %}{% with view_url=url %}{% include "coso_collect/_attachment_actions_links.html" %}{% endwith %}{% endif %}

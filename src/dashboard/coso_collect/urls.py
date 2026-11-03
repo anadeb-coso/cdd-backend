@@ -40,6 +40,8 @@ urlpatterns = [
     path('record/<uuid:uuid>/save/', views.SubmissionSaveView.as_view(), name='save'),
     path('record/<uuid:uuid>/editable/', views.SubmissionEditableView.as_view(), name='editable'),
     path('record/<uuid:uuid>/delete/', views.SubmissionDeleteView.as_view(), name='delete_submission'),
+    path('<int:pk>/records/reopen/', views.SubmissionBulkReopenView.as_view(), name='reopen_submissions'),
+    path('<int:pk>/records/delete/', views.SubmissionBulkDeleteView.as_view(), name='delete_submissions'),
     # Correction des données d'une saisie par un administrateur (droit « Modifier les saisies »)
     path('record/<uuid:uuid>/admin-edit/', views.AdminEditSubmissionView.as_view(), name='admin_edit'),
     path('record/<uuid:uuid>/admin-save/', views.AdminSaveSubmissionView.as_view(), name='admin_save'),

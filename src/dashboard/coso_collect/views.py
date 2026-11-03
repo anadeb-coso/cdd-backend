@@ -1,8 +1,10 @@
 """Menu « COSOCollect » du Web DCC : création / publication des formulaires (web uniquement), saisie web,
 et, pour les administrateurs d'un formulaire, résumé, données, galerie, carte et exports."""
 import json
+import os
 import re
 import uuid
+from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,10 +22,11 @@ from django.views import generic
 
 from coso_collect import access, exports, stats
 from coso_collect.api_views import attachment_payload, serve_attachment
-from coso_collect.display import build_tree, cell_value, table_columns
+from coso_collect.display import build_tree, cell_value, media_kind, table_columns
+from cdd.my_librairies.doc_convert import DocConversionError, docx_bytes_to_pdf_bytes, pdf_bytes_to_docx_bytes
 from coso_collect.fields import geopoint_values, leaf_fields
 from coso_collect.form_files import export_json, export_xlsform, import_form_file
-from coso_collect.models import CollectAttachment, CollectForm, CollectFormAdmin, CollectSubmission
+from coso_collect.models import CollectAttachment, CollectForm, CollectFormAdmin, CollectSubmission, ranked_order
 from coso_collect.services import (
     CollectError, admin_update_submission, bump_version, discard_stored_file, has_own_submission,
     save_submission, set_submission_editable, store_attachment, submission_payload,
@@ -147,7 +150,7 @@ class FormListView(CollectPageMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
-        fillable = list(access.fillable_forms(user).order_by('-published_at', '-updated_at'))
+        fillable = list(access.fillable_forms(user).order_by(*ranked_order('-published_at', '-updated_at')))
         counts = {}
         for row in (access.own_submissions(user).filter(form__in=fillable)
                     .values('form_id', 'status').annotate(n=Count('pk'))):
@@ -159,7 +162,7 @@ class FormListView(CollectPageMixin, generic.TemplateView):
             access.administered_forms(user)
             .annotate(n_submissions=Count('submissions', distinct=True),
                       last_submission=Max('submissions__updated_at'))
-            .select_related('created_by').order_by('-updated_at')
+            .select_related('created_by').order_by(*ranked_order('-updated_at'))
         )
         rights = access.rights_by_form(user, administered)
         for form in administered:
@@ -456,12 +459,22 @@ class FormAdminsView(LoginRequiredMixin, FormAdminMixin, generic.View):
         if action == 'add':
             add_form = AddFormAdminForm(form, request.POST)
             if not add_form.is_valid():
-                messages.error(request, _('Choose a user who is not yet an administrator of this form.'))
+                messages.error(request, _('Choose users or groups whose members are not yet administrators of this form.'))
                 return redirect(back)
-            user = add_form.cleaned_data['user']
-            CollectFormAdmin.objects.create(form=form, user=user)  # lecture des données seule, par défaut
-            messages.success(request, _('%(name)s is now an administrator of this form: tick the rights to grant.')
-                             % {'name': user.get_full_name() or user.username})
+            users = add_form.new_admins()
+            if not users:
+                messages.warning(request, _('Nobody added: the users chosen (or the members of the groups chosen) are '
+                                            'already administrators, the creator, superusers or inactive accounts.'))
+                return redirect(back)
+            # Lecture des données seule, par défaut.
+            CollectFormAdmin.objects.bulk_create([CollectFormAdmin(form=form, user=user) for user in users],
+                                                 ignore_conflicts=True)
+            if len(users) == 1:
+                messages.success(request, _('%(name)s is now an administrator of this form: tick the rights to grant.')
+                                 % {'name': users[0].get_full_name() or users[0].username})
+            else:
+                messages.success(request, _('%(count)s administrators added to this form: tick the rights to grant.')
+                                 % {'count': len(users)})
         elif action == 'remove':
             try:
                 user_id = int(request.POST.get('user') or 0)
@@ -709,9 +722,36 @@ class AttachmentView(LoginRequiredMixin, generic.View):
         attachment = get_object_or_404(CollectAttachment.objects.select_related('form', 'submission'), pk=kwargs['aid'])
         if not access.can_view_attachment(request.user, attachment):
             raise PermissionDenied
-        response = serve_attachment(attachment)
-        if request.GET.get('download') and isinstance(response, FileResponse):
-            response['Content-Disposition'] = 'attachment; filename="{}"'.format(attachment.name.replace('"', ''))
+        convert = request.GET.get('convert')
+        if convert:
+            return self._converted(attachment, convert, inline=request.GET.get('inline') == '1')
+        if request.GET.get('download'):
+            # Lu depuis le stockage (S3 compris) : le nom du fichier est gardé.
+            return FileResponse(attachment.file.open('rb'), as_attachment=True,
+                                filename=attachment.name or os.path.basename(attachment.file.name),
+                                content_type=attachment.mime_type or None)
+        return serve_attachment(attachment)
+
+    @staticmethod
+    def _converted(attachment, target, inline=False):
+        """`target` = 'pdf' (Word -> PDF, affichable dans le navigateur avec `inline`) ou 'docx' (PDF -> Word)."""
+        kind = media_kind(attachment.name, attachment.mime_type)
+        if (target, kind) not in (('pdf', 'word'), ('docx', 'pdf')):
+            raise Http404
+        with attachment.file.open('rb') as fh:
+            source = fh.read()
+        try:
+            content = docx_bytes_to_pdf_bytes(source) if target == 'pdf' else pdf_bytes_to_docx_bytes(source)
+        except DocConversionError as exc:
+            return HttpResponse(str(exc), status=502, content_type='text/plain; charset=utf-8')
+        base = os.path.splitext(attachment.name or '')[0] or 'document'
+        response = HttpResponse(content, content_type='application/pdf' if target == 'pdf' else
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        disposition = 'inline' if inline and target == 'pdf' else 'attachment'
+        filename = f'{base}.{target}'
+        response['Content-Disposition'] = "{}; filename=\"{}\"; filename*=UTF-8''{}".format(
+            disposition, filename.encode('ascii', 'ignore').decode().replace('"', '') or f'document.{target}',
+            quote(filename))
         return response
 
 
@@ -794,6 +834,63 @@ class SubmissionDeleteView(LoginRequiredMixin, generic.View):
         submission.delete()
         messages.success(request, _('Record deleted.'))
         return redirect(_next_url(request, reverse('dashboard:coso_collect:data', args=[form.pk])))
+
+
+def _selected_uuids(request):
+    uuids = []
+    for value in request.POST.getlist('uuids'):
+        try:
+            uuids.append(uuid.UUID(value))
+        except ValueError:
+            continue
+    return uuids
+
+
+class SubmissionBulkDeleteView(LoginRequiredMixin, FormAdminMixin, generic.View):
+    """Suppression des enregistrements cochés sur la page Données (après confirmation dans la page)."""
+    required_right = 'delete_records'
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_obj
+        back = _next_url(request, reverse('dashboard:coso_collect:data', args=[form.pk]))
+        # Seulement des enregistrements de CE formulaire.
+        submissions = list(form.submissions.filter(uuid__in=_selected_uuids(request)).prefetch_related('attachments'))
+        if not submissions:
+            messages.warning(request, _('Select at least one record to delete.'))
+            return redirect(back)
+        for submission in submissions:
+            for attachment in submission.attachments.all():
+                discard_stored_file(attachment.file)
+        CollectSubmission.objects.filter(pk__in=[s.pk for s in submissions]).delete()
+        messages.success(request, _('%(count)s record(s) deleted.') % {'count': len(submissions)})
+        return redirect(back)
+
+
+class SubmissionBulkReopenView(LoginRequiredMixin, FormAdminMixin, generic.View):
+    """Réouverture à la modification des enregistrements envoyés cochés (après confirmation dans la page) ;
+    les autres (brouillons, complétés, déjà rouverts) sont ignorés."""
+    required_right = 'reopen_records'
+
+    def post(self, request, *args, **kwargs):
+        form = self.form_obj
+        back = _next_url(request, reverse('dashboard:coso_collect:data', args=[form.pk]))
+        selected = list(form.submissions.filter(uuid__in=_selected_uuids(request)))
+        if not selected:
+            messages.warning(request, _('Select at least one record to reopen.'))
+            return redirect(back)
+        reopened = 0
+        for submission in selected:
+            if submission.status == CollectSubmission.STATUS_SUBMITTED and not submission.editable:
+                set_submission_editable(submission, request.user, True)
+                reopened += 1
+        if reopened:
+            messages.success(request, _('%(count)s record(s) reopened for modification by their author.')
+                             % {'count': reopened})
+        skipped = len(selected) - reopened
+        if skipped:
+            messages.info(request, _('%(count)s record(s) left unchanged: not sent yet or already reopened.')
+                          % {'count': skipped})
+        return redirect(back)
 
 
 # ------------------------------------------------------------------------------- administration : données
@@ -917,6 +1014,7 @@ class GalleryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         for attachment in page.object_list:
             attachment.field_label = labels.get(generic_path(attachment.field_path), attachment.field_path)
             attachment.url = attachment_url(attachment.pk)
+            attachment.kind = media_kind(attachment.name, attachment.mime_type, attachment.is_image)
         params = self.request.GET.copy()
         params.pop('page', None)
         ctx.update({'page_obj': page, 'media_fields': media_fields, 'filters': self.request.GET,
