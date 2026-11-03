@@ -37,7 +37,7 @@ DEBUG = env.bool('DEBUG', False)
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', list, ['localhost'])
 
 # Bump to force browsers to reload cdd.css after a style change.
-VERSION_CUSTOM = env('VERSION_CUSTOM', default='2026.11.02.3')
+VERSION_CUSTOM = env('VERSION_CUSTOM', default='2026.11.03.1')
 
 
 # Application definition
@@ -219,6 +219,9 @@ MEDIA_URL = '/media/'
 
 
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 100MB
+
+# MAX data to upload
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
