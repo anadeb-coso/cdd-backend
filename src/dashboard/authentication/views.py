@@ -234,6 +234,9 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
             project_id = self.request.session.get('project_id')
             if not self.id and project_id:
                 instance.projects.add(*(Project.objects.get(id=project_id).build_the_tree_structure()))
+            if self.id and 'projects' in form.cleaned_data:
+                # Projets choisis sur la page de modification
+                instance.projects.set(form.cleaned_data['projects'])
 
             instance.save()
 

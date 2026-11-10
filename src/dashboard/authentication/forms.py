@@ -62,14 +62,26 @@ class CreateUserForm(forms.ModelForm):
         return cleaned_data
 
 class UpdateUserForm(forms.ModelForm):
-                
+    # Projets de l'utilisateur (Project.users, relation inverse : enregistrée par la vue)
+    projects = forms.ModelMultipleChoiceField(
+        queryset=None, required=False, label=gettext_lazy('Projects'),
+        widget=forms.SelectMultiple(attrs={'style': 'width:100%'}),
+    )
+
     class Meta:
         """docstring for Meta"""
         model = User
         fields = (
-            'username', 'last_name', 'first_name', 'email', 
-            'is_superuser', 'is_staff', 'is_active', 'groups', 'user_permissions'
+            'username', 'last_name', 'first_name', 'email',
+            'is_superuser', 'is_staff', 'is_active', 'groups', 'projects', 'user_permissions'
         )
+
+    def __init__(self, *args, **kwargs):
+        from process_manager.models import Project
+        super().__init__(*args, **kwargs)
+        self.fields['projects'].queryset = Project.objects.order_by('name')
+        if self.instance.pk and not self.is_bound:
+            self.initial['projects'] = list(self.instance.projects.values_list('pk', flat=True))
 
     def clean_email(self):
         """Nouvel e-mail : libre dans le DCC (hors ce compte et son facilitateur lié) et sur le MGP (hors son propre

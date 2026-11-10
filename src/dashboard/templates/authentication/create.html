@@ -62,6 +62,14 @@
 {% endblock javascript %}
 
 {% block select2 %}
+    <script type="text/javascript">
+        // Autocomplétion (recherche) sur toutes les listes de la page
+        $(function () {
+            $("form select").each(function () {
+                $(this).select2({ width: "100%", placeholder: "{% translate 'Click to select' %}", allowClear: !this.multiple });
+            });
+        });
+    </script>
     {% comment %} <script src="{% static 'js/dynamicRegionSelector.js' %}"></script>
     <script type="text/javascript">
         $("#id_administrative_level").select2({
