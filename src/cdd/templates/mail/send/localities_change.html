@@ -30,10 +30,11 @@
             {% if row.whole_country %}
                 <p><b>{% trans "Whole country (TOGO)" %}</b></p>
             {% else %}
-                {% if row.main %}<p><b>{% trans "Main level" %}</b> : {{ row.main }}</p>{% endif %}
-                {% if row.added %}<p class="added"><b>{% if row.first_definition %}{% trans "Villages" %}{% else %}{% trans "Villages added" %}{% endif %} ({{ row.added|length }})</b> : {{ row.added|join:", " }}</p>{% endif %}
-                {% if row.removed %}<p class="removed"><b>{% trans "Villages removed" %} ({{ row.removed|length }})</b> : {{ row.removed|join:", " }}</p>{% endif %}
-                {% if not row.first_definition %}<p><b>{% trans "Current villages" %} ({{ row.villages|length }})</b> : {% if row.villages %}{{ row.villages|join:", " }}{% else %}{% trans "None" %}{% endif %}</p>{% endif %}
+                <p><b>{% trans "Selected localities" %}</b> : {% if row.choices %}{{ row.choices|join:", " }}{% else %}{% trans "None" %}{% endif %}</p>
+                {% if not row.first_definition %}
+                    {% if row.added %}<p class="added"><b>{% trans "Added" %}</b> : {{ row.added|join:", " }}</p>{% endif %}
+                    {% if row.removed %}<p class="removed"><b>{% trans "Removed" %}</b> : {{ row.removed|join:", " }}</p>{% endif %}
+                {% endif %}
             {% endif %}
         {% endfor %}
         <br />

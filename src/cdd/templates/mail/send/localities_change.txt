@@ -5,9 +5,9 @@
 {{ row.section }}
 {% if row.whole_country %}{% trans "Whole country (TOGO)" %}
 {% else %}{% if row.main %}{% trans "Main level" %} : {{ row.main }}
-{% endif %}{% if row.added %}{% if row.first_definition %}{% trans "Villages" %}{% else %}{% trans "Villages added" %}{% endif %} ({{ row.added|length }}) : {{ row.added|join:", " }}
-{% endif %}{% if row.removed %}{% trans "Villages removed" %} ({{ row.removed|length }}) : {{ row.removed|join:", " }}
-{% endif %}{% if not row.first_definition %}{% trans "Current villages" %} ({{ row.villages|length }}) : {% if row.villages %}{{ row.villages|join:", " }}{% else %}{% trans "None" %}{% endif %}
-{% endif %}{% endif %}{% endfor %}
+{% endif %}{% trans "Selected localities" %} : {% if row.choices %}{{ row.choices|join:", " }}{% else %}{% trans "None" %}{% endif %}
+{% if not row.first_definition %}{% if row.added %}{% trans "Added" %} : {{ row.added|join:", " }}
+{% endif %}{% if row.removed %}{% trans "Removed" %} : {{ row.removed|join:", " }}
+{% endif %}{% endif %}{% endif %}{% endfor %}
 {% trans "For any question, please contact your supervisor." %}
 {% endautoescape %}

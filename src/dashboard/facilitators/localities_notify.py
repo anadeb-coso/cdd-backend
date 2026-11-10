@@ -15,15 +15,18 @@ def localities_mail_rows(tree, events):
     rows = []
     for event in events:
         whole_country = event.main_after == TOGO_ID
+        # Le mail reprend les choix faits dans les champs (niveaux sélectionnés), pas les villages déduits.
+        before = list(event.choices_before or [])
+        after = list(event.choices_after or [])
+        first_definition = event.choices_before is None and event.villages_before is None
         rows.append({
             'section': str(event.get_section_display()),
             'whole_country': whole_country,
-            'first_definition': event.villages_before is None,
+            'first_definition': first_definition,
             'main': tree.label_of(event.main_after) if event.main_after else None,
-            'choices': [tree.label_of(c) for c in event.choices_after or []],
-            'added': [tree.name_of(v) for v in event.added or []],
-            'removed': [tree.name_of(v) for v in event.removed or []],
-            'villages': [tree.name_of(v) for v in event.villages_after or []],
+            'choices': [tree.label_of(c) for c in after],
+            'added': [tree.label_of(c) for c in after if c not in before],
+            'removed': [tree.label_of(c) for c in before if c not in after],
         })
     return rows
 
