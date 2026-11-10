@@ -4230,6 +4230,12 @@ msgstr "Titre combiné, auteur…"
 msgid "Only records reopened for modification"
 msgstr "Uniquement les saisies rouvertes à la modification"
 
+msgid "Exclude develop mode accounts"
+msgstr "Retirer les comptes en mode développement"
+
+msgid "Exclude test mode accounts"
+msgstr "Retirer les comptes en mode test"
+
 msgid "record(s)"
 msgstr "saisie(s)"
 
@@ -6182,3 +6188,45 @@ msgstr "%(count)s enregistrement(s) inchangé(s) : pas encore envoyé(s) ou déj
 msgid "Word document shown converted to PDF: the conversion can take a few seconds."
 msgstr "Document Word affiché converti en PDF : la conversion peut prendre quelques secondes."
 
+
+msgid "User group of the author"
+msgstr "Groupe d'utilisateurs de l'auteur"
+
+msgid "Project of the author"
+msgstr "Projet de l'auteur"
+
+msgid "Projects of the group members"
+msgstr "Projets des membres des groupes"
+
+msgid "Optional: only the members of the groups chosen who are in one of these projects are added. The users chosen one by one are always added."
+msgstr "Facultatif : seuls les membres des groupes choisis qui sont dans l'un de ces projets sont ajoutés. Les utilisateurs choisis un par un sont toujours ajoutés."
+
+msgid "No project: open to people linked to no project too"
+msgstr "Aucun : ouvert aussi aux personnes reliées à aucun projet"
+
+msgid "All the projects: only people linked to at least one project"
+msgstr "Tous les projets : seulement les personnes reliées à au moins un projet"
+
+msgid "Only the projects selected"
+msgstr "Seulement les projets choisis"
+
+msgid "Linked projects"
+msgstr "Projets liés"
+
+msgid "Choose at least one project."
+msgstr "Choisissez au moins un projet."
+
+msgid "Choose the projects"
+msgstr "Choisissez les projets"
+
+msgid "Applies on the web and on the mobile, on top of the access above. The creator and the administrators always keep access."
+msgstr "S'applique sur le web et sur le mobile, en plus de l'accès ci-dessus. Le créateur et les administrateurs gardent toujours l'accès."
+
+msgid "Selected localities"
+msgstr "Localités choisies"
+
+msgid "Facilitator and validator"
+msgstr "Animateur et validateur"
+
+msgid "Read all other details on the DCC application"
+msgstr "Lisez tous les autres détails sur l'application DCC"
