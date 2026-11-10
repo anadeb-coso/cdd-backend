@@ -1,0 +1,27 @@
+{% load i18n %}{# Statut + période d'enregistrement (filtres communs, lus par filtered_submissions) #}
+<div class="col-md-{{ status_cols|default:3 }} mb-2">
+    <label class="small text-muted mb-1">{% translate "Status" %}</label>
+    <select name="status" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+        {% for key, label in statuses %}<option value="{{ key }}" {% if key in selected_statuses %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+</div>
+<div class="col-md-{{ author_cols|default:3 }} mb-2">
+    <label class="small text-muted mb-1">{% translate "User group of the author" %}</label>
+    <select name="group" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+        {% for g in filter_groups %}<option value="{{ g.pk }}" {% if g.pk|stringformat:"s" in selected_groups %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+    </select>
+</div>
+<div class="col-md-{{ author_cols|default:3 }} mb-2">
+    <label class="small text-muted mb-1">{% translate "Project of the author" %}</label>
+    <select name="project" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+        {% for p in filter_projects %}<option value="{{ p.pk }}" {% if p.pk|stringformat:"s" in selected_projects %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+</div>
+<div class="col-md-2 mb-2">
+    <label class="small text-muted mb-1">{% translate "From" %}</label>
+    <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
+</div>
+<div class="col-md-2 mb-2">
+    <label class="small text-muted mb-1">{% translate "To" %}</label>
+    <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control form-control-sm">
+</div>

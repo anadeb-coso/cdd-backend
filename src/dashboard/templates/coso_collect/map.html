@@ -18,12 +18,7 @@
             <label class="small text-muted mb-1">{% translate "Search" %}</label>
             <input type="search" name="q" value="{{ filters.q }}" class="form-control form-control-sm">
         </div>
-        <div class="col-md-3 mb-2">
-            <label class="small text-muted mb-1">{% translate "Status" %}</label>
-            <select name="status" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
-                {% for key, label in statuses %}<option value="{{ key }}" {% if key in selected_statuses %}selected{% endif %}>{{ label }}</option>{% endfor %}
-            </select>
-        </div>
+        {% include "coso_collect/_record_filters.html" with status_cols=2 %}
         <div class="col-md-3 mb-2">
             <label class="small text-muted mb-1">{% translate "GPS question" %}</label>
             <select id="cc-geo-field" class="form-control form-control-sm">
@@ -31,9 +26,11 @@
                 {% for f in geo_fields %}<option value="{{ f.path }}">{{ f.label }}</option>{% endfor %}
             </select>
         </div>
-        <div class="col-md-3 mb-2 d-flex" style="gap:.4rem;">
+        <div class="col-md-12 mb-2 d-flex flex-wrap align-items-center" style="gap:.6rem;">
+            {% include "coso_collect/_exclude_accounts.html" %}
             <button class="btn btn-sm btn-primary"><i class="fas fa-filter mr-1"></i>{% translate "Filter" %}</button>
-            {% if rights.export %}<a class="btn btn-sm btn-outline-success" href="{% url 'dashboard:coso_collect:export' collect_form.pk %}?download=geojson"><i class="fas fa-download mr-1"></i>GeoJSON</a>{% endif %}
+            {% if rights.export %}<a class="btn btn-sm btn-outline-success" href="{% url 'dashboard:coso_collect:export' collect_form.pk %}?download=geojson{% if query_string %}&amp;{{ query_string }}{% endif %}"><i class="fas fa-download mr-1"></i>GeoJSON</a>{% endif %}
+            <a class="btn btn-sm btn-link" href="{% url 'dashboard:coso_collect:map' collect_form.pk %}">{% translate "Reset" %}</a>
         </div>
     </div>
     <div class="small text-muted"><span id="cc-point-count">{{ points|length }}</span> {% translate "point(s)" %}</div>

@@ -18,6 +18,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, gettext_lazy
+from django.contrib.auth.models import Group
 from django.views import generic
 
 from coso_collect import access, exports, stats
@@ -33,12 +34,14 @@ from coso_collect.services import (
 )
 from coso_collect.titles import normalize_template, parse_iso
 from dashboard.mixins import PageMixin
+from process_manager.models import Project
 from dashboard.process_manager.tasks.form_design import (
     ADMIN_LEVEL_TYPES, DATASOURCE_OPS, choices_to_xlsx, list_datasources, query_datasource,
     read_sheet_table, validate_form_design, xlsx_to_choices,
 )
 
-from .forms import AddFormAdminForm, CollectFormCreateForm, CollectFormSettingsForm, ImportFormFileForm
+from .forms import (AddFormAdminForm, CollectFormCreateForm, CollectFormSettingsForm, ImportFormFileForm,
+                    ProjectScopeForm)
 
 XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -94,6 +97,28 @@ def admin_home_url(form, rights):
     return reverse(f'dashboard:coso_collect:{rights.first_tab()}', args=[form.pk])
 
 
+DEFAULT_FILTER_GROUP = 'CommunityFacilitator'
+
+
+class DefaultFiltersMixin:
+    """Filtres par défaut des pages de données (synthèse, données, galerie, carte, export) : comptes de
+    développement et de test retirés, groupe « facilitateur communautaire ». Les formulaires de filtres envoient
+    `filtered=1` : dès qu'il est présent, seuls les choix de l'utilisateur comptent (cases décochées comprises)."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'GET' and 'filtered' not in request.GET:
+            params = request.GET.copy()
+            params['filtered'] = '1'
+            params.setdefault('exclude_develop_mode', '1')
+            params.setdefault('exclude_training_mode', '1')
+            if 'group' not in params:
+                group_id = Group.objects.filter(name=DEFAULT_FILTER_GROUP).values_list('pk', flat=True).first()
+                if group_id:
+                    params.setlist('group', [str(group_id)])
+            request.GET = params
+        return super().dispatch(request, *args, **kwargs)
+
+
 class FormAdminMixin:
     """Formulaire `pk`, réservé à ses administrateurs ; `required_right` : droit exigé en plus
     (cf. CollectFormAdmin.RIGHTS), None = tout administrateur du formulaire."""
@@ -119,6 +144,11 @@ class FormAdminMixin:
             'tab': tab,
             'title': _('COSOCollect'),
             'submissions_count': form.submissions.count(),
+            # Choix des filtres « groupe d'utilisateurs » / « projet » de l'auteur (cf. filtered_submissions)
+            'filter_groups': Group.objects.order_by('name'),
+            'filter_projects': Project.objects.order_by('name'),
+            'selected_groups': self.request.GET.getlist('group'),
+            'selected_projects': self.request.GET.getlist('project'),
             'has_own_record': form.single_submission and has_own_submission(self.request.user, form),
             'breadcrumb': [
                 {'url': reverse('dashboard:coso_collect:list'), 'title': _('COSOCollect')},
@@ -175,6 +205,7 @@ class FormListView(CollectPageMixin, generic.TemplateView):
             'can_create': access.can_create_forms(user),
             'create_form': CollectFormCreateForm(),
             'import_form': ImportFormFileForm(),
+            'import_scope_form': ProjectScopeForm(),
         })
         return ctx
 
@@ -185,12 +216,14 @@ class FormCreateView(LoginRequiredMixin, generic.View):
             raise PermissionDenied
         form = CollectFormCreateForm(request.POST)
         if not form.is_valid():
-            messages.error(request, _('The title is required.'))
+            messages.error(request, _('The title is required.') if 'title' in form.errors
+                           else ' '.join(e for errs in form.errors.values() for e in errs))
             return redirect('dashboard:coso_collect:list')
         obj = form.save(commit=False)
         obj.created_by = request.user
         obj.form = []
         obj.save()
+        form.save_m2m()
         return redirect('dashboard:coso_collect:builder', pk=obj.pk)
 
 
@@ -200,6 +233,10 @@ class FormImportCreateView(LoginRequiredMixin, generic.View):
     def post(self, request, *args, **kwargs):
         if not access.can_create_forms(request.user):
             raise PermissionDenied
+        scope_form = ProjectScopeForm(request.POST)
+        if not scope_form.is_valid():
+            messages.error(request, ' '.join(e for errs in scope_form.errors.values() for e in errs))
+            return redirect('dashboard:coso_collect:list')
         uploaded = request.FILES.get('file')
         if not uploaded:
             messages.error(request, _('No file.'))
@@ -213,7 +250,9 @@ class FormImportCreateView(LoginRequiredMixin, generic.View):
             title=title[:255], description=result.get('description') or '', form=result.get('form') or [],
             title_template=result.get('title_template') or {}, created_by=request.user,
             single_submission=bool(result.get('single_submission')),
+            project_scope=scope_form.cleaned_data['project_scope'],
         )
+        obj.projects.set(scope_form.cleaned_data['projects'])
         if result.get('errors'):
             messages.warning(request, _('Partial import: ') + ' '.join(result['errors']))
         else:
@@ -915,10 +954,27 @@ def filtered_submissions(form, params):
         qs = qs.filter(created_at__date__lte=date_to)
     if params.get('editable') == '1':
         qs = qs.filter(editable=True)
+    # Groupe d'utilisateurs / projet de l'auteur : compte web auteur, ou compte web lié au facilitateur auteur ;
+    # pour les projets, aussi le facilitateur membre du projet (directement ou via son compte web).
+    def _ids(name):
+        values = params.getlist(name) if hasattr(params, 'getlist') else (params.get(name) or [])
+        return [int(v) for v in ([values] if isinstance(values, str) else values) if str(v).isdigit()]
+    group_ids, project_ids = _ids('group'), _ids('project')
+    if group_ids:
+        qs = qs.filter(pk__in=CollectSubmission.objects.filter(
+            Q(user__groups__in=group_ids) | Q(facilitator__user__groups__in=group_ids)).values('pk'))
+    if project_ids:
+        qs = qs.filter(pk__in=CollectSubmission.objects.filter(
+            Q(user__projects__in=project_ids) | Q(user__facilitator__projects__in=project_ids)
+            | Q(facilitator__projects__in=project_ids) | Q(facilitator__user__projects__in=project_ids)).values('pk'))
+    # Retirer les comptes de développement / de test : facilitateur auteur, ou facilitateur lié au compte web auteur
+    for flag in ('develop_mode', 'training_mode'):
+        if params.get(f'exclude_{flag}') == '1':
+            qs = qs.exclude(**{f'facilitator__{flag}': True}).exclude(**{f'user__facilitator__{flag}': True})
     return qs
 
 
-class DataView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
+class DataView(DefaultFiltersMixin, CollectPageMixin, FormAdminMixin, generic.TemplateView):
     template_name = 'coso_collect/data.html'
     required_right = 'view_data'
 
@@ -950,7 +1006,7 @@ class DataView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         return ctx
 
 
-class SummaryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
+class SummaryView(DefaultFiltersMixin, CollectPageMixin, FormAdminMixin, generic.TemplateView):
     template_name = 'coso_collect/summary.html'
     required_right = 'view_data'
 
@@ -959,11 +1015,16 @@ class SummaryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         form = self.form_obj
         days = stats.pick_range(self.request.GET.get('days'))
         scope = self.request.GET.get('scope') or 'all'
-        qs = self.submissions()
+        qs = filtered_submissions(form, self.request.GET)
+        params = self.request.GET.copy()
+        for key in ('days', 'scope'):
+            params.pop(key, None)
         report_qs = qs.filter(status=CollectSubmission.STATUS_SUBMITTED) if scope == 'submitted' else qs
         ctx.update({
             'overview': stats.overview(form, qs),
             'days': days, 'ranges': stats.RANGES, 'scope': scope,
+            'statuses': CollectSubmission.STATUSES, 'selected_statuses': self.request.GET.getlist('status'),
+            'filters': self.request.GET, 'filter_query': params.urlencode(),
             'charts': {
                 'timeline': stats.timeline(qs, days),
                 'by_author': stats.by_author(qs),
@@ -978,7 +1039,7 @@ class SummaryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         return ctx
 
 
-class GalleryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
+class GalleryView(DefaultFiltersMixin, CollectPageMixin, FormAdminMixin, generic.TemplateView):
     template_name = 'coso_collect/gallery.html'
     required_right = 'view_data'
 
@@ -996,7 +1057,10 @@ class GalleryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         q = (self.request.GET.get('q') or '').strip()
         if q:
             qs = qs.filter(Q(submission__title__icontains=q) | Q(name__icontains=q))
-        return qs
+        # Statut, période et comptes de développement / de test : mêmes filtres que la page Données (sans sa recherche)
+        params = self.request.GET.copy()
+        params.pop('q', None)
+        return qs.filter(submission__in=filtered_submissions(self.form_obj, params))
 
     def get(self, request, *args, **kwargs):
         if request.GET.get('download') == 'zip':
@@ -1018,11 +1082,12 @@ class GalleryView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         params = self.request.GET.copy()
         params.pop('page', None)
         ctx.update({'page_obj': page, 'media_fields': media_fields, 'filters': self.request.GET,
-                    'query_string': params.urlencode()})
+                    'query_string': params.urlencode(), 'statuses': CollectSubmission.STATUSES,
+                    'selected_statuses': self.request.GET.getlist('status')})
         return ctx
 
 
-class MapView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
+class MapView(DefaultFiltersMixin, CollectPageMixin, FormAdminMixin, generic.TemplateView):
     template_name = 'coso_collect/map.html'
     required_right = 'view_data'
 
@@ -1044,7 +1109,7 @@ class MapView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
                 })
         ctx.update({
             'geo_fields': geo_fields, 'points': points, 'statuses': CollectSubmission.STATUSES,
-            'selected_statuses': statuses, 'filters': self.request.GET,
+            'selected_statuses': statuses, 'filters': self.request.GET, 'query_string': self.request.GET.urlencode(),
             'mapbox_token': settings.MAPBOX_ACCESS_TOKEN,
             'map_center': {'lat': settings.DIAGNOSTIC_MAP_LATITUDE, 'lng': settings.DIAGNOSTIC_MAP_LONGITUDE,
                            'zoom': settings.DIAGNOSTIC_MAP_ZOOM},
@@ -1052,7 +1117,7 @@ class MapView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
         return ctx
 
 
-class ExportView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
+class ExportView(DefaultFiltersMixin, CollectPageMixin, FormAdminMixin, generic.TemplateView):
     template_name = 'coso_collect/export.html'
     required_right = 'export'
 
@@ -1087,6 +1152,7 @@ class ExportView(CollectPageMixin, FormAdminMixin, generic.TemplateView):
     def get_context_data(self, **kwargs):
         ctx = self.admin_context(super().get_context_data(**kwargs), 'export')
         ctx.update({'statuses': CollectSubmission.STATUSES, 'sources': CollectSubmission.SOURCES,
+                    'filters': self.request.GET,
                     'has_geopoint': any(f['type'] == 'geopoint' for f in leaf_fields(self.form_obj.form)),
                     'has_media': any(f['type'] in ('photo', 'file') for f in leaf_fields(self.form_obj.form))})
         return ctx

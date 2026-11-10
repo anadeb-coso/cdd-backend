@@ -56,6 +56,21 @@ class CollectForm(models.Model):
     # ceux sans classement viennent ensuite (ordre habituel : les plus récents d'abord).
     rank = models.PositiveIntegerField(null=True, blank=True, verbose_name=_('Ranking'))
 
+    # Projets liés : aucun (pas de condition), tous (personne reliée à au moins un projet) ou ceux choisis
+    # (personne reliée à l'un d'eux, par son compte web ou son facilitateur). S'ajoute à `access_scope`.
+    PROJECTS_NONE = 'none'
+    PROJECTS_ALL = 'all'
+    PROJECTS_SELECTED = 'selected'
+    PROJECT_SCOPES = [
+        (PROJECTS_NONE, _('No project: open to people linked to no project too')),
+        (PROJECTS_ALL, _('All the projects: only people linked to at least one project')),
+        (PROJECTS_SELECTED, _('Only the projects selected')),
+    ]
+    project_scope = models.CharField(max_length=20, choices=PROJECT_SCOPES, default=PROJECTS_NONE,
+                                     verbose_name=_('Linked projects'))
+    projects = models.ManyToManyField('process_manager.Project', blank=True, related_name='collect_forms',
+                                      verbose_name=_('Projects'))
+
     access_scope = models.CharField(max_length=20, choices=ACCESS_SCOPES, default=ACCESS_ALL,
                                     verbose_name=_('Who can fill in this form'))
     allowed_users = models.ManyToManyField(User, blank=True, related_name='collect_forms_allowed',

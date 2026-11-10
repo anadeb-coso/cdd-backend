@@ -20,7 +20,7 @@
 
 <h6 class="cc-section-title">{% translate "Forms to fill in" %} <span class="text-muted">({{ fillable_forms|length }})</span></h6>
 {% if fillable_forms %}
-<div class="row">
+<div class="row cc-hscroll">
     {% for f in fillable_forms %}
     <div class="col-xl-3 col-lg-4 col-md-6 mb-3 cc-item" data-search="{{ f.title|lower }} {{ f.description|lower }}">
         <div class="card cc-card">
@@ -121,10 +121,11 @@
                     <label for="id_title">{% translate "Title" %}</label>
                     {{ create_form.title }}
                 </div>
-                <div class="form-group mb-0">
+                <div class="form-group">
                     <label for="id_description">{% translate "Description" %}</label>
                     {{ create_form.description }}
                 </div>
+                {% include "coso_collect/_project_scope_fields.html" with pf=create_form uid="create" %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
@@ -143,7 +144,8 @@
             </div>
             <div class="modal-body">
                 <p class="text-muted small">{% translate "XLSForm workbook (.xlsx, e.g. exported from kobocollect or from this application) or COSOCollect file (.json). The combined title is read from the instance_name setting." %}</p>
-                <input type="file" name="file" accept=".xlsx,.json" class="form-control-file" required>
+                <input type="file" name="file" accept=".xlsx,.json" class="form-control-file mb-3" required>
+                {% include "coso_collect/_project_scope_fields.html" with pf=import_scope_form uid="import" %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
@@ -157,6 +159,7 @@
 
 {% block javascript %}
     {{ block.super }}
+    {% include "coso_collect/_project_scope_js.html" %}
     <script>
         (function () {
             var input = document.getElementById("cc-search");

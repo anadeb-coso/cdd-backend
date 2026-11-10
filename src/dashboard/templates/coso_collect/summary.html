@@ -9,6 +9,21 @@
 {% block content %}
 {% include "coso_collect/_admin_header.html" %}
 
+<form method="get" class="cc-filters">
+    <input type="hidden" name="days" value="{{ days }}">
+    <input type="hidden" name="scope" value="{{ scope }}">
+    <div class="form-row align-items-end">
+        {% include "coso_collect/_record_filters.html" with status_cols=4 %}
+        <div class="col-md-4 mb-2 d-flex flex-wrap" style="gap:.4rem;">
+            <button class="btn btn-sm btn-primary"><i class="fas fa-filter mr-1"></i>{% translate "Filter" %}</button>
+            <a class="btn btn-sm btn-link" href="{% url 'dashboard:coso_collect:summary' collect_form.pk %}">{% translate "Reset" %}</a>
+        </div>
+        <div class="col-md-12 d-flex flex-wrap align-items-center" style="gap:.6rem;">
+            {% include "coso_collect/_exclude_accounts.html" %}
+        </div>
+    </div>
+</form>
+
 <div class="cc-kpis">
     <div class="cc-kpi"><div class="cc-kpi-value">{{ overview.total }}</div><div class="cc-kpi-label">{% translate "Records" %}</div></div>
     {% for s in overview.by_status %}
@@ -23,7 +38,7 @@
         <h6 class="mb-0">{% translate "Records over time" %}</h6>
         <div class="btn-group btn-group-sm" role="group">
             {% for r in ranges %}
-                <a class="btn {% if r == days %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ r }}&amp;scope={{ scope }}">
+                <a class="btn {% if r == days %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ r }}&amp;scope={{ scope }}{% if filter_query %}&amp;{{ filter_query }}{% endif %}">
                     {% if r == 7 %}{% translate "7 days" %}{% elif r == 31 %}{% translate "31 days" %}{% elif r == 90 %}{% translate "3 months" %}{% else %}{% translate "12 months" %}{% endif %}
                 </a>
             {% endfor %}
@@ -47,8 +62,8 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-2" style="gap:.5rem;">
     <h6 class="cc-section-title m-0">{% translate "Reports by question" %}</h6>
     <div class="btn-group btn-group-sm">
-        <a class="btn {% if scope != 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=all">{% translate "All records" %}</a>
-        <a class="btn {% if scope == 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=submitted">{% translate "Sent records only" %}</a>
+        <a class="btn {% if scope != 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=all{% if filter_query %}&amp;{{ filter_query }}{% endif %}">{% translate "All records" %}</a>
+        <a class="btn {% if scope == 'submitted' %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="?days={{ days }}&amp;scope=submitted{% if filter_query %}&amp;{{ filter_query }}{% endif %}">{% translate "Sent records only" %}</a>
     </div>
 </div>
 <div class="row" id="cc-questions">

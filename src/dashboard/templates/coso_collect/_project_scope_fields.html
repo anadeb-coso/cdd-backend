@@ -1,0 +1,16 @@
+{% load i18n %}{# Projets liés au formulaire (création, import, paramètres). `pf` = formulaire, `uid` = suffixe unique. #}
+<div class="form-group cc-project-scope" data-uid="{{ uid }}">
+    <label>{{ pf.project_scope.label }}</label>
+    {% for radio in pf.project_scope %}
+        <div class="custom-control custom-radio">
+            <input type="radio" class="custom-control-input" name="project_scope" value="{{ radio.data.value }}" id="cc-ps-{{ uid }}-{{ forloop.counter }}" {% if radio.data.selected %}checked{% endif %}>
+            <label class="custom-control-label" for="cc-ps-{{ uid }}-{{ forloop.counter }}">{{ radio.choice_label }}</label>
+        </div>
+    {% endfor %}
+    <div class="cc-project-list mt-2 pl-3 border-left" style="border-color:#d7f2e6 !important;">
+        <label class="small text-muted mb-1">{% translate "Projects" %}</label>
+        {{ pf.projects }}
+        {% for e in pf.projects.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <small class="form-text text-muted">{% translate "Applies on the web and on the mobile, on top of the access above. The creator and the administrators always keep access." %}</small>
+</div>

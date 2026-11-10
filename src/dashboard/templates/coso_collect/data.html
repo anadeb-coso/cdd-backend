@@ -27,6 +27,18 @@
                 {% for key, label in sources %}<option value="{{ key }}" {% if filters.source == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
             </select>
         </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "User group of the author" %}</label>
+            <select name="group" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+                {% for g in filter_groups %}<option value="{{ g.pk }}" {% if g.pk|stringformat:"s" in selected_groups %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Project of the author" %}</label>
+            <select name="project" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+                {% for p in filter_projects %}<option value="{{ p.pk }}" {% if p.pk|stringformat:"s" in selected_projects %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+        </div>
         <div class="col-md-2 mb-2">
             <label class="small text-muted mb-1">{% translate "From" %}</label>
             <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control form-control-sm">
@@ -40,6 +52,7 @@
                 <input type="checkbox" class="custom-control-input" id="cc-editable" name="editable" value="1" {% if filters.editable == '1' %}checked{% endif %}>
                 <label class="custom-control-label small" for="cc-editable">{% translate "Only records reopened for modification" %}</label>
             </div>
+            {% include "coso_collect/_exclude_accounts.html" %}
             <input type="hidden" name="sort" value="{{ sort }}">
             <select name="per_page" class="form-control form-control-sm" style="width:auto;">
                 <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>

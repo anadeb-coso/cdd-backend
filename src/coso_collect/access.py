@@ -146,6 +146,13 @@ def _group_ids(actor):
     return group_ids
 
 
+def _project_ids(users, facilitators):
+    """Projets de la personne : comptes web membres du projet ou facilitateurs du projet (même personne)."""
+    from process_manager.models import Project
+    return list(Project.objects.filter(Q(users__in=list(users)) | Q(facilitators__in=list(facilitators)))
+                .values_list('pk', flat=True).distinct())
+
+
 def fill_filter(actor):
     """Condition « formulaires que `actor` peut remplir / consulter » (hors statut)."""
     users, facilitators = accounts(actor)
@@ -153,14 +160,19 @@ def fill_filter(actor):
         return Q(pk__in=[])
     if users and User.objects.filter(pk__in=users, is_superuser=True).exists():
         return Q()
-    return (
+    audience = (
         Q(access_scope=CollectForm.ACCESS_ALL)
         | Q(allowed_users__in=list(users))
         | Q(allowed_facilitators__in=list(facilitators))
         | Q(allowed_groups__in=list(_group_ids(actor)))
-        | Q(created_by_id__in=list(users))
-        | Q(admin_rights__user_id__in=list(users))
     )
+    project_ids = _project_ids(users, facilitators)
+    in_projects = Q(project_scope=CollectForm.PROJECTS_NONE)
+    if project_ids:
+        in_projects |= Q(project_scope=CollectForm.PROJECTS_ALL)
+        in_projects |= Q(project_scope=CollectForm.PROJECTS_SELECTED, projects__in=project_ids)
+    # Créateur et administrateurs : toujours accès, quels que soient les projets.
+    return (audience & in_projects) | Q(created_by_id__in=list(users)) | Q(admin_rights__user_id__in=list(users))
 
 
 def fillable_forms(actor, include_closed=True):

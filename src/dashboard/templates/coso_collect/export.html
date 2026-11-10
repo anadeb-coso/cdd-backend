@@ -56,6 +56,18 @@
                     </select>
                 </div>
                 <div class="form-group col-md-6">
+                    <label>{% translate "User group of the author" %}</label>
+                    <select name="group" class="form-control" multiple data-placeholder="{% translate 'All' %}">
+                        {% for g in filter_groups %}<option value="{{ g.pk }}" {% if g.pk|stringformat:"s" in selected_groups %}selected{% endif %}>{{ g.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>{% translate "Project of the author" %}</label>
+                    <select name="project" class="form-control" multiple data-placeholder="{% translate 'All' %}">
+                        {% for p in filter_projects %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
                     <label>{% translate "Recorded from" %}</label>
                     <input type="date" name="date_from" class="form-control">
                 </div>
@@ -72,10 +84,11 @@
                 <input type="checkbox" class="custom-control-input" id="cc-split" name="split_multiple" value="1">
                 <label class="custom-control-label" for="cc-split">{% translate "Multiple choice: one column per choice (1/0)" %}</label>
             </div>
-            <div class="custom-control custom-checkbox mb-3">
+            <div class="custom-control custom-checkbox">
                 <input type="checkbox" class="custom-control-input" id="cc-media-urls" name="media_urls" value="1" checked>
                 <label class="custom-control-label" for="cc-media-urls">{% translate "Add the link of the photos and documents (_URL column)" %}</label>
             </div>
+            <div class="mb-3">{% include "coso_collect/_exclude_accounts.html" with large=True %}</div>
             <input type="hidden" name="group_headers" value="0" id="cc-group-headers-off" disabled>
             <button class="btn btn-primary rounded-xl"><i class="fas fa-file-download mr-1"></i>{% translate "Download" %}</button>
         </form>

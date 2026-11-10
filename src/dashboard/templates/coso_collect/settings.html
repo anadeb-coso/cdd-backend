@@ -57,6 +57,8 @@
                 </div>
             </div>
 
+            {% include "coso_collect/_project_scope_fields.html" with pf=form uid="settings" %}
+
             <h6 class="cc-section-title mt-4">{% translate "Records per person" %}</h6>
             <div class="form-group">
                 <div class="custom-control custom-switch">
@@ -222,6 +224,11 @@
                 {{ add_admin_form.groups }}
                 <small class="form-text text-muted">{% translate "All the members of the groups chosen are added (except superusers, the creator and the current administrators)." %}</small>
             </div>
+            <div class="form-group col-md-6 offset-md-6">
+                <label for="{{ add_admin_form.projects.id_for_label }}" class="small text-muted">{{ add_admin_form.projects.label }}</label>
+                {{ add_admin_form.projects }}
+                <small class="form-text text-muted">{% translate "Optional: only the members of the groups chosen who are in one of these projects are added. The users chosen one by one are always added." %}</small>
+            </div>
         </div>
         <button class="btn btn-outline-primary btn-sm rounded-xl"><i class="fas fa-user-plus mr-1"></i>{% translate "Add" %}</button>
         <small class="text-muted d-block mt-1">{% translate "The new administrators first receive the reading of the data only." %}</small>
@@ -233,6 +240,7 @@
 
 {% block javascript %}
     {{ block.super }}
+    {% include "coso_collect/_project_scope_js.html" %}
     <script>
         $(function () {
             function toggle() {

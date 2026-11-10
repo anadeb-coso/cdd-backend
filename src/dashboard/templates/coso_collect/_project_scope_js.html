@@ -1,0 +1,26 @@
+{% load i18n %}<script>
+    // Liste des projets visible seulement pour « Projets choisis », avec recherche (autocomplétion Select2)
+    $(function () {
+        $(".cc-project-scope").each(function () {
+            var $box = $(this);
+            var $select = $box.find(".cc-project-list select");
+            function initSelect() {
+                if (!$select.length || !$.fn.select2) return;
+                if ($select.hasClass("select2-hidden-accessible")) $select.select2("destroy");
+                $select.select2({
+                    width: "100%",
+                    placeholder: $select.data("placeholder") || "{% translate 'Choose the projects'|escapejs %}",
+                    allowClear: true,
+                    dropdownParent: $box.closest(".modal").length ? $box.closest(".modal") : $(document.body)
+                });
+            }
+            function toggle() {
+                var show = $box.find("input[name='project_scope']:checked").val() === "selected";
+                $box.find(".cc-project-list").toggle(show);
+                if (show) initSelect(); // initialisé une fois visible pour une largeur correcte
+            }
+            $box.on("change", "input[name='project_scope']", toggle);
+            toggle();
+        });
+    });
+</script>

@@ -1,0 +1,10 @@
+{% load i18n %}{# Retrait des comptes de développement / de test (lu par filtered_submissions) #}
+<input type="hidden" name="filtered" value="1">
+<div class="custom-control custom-checkbox">
+    <input type="checkbox" class="custom-control-input" id="cc-exclude-develop" name="exclude_develop_mode" value="1" {% if filters.exclude_develop_mode == '1' %}checked{% endif %}>
+    <label class="custom-control-label{% if not large %} small{% endif %}" for="cc-exclude-develop">{% translate "Exclude develop mode accounts" %}</label>
+</div>
+<div class="custom-control custom-checkbox">
+    <input type="checkbox" class="custom-control-input" id="cc-exclude-training" name="exclude_training_mode" value="1" {% if filters.exclude_training_mode == '1' %}checked{% endif %}>
+    <label class="custom-control-label{% if not large %} small{% endif %}" for="cc-exclude-training">{% translate "Exclude test mode accounts" %}</label>
+</div>
