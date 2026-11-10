@@ -123,7 +123,10 @@ def attach_cantons_details(supervisors, projects, task_filter=None):
 
     for supervisor in supervisors:
         details = {}
+        allowed = supervisor.get('_project_ids')
         for cycle_id, (project, cycle_name) in cycles.items():
+            if allowed is not None and project.id not in allowed:
+                continue  # projet où ce superviseur n'intervient pas
             mis_project_id = mis_projects.get(project.name)
             cantons = []
             for canton_id in sorted(supervisor.get('_canton_ids', []), key=lambda i: names.get(i, '')):
@@ -250,12 +253,20 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
 
         projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
         task_filter = supervisors_task_filter(self.request)
+        # Projets de chaque superviseur : sur sa ligne, seuls ceux où il intervient sont comptés
+        projects_of = defaultdict(set)
+        for user_id, project_id in Project.users.through.objects.filter(
+            user_id__in=[s[0] for s in _supervisors.values()], project_id__in=[p.id for p in projects],
+        ).values_list('user_id', 'project_id'):
+            projects_of[user_id].add(project_id)
 
         for supervisor in supervisors:
             grm_client.attach_administrative_regions_objects(supervisor)
             supervisor['user_object_cdd_id'] = _supervisors[supervisor['representative']['email']][0]
             supervisor['user_object_cdd_username'] = _supervisors[supervisor['representative']['email']][2]
             supervisor['user_object_cdd_full_name'] = f"{_supervisors[supervisor['representative']['email']][3]} {_supervisors[supervisor['representative']['email']][4]}"
+            supervisor['_project_ids'] = projects_of[supervisor['user_object_cdd_id']]
+            supervisor_projects = [p for p in projects if p.id in supervisor['_project_ids']]
 
 
             administrative_regions_objects = supervisor.get('administrative_regions_objects')
@@ -282,8 +293,8 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
             aggregated_data = (
                 AggregatedStatus.objects
                 .filter(
-                    project_id__in=[p.id for p in projects],
-                    cycle_id__in=[c.id for p in projects for c in p.cycle_set.all()],
+                    project_id__in=[p.id for p in supervisor_projects],
+                    cycle_id__in=[c.id for p in supervisor_projects for c in p.cycle_set.all()],
                     facilitator=None,
                     administrative_level_id__in=[int(_id) for _id in cantons_stabilized_ids],
                     **task_filter
@@ -305,7 +316,7 @@ class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
                 for item in aggregated_data
             }
             
-            for project in projects:
+            for project in supervisor_projects:
                 
                 invalidation_notifications[project.name] = {'project_id': project.name}
 
