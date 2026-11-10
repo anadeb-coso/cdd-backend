@@ -40,7 +40,7 @@ def send_invalidation_reviewed_mail(request, task, facilitator, fields_updated, 
                     _("Activity"): task.get("activity_name"),
                     _("Task"): task.get("name"),
                     _("Location Name"): administrative_region_name,
-                    _("Modified variable(s)"): fields_updated + attachments_updated,
+                    _("Modified variable(s)"): ", ".join(str(x) for x in list(fields_updated or []) + list(attachments_updated or [])),
                     _("Date"): task['last_updated'],
                 },
                 "user": {

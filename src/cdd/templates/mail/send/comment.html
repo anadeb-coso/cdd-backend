@@ -1,34 +1,46 @@
-
-{% for k, v in user.items %}
-    <p>
-        <span style="font-weight: bold;">{{ k }}</span>: {{ v }}
-    </p>
-{% endfor %}
-
-<div style='width: 75% !important; margin: auto !important;border-style: double !important; padding-bottom: 50px !important;'>
-    <div style="margin-left: 17px;">
-        {% for k, v in datas.items %}
-            <p {% if forloop.counter == 1 %}style="font-weight: bold;"{% endif %}>
-                <span style="font-weight: bold;">{{ k }}</span>: {{ v }}
-            </p>
-        {% endfor %}
+{% load i18n %}<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+{% comment %}Mail des tâches (invalidation, revue d'une tâche invalidée, commentaires). Couleur selon le titre :
+orange = revue, rouge = invalidation, vert = autres. Styles en ligne pour les clients mail.{% endcomment %}
+{% for k, v in datas.items %}{% if forloop.first %}{% with t=v|stringformat:"s"|lower %}{% if "revue" in t or "review" in t %}{% firstof "#e67e22" as color %}{% elif "invalid" in t %}{% firstof "#c0392b" as color %}{% else %}{% firstof "rgb(12, 160, 34)" as color %}{% endif %}
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+<div style="max-width: 750px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+    <div style="background-color: {{ color }}; color: #ffffff; text-align: center; padding: 20px;">
+        <h1 style="margin: 0; font-size: 22px;">{{ v }}</h1>
     </div>
-    
-    <div style="text-align: center !important; margin: auto !important;">
-        <a href='{{ url }}' style='margin-bottom: 50px !important;cursor: pointer;'><button style='display: inline-block;
-        padding: 10px 15px;
-        font-size: 11px;
-        cursor: pointer;
-        text-align: center;
-        text-decoration: none;
-        outline: none;
-        color: #fff;
-        background-color: #4CAF50;
-        border: none;
-        border-radius: 15px;
-        box-shadow: 0 9px #999;'>
-                Lisez tous les autres détails sur l'application DCC
-            </button></a>
+    <div style="padding: 20px; color: #333333;">
+        <h2 style="font-size: 18px; color: {{ color }}; margin: 0 0 8px;">{% trans "Facilitator and validator" %}</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            {% for uk, uv in user.items %}
+            <tr>
+                <td style="padding: 6px 10px; border-bottom: 1px solid #eeeeee; font-weight: bold; width: 35%;">{{ uk }}</td>
+                <td style="padding: 6px 10px; border-bottom: 1px solid #eeeeee;">{{ uv|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <h2 style="font-size: 18px; color: {{ color }}; margin: 0 0 8px;">{% trans "Task" %}</h2>
+        <table style="width: 100%; border-collapse: collapse; border-left: 4px solid {{ color }}; background: #fafafa;">
+            {% for dk, dv in datas.items %}{% if not forloop.first %}
+            <tr>
+                <td style="padding: 6px 10px; border-bottom: 1px solid #eeeeee; font-weight: bold; width: 35%;">{{ dk }}</td>
+                <td style="padding: 6px 10px; border-bottom: 1px solid #eeeeee;">{{ dv|default:"-" }}</td>
+            </tr>
+            {% endif %}{% endfor %}
+        </table>
+        {% if url %}
+        <div style="text-align: center; margin: 25px 0 10px;">
+            <a href="{{ url }}" style="display: inline-block; padding: 12px 22px; font-size: 14px; color: #ffffff; background-color: {{ color }}; border-radius: 6px; text-decoration: none;">{% trans "Read all other details on the DCC application" %}</a>
+        </div>
+        {% endif %}
     </div>
-
+    <div style="background-color: #f4f4f4; text-align: center; color: #999999; padding: 10px; font-size: 12px;">
+        <p style="margin: 0;">&copy; {% now "Y" %} Projet de Cohésion Sociale des régions nord du Golfe de Guinée. Tous droits réservés.</p>
+    </div>
 </div>
+</body>
+{% endwith %}{% endif %}{% endfor %}
+</html>
