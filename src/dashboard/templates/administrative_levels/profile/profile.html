@@ -884,7 +884,7 @@
         };
         window.TFB_RELOAD_PLANNING_CYCLE = (typeof reloadPlanningCycle === 'function') ? reloadPlanningCycle : null;
     </script>
-    <script src="{% static 'dashboard/js/task_detail_modal.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_detail_modal.js' %}?v={{ VERSION_CUSTOM }}"></script>
 
     {% comment %} Ancienne implémentation dupliquée (validate/invalidate/complete)
          remplacée par static/dashboard/js/task_detail_modal.js ci-dessus. {% endcomment %}

@@ -252,6 +252,11 @@
                   );
                 }
               }
+              // Crochet optionnel de la page hôte : met à jour la ligne de la
+              // liste (badge de statut) sans rafraîchir la page.
+              if (typeof window.TFB_ON_TASK_VALIDATION === "function") {
+                try { window.TFB_ON_TASK_VALIDATION(doneTaskId, String(current_action_code) === "1", response); } catch (e) { /* no-op */ }
+              }
               $('#modal_comment').modal('hide');
               current_task_id = null;
               current_action_code = null;

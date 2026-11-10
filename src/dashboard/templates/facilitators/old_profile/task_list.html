@@ -181,7 +181,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-sm-3 text-right text_completed_{{ task|get:'_id' }}">
+            <div class="col-sm-3 text-right text_completed_{{ task|get:'_id' }}" data-completed="{% if task.completed %}1{% else %}0{% endif %}" data-has-response="{% if task.form_response and task.form_response|length != 0 %}1{% else %}0{% endif %}">
                 {% comment %} {% if task.completed %}
                     <div class="status-badge badge-completed">
                         {% translate 'Completed' %}

@@ -185,8 +185,28 @@ input {
             taskDetailModalTmpl: "{% url 'dashboard:facilitators:task_detail_modal' 'no_sql_db_name' %}"
         };
         window.TFB_RELOAD_PLANNING_CYCLE = (typeof reloadPlanningCycle === 'function') ? reloadPlanningCycle : null;
+        // Après validation/invalidation dans le modal : met à jour le statut de la ligne
+        // de la liste (mêmes libellés que task_list.html), sans rafraîchir la page.
+        window.TFB_ON_TASK_VALIDATION = function (taskId, validated) {
+            var $status = $('.text_completed_' + taskId);
+            var completed = String($status.data('completed')) === '1';
+            var badge;
+            if (validated) {
+                badge = completed
+                    ? '<div class="status-badge badge-completed">{% translate "Validated"|escapejs %}</div>'
+                    : '<div class="status-badge badge-pending">{% translate "In progress"|escapejs %}</div>';
+            } else {
+                badge = completed
+                    ? '<div class="status-badge-no-size badge-danger">{% translate "Invalidated (Not returned after invalidation)"|escapejs %}</div>'
+                    : '<div class="status-badge-no-size badge-secondary">{% translate "Invalidated (Reset in progress)"|escapejs %}</div>';
+            }
+            if (completed || String($status.data('has-response')) === '1') $status.html(badge);
+            $('.text_' + taskId).html(validated
+                ? '<i class="fas fa-check success-color"></i> {% translate "Task validated"|escapejs %}'
+                : '<i class="fas fa-times warning-color"></i> {% translate "Task not validated"|escapejs %}');
+        };
     </script>
-    <script src="{% static 'dashboard/js/task_detail_modal.js' %}"></script>
+    <script src="{% static 'dashboard/js/task_detail_modal.js' %}?v={{ VERSION_CUSTOM }}"></script>
 
     <script type="text/javascript">
         let spin = $('#spin');
