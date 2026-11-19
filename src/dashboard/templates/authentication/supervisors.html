@@ -179,21 +179,28 @@
                     </div>
                 </div>
                 <div class="p-2 row task-filters">
-                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                    <div class="col-12 col-lg-3 mb-2 mb-lg-0">
+                        <select id="filter_projects" class="form-control" multiple>
+                            {% for project in filter_projects %}
+                                <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-3 mb-2 mb-lg-0">
                         <select id="filter_phases" class="form-control" multiple>
                             {% for phase in filter_phases %}
                                 <option value="{{ phase.key }}">{{ phase.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                    <div class="col-12 col-lg-3 mb-2 mb-lg-0">
                         <select id="filter_activities" class="form-control" multiple>
                             {% for activity in filter_activities %}
                                 <option value="{{ activity.key }}" data-phase="{{ activity.phase }}">{{ activity.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                    <div class="col-12 col-lg-3 mb-2 mb-lg-0">
                         <select id="filter_tasks" class="form-control" multiple>
                             {% for task in filter_tasks %}
                                 <option value="{{ task.key }}" data-phase="{{ task.phase }}" data-activity="{{ task.activity }}">{{ task.name }}</option>
@@ -206,6 +213,10 @@
                         <i class="fas fa-filter mr-1"></i>{% translate "Apply" %}
                     </button>
                     <small class="text-muted ml-2 d-none" id="filters_pending">{% translate "Filters changed: click Apply to update the table." %}</small>
+                    <a href="#" class="btn btn-outline-success btn-sm ml-auto" id="export_supervisors"
+                       title="{% translate 'Zone supervisors with their cantons, and the cantons with their zone supervisor (selected projects and area)' %}">
+                        <i class="fas fa-file-excel mr-1"></i>{% translate "Export zone supervisors and cantons (Excel)" %}
+                    </a>
                 </div>
             </div>
 
@@ -283,6 +294,27 @@
         }
 
         // Chargement du tableau : uniquement au démarrage, sur « Appliquer » et sur « Effacer tous les filtres »
+        function currentFilters() {
+            return {
+                id_region: id_region.val(),
+                id_prefecture: id_prefecture.val(),
+                id_commune: id_commune.val(),
+                id_canton: id_canton.val(),
+                id_village: id_village.val(),
+                type_field: currentGeoType(),
+                projects: ($('#filter_projects').val() || []).join(','),
+                phases: ($('#filter_phases').val() || []).join(','),
+                activities: ($('#filter_activities').val() || []).join(','),
+                tasks: ($('#filter_tasks').val() || []).join(',')
+            };
+        }
+
+        // Export Excel : superviseurs de zone + cantons, avec les filtres projets / zone choisis
+        $("#export_supervisors").on("click", function (e) {
+            e.preventDefault();
+            window.location.href = "{% url 'dashboard:authentication:supervisors_export' %}?" + $.param(currentFilters());
+        });
+
         function loadSupervisors() {
             $('#filters_pending').addClass('d-none');
             spin.show();
@@ -290,17 +322,7 @@
             $.ajax({
                 type: "GET",
                 url: "{% url 'dashboard:authentication:supervisors_list' %}",
-                data: {
-                    id_region: id_region.val(),
-                    id_prefecture: id_prefecture.val(),
-                    id_commune: id_commune.val(),
-                    id_canton: id_canton.val(),
-                    id_village: id_village.val(),
-                    type_field: currentGeoType(),
-                    phases: ($('#filter_phases').val() || []).join(','),
-                    activities: ($('#filter_activities').val() || []).join(','),
-                    tasks: ($('#filter_tasks').val() || []).join(',')
-                },
+                data: currentFilters(),
                 success: function (response) {
                     spin.hide();
                     supervisors.html(response);
@@ -369,6 +391,7 @@
         $("#clear_all_filters").on("click", function () {
             $('.supervisors-filter input').val('');
             $('.supervisors-filter select').val(null).trigger('change.select2');
+            $('#filter_projects').val(null).trigger('change.select2');
             $('#filter_phases').val(null).trigger('change.select2');
             $('#filter_activities').val(null);
             refreshTaskFilterOptions();
@@ -404,6 +427,7 @@
             allowClear: true,
         });
 
+        $("#filter_projects").select2({placeholder: "{% translate 'All projects' %}", allowClear: true, width: '100%'});
         $("#filter_phases").select2({placeholder: "{% translate 'Phases' %}", allowClear: true, width: '100%'});
         $("#filter_activities").select2({placeholder: "{% translate 'Activities' %}", allowClear: true, width: '100%'});
         $("#filter_tasks").select2({placeholder: "{% translate 'Tasks' %}", allowClear: true, width: '100%'});

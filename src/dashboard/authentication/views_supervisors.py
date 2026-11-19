@@ -47,6 +47,17 @@ def _task_keys(task):
     return phase, activity, f"{activity}|{normaliser_chaine(task.name)}"
 
 
+def supervisors_selected_projects(request):
+    """Projets retenus sur /supervisors/ : ceux de l'utilisateur (comptés sur la page), limités aux projets choisis
+    dans le filtre « Projets » (`projects=<id>,<id>`). Renvoie (projets, choix_effectif) ; sans choix (ou choix hors
+    de ses projets) : tous ses projets et False."""
+    projects = Project.objects.filter(users__in=[request.user.id]).distinct()
+    chosen = {int(v) for v in _keys_param(request, 'projects') if v.isdigit()}
+    if chosen and projects.filter(id__in=chosen).exists():
+        return projects.filter(id__in=chosen), True
+    return projects, False
+
+
 def supervisor_filter_tasks(user):
     """Tâches des projets de l'utilisateur (ceux comptés sur /supervisors/), dans l'ordre du processus."""
     return Task.objects.filter(project__users__in=[user.id]).select_related('phase', 'activity').distinct().order_by(
@@ -174,6 +185,8 @@ class SupervisrosListView(PageMixin, LoginRequiredMixin, generic.ListView):
 
         # Choix des filtres phases / activités / tâches : par nom, sur tous les projets de l'utilisateur
         context['filter_phases'], context['filter_activities'], context['filter_tasks'] = supervisors_filter_choices(self.request.user)
+        # Filtre « Projets » : ceux de l'utilisateur (vide = tous)
+        context['filter_projects'] = Project.objects.filter(users__in=[self.request.user.id]).distinct().order_by('name')
         
         return context
     
@@ -197,61 +210,58 @@ def supervisors_localities_docs(user_ids):
     return docs
 
 
+def geo_filter_id(request):
+    """Niveau géographique filtré sur /supervisors/ (le plus fin choisi, `type_field`) : son identifiant, 0 si le
+    type ne correspond à aucun niveau renseigné (aucun superviseur), None sans filtre."""
+    get = request.GET.get
+    type_field = get('type_field')
+    if not ((get('id_region') or get('id_prefecture') or get('id_commune') or get('id_canton') or get('id_village'))
+            and type_field):
+        return None
+    for level in ('region', 'prefecture', 'commune', 'canton', 'village'):
+        if get(f'id_{level}') and type_field == level:
+            return get(f'id_{level}')
+    return 0
+
+
+def selected_supervisor_docs(request):
+    """Superviseurs listés sur /supervisors/ (tableau et export Excel) : (projets comptés, projets dont les
+    superviseurs sont listés, {email: [id, email, username, nom, prénom]}, documents de localités filtrés par le
+    niveau géographique)."""
+    # Filtre « Projets » : sans choix, projets de l'utilisateur et superviseurs du projet de session (comme avant) ;
+    # avec choix, seuls ces projets sont comptés et les superviseurs listés sont ceux de l'un d'eux.
+    projects, projects_chosen = supervisors_selected_projects(request)
+    projects = projects.prefetch_related("cycle_set")
+    listed_projects = list(projects) if projects_chosen else list(Project.objects.filter(id=request.session.get('project_id')))
+    _supervisors = {s[1]: list(s) for s in User.objects.filter(
+        groups__name__in=['Supervisor'],
+        is_active=True,
+        projects__in=[p.id for p in projects] if projects_chosen else [request.session.get('project_id')]
+    ).distinct().values_list('id', 'email', 'username', 'last_name', 'first_name')}
+    # Localités des superviseurs lues dans CDD (copie de leur EADL du GRM), sans appel au GRM
+    supervisors = supervisors_localities_docs([s[0] for s in _supervisors.values()])
+
+    _id = geo_filter_id(request)
+    if _id is not None:
+        liste_villages = get_cascade_villages_by_administrative_level_id(_id)
+
+        # Comme `grm_client.get_facilitator_by_village` : un niveau choisi ou un village de la zone, sans les
+        # villages additionnels.
+        area_ids = {str(v['administrative_id']) for v in liste_villages}
+        supervisors = [
+            doc for doc in supervisors
+            if area_ids.intersection(doc['administrative_regions'] + doc['smallest_administrative_level_ids'])
+        ]
+    return projects, listed_projects, _supervisors, supervisors
+
+
 class SupervisorsListTableView(LoginRequiredMixin, generic.ListView):
     template_name = 'authentication/supervisors_list.html'
     context_object_name = 'supervisors'
 
     def get_results(self):
-        id_region = self.request.GET.get('id_region')
-        id_prefecture = self.request.GET.get('id_prefecture')
-        id_commune = self.request.GET.get('id_commune')
-        id_canton = self.request.GET.get('id_canton')
-        id_village = self.request.GET.get('id_village')
-        type_field = self.request.GET.get('type_field')
-        
-        _id = 0
+        projects, _listed_projects, _supervisors, supervisors = selected_supervisor_docs(self.request)
 
-        supervisors = []
-        _supervisors = {s[1]: list(s) for s in User.objects.filter(
-            groups__name__in=['Supervisor'],
-            is_active=True,
-            projects__in=[self.request.session.get('project_id')]
-        ).values_list('id', 'email', 'username', 'last_name', 'first_name')}
-        # Localités des superviseurs lues dans CDD (copie de leur EADL du GRM), sans appel au GRM
-        supervisors = supervisors_localities_docs([s[0] for s in _supervisors.values()])
-
-        if (id_region or id_prefecture or id_commune or id_canton or id_village) and type_field:
-            _type = None
-            if id_region and type_field == "region":
-                _type = "region"
-                _id = id_region
-            elif id_prefecture and type_field == "prefecture":
-                _type = "prefecture"
-                _id = id_prefecture
-            elif id_commune and type_field == "commune":
-                _type = "commune"
-                _id = id_commune
-            elif id_canton and type_field == "canton":
-                _type = "canton"
-                _id = id_canton
-            elif id_village and type_field == "village":
-                _type = "village"
-                _id = id_village
-                
-            
-            if type(_id) is not list:
-                liste_villages = []
-                liste_villages = get_cascade_villages_by_administrative_level_id(_id)
-
-                # Comme `grm_client.get_facilitator_by_village` : un niveau choisi ou un village de la zone, sans les
-                # villages additionnels.
-                area_ids = {str(v['administrative_id']) for v in liste_villages}
-                supervisors = [
-                    doc for doc in supervisors
-                    if area_ids.intersection(doc['administrative_regions'] + doc['smallest_administrative_level_ids'])
-                ]
-
-        projects = Project.objects.filter(users__in=[self.request.user.id]).prefetch_related("cycle_set")
         task_filter = supervisors_task_filter(self.request)
         # Projets de chaque superviseur : sur sa ligne, seuls ceux où il intervient sont comptés
         projects_of = defaultdict(set)

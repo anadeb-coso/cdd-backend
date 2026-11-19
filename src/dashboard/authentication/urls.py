@@ -2,7 +2,8 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from dashboard.authentication.forms import EmailAuthenticationForm
-from dashboard.authentication import views, views_first_login, views_localities, views_profile, views_supervisors
+from dashboard.authentication import views, views_first_login, views_localities, views_profile, views_supervisors, \
+    supervisors_export
 
 app_name = 'authentication'
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     
     path('supervisors/', views_supervisors.SupervisrosListView.as_view(), name='supervisors'),
     path('supervisors-list/', views_supervisors.SupervisorsListTableView.as_view(), name='supervisors_list'),
+    path('supervisors-export/', supervisors_export.SupervisorsExportView.as_view(), name='supervisors_export'),
 ]
