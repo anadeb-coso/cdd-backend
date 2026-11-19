@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.administrative_levels import views, views_adl, views_doc, views_export
+from dashboard.administrative_levels import views, views_adl, views_checking, views_doc, views_export, views_works
 
 app_name = 'administrative_levels'
 urlpatterns = [
@@ -31,6 +31,10 @@ urlpatterns = [
     path('documents/download-zip/', views_doc.DownloadAttachmentsZipView.as_view(), name='documents_download_zip'),
     path('documents/filter-choices/', views_doc.DocumentsFilterChoicesView.as_view(), name='documents_filter_choices'),
     path('documents/label-choices/', views_doc.DocumentsLabelChoicesView.as_view(), name='documents_label_choices'),
+
+    path('works/', views_works.WorksGalleryView.as_view(), name='works_gallery'),
+    path('checking/', views_checking.VillageCheckingView.as_view(), name='villages_checking'),
+    path('checking/names/', views_checking.VillageNamesView.as_view(), name='villages_checking_names'),
 
     path('export-situations/', views_export.export_administrativelels_situation_to_excel, name='export_administrativelels_situation_to_excel'),
 ]

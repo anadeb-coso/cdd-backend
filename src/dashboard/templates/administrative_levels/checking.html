@@ -1,0 +1,300 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" id="checking-filters">
+                        <input type="hidden" name="rubric" value="{{ rubric }}">
+                        <div class="row">
+                            <div class="col-md-12 form-group">
+                                <label for="id_project">{% translate 'Projects' %}</label>
+                                <select class="form-control js-checking-select" name="project" id="id_project" multiple
+                                        data-placeholder="{% translate 'All my projects' %}">
+                                    {% for project in projects %}
+                                        <option value="{{ project.id }}"{% if project.id in chosen_project_ids %} selected{% endif %}>{{ project.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% for select in geo_selects %}
+                                <div class="col-md form-group">
+                                    <label for="id_{{ select.key }}">{{ select.label }}</label>
+                                    <select class="form-control js-checking-select js-geo-select" name="{{ select.key }}" id="id_{{ select.key }}"
+                                            multiple data-placeholder="{% translate 'All' %}">
+                                        {% for option_id, option_name in select.options %}
+                                            <option value="{{ option_id }}"{% if option_id in select.selected %} selected{% endif %}>{{ option_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'dashboard:administrative_levels:villages_checking' %}?rubric={{ rubric }}" class="btn btn-link px-0">{% translate 'Reset' %}</a>
+                            <button type="submit" class="btn btn-primary">{% translate 'Apply' %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <p class="text-muted mb-2">
+                {% blocktranslate count counter=total_villages %}{{ counter }} village in the selected scope.{% plural %}{{ counter }} villages in the selected scope.{% endblocktranslate %}
+            </p>
+
+            <div class="row">
+                {% for item in rubrics %}
+                    <div class="col-md-3 col-sm-6">
+                        <a href="?{% if filters_query %}{{ filters_query }}&amp;{% endif %}rubric={{ item.key }}" class="text-reset">
+                            <div class="info-box {% if item.active %}bg-primary{% endif %}">
+                                <span class="info-box-icon {% if item.active %}{% elif item.count %}bg-warning{% else %}bg-success{% endif %}"><i class="{{ item.icon }}"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text text-wrap">{{ item.label }}</span>
+                                    <span class="info-box-number">{{ item.count }}</span>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">{{ rubric_label }}</h3></div>
+                <div class="card-body table-responsive">
+                    {% if rubric == 'unassigned' %}
+                        <p class="text-muted small">{% translate 'A village is listed when it has no active assignment in at least one of the selected projects it belongs to.' %}</p>
+                    {% elif rubric == 'no_fc' or rubric == 'no_ft' %}
+                        <p class="text-muted small">{% translate 'Only active facilitators outside test mode are counted, by their stabilization villages (additional villages are not counted).' %}</p>
+                    {% endif %}
+                    <table id="checking-table" class="table table-sm table-striped">
+                        <thead>
+                        <tr>
+                            {% for header in geo_headers %}<th>{{ header }}</th>{% endfor %}
+                            <th>{% translate 'CVD' %}</th>
+                            <th>{% translate 'Projects' %}</th>
+                            {% if rubric == 'unassigned' %}<th>{% translate 'Projects without assignment' %}</th>{% endif %}
+                            {% if rubric != 'no_fc' %}<th>{% translate 'Stabilized community facilitators' %}</th>{% endif %}
+                            {% if rubric != 'no_ft' %}<th>{% translate 'Stabilized technical facilitators' %}</th>{% endif %}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in rows %}
+                            <tr>
+                                <td>{{ row.names.region }}</td>
+                                <td>{{ row.names.prefecture }}</td>
+                                <td>{{ row.names.commune }}</td>
+                                <td>{{ row.names.canton }}</td>
+                                <td><a href="{% url 'dashboard:administrative_levels:detail' row.id %}">{{ row.names.village }}</a></td>
+                                <td>{{ row.cvd|default:"—" }}</td>
+                                <td>{{ row.projects|join:", " }}</td>
+                                {% if rubric == 'unassigned' %}<td>{{ row.missing_projects|join:", " }}</td>{% endif %}
+                                {% if rubric != 'no_fc' %}<td>{{ row.fc|join:", "|default:"—" }}</td>{% endif %}
+                                {% if rubric != 'no_ft' %}<td>{{ row.ft|join:", "|default:"—" }}</td>{% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# Noms corrigés sur le SIG -> bases CouchDB des facilitateurs (dashboard/administrative_levels/couch_names.py) #}
+            <div class="card" id="names-card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-spell-check mr-1"></i>{% translate 'Names corrected on the SIG: update the facilitators CouchDB' %}</h3></div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2">{% translate 'Village, canton, CVD and geographical unit names are copied into the facilitators CouchDB databases (facilitator document read by the mobile, tasks, backup database) when they are distributed. The analysis compares them with the SIG names for the villages of the selected scope; only the checked names are then updated (nothing else changes in the documents).' %}</p>
+                    <div class="d-flex flex-wrap align-items-center mb-2">
+                        <button type="button" class="btn btn-outline-primary mr-2 mb-1" id="names-scan"><i class="fas fa-search mr-1"></i>{% translate 'Analyse the names of the selected scope' %}</button>
+                        <button type="button" class="btn btn-primary mr-2 mb-1 d-none" id="names-apply"><i class="fas fa-sync mr-1"></i>{% translate 'Update the checked names' %}</button>
+                        <span class="small mb-1" id="names-status"></span>
+                    </div>
+                    <div id="names-error" class="alert alert-danger d-none"></div>
+                    <div id="names-scope" class="small text-muted mb-1"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped d-none" id="names-table">
+                            <thead>
+                            <tr>
+                                <th><input type="checkbox" id="names-all" title="{% translate 'Check all' %}"></th>
+                                <th>{% translate 'Type' %}</th>
+                                <th>{% translate 'Parent' %}</th>
+                                <th>{% translate 'Name in CouchDB' %}</th>
+                                <th>{% translate 'Name on the SIG' %}</th>
+                                <th>{% translate 'Databases' %}</th>
+                                <th>{% translate 'Documents' %}</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="names-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% include 'layouts/datatable-js.html' %}
+    <script type="text/javascript">
+        $(document).ready(function () {
+            {% get_current_language as lang %}
+            $('#checking-table').DataTable({
+                language: { url: '{% static 'AdminLTE/plugins/datatables/locale/lang.json' %}'.replace('lang', '{{ lang }}') },
+                dom: "Bfrtip",
+                buttons: [
+                    { extend: 'copy' },
+                    { extend: 'excel', title: '{{ rubric_label|escapejs }}' },
+                    'colvis'
+                ],
+                pageLength: 25,
+                order: []
+            });
+            function normalize(text) {
+                return (text || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+            }
+            $('.js-checking-select').each(function () {
+                let $sel = $(this);
+                $sel.select2({
+                    width: '100%', placeholder: $sel.data('placeholder'), allowClear: true, closeOnSelect: false,
+                    language: { noResults: function () { return "{% translate 'No results found' %}"; } },
+                    matcher: function (params, data) {
+                        let term = normalize(params.term);
+                        if (!term) { return data; }
+                        return normalize(data.text).indexOf(term) !== -1 ? data : null;
+                    }
+                });
+            });
+            namesInit();
+            // Changer un projet ou un niveau recharge les listes des niveaux en dessous (à la fermeture de la liste,
+            // pour pouvoir cocher plusieurs choix d'affilée).
+            let changed = false;
+            $('.js-checking-select').on('change', function () { changed = true; });
+            $('.js-checking-select').on('select2:close', function () {
+                if (changed) { $('#checking-filters').submit(); }
+            });
+        });
+
+        // Noms corrigés sur le SIG -> CouchDB des facilitateurs : analyse puis mise à jour des lignes cochées (threads)
+        function namesInit() {
+            var URL = "{% url 'dashboard:administrative_levels:villages_checking_names' %}";
+            var FILTERS = "{{ filters_query|escapejs }}";
+            var CSRF = "{{ csrf_token }}";
+            var T = {
+                kinds: { cvd: "{% translate 'CVD' %}", unit: "{% translate 'Geographical unit' %}" },
+                scanning: "{% translate 'Analysis in progress' %}",
+                applying: "{% translate 'Update in progress' %}",
+                waiting: "{% translate 'Waiting for another operation' %}",
+                databases: "{% translate 'databases' %}",
+                none: "{% translate 'No difference: the CouchDB names match the SIG.' %}",
+                otherScope: "{% translate 'This analysis was made on other filters: run it again to see the selected scope.' %}",
+                scanOf: "{% translate 'Analysis of' %}",
+                by: "{% translate 'by' %}",
+                villages: "{% translate 'villages' %}",
+                confirm: "{% translate 'Update the checked names in the facilitators CouchDB databases?' %}",
+                select: "{% translate 'Select at least one line.' %}",
+                done: "{% translate 'Update finished' %}",
+                failed: "{% translate 'Failed' %}",
+                interrupted: "{% translate 'Interrupted' %}",
+                current: "{% translate 'Current' %}"
+            };
+            var lastScanId = null, timer = null, lastApplyShown = null;
+            function esc(v) { return $("<div>").text(v === null || v === undefined ? "" : String(v)).html(); }
+            function showError(msg) { $("#names-error").toggleClass("d-none", !msg).text(msg || ""); }
+
+            function renderScan(scan) {
+                var $tbody = $("#names-table tbody").empty();
+                if (!scan || scan.status !== "done") {
+                    $("#names-table, #names-apply").addClass("d-none");
+                    $("#names-scope").text("");
+                    return;
+                }
+                lastScanId = scan.id;
+                var sameScope = (scan.filters || "") === FILTERS;
+                $("#names-scope").html(esc(T.scanOf) + " " + esc(scan.finished_at || scan.started_at)
+                    + (scan.started_by ? " " + esc(T.by) + " " + esc(scan.started_by) : "")
+                    + (scan.scope_villages !== null && scan.scope_villages !== undefined ? " — " + esc(scan.scope_villages) + " " + esc(T.villages) : "")
+                    + (sameScope ? "" : ' <span class="text-warning">' + esc(T.otherScope) + "</span>"));
+                var rows = scan.results || [];
+                if (!rows.length) {
+                    $("#names-table, #names-apply").addClass("d-none");
+                    $("#names-scope").append('<br><span class="text-success">' + esc(T.none) + "</span>");
+                    return;
+                }
+                rows.forEach(function (r) {
+                    var dbs = Object.keys(r.dbs || {}).map(function (db) { return r.dbs[db].label; });
+                    $tbody.append("<tr>"
+                        + '<td><input type="checkbox" class="names-row" value="' + esc(r.key) + '"' + (sameScope ? "" : " disabled") + "></td>"
+                        + "<td>" + esc(r.kind === "level" ? r.type : (T.kinds[r.kind] || r.kind)) + "</td>"
+                        + "<td>" + esc(r.parent) + "</td>"
+                        + '<td class="text-danger">' + (r.old || []).map(function (o) { return esc(o || "—"); }).join("<br>") + "</td>"
+                        + '<td class="text-success font-weight-bold">' + esc(r.new) + "</td>"
+                        + "<td><details><summary>" + dbs.length + " " + esc(T.databases) + "</summary>" + dbs.map(esc).join("<br>") + "</details></td>"
+                        + "<td>" + esc(r.documents) + "</td></tr>");
+                });
+                $("#names-all").prop("checked", false).prop("disabled", !sameScope);
+                $("#names-table").removeClass("d-none");
+                $("#names-apply").toggleClass("d-none", !sameScope);
+            }
+
+            function renderOperation(op) {
+                var running = !!(op && op.running);
+                $("#names-scan, #names-apply").prop("disabled", running);
+                if (!op) { $("#names-status").text(""); return; }
+                if (running) {
+                    $("#names-status").html('<i class="fas fa-spinner fa-spin mr-1"></i>'
+                        + esc(op.status === "pending" ? T.waiting : (op.mode === "scan" ? T.scanning : T.applying))
+                        + " — " + esc(op.items_done) + " / " + esc(op.items_total) + " " + esc(T.databases)
+                        + (op.current ? " — " + esc(T.current) + " : " + esc(op.current) : ""));
+                    $("#names-results").empty();
+                    lastApplyShown = null;
+                    return;
+                }
+                $("#names-status").html(op.status === "failed" || op.status === "interrupted"
+                    ? '<span class="text-danger">' + esc(op.status === "failed" ? T.failed : T.interrupted) + "</span>" : "");
+                if (op.error) { showError(op.error); }
+                if (op.mode === "apply" && lastApplyShown !== op.id) {
+                    lastApplyShown = op.id;
+                    var cls = { ok: "text-success", warning: "text-warning", error: "text-danger" };
+                    $("#names-results").html('<div class="small"><b>' + esc(T.done) + "</b> (" + esc(op.finished_at || "")
+                        + (op.started_by ? ", " + esc(op.started_by) : "") + ')<ul class="pl-3 mb-0">'
+                        + (op.results || []).map(function (r) {
+                            return '<li class="' + (cls[r.status] || "") + '">' + esc(r.label) + " : " + esc(r.message) + "</li>";
+                        }).join("") + "</ul></div>");
+                }
+            }
+
+            function refresh() {
+                $.getJSON(URL).done(function (data) {
+                    renderOperation(data.operation);
+                    renderScan(data.scan);
+                    clearTimeout(timer);
+                    if (data.operation && data.operation.running) { timer = setTimeout(refresh, 3000); }
+                });
+            }
+
+            function start(body) {
+                showError("");
+                $.ajax({ url: URL, method: "POST", contentType: "application/json", data: JSON.stringify(body),
+                         headers: { "X-CSRFToken": CSRF } })
+                    .done(function () { refresh(); })
+                    .fail(function (xhr) {
+                        var data = xhr.responseJSON || {};
+                        showError(data.error || xhr.statusText);
+                        if (data.operation) { refresh(); }
+                    });
+            }
+
+            $("#names-scan").on("click", function () { start({ mode: "scan", filters: FILTERS }); });
+            $("#names-apply").on("click", function () {
+                var keys = $(".names-row:checked").map(function () { return this.value; }).get();
+                if (!keys.length) { showError(T.select); return; }
+                if (!window.confirm(T.confirm)) { return; }
+                start({ mode: "apply", scan: lastScanId, keys: keys });
+            });
+            $("#names-all").on("change", function () { $(".names-row:not(:disabled)").prop("checked", this.checked); });
+            refresh();
+        }
+    </script>
+{% endblock %}
+
+{% block select2 %}{% endblock select2 %}
