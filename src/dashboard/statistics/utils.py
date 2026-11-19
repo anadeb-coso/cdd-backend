@@ -78,7 +78,7 @@ def cdd_projects_for_request(request):
     """Projets CDD proposés aux exports "par projet".
 
     Priorité à l'arborescence du projet de session (ex. COSO -> COSO, FA-COSO), sinon les
-    projets auxquels l'utilisateur est rattaché, sinon tous.
+    projets auxquels l'utilisateur est rattaché, sinon tous (super-administrateur seulement).
     """
     from process_manager.models import Project
 
@@ -87,6 +87,6 @@ def cdd_projects_for_request(request):
         projects = Project.objects.filter(name__in=tree_names)
     else:
         projects = Project.objects.filter(users=request.user)
-        if not projects.exists():
-            projects = Project.objects.all()
+        if not projects.exists() and request.user.is_superuser:
+            projects = Project.objects.all()  # « tous » réservé au super-administrateur
     return projects.order_by('name')

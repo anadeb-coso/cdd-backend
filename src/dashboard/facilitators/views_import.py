@@ -25,6 +25,8 @@ from .localities import AdministrativeTree, LocalitiesChange, can_edit_localitie
 from .localities_apply import apply_facilitator_localities
 from .localities_notify import notify_localities_change
 
+from process_manager.project_access import restrict_projects_field
+
 XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 
@@ -33,6 +35,11 @@ class FacilitatorsFileForm(forms.Form):
     projects = forms.ModelMultipleChoiceField(
         label=gettext_lazy("Projects"), queryset=Project.objects.all(), widget=forms.CheckboxSelectMultiple, required=True,
     )
+
+    def __init__(self, *args, current_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Projets proposés : ceux où intervient l'utilisateur connecté (tous pour un super-administrateur)
+        restrict_projects_field(self, current_user)
 
 
 class AssignmentsFileForm(forms.Form):
@@ -82,14 +89,14 @@ class FacilitatorsImportView(PageMixin, LoginRequiredMixin, AdminPermissionRequi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.setdefault('form', FacilitatorsFileForm(initial={'projects': self.default_projects()}))
+        context.setdefault('form', FacilitatorsFileForm(initial={'projects': self.default_projects()}, current_user=self.request.user))
         context['template_url'] = reverse('dashboard:facilitators:import_template', args=['facilitators'])
         return context
 
     def post(self, request, *args, **kwargs):
         if 'payload' in request.POST:
             return self.confirm(request)
-        form = FacilitatorsFileForm(request.POST, request.FILES)
+        form = FacilitatorsFileForm(request.POST, request.FILES, current_user=request.user)
         if not form.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
         try:
@@ -134,6 +141,8 @@ class FacilitatorsImportView(PageMixin, LoginRequiredMixin, AdminPermissionRequi
                     'line': row['line'], 'name': f"{row['last_name']} {row['first_name']}", 'errors': exc})
                 continue
             reserved.add(creation.username)
+            from dashboard.diagnostics.village_docs import track_operation
+            track_operation(request, creation.documents_operation)
             created.append(creation.as_row())
         return accounts_created_response(
             request, created, reverse('dashboard:facilitators:list'), gettext('Import facilitators'),
@@ -276,6 +285,8 @@ class AssignmentsImportView(PageMixin, LoginRequiredMixin, generic.TemplateView)
             except Exception as exc:
                 row['errors'] = [str(exc)]
                 continue
+            from dashboard.diagnostics.village_docs import track_operation
+            track_operation(request, result['documents_operation'])
             row['grm'] = result['grm']
             row['databases_error'] = result['databases_error']
             row['mail_sent'] = notify_localities_change(facilitator, result['events'], tree=tree)

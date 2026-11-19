@@ -45,8 +45,11 @@
                     {% translate "Select a project" %}
                 </p>
                   {% block content %}
+                    <div class="project-picker">
+                    {% include 'layouts/project_picker.html' with part='search' %}
+                    <div class="project-picker-list">
                     {% for project in projects %}
-                      <a class="row" href="{% url 'dashboard:process_manager:list' %}?project_id={{ project.id }}{% if next_url %}&next={{ next_url }}{% endif %}">
+                      <a class="row mx-0 project-picker-item" href="{% url 'dashboard:process_manager:list' %}?project_id={{ project.id }}{% if next_url %}&next={{ next_url }}{% endif %}">
                         <div class="col-12 border-bottom pt-2 pb-2 pointer-event">
                             <div class="text-primary">
                                 {{ project.name }}
@@ -62,6 +65,10 @@
                             {% translate 'No projects found. If you have any questions, please contact the system administrator.' %}
                         </p>
                       {% endfor %}
+                    {% include 'layouts/project_picker.html' with part='empty' %}
+                    </div>
+                    </div>
+                    {% include 'layouts/project_picker.html' with part='js' %}
                     {% endblock %}
                   {% if user.is_superuser %}
                     <div class="text-center mt-3">

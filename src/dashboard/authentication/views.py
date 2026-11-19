@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from process_manager.project_access import keep_hidden_projects
 from rest_framework import status
 from django.utils.translation import gettext_lazy
 from django.views import generic
@@ -179,7 +180,7 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
         ctx = super(CreateUpdateUserFormView, self).get_context_data(**kwargs)
         ctx['is_creation'] = not self.id
         if self.id:
-            form = UpdateUserForm(instance=User.objects.get(id=self.id))
+            form = UpdateUserForm(instance=User.objects.get(id=self.id), current_user=self.request.user)
             ctx['form'] = form
 
             ctx['title'] = gettext_lazy('Update User')
@@ -203,7 +204,7 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
         previous_identity = None
         if self.id:
             user = User.objects.get(id=self.id)
-            form = UpdateUserForm(request.POST, instance=user)
+            form = UpdateUserForm(request.POST, instance=user, current_user=request.user)
             facilitator_email = user.email
             previous_identity = (user.email, user.first_name, user.last_name)
         else:
@@ -236,7 +237,9 @@ class CreateUpdateUserFormView(PageMixin, LoginRequiredMixin, AdminPermissionReq
                 instance.projects.add(*(Project.objects.get(id=project_id).build_the_tree_structure()))
             if self.id and 'projects' in form.cleaned_data:
                 # Projets choisis sur la page de modification
-                instance.projects.set(form.cleaned_data['projects'])
+                # (les projets déjà liés que l'utilisateur connecté ne voit pas sont conservés)
+                instance.projects.set(keep_hidden_projects(
+                    request.user, instance.projects.all(), form.cleaned_data['projects']))
 
             instance.save()
 

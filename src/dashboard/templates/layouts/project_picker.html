@@ -1,0 +1,97 @@
+{% load i18n %}
+{% comment %}
+    Search box + scrollable list for a project picker, shown only when the picker holds more than
+    3 projects. Markup expected by the script:
+        <div class="project-picker">
+            {% include 'layouts/project_picker.html' with part='search' %}
+            <div class="project-picker-list">
+                <a class="project-picker-item" ...>...</a>   (one per project)
+                {% include 'layouts/project_picker.html' with part='empty' %}
+            </div>
+        </div>
+        {% include 'layouts/project_picker.html' with part='js' %}   (once per page)
+{% endcomment %}
+{% if part == 'search' %}
+    <div class="project-picker-search d-none">
+        <div class="input-group input-group-sm">
+            <div class="input-group-prepend">
+                <span class="input-group-text"><i class="fas fa-search" aria-hidden="true"></i></span>
+            </div>
+            <input type="search" class="form-control project-picker-input" autocomplete="off"
+                   placeholder="{% translate 'Search a project' %}" aria-label="{% translate 'Search a project' %}">
+        </div>
+    </div>
+{% elif part == 'empty' %}
+    <p class="project-picker-empty text-secondary text-center small py-2 mb-0 d-none">
+        {% translate 'No project matches your search.' %}
+    </p>
+{% elif part == 'js' %}
+    <style>
+        .project-picker-search { padding: .5rem .75rem; }
+        .project-picker-list.is-scrollable { max-height: 320px; overflow-y: auto; overflow-x: hidden; }
+    </style>
+    <script type="text/javascript">
+        (function () {
+            var THRESHOLD = 3;
+
+            function normalize(text) {
+                return (text || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+            }
+
+            function init_picker(picker) {
+                var items = picker.querySelectorAll(".project-picker-item");
+                if (items.length <= THRESHOLD) {
+                    return;
+                }
+                var search = picker.querySelector(".project-picker-search");
+                var input = picker.querySelector(".project-picker-input");
+                var list = picker.querySelector(".project-picker-list");
+                var empty = picker.querySelector(".project-picker-empty");
+
+                search.classList.remove("d-none");
+                list.classList.add("is-scrollable");
+
+                input.addEventListener("input", function () {
+                    var query = normalize(input.value);
+                    var visible = 0;
+                    items.forEach(function (item) {
+                        var match = !query || normalize(item.textContent).indexOf(query) !== -1;
+                        item.classList.toggle("d-none", !match);
+                        if (match) { visible++; }
+                    });
+                    if (empty) { empty.classList.toggle("d-none", visible > 0); }
+                });
+
+                // Enter opens the first visible project.
+                input.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        var first = list.querySelector(".project-picker-item:not(.d-none)");
+                        if (first) { window.location.href = first.href; }
+                    }
+                });
+
+                // In the navbar dropdown: focus the search box when the menu opens.
+                var dropdown = picker.closest(".dropdown");
+                if (dropdown) {
+                    var toggle = dropdown.querySelector("[data-toggle='dropdown']");
+                    if (toggle) {
+                        toggle.addEventListener("click", function () {
+                            setTimeout(function () { input.focus(); }, 50);
+                        });
+                    }
+                }
+            }
+
+            function init_all() {
+                document.querySelectorAll(".project-picker").forEach(init_picker);
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", init_all);
+            } else {
+                init_all();
+            }
+        })();
+    </script>
+{% endif %}

@@ -76,10 +76,11 @@ class UpdateUserForm(forms.ModelForm):
             'is_superuser', 'is_staff', 'is_active', 'groups', 'projects', 'user_permissions'
         )
 
-    def __init__(self, *args, **kwargs):
-        from process_manager.models import Project
+    def __init__(self, *args, current_user=None, **kwargs):
+        from process_manager.project_access import visible_projects
         super().__init__(*args, **kwargs)
-        self.fields['projects'].queryset = Project.objects.order_by('name')
+        # Seulement les projets où intervient l'utilisateur connecté (tous pour un super-administrateur)
+        self.fields['projects'].queryset = visible_projects(current_user)
         if self.instance.pk and not self.is_bound:
             self.initial['projects'] = list(self.instance.projects.values_list('pk', flat=True))
 

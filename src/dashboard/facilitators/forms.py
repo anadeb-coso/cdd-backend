@@ -11,6 +11,7 @@ from dashboard.utils import (
 from no_sql_client import NoSQLClient
 from .functions import get_cvds
 from process_manager.models import Task, Phase, Activity, Project
+from process_manager.project_access import restrict_projects_field
 from administrativelevels.models import AdministrativeLevel
 from authentication import FACILITATORS_TYPES
 from authentication.accounts import email_in_use, username_candidates
@@ -159,11 +160,13 @@ class FacilitatorForm(forms.Form):
             self.add_error('last_name', _('The last name and the first name(s) must contain letters.'))
         return cleaned_data
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, current_user=None, **kwargs):
         initial = kwargs.get('initial')
         project_id = initial.get('project_id', None)
         user_id = initial.get('user_id')
         super().__init__(*args, **kwargs)
+        # Projets proposés : ceux où intervient l'utilisateur connecté (tous pour un super-administrateur)
+        restrict_projects_field(self, current_user)
 
         nsc = NoSQLClient()
         administrative_levels_db = nsc.get_db('administrative_levels')
@@ -209,7 +212,7 @@ class UpdateFacilitatorForm(forms.ModelForm):
         #     raise forms.ValidationError(self.error_messages['administrative_level_required'])
         return super().clean()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, current_user=None, **kwargs):
         initial = kwargs.get('initial')
         if initial:
             facilitator_doc = initial.get('facilitator_doc', None)
@@ -220,6 +223,8 @@ class UpdateFacilitatorForm(forms.ModelForm):
             facilitator_projects = None
             project_id = None
         super().__init__(*args, **kwargs)
+        # Projets proposés : ceux où intervient l'utilisateur connecté (tous pour un super-administrateur)
+        restrict_projects_field(self, current_user)
 
         nsc = NoSQLClient()
         administrative_levels_db = nsc.get_db('administrative_levels')
