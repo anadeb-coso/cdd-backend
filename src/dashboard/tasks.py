@@ -17,6 +17,7 @@ from cdd.functions import datetime_complet_str
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject, Cycle as MisCycle
 from cdd.constants import PHASES_BEFORE_BEGINING_SUBPROJECT_EXECUTION
+from dashboard.commands_runner.progress import report as report_progress  # menu « Commandes / sync » (sinon sans effet)
 
 BATCH_SIZE = 500
 def bulk_objects_create_or_update(model, objects, type_bulk="update", fields=[], batch_size=BATCH_SIZE):
@@ -227,7 +228,9 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
         tasks_bucket_create = []
         tasks_bucket_update = []
         print("Start sync_aggregated_status_on_adl for Village")
-        for adl in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]):
+        _villages = list(mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id]))
+        for _index, adl in enumerate(_villages):
+            report_progress(phase="Compteurs des villages", done=_index, total=len(_villages), current=adl.name)
             aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id, cycle_id=cycle_id, facilitator=None, task__isnull=False)
             
             if aggregs.exists():
@@ -300,7 +303,8 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             adls = adls_dict.get(type_adl)
             tasks_bucket_create = []
             tasks_bucket_update = []
-            for adl in adls:
+            for _index, adl in enumerate(adls):
+                report_progress(phase=f"Compteurs par tâche : {type_adl}", done=_index, total=len(adls), current=adl.name)
                 _adls_ids = _adls_ids_dict.get(str(adl.id))
                 
                 for task in Task.objects.filter(project_id=project_id, cycles__in=[cycle_id]).order_by('id'):
@@ -376,7 +380,8 @@ def sync_aggregated_status_on_adl(project_id: int, cycle_id: int, execute_adl_vi
             adls = adls_dict.get(type_adl)
             tasks_bucket_create = []
             tasks_bucket_update = []
-            for adl in adls:
+            for _index, adl in enumerate(adls):
+                report_progress(phase=f"Compteurs d'ensemble : {type_adl}", done=_index, total=len(adls), current=adl.name)
                 _adls_ids = _adls_ids_dict.get(str(adl.id))
                 
                 aggregs = AggregatedStatus.objects.filter(administrative_level_id=adl.id, project_id=project_id, cycle_id=cycle_id, facilitator=None, task__isnull=False)
@@ -627,7 +632,13 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     else:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
-    administrativelevels_dict = {str(ad.id): str(ad.cvd.id) for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])}
+    # village -> CVD ; les villages sans CVD (CVD pas encore créés dans le SIG, ex. nouvelles zones d'un projet) sont
+    # ignorés : sans CVD, pas de village siège ni de tâche à répartir sur ses villages.
+    administrativelevels_dict = {
+        str(ad.id): str(ad.cvd_id)
+        for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])
+        if ad.cvd_id
+    }
     cvds_dict_with_villages = {str(_cvd.id): [str(v.id) for v in _cvd.get_villages()] for _cvd in mis_objects_call.filter_objects(CVD)}
 
     #Backup
@@ -638,7 +649,9 @@ def sync_celery_tasks_re(project_id, cycle_id, develop_mode=False, training_mode
     ]
     sync_aggregated_status_from_tasks(backup_db_docs, project_id, cycle_id, administrativelevels_dict, cvds_dict_with_villages, villages_ids_have_subproject, now)
 
-    for f in facilitators.order_by('id'):
+    _facilitators = list(facilitators.order_by('id'))
+    for _index, f in enumerate(_facilitators):
+        report_progress(phase="Tâches des facilitateurs", done=_index, total=len(_facilitators), current=f.username)
         print()
         print(count_facilitator, f.no_sql_db_name, f.username)
         count_facilitator += 1

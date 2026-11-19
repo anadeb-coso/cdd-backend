@@ -7,12 +7,50 @@ from process_manager.models import Project, Cycle, AggregatedStatusFacilitator, 
 from cdd.call_objects_from_other_db import mis_objects_call
 from subprojects.models import Project as MisProject, Subproject
 from dashboard.facilitators.functions import update_facilitators_stats
+from dashboard.commands_runner.progress import report as report_progress  # menu « Commandes / sync »
 
 class Command(BaseCommand):
     help = 'Update the AggregatedStatus objects for the funnel'
     # sudo -i
     # cd /var/app/current && source /var/app/venv/*/bin/activate && systemd-run --scope -p MemoryMax=800M -p MemorySwapMax=0 nice -n 19 python manage.py update_funnel
 
+
+    def warn_cycle_coverage(self, project, cycle_id):
+        """Le calcul ne retient que les villages du projet ET du cycle dans le SIG (rapprochés par le nom du projet et
+        l'ordre du cycle, pas par les identifiants, qui diffèrent : cycle DCC 7 = cycle SIG 4 pour FA2-COSO).
+        Prévient quand le cycle SIG n'a pas tous les villages du projet, ou des villages sans CVD (ignorés)."""
+        from administrativelevels.models import AdministrativeLevel
+        from subprojects.models import Cycle as MisCycle
+        cycle = Cycle.objects.filter(id=cycle_id).first()
+        project_mis = mis_objects_call.filter_objects(MisProject, name=project.name).first()
+        cycle_mis = mis_objects_call.filter_objects(MisCycle, order=cycle.order, project_id=project_mis.id).first() \
+            if (cycle and project_mis) else None
+        if not cycle_mis:
+            self.stdout.write(self.style.ERROR(f"\tAucun cycle SIG d'ordre {cycle.order if cycle else '?'} pour le projet "
+                                               f"{project.name} : aucune statistique ne sera calculée."))
+            return
+        project_villages = set(project_mis.administrative_levels.filter(type='Village').values_list('id', flat=True))
+        cycle_villages = mis_objects_call.filter_objects(AdministrativeLevel, type='Village',
+                                                        administrative_levels_cycles__in=[cycle_mis.id])
+        missing = project_villages - set(cycle_villages.values_list('id', flat=True))
+        # Régions…cantons : sans eux dans le cycle SIG, les niveaux supérieurs ne sont pas calculés et la page
+        # /diagnostics/ (qui additionne les régions du projet ET du cycle) affiche 0 partout.
+        cycle_upper = set(cycle_mis.administrative_levels.exclude(type='Village').values_list('id', flat=True))
+        upper_missing = project_mis.administrative_levels.exclude(type='Village').exclude(id__in=cycle_upper).count()
+        if upper_missing:
+            self.stdout.write(self.style.WARNING(
+                f"\t{upper_missing} niveau(x) région/préfecture/commune/canton du projet absents du cycle SIG "
+                f"{cycle_mis.id} : la page Diagnostics affichera 0. Corriger : python manage.py "
+                f"align_sig_cycles_with_projects --project \"{project.name}\" --apply"))
+        without_cvd = cycle_villages.filter(cvd__isnull=True).count()
+        self.stdout.write(f"\tCycle DCC {cycle.id} = cycle SIG {cycle_mis.id} (projet {project.name}, ordre {cycle.order})")
+        if missing:
+            self.stdout.write(self.style.WARNING(
+                f"\t{len(missing)} village(s) du projet absents du cycle SIG {cycle_mis.id} : leurs tâches ne seront pas "
+                f"comptées. Corriger : python manage.py align_sig_cycles_with_projects --project \"{project.name}\" --apply"))
+        if without_cvd:
+            self.stdout.write(self.style.WARNING(
+                f"\t{without_cvd} village(s) du cycle sans CVD dans le SIG : ignorés (CVD à créer dans le SIG)."))
 
     def manage_prompt(self, type_value, prompt_message, options=None, default=''):
         if options:
@@ -77,6 +115,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f'\tStarting synchronization for Project ID: {project_id}, Cycle ID: {cycle_id}...'))
 
             _project = Project.objects.get(id=project_id)
+            self.warn_cycle_coverage(_project, cycle_id)
 
             villages_ids_for_project = list(set(sum([sp.get_villages_ids() for sp in mis_objects_call.filter_objects(
                 Subproject, projects__name__in=[_project.name]
@@ -103,6 +142,7 @@ class Command(BaseCommand):
         
             #Sync facilitators stats
             print("Sync facilitators stats")
+            report_progress(phase="Statistiques des facilitateurs")
             
             facilitators = update_facilitators_stats(
                 FacilitatorRepository().find_by_criteria(

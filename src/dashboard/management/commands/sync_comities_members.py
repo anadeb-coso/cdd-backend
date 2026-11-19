@@ -8,6 +8,7 @@ from cdd.call_objects_from_other_db import mis_objects_call
 from reports.models import VillageCommittee
 from dashboard.tasks import bulk_objects_create_or_update
 from cdd.functions import datetime_complet_str
+from dashboard.commands_runner.progress import report as report_progress  # menu « Commandes / sync »
 
 class Command(BaseCommand):
 
@@ -55,7 +56,8 @@ def sync_comities_members():
     village_committees_bulk_create_list = []
     village_committees_bulk_update_list = []
 
-    for db_name in facilitator_dbs:
+    for _index, db_name in enumerate(facilitator_dbs):
+        report_progress(phase="Bases des facilitateurs", done=_index, total=len(facilitator_dbs), current=db_name)
         if check_for_valid_facilitator(nsc, db_name):
             _query_result = nsc.get_db(db_name).get_query_result({
                 "type": "task",
@@ -151,6 +153,7 @@ def sync_comities_members():
                         else:
                             village_committees_bulk_update_list.append(village_committee)
     
+    report_progress(phase="Enregistrement des comités")
     if village_committees_bulk_create_list:
         bulk_objects_create_or_update(VillageCommittee, village_committees_bulk_create_list, type_bulk="create")
     if village_committees_bulk_update_list:
