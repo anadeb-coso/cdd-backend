@@ -129,7 +129,11 @@ class TaskFormSaveView(LoginRequiredMixin, generic.View):
         if doc is None:
             return JsonResponse({'ok': False, 'message': 'no data found for this task/village yet'}, status=404)
 
-        result = save_task_form(request, doc, db, found_db_name, values, attachments)
+        # Formulaire affiché par la page de saisie (TaskFormFetchView : `task.form`), pour vider les pages
+        # sautées par une condition de page selon CE formulaire.
+        task = Task.objects.filter(id=sql_id).only('form').first() if str(sql_id).isdigit() else None
+        result = save_task_form(request, doc, db, found_db_name, values, attachments,
+                                form=task.form if task is not None else None)
         return JsonResponse(result, status=200 if result['ok'] else 409)
 
 

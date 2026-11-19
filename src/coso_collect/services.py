@@ -21,6 +21,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from authentication.identity import is_facilitator
+from dashboard.process_manager.tasks.form_design import clear_hidden_page_responses
 
 from . import access
 from .fields import media_values
@@ -103,6 +104,8 @@ def clean_data(form, data):
         return []
     data = copy.deepcopy(data)
     data = [page if isinstance(page, dict) else {} for page in data]
+    # Pages sautées par une condition de page : réponse vide, quel que soit le client.
+    data = clear_hidden_page_responses(form.form or [], data)
     for path, field, value in media_values(data, form.form):
         cleaned = clean_media_value(value)
         _set_concrete(data, path, cleaned)

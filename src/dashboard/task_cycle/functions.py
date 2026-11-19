@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from no_sql_client import NoSQLClient
+from dashboard.process_manager.tasks.form_design import clear_hidden_page_responses
 from dashboard.administrative_levels.views_adl import build_admin_level_planning_cycle
 
 
@@ -173,7 +174,7 @@ def diff_attachments(old_attachments, new_attachments):
     return attachments_updated, attachments_updated_response
 
 
-def save_task_form(request, doc, db, found_db_name, new_values, new_attachments=None):
+def save_task_form(request, doc, db, found_db_name, new_values, new_attachments=None, form=None):
     """Sauvegarde `new_values` (form_response complet, toutes pages) + les
     pièces jointes éventuelles dans le doc CouchDB déjà résolu
     (`resolve_task_doc`), avec piste d'audit — miroir de `insertTaskToLocalDb`
@@ -197,6 +198,9 @@ def save_task_form(request, doc, db, found_db_name, new_values, new_attachments=
             'message': str(_("This task has already been validated — changes can no longer be saved.")),
         }
 
+    # Pages sautées par une condition de page (`pageCondition`) : réponse vide. `form` = formulaire affiché
+    # par la page de saisie web (Task.form) ; repli sur la copie du doc CouchDB.
+    new_values = clear_hidden_page_responses(form if form is not None else (doc.get('form') or []), new_values)
     identity = _facilitator_identity(request)
     fields_updated, fields_updated_response = diff_form_pages(doc.get('form_response'), new_values)
     attachments_updated, attachments_updated_response = (

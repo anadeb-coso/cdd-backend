@@ -78,6 +78,7 @@
       f.minLength = prop.minLength != null ? prop.minLength : null;
       f.maxLength = prop.maxLength != null ? prop.maxLength : null;
       f.pattern = prop.pattern || '';
+      f.multiline = !!opts.multiline;
     }
     return f;
   }
@@ -432,7 +433,8 @@
       case 'file':
         return renderMedia(field, path, value, dyn, ctx, $wrap);
       default: {
-        $input = (field.maxLength && field.maxLength > 160)
+        // Plusieurs lignes : option du générateur (`options.multiline`), ou texte long (> 160 caractères).
+        $input = (field.multiline || (field.maxLength && field.maxLength > 160))
           ? $('<textarea class="form-control" rows="3"></textarea>')
           : $('<input class="form-control" type="text">');
         if (field.maxLength) $input.attr('maxlength', field.maxLength);
@@ -963,6 +965,43 @@
 
   FillFormController.prototype.currentPage = function () { return this.form[this.pageIndex] || { options: {}, page: { properties: {} } }; };
 
+  /* ------------------------------------------- condition de page (pageCondition) */
+  /** Pages sautées : `page.pageCondition = {action: "show"|"hide", when}` évaluée sur les
+   * réponses des pages PRÉCÉDENTES (chemins "$<index>.<chemin>"). Parcours dans l'ordre :
+   * une page sautée compte comme vide ({}) pour les conditions des pages suivantes.
+   * Même calcul que le mobile (src/utils/pageVisibility.ts). Renvoie {index: true}. */
+  function hiddenPages(form, responses) {
+    var effective = (responses || []).slice();
+    var hidden = {};
+    (form || []).forEach(function (page, i) {
+      var pc = page && page.pageCondition;
+      if (!pc || !pc.when) return;
+      var met = L.evaluateCondition(pc.when, {}, effective);
+      if (pc.action === 'hide' ? met : !met) {
+        hidden[i] = true;
+        effective[i] = {};
+      }
+    });
+    return hidden;
+  }
+  FillFormController.prototype.hiddenPages = function () { return hiddenPages(this.form, this.state.values); };
+  /** Index de la page affichée suivante (-1 : aucune) / précédente (-1 : aucune). */
+  FillFormController.prototype.nextVisibleIndex = function (from) {
+    var hidden = this.hiddenPages();
+    for (var i = from + 1; i < this.form.length; i++) { if (!hidden[i]) return i; }
+    return -1;
+  };
+  FillFormController.prototype.prevVisibleIndex = function (from) {
+    var hidden = this.hiddenPages();
+    for (var i = from - 1; i >= 0; i--) { if (!hidden[i]) return i; }
+    return -1;
+  };
+  /** Une page sautée a une réponse vide. */
+  FillFormController.prototype.clearHiddenPages = function () {
+    var hidden = this.hiddenPages();
+    for (var i = 0; i < this.state.values.length; i++) { if (hidden[i]) this.state.values[i] = {}; }
+  };
+
   /** IDs de tâches externes requis par `page` et pas encore en cache ->
    * les récupère via `this.fetchExternalTask`, puis appelle `done()` (jamais
    * de fetch réseau si tout est déjà en cache -> `done()` synchrone). */
@@ -1081,14 +1120,16 @@
   FillFormController.prototype.renderNav = function () {
     var $nav = $('<div class="tcf-nav d-flex justify-content-between mt-3"></div>');
     var self = this;
-    if (this.pageIndex > 0) {
+    var prevIndex = this.prevVisibleIndex(this.pageIndex);
+    if (prevIndex !== -1) {
       var $prev = $('<button type="button" class="btn btn-outline-secondary">' + esc(this.i18n.previous) + '</button>');
-      $prev.on('click', function () { self.pageIndex -= 1; self.render(); });
+      $prev.on('click', function () { self.pageIndex = prevIndex; self.render(); });
       $nav.append($prev);
     } else {
       $nav.append('<span></span>');
     }
-    var isLast = this.pageIndex >= this.form.length - 1;
+    // Dernière page AFFICHÉE : les pages suivantes peuvent être sautées (pageCondition).
+    var isLast = this.nextVisibleIndex(this.pageIndex) === -1;
     var $right = $('<div class="d-flex flex-wrap justify-content-end" style="gap:.5rem;"></div>');
     if (this.onSaveDraft) {
       var $draft = $('<button type="button" class="btn btn-outline-secondary">' + esc(this.i18n.saveDraft) + '</button>');
@@ -1173,8 +1214,10 @@
     }
     pruneHiddenValues(parsePageFields(page), dynOptions, values);
     this.state.values[this.pageIndex] = values;
-    if (this.pageIndex < this.form.length - 1) {
-      this.pageIndex += 1;
+    this.clearHiddenPages();
+    var nextIndex = this.nextVisibleIndex(this.pageIndex);
+    if (nextIndex !== -1) {
+      this.pageIndex = nextIndex;
       this.render();
     } else {
       this.onSubmit(this.state.values, this.state.attachments, actionKey);
@@ -1271,6 +1314,7 @@
 
   window.TCFillForm = {
     parsePageFields: parsePageFields,
+    hiddenPages: hiddenPages,
     FillFormController: FillFormController,
     attachmentFileAllowed: attachmentFileAllowed
   };

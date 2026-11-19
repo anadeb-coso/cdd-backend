@@ -132,7 +132,7 @@
   function newNode(type) {
     return {
       id: uid(), key: "", type: type || "text", label: "", help: "", required: false,
-      def: "", choices: [], min: "", max: "", minLength: "", maxLength: "", pattern: "",
+      def: "", choices: [], min: "", max: "", minLength: "", maxLength: "", pattern: "", multiline: false,
       message: { required: "", range: "", regex: "", type: "" }, mode: type === "date",
       minItems: "", maxItems: "", disableOrder: false,
       accuracyThreshold: type === "geopoint" ? DEFAULT_GPS_ACCURACY : "",
@@ -167,7 +167,7 @@
       children: []
     };
   }
-  function newPage() { return { id: uid(), nodes: [], rules: [], calculate: [], autofill: [], messages: {} }; }
+  function newPage() { return { id: uid(), nodes: [], rules: [], calculate: [], autofill: [], messages: {}, pageCondition: null }; }
 
   // Ordre d'affichage : `options.order` d'abord (l'ordre stocké par
   // PostgreSQL/jsonb ne conserve PAS l'ordre des clés d'objet), puis les clés
@@ -194,6 +194,7 @@
         return nodeFromSchema(k, schema.properties[k], fields[k] || {}, required.indexOf(k) !== -1);
       });
       page.rules = (pg.rules || []).map(ruleFromStored);
+      page.pageCondition = pageConditionFromStored(pg.pageCondition);
       page.calculate = (pg.calculate || []).map(function (c) { return { target: c.target || "", expr: c.expr || "" }; });
       page.autofill = (pg.autofill || []).map(autofillFromStored);
       applyStoredMessages(page.nodes, pg.messages || {});
@@ -360,7 +361,7 @@
     else if (prop.format === "datetime") { n.type = "datetime"; }
     else if (prop.format === "time") { n.type = "time"; }
     else if (prop._note) { n.type = "note"; }
-    else { n.type = "text"; if (prop.minLength != null) n.minLength = prop.minLength; if (prop.maxLength != null) n.maxLength = prop.maxLength; if (prop.pattern) n.pattern = prop.pattern; }
+    else { n.type = "text"; if (prop.minLength != null) n.minLength = prop.minLength; if (prop.maxLength != null) n.maxLength = prop.maxLength; if (prop.pattern) n.pattern = prop.pattern; n.multiline = !!opts.multiline; }
     return n;
   }
   function childrenFromObject(objSchema, opts) {
@@ -382,11 +383,59 @@
     if (!out.conds.length) out.conds.push({ field: "", op: "eq", value: "" });
     return out;
   }
+  // Condition d'affichage de la page entière : {action: "show"|"hide", when} stockée,
+  // {action, conj, conds:[...]} en édition (même éditeur de conditions que les règles).
+  function pageConditionFromStored(pc) {
+    if (!pc || !pc.when) return null;
+    var r = ruleFromStored({ when: pc.when, then: [{ action: pc.action || "show", target: "" }] });
+    return { action: r.action === "hide" ? "hide" : "show", conj: r.conj, conds: r.conds };
+  }
+  function compilePageCondition(pc) {
+    if (!pc) return null;
+    var r = compileRule({ conj: pc.conj, conds: pc.conds, action: pc.action, target: "__page__" });
+    return r ? { action: pc.action === "hide" ? "hide" : "show", when: r.when } : null;
+  }
   function condFromStored(c) { c = c || {}; return { field: c.field || "", op: c.op || "eq", value: c.value != null ? c.value : "" }; }
 
   /* ---------------------------------------------------------------- compile */
+  // Règle dont le champ cible est sur une AUTRE page ("$<j>.<chemin>") : déplacée sur la
+  // page j à la compilation (le moteur mobile / web applique une règle sur la page qui
+  // l'affiche), chemins réécrits : champ nu de la page d'origine i -> "$<i>.<chemin>",
+  // "$<j>.<chemin>" -> chemin nu. Au rechargement, la règle apparaît sur la page j.
+  function relocateCond(c, fromIndex, toIndex) {
+    var o = {};
+    for (var k in c) { if (Object.prototype.hasOwnProperty.call(c, k)) o[k] = c[k]; }
+    var m = /^\$(\d+)\.(.+)$/.exec(o.field || "");
+    if (m && Number(m[1]) === toIndex) o.field = m[2];
+    else if (!m && o.field) o.field = "$" + fromIndex + "." + o.field;
+    return o;
+  }
+  function relocateWhen(w, fromIndex, toIndex) {
+    if (w.all) return { all: w.all.map(function (c) { return relocateWhen(c, fromIndex, toIndex); }) };
+    if (w.any) return { any: w.any.map(function (c) { return relocateWhen(c, fromIndex, toIndex); }) };
+    return relocateCond(w, fromIndex, toIndex);
+  }
+  function compileRulesByPage() {
+    var byPage = state.pages.map(function () { return []; });
+    state.pages.forEach(function (page, i) {
+      page.rules.forEach(function (r) {
+        var rule = compileRule(r);
+        if (!rule) return;
+        var m = /^\$(\d+)\.(.+)$/.exec(rule.then[0].target);
+        if (!m) { byPage[i].push(rule); return; }
+        var j = Number(m[1]);
+        if (j >= state.pages.length) return; // page supprimée : règle abandonnée
+        rule.then[0].target = m[2];
+        if (j !== i) rule.when = relocateWhen(rule.when, i, j);
+        byPage[j].push(rule);
+      });
+    });
+    return byPage;
+  }
+
   function compile() {
-    return state.pages.map(function (page) {
+    var rulesByPage = compileRulesByPage();
+    return state.pages.map(function (page, pageIndex) {
       var properties = {}, fields = {}, required = [], order = [];
       page.nodes.forEach(function (n) {
         var r = compileNode(n);
@@ -395,8 +444,10 @@
       });
       // `order` explicite : PostgreSQL/jsonb ne conserve pas l'ordre des clés.
       var out = { options: { fields: fields, order: order }, page: { type: "object", properties: properties, required: required } };
-      var rules = page.rules.map(compileRule).filter(Boolean);
+      var rules = rulesByPage[pageIndex];
       if (rules.length) out.rules = rules;
+      var pageCondition = pageIndex > 0 ? compilePageCondition(page.pageCondition) : null;
+      if (pageCondition) out.pageCondition = pageCondition;
       var calc = page.calculate.filter(function (c) { return c.target && c.expr; })
         .map(function (c) { return { target: c.target, expr: c.expr }; });
       if (calc.length) out.calculate = calc;
@@ -470,6 +521,9 @@
         break;
       }
       default: schema = { type: "string" };
+        // Texte sur plusieurs lignes : `options.multiline` (tcomb-form-native sur mobile, <textarea> sur le web,
+        // appearance « multiline » en XLSForm).
+        if (n.multiline) options.multiline = true;
         if (num(n.minLength) != null) schema.minLength = num(n.minLength);
         if (num(n.maxLength) != null) schema.maxLength = num(n.maxLength);
         if (n.pattern) schema.pattern = n.pattern;
@@ -636,6 +690,12 @@
     });
     return acc;
   }
+  // Champs des pages PRÉCÉDANT la page active (condition d'affichage d'une page).
+  function earlierPagePaths() {
+    return crossPagePaths().filter(function (p) {
+      return Number(/^\$(\d+)\./.exec(p.path)[1]) < state.active;
+    });
+  }
   // Mirroir de `crossPagePaths()`, SAUF qu'elle inclut aussi la page active :
   // utilisée pour le picker "Champ source (même tâche)" des conditions
   // d'attachment (`renderAttachmentConditionRow`), qui n'est pas rattaché à
@@ -732,6 +792,9 @@
     state.pages.forEach(function (pg, i) {
       var li = el("li", { class: i === state.active ? "active" : "", onclick: function () { state.active = i; state.sel = null; render(); } }, [
         el("span", { text: t("page", "Page") + " " + (i + 1) + " (" + pg.nodes.length + ")" }),
+        (i > 0 && compilePageCondition(pg.pageCondition))
+          ? el("span", { class: "tfb-page-cond", title: t("pc_title", "Condition d'affichage de la page"), text: pg.pageCondition.action === "hide" ? "\u21B7" : "?" })
+          : el("span"),
         el("span", { class: "tfb-page-actions" }, [
           btn("▲", function (e) { e.stopPropagation(); movePage(i, -1); }),
           btn("▼", function (e) { e.stopPropagation(); movePage(i, 1); }),
@@ -1181,6 +1244,7 @@
       box.appendChild(renderCalcFieldEditor(n, nPath));
     }
     if (n.type === "text") {
+      box.appendChild(el("div", { class: "tfb-field-row" }, [checkbox(n.multiline, function (v) { n.multiline = v; }, t("f_multiline", "Texte sur plusieurs lignes"))]));
       box.appendChild(el("div", { class: "tfb-inline" }, [
         fieldRow(t("f_minlen", "Long. min"), textInput(n.minLength, function (v) { n.minLength = v; })),
         fieldRow(t("f_maxlen", "Long. max"), textInput(n.maxLength, function (v) { n.maxLength = v; }))
@@ -1923,13 +1987,16 @@
   function renderRulesEditor() {
     var page = state.pages[state.active];
     var box = el("div");
+    box.appendChild(renderPageConditionEditor());
+    box.appendChild(el("h6", { class: "mt-3", text: t("field_rules_title", "Règles sur les champs") }));
     box.appendChild(el("p", { class: "tfb-muted", text: t("rules_help", "Conditions entre champs : afficher / masquer / rendre obligatoire un champ selon la valeur d'un autre.") }));
+    box.appendChild(el("p", { class: "tfb-muted", text: t("rules_cross_page_help", "Le champ cible et les champs des conditions peuvent être sur d'autres pages (P1, P2…). Une règle dont la cible est sur une autre page est rangée sur la page de la cible à l'enregistrement.") }));
     var paths = currentPagePaths().concat(crossPagePaths());
     page.rules.forEach(function (r, ri) {
       var rb = el("div", { class: "tfb-rule" });
       rb.appendChild(el("div", { class: "tfb-inline" }, [
         fieldRow(t("r_action", "Action"), selectFrom(ACTIONS, r.action, function (v) { r.action = v; })),
-        fieldRow(t("r_target", "Champ cible"), selectPaths(currentPagePaths(), r.target, function (v) { r.target = v; }))
+        fieldRow(t("r_target", "Champ cible"), selectPaths(currentPagePaths().concat(crossPagePaths()), r.target, function (v) { r.target = v; }))
       ]));
       rb.appendChild(fieldRow(t("r_when", "Quand"), selectFrom([["all", t("r_all", "toutes les conditions")], ["any", t("r_any", "au moins une condition")]], r.conj, function (v) { r.conj = v; })));
       r.conds.forEach(function (c, ci) {
@@ -1950,6 +2017,46 @@
       page.rules.push({ id: uid(), target: "", conj: "all", conds: [{ field: "", op: "eq", value: "" }], action: "show" });
       render();
     }, "btn-primary btn-sm"));
+    return box;
+  }
+  // Condition d'affichage de la PAGE active (afficher la page seulement si… / sauter la
+  // page si…), sur des champs des pages précédentes. Page sautée : réponse vide ({}).
+  var PAGE_CONDITION_ACTIONS = [
+    ["show", t("pc_show", "Afficher cette page seulement si")],
+    ["hide", t("pc_hide", "Sauter (masquer) cette page si")]
+  ];
+  function renderPageConditionEditor() {
+    var page = state.pages[state.active];
+    var box = el("div", { class: "tfb-rule tfb-page-condition" });
+    box.appendChild(el("h6", { text: t("pc_title", "Condition d'affichage de la page") }));
+    if (state.active === 0) {
+      box.appendChild(el("p", { class: "tfb-muted", text: t("pc_first_page", "La 1re page est toujours affichée (aucune page avant elle).") }));
+      return box;
+    }
+    box.appendChild(el("p", { class: "tfb-muted", text: t("pc_help", "Selon la réponse à un champ d'une page précédente. Une page sautée n'est pas affichée et sa réponse est vide.") }));
+    var pc = page.pageCondition;
+    if (!pc) {
+      box.appendChild(btn("+ " + t("pc_add", "Ajouter une condition de page"), function () {
+        page.pageCondition = { action: "show", conj: "all", conds: [{ field: "", op: "eq", value: "" }] };
+        render();
+      }, "btn-primary btn-sm"));
+      return box;
+    }
+    var paths = earlierPagePaths();
+    box.appendChild(fieldRow(t("r_action", "Action"), selectFrom(PAGE_CONDITION_ACTIONS, pc.action, function (v) { pc.action = v; refreshTree(); })));
+    box.appendChild(fieldRow(t("r_when", "Quand"), selectFrom([["all", t("r_all", "toutes les conditions")], ["any", t("r_any", "au moins une condition")]], pc.conj, function (v) { pc.conj = v; })));
+    pc.conds.forEach(function (c, ci) {
+      box.appendChild(el("div", { class: "tfb-cond-row" }, [
+        selectPaths(paths, c.field, function (v) { c.field = v; refreshTree(); }),
+        selectFrom(OPS, c.op, function (v) { c.op = v; render(); }),
+        (c.op === "empty" || c.op === "notEmpty") ? el("span") : textInput(c.value, function (v) { c.value = v; refreshTree(); }),
+        btn("✕", function () { pc.conds.splice(ci, 1); if (!pc.conds.length) pc.conds.push({ field: "", op: "eq", value: "" }); render(); }, "btn-danger btn-sm")
+      ]));
+    });
+    box.appendChild(el("div", {}, [
+      btn("+ " + t("add_cond", "Ajouter une condition"), function () { pc.conds.push({ field: "", op: "eq", value: "" }); render(); }, "btn-secondary btn-sm"), " ",
+      btn("✕ " + t("pc_delete", "Supprimer la condition de page"), function () { page.pageCondition = null; render(); }, "btn-danger btn-sm")
+    ]));
     return box;
   }
   function selectFrom(pairs, val, on) {

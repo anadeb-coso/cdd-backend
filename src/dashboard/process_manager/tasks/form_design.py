@@ -39,6 +39,7 @@ import ast
 import copy
 import io
 import json
+import re
 
 CONDITION_OPERATORS = {
     "eq", "ne", "in", "nin", "gt", "gte", "lt", "lte",
@@ -174,6 +175,15 @@ def validate_form_design(form):
         # -- rules : erreurs bloquantes (produites par le builder) --------
         for r_index, rule in enumerate(page.get("rules", []) or []):
             _validate_rule(rule, form, p_index, f"{prefix} règle {r_index + 1}", errors)
+
+        # -- pageCondition : afficher / sauter la page entière -------------
+        if "pageCondition" in page:
+            page_condition = _validate_page_condition(
+                page.get("pageCondition"), form, p_index, f"{prefix} condition de page", errors)
+            if page_condition:
+                page["pageCondition"] = page_condition
+            else:
+                page.pop("pageCondition")
 
         # -- calculate : erreurs bloquantes ------------------------------
         _validate_calculate(page.get("calculate", []) or [], properties, prefix, errors)
@@ -938,6 +948,59 @@ def _validate_rule(rule, form, page_index, prefix, errors):
             errors.append(f"{prefix} : cible d'action inconnue '{target}'.")
 
 
+# Actions d'une condition de page (`page["pageCondition"]`).
+PAGE_CONDITION_ACTIONS = {"show", "hide"}
+
+
+def _condition_fields(cond):
+    """Champs (chemins bruts) référencés par une condition ``when`` (all / any imbriqués)."""
+    if not isinstance(cond, dict):
+        return []
+    if "all" in cond or "any" in cond:
+        out = []
+        for sub in (cond.get("all") or cond.get("any") or []):
+            out.extend(_condition_fields(sub))
+        return out
+    return [cond.get("field", "")]
+
+
+def _validate_page_condition(page_condition, form, page_index, prefix, errors):
+    """Condition d'affichage d'une page entière :
+    ``{"action": "show"|"hide", "when": <condition>}``.
+
+    - ``show`` : la page n'est affichée que si la condition est vraie ;
+      ``hide`` : la page est sautée si la condition est vraie.
+    - La condition ne porte que sur des champs des pages PRÉCÉDENTES
+      (``"$<index>.<chemin>"`` avec index < page courante) : la réponse doit être
+      connue en arrivant sur la page. La 1re page ne peut donc pas en avoir.
+    - Page sautée : non affichée sur mobile / web et sa réponse est ``{}``.
+
+    Retourne la condition nettoyée, ou ``None`` (vide / absente -> clé retirée). Les
+    erreurs de forme sont bloquantes (produites par le générateur), comme pour ``rules``.
+    """
+    if page_condition in (None, {}, ""):
+        return None
+    if not isinstance(page_condition, dict) or not isinstance(page_condition.get("when"), dict):
+        errors.append(f"{prefix} : condition mal formée.")
+        return None
+    action = page_condition.get("action") or "show"
+    if action not in PAGE_CONDITION_ACTIONS:
+        errors.append(f"{prefix} : action inconnue '{action}' (attendu : show, hide).")
+        return None
+    if page_index == 0:
+        errors.append(f"{prefix} : la 1re page ne peut pas être conditionnée (aucune page avant elle).")
+        return None
+    when = page_condition["when"]
+    _validate_condition(when, form, page_index, prefix, errors)
+    for field in _condition_fields(when):
+        head = field[1:].partition(".")[0] if isinstance(field, str) and field.startswith("$") else None
+        if head is None or not head.isdigit() or int(head) >= page_index:
+            errors.append(
+                f"{prefix} : '{field}' — la condition d'une page ne peut porter que sur "
+                f"un champ d'une page précédente.")
+    return {"action": action, "when": when}
+
+
 def _validate_condition(cond, form, page_index, prefix, errors):
     if not isinstance(cond, dict):
         errors.append(f"{prefix} : condition mal formée.")
@@ -1250,7 +1313,15 @@ def form_design_to_xlsform(form, form_title="form", instance_name=None):
         calc_by_target = {c["target"]: c["expr"] for c in page.get("calculate", []) or []}
 
         page_name = f"page_{page_index + 1}"
-        survey.append(["begin group", page_name, f"Page {page_index + 1}", "", "", "", "", "", "field-list"])
+        # Condition de page (`pageCondition`) -> `relevant` du groupe-page.
+        page_relevant = ""
+        page_condition = page.get("pageCondition")
+        if isinstance(page_condition, dict) and isinstance(page_condition.get("when"), dict):
+            page_relevant = _condition_to_xpath(page_condition["when"])
+            if page_condition.get("action") == "hide":
+                page_relevant = f"not({page_relevant})"
+        survey.append(["begin group", page_name, f"Page {page_index + 1}", "", "", page_relevant, "", "",
+                       "field-list"])
         for name in _normalize_order(page_opts.get("order"), properties):
             prop = properties[name]
             _emit_survey_row(
@@ -1375,6 +1446,10 @@ def _emit_survey_row(survey, choices, choice_lists, name, prop, opts,
     hint = opts.get("help", "")
     # `mode:"checklist"` (select_multiple rendu en cases à cocher) -> appearance ODK.
     appearance = "list" if opts.get("mode") == "checklist" else ""
+    # Texte sur plusieurs lignes (`options.multiline`) -> appearance ODK « multiline ».
+    if (opts.get("multiline") and prop.get("type") == "string" and not prop.get("enum")
+            and not prop.get("format") and not prop.get("_note")):
+        appearance = "multiline"
 
     if prop.get("type") == "object":
         survey.append(["begin group", name, label, hint, "", relevant or "", "", "", ""])
@@ -1570,6 +1645,8 @@ def xlsform_to_form_design(file_obj):
                         stack = [(cur["properties"], cur["options_fields"], cur["required"])]
                     # sinon : page initiale encore vide -> réutilisée pour CE
                     # premier groupe-page plutôt que de créer une page vide en tête.
+                    if row.get("relevant"):
+                        cur["page_relevant"] = row["relevant"]
                     open_kinds.append("page")
                 else:
                     sub_props, sub_opts, sub_req = {}, {}, []
@@ -1632,9 +1709,52 @@ def xlsform_to_form_design(file_obj):
             page["rules"] = ps["rules"]
         if ps["calculate"]:
             page["calculate"] = ps["calculate"]
+        if ps.get("page_relevant"):
+            converted = []
+            _relevant_to_rule(ps["page_relevant"], "", converted)
+            if converted:
+                page["pageCondition"] = {"action": converted[0]["then"][0]["action"],
+                                         "when": converted[0]["when"]}
         pages.append(page)
+    _resolve_imported_page_refs(pages)
     _autofill_from_sheets(wb, pages)
     return pages
+
+
+def _resolve_imported_page_refs(pages):
+    """XLSForm est un survey unique : l'export aplatit le préfixe de page ``$<index>.``
+    (cf. ``_condition_to_xpath``). À l'import, un champ de condition introuvable sur sa
+    propre page est recherché sur les autres pages et préfixé de ``$<index>.`` — pour
+    les règles (champ d'une autre page) comme pour ``pageCondition`` (toujours une
+    autre page, la plus proche AVANT la page)."""
+    def page_of(field, own_index, earlier_only):
+        candidates = range(own_index - 1, -1, -1) if earlier_only else             [i for i in range(len(pages)) if i != own_index]
+        for i in candidates:
+            if _resolve_local_path(field, pages[i]["page"]["properties"]):
+                return i
+        return None
+
+    def fix(cond, own_index, earlier_only):
+        if not isinstance(cond, dict):
+            return
+        if "all" in cond or "any" in cond:
+            for sub in (cond.get("all") or cond.get("any") or []):
+                fix(sub, own_index, earlier_only)
+            return
+        field = cond.get("field") or ""
+        if not field or field.startswith("$"):
+            return
+        if not earlier_only and _resolve_local_path(field, pages[own_index]["page"]["properties"]):
+            return
+        other = page_of(field, own_index, earlier_only)
+        if other is not None:
+            cond["field"] = f"${other}.{field}"
+
+    for index, page in enumerate(pages):
+        for rule in page.get("rules") or []:
+            fix(rule.get("when"), index, False)
+        if page.get("pageCondition"):
+            fix(page["pageCondition"].get("when"), index, True)
 
 
 def _xls_row_to_prop(row, head, raw_type, choice_map):
@@ -1675,6 +1795,8 @@ def _xls_row_to_prop(row, head, raw_type, choice_map):
         opt["mode"] = "file"
     else:
         prop = {"type": "string"}
+        if head == "text" and "multiline" in (row.get("appearance") or "").lower():
+            opt["multiline"] = True
 
     _merge_xls_constraint(row.get("constraint"), prop)
     return prop, opt
@@ -2227,3 +2349,123 @@ def read_sheet_table(file_obj, limit=_DATASOURCE_ROW_CAP):
         if len(rows) >= limit:
             break
     return columns, rows
+
+
+# ---------------------------------------------------------------------------
+# Pages sautées (`page["pageCondition"]`) : même calcul que le web
+# (task_cycle_fill_form.js `hiddenPages`) et le mobile (src/utils/pageVisibility.ts).
+# Appliqué côté serveur à l'enregistrement d'une saisie : un client qui ne connaît
+# pas les conditions de page (ancienne version de l'application) ne peut pas
+# laisser de réponse sur une page sautée.
+# ---------------------------------------------------------------------------
+def _is_empty_value(value):
+    return value is None or value == "" or (isinstance(value, list) and not value)
+
+
+_JS_FLOAT_PREFIX = re.compile(r"^[+-]?(Infinity|(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)")
+
+
+def _to_number(value):
+    """``toNumber`` du moteur JS : nombre tel quel, sinon ``parseFloat(String(v))`` (préfixe numérique
+    lu, booléens / null / texte -> NaN), pour des comparaisons identiques au web et au mobile."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    match = _JS_FLOAT_PREFIX.match(_js_string(value).lstrip(" \t\n\r\x0b\x0c ﻿"))
+    if not match:
+        return float("nan")
+    text = match.group(0)
+    return float(text.replace("Infinity", "inf"))
+
+
+def _js_string(value):
+    """``String(value)`` du JavaScript, pour les comparaisons eq / ne / in (mêmes résultats qu'en JS)."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, list):
+        return ",".join("" if v is None else _js_string(v) for v in value)
+    if isinstance(value, dict):
+        return "[object Object]"
+    return str(value)
+
+
+def _resolve_response_field(field, responses):
+    if not isinstance(field, str) or not field.startswith("$"):
+        return None
+    head, _, rest = field[1:].partition(".")
+    try:
+        index = int(head)
+    except ValueError:
+        return None
+    cur = responses[index] if 0 <= index < len(responses) and isinstance(responses[index], dict) else {}
+    if not rest:
+        return cur
+    for part in rest.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(part)
+    return cur
+
+
+def evaluate_page_condition(cond, responses):
+    if not isinstance(cond, dict):
+        return True
+    if isinstance(cond.get("all"), list):
+        return all(evaluate_page_condition(c, responses) for c in cond["all"])
+    if isinstance(cond.get("any"), list):
+        return any(evaluate_page_condition(c, responses) for c in cond["any"])
+    actual = _resolve_response_field(cond.get("field"), responses)
+    expected = cond.get("value")
+    op = cond.get("op")
+    if op == "eq":
+        return _js_string(actual) == _js_string(expected)
+    if op == "ne":
+        return _js_string(actual) != _js_string(expected)
+    if op in ("gt", "gte", "lt", "lte"):
+        a, b = _to_number(actual), _to_number(expected)
+        return {"gt": a > b, "gte": a >= b, "lt": a < b, "lte": a <= b}[op]
+    if op in ("in", "nin"):
+        if isinstance(actual, list):
+            found = _js_string(expected) in [_js_string(v) for v in actual]
+        else:
+            found = _js_string(actual) == _js_string(expected)
+        return found if op == "in" else not found
+    if op == "contains":
+        return _js_string(expected) in ("" if actual is None else _js_string(actual))
+    if op == "empty":
+        return _is_empty_value(actual)
+    if op == "notEmpty":
+        return not _is_empty_value(actual)
+    return True
+
+
+def hidden_page_indexes(form, responses):
+    """Index des pages sautées ; une page sautée compte comme vide pour les pages suivantes."""
+    effective = list(responses or [])
+    hidden = set()
+    for index, page in enumerate(form or []):
+        page_condition = page.get("pageCondition") if isinstance(page, dict) else None
+        if not isinstance(page_condition, dict) or not isinstance(page_condition.get("when"), dict):
+            continue
+        met = evaluate_page_condition(page_condition["when"], effective)
+        if (met if page_condition.get("action") == "hide" else not met):
+            hidden.add(index)
+            while len(effective) <= index:
+                effective.append({})
+            effective[index] = {}
+    return hidden
+
+
+def clear_hidden_page_responses(form, responses):
+    """Copie de ``responses`` où chaque page sautée vaut ``{}`` (inchangée sans condition de page)."""
+    out = list(responses or [])
+    if not any(isinstance(p, dict) and p.get("pageCondition") for p in (form or [])):
+        return out
+    while len(out) < len(form):
+        out.append({})
+    for index in hidden_page_indexes(form, out):
+        out[index] = {}
+    return out

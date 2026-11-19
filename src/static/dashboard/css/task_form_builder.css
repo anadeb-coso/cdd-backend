@@ -163,3 +163,6 @@
 .tfb-tt-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tfb-tt-add { min-width: 220px; max-width: 360px; }
 .tfb-tt-preview { background: #f4f6f8; padding: 2px 6px; border-radius: 4px; color: #2b6e55; word-break: break-all; }
+/* Page dont l'affichage dépend d'une condition (onglet Règles > Condition d'affichage de la page). */
+.tfb-pages li .tfb-page-cond { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #fff3cd; color: #856404; font-size: 11px; font-weight: 700; }
+.tfb-page-condition { background: #fffdf5; }
