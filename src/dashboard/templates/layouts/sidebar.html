@@ -1,4 +1,11 @@
 {% load static i18n custom_tags %}
+{# Barre de défilement du menu latéral (voir data-scrollbar-* sur <body>, layouts/base.html) : plus large et contrastée #}
+<style>
+    .main-sidebar .sidebar > .os-scrollbar-vertical { width: 10px; padding: 2px; }
+    .main-sidebar .sidebar > .os-scrollbar-vertical .os-scrollbar-handle { background: rgba(0, 0, 0, .28); border-radius: 6px; }
+    .main-sidebar .sidebar > .os-scrollbar-vertical .os-scrollbar-handle:hover,
+    .main-sidebar .sidebar > .os-scrollbar-vertical .os-scrollbar-handle.active { background: rgba(0, 0, 0, .45); }
+</style>
 
 <!-- Main Sidebar Container -->
 <aside class="main-sidebar sidebar-light-primary soft-shadow sidebar-no-expand">
@@ -38,6 +45,53 @@
                 </li>
             </ul>
         </nav>
+        {% if user.is_superuser %}{# Contrôle des villages : super-administrateurs seulement #}
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                <li class="nav-item has-treeview {% if active_level1 == 'village_docs' %}menu-open{% endif %}">
+                    <a href="#" class="nav-link {% if active_level1 == 'village_docs' %}active{% endif %}">
+                        <i class="nav-icon fas fa-clipboard-check"></i>
+                        <p>{% translate "Villages control" %} <i class="right fas fa-angle-left"></i></p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:administrative_levels:villages_checking' %}"
+                               class="nav-link {% if active_level2 == 'villages_checking' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'villages_checking' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Villages checking" %}</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:diagnostics:village_docs_orphans' %}"
+                               class="nav-link {% if active_level2 == 'village_docs_orphans' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'village_docs_orphans' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Documents without village" %}</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:diagnostics:village_docs_missing' %}"
+                               class="nav-link {% if active_level2 == 'village_docs_missing' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'village_docs_missing' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Villages without documents" %}</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+        {# Commandes de gestion lancées en arrière-plan : super-administrateurs seulement #}
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+                <li class="nav-item">
+                    <a href="{% url 'dashboard:commands_runner:index' %}"
+                       class="nav-link {% if active_level1 == 'commands_sync' %}active{% endif %}">
+                        <i class="nav-icon fas fa-terminal"></i>
+                        <p>{% translate "Commands / sync" %}</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
         {% endif %}
         
         {% comment %} <nav class="mt-2">
@@ -89,6 +143,15 @@
                                 <p>{% translate "Supervisors" %}</p>
                             </a>
                         </li>
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a href="{% url 'dashboard:facilitators:training_accounts' %}"
+                            class="nav-link {% if active_level2 == 'training_accounts' %}active{% endif %}">
+                                <i class="{% if active_level2 == 'training_accounts' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                                <p>{% translate "Training accounts" %}</p>
+                            </a>
+                        </li>
+                        {% endif %}
                         {% if user|can_view_localities_history %}
                         <li class="nav-item">
                             <a href="{% url 'dashboard:facilitators:localities_history' %}"
@@ -130,13 +193,29 @@
             </ul>
         </nav>
 
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
-            <li class="nav-item">
-                <a href="{% url 'dashboard:administrative_levels:documents' %}"
-                    class="nav-link {% if active_level1 == 'documents' %}active{% endif %}">
-                    <i class="nav-icon fa fa-square"></i>
-                    <p>{% translate "Documents" %}</p>
+        {# Galerie : documents du cycle d'investissement + fichiers des ouvrages (sous-projets) #}
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item has-treeview {% if active_level1 == 'gallery' %}menu-open{% endif %}">
+                <a href="#" class="nav-link {% if active_level1 == 'gallery' %}active{% endif %}">
+                    <i class="nav-icon fa fa-images"></i>
+                    <p>{% translate "Gallery" %} <i class="right fas fa-angle-left"></i></p>
                 </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard:administrative_levels:documents' %}"
+                           class="nav-link {% if active_level2 == 'documents' %}active{% endif %}">
+                            <i class="{% if active_level2 == 'documents' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                            <p>{% translate "Investment cycle" %}</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard:administrative_levels:works_gallery' %}"
+                           class="nav-link {% if active_level2 == 'works' %}active{% endif %}">
+                            <i class="{% if active_level2 == 'works' %}fas{% else %}far{% endif %} fa-circle nav-icon"></i>
+                            <p>{% translate "Works" %}</p>
+                        </a>
+                    </li>
+                </ul>
             </li>
         </ul>
 

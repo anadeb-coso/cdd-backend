@@ -7,7 +7,9 @@
     {% include 'layouts/head.html' %}
     {% block extracss %}{% endblock %}
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
+{# Barre de défilement du menu latéral (OverlayScrollbars, réglée par AdminLTE depuis ces attributs) : thème sombre,    #}
+{# lisible sur le menu clair, et toujours visible quand le menu dépasse la hauteur de l'écran (défaut : blanche, masquée) #}
+<body class="hold-transition sidebar-mini layout-fixed" data-scrollbar-theme="os-theme-dark" data-scrollbar-auto-hide="never">
 <div class="wrapper">
     {% include 'layouts/navbar.html' %}
     {% block progress-bar %}{% endblock %}
@@ -85,6 +87,7 @@
 
 {% block javascript %}
     {% include 'layouts/foot.html' %}
+    {% if vd_tracker_enabled %}{% include 'diagnostics/components/village_docs_tracker.html' %}{% endif %}
     {% block select2 %}
         <script type="text/javascript">
             $(document).ready(function () {
