@@ -301,6 +301,11 @@ class GetFCSituationExcelCSVReport(PageMixin, LoginRequiredMixin, TemplateView):
             facilitator_dbs_name.append(facilitator_db_name)
 
         project_names = self._get_ids_list(request.GET.get('projects')) or None
+        if project_names:
+            # Projets choisis dans le filtre : limités à ceux proposés à l'utilisateur.
+            from dashboard.statistics.utils import cdd_projects_for_request
+            allowed_names = set(cdd_projects_for_request(request).values_list('name', flat=True))
+            project_names = [n for n in project_names if n in allowed_names] or None
         three_priorities_rule = request.GET.get('three_priorities_rule')
         if three_priorities_rule in ('1', 'true', 'True'):
             three_priorities_rule = True

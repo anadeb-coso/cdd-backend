@@ -52,9 +52,40 @@ SHEET_PREFIX_BY_PROJECT = {"COSO": "COSO_P", "FA-COSO": "FACOSO", "FA COSO": "FA
 # ordre des projets dans la feuille FC_SITUATION
 PROJECT_RANKING = {"COSO": 0, "FA-COSO": 1, "PURS": 2}
 
+# États d'invalidation (tâche `validated` False), sans recouvrement : invalidées = non revues + revues + remises en
+# cours. Même découpage que le menu « Tâches (cycle DCC) » (views_adl._classify_task_detailed) :
+# - non revue : achevée, pas reprise par le FC depuis l'invalidation (`updated_after_invalidation` faux) ;
+# - revue : achevée et reprise par le FC (`updated_after_invalidation` vrai) ;
+# - remise en cours : plus achevée (le FC l'a rouverte pour la reprendre).
+INVALIDATION_UNREVIEWED, INVALIDATION_REVIEWED, INVALIDATION_RESUBMITTING = "unreviewed", "reviewed", "resubmitting"
+INVALIDATION_LABELS = {
+    INVALIDATION_UNREVIEWED: "Invalidée non revue par le FC",
+    INVALIDATION_REVIEWED: "Invalidée revue par le FC",
+    INVALIDATION_RESUBMITTING: "Invalidée remise en cours",
+}
+# Plusieurs copies d'une même tâche (stabilisation) : on garde l'état le plus avancé.
+_INVALIDATION_RANK = {INVALIDATION_UNREVIEWED: 0, INVALIDATION_RESUBMITTING: 1, INVALIDATION_REVIEWED: 2}
+
+INVALIDATION_METRIC_LABELS = [
+    "Nombre de tâches invalidées", "Nombre de tâches invalidées non revues par le FC",
+    "Nombre de tâches invalidées revues par le FC", "Nombre de tâches invalidées remises en cours",
+]
 FC_METRIC_LABELS = [
     "Nombre de tâches achevées", "Pourcentage d'achevement",
     "Nombre de tâches validées", "Pourcentage de validation", "Nombre de tâches",
+] + INVALIDATION_METRIC_LABELS
+
+# Feuilles des villages des tâches invalidées (par projet) : (suffixe, états retenus)
+INVALIDATION_SHEETS = [
+    ("TACHES INVALIDEES", None),
+    ("INV NON REVUES", INVALIDATION_UNREVIEWED),
+    ("INV REVUES", INVALIDATION_REVIEWED),
+    ("INV REMISES EN COURS", INVALIDATION_RESUBMITTING),
+]
+INVALIDATION_SHEET_COLUMNS = [
+    "REGION", "PREFECTURE", "COMMUNE", "CANTON", "CVD", "CVD_ID", "VILLAGE", "VILLAGE_ID",
+    "PHASE", "ACTIVITE", "TACHE", "TACHE_ID", "STATUT", "FC",
+    "Date d'invalidation", "Invalidée par", "Motif de l'invalidation",
 ]
 
 CVD_GEO_COLUMNS = ["REGION", "PREFECTURE", "COMMUNE", "CANTON", "CVD", "CVD_ID", "VILLAGES"]
@@ -107,6 +138,37 @@ def _as_id_list(value):
         if pid is not None:
             out.append(pid)
     return out
+
+
+def invalidation_state(doc):
+    """État d'invalidation d'un document de tâche (None : tâche non invalidée)."""
+    if doc.get("validated") is not False:
+        return None
+    if not doc.get("completed"):
+        return INVALIDATION_RESUBMITTING
+    return INVALIDATION_REVIEWED if doc.get("updated_after_invalidation") else INVALIDATION_UNREVIEWED
+
+
+def invalidation_counts(states):
+    """[invalidées, non revues, revues, remises en cours] pour une liste d'états."""
+    states = [st for st in states if st]
+    return [len(states)] + [sum(1 for st in states if st == key)
+                            for key in (INVALIDATION_UNREVIEWED, INVALIDATION_REVIEWED, INVALIDATION_RESUBMITTING)]
+
+
+def _last_invalidation(doc):
+    """(date, auteur, motif) de la dernière invalidation enregistrée sur le document."""
+    actions = doc.get("actions_by") or []
+    if not isinstance(actions, list):
+        actions = [actions]
+    action = doc.get("action_by")
+    if isinstance(action, list):
+        action = action[0] if action else None
+    for candidate in [action] + actions:
+        if isinstance(candidate, dict) and candidate.get("type") == "Invalidated":
+            name = " ".join(x for x in (candidate.get("user_first_name"), candidate.get("user_last_name")) if x)
+            return candidate.get("action_date") or "", name or candidate.get("user_name") or "", candidate.get("comment") or ""
+    return "", "", ""
 
 
 def _percent(numerator, denominator):
@@ -372,13 +434,15 @@ def _task_docs_from_aggregated_status(projects, params, all_sql_ids):
         rows = AggregatedStatus.objects.filter(
             project=project, facilitator=None, task__isnull=False, administrative_level_id__in=hq_ids,
             **({"cycle": cycle} if cycle else {}), **({"task_id__in": all_sql_ids} if all_sql_ids else {}),
-        ).values_list("task_id", "administrative_level_id", "total_tasks_completed", "total_tasks_validated", "total_tasks_invalidated")
+        ).values_list("task_id", "administrative_level_id", "total_tasks_completed", "total_tasks_validated",
+                      "total_tasks_invalidated", "total_tasks_invalidated_review")
         task_docs_by_project[project.name] = [
             {
                 "type": "task", "project_name": project.name, "sql_id": task_id, "administrative_level_id": adl_id,
                 "completed": bool(completed), "validated": True if validated else (False if invalidated else None),
+                "updated_after_invalidation": bool(reviewed),
             }
-            for task_id, adl_id, completed, validated, invalidated in rows
+            for task_id, adl_id, completed, validated, invalidated, reviewed in rows
         ]
     return task_docs_by_project
 
@@ -400,11 +464,19 @@ def _dedup_task_status_by_project(task_docs_by_project):
             aid = _to_int(doc.get("administrative_level_id"))
             if sid is None or aid is None:
                 continue
-            entry = per_key.setdefault((sid, aid), {"completed": False, "validated": False})
+            entry = per_key.setdefault((sid, aid), {"completed": False, "validated": False, "invalidation": None, "doc": None})
             if doc.get("completed"):
                 entry["completed"] = True
             if doc.get("validated") is True:
                 entry["validated"] = True
+            state = invalidation_state(doc)
+            if state and (entry["invalidation"] is None
+                          or _INVALIDATION_RANK[state] > _INVALIDATION_RANK[entry["invalidation"]]):
+                entry["invalidation"], entry["doc"] = state, doc
+    for per_key in status.values():
+        for entry in per_key.values():
+            if entry["validated"]:  # validée dans une copie : n'est plus invalidée
+                entry["invalidation"], entry["doc"] = None, None
     return status
 
 
@@ -456,6 +528,7 @@ def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name
             ]
 
         g_completed = g_validated = g_total = 0
+        g_states = []
         for name in project_names:
             scope_ids = scope_by_project_name.get(name, set())
             fc_ads = set(ads_for_fc.get(name, []))
@@ -466,11 +539,14 @@ def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name
             nb = len(entries)
             completed = sum(1 for v in entries if v["completed"])
             validated = sum(1 for v in entries if v["validated"])
+            states = [v["invalidation"] for v in entries]
             if nb == 0:
                 # même rendu que `export_fc_situation_to_excel` : bloc projet vide
-                row += ["", "", "", "", ""]
+                row += [""] * len(FC_METRIC_LABELS)
             else:
                 row += [completed, _percent(completed, nb), validated, _percent(validated, nb), nb]
+                row += invalidation_counts(states)
+            g_states += states
             g_completed += completed
             g_validated += validated
             g_total += nb
@@ -479,9 +555,62 @@ def _build_fc_situation_sheet(facilitators, project_names, scope_by_project_name
             g_completed, _percent(g_completed, g_total),
             g_validated, _percent(g_validated, g_total), g_total,
         ]
+        row += invalidation_counts(g_states)
         rows.append(row)
 
     return pd.DataFrame(rows, columns=columns)
+
+
+# --- Feuilles des tâches invalidées (villages) ------------------------------
+
+def _facilitators_by_hq_village(facilitators, project_name, hq_ids):
+    """{village siège: [noms des FC]} : villages initialement affectés + stabilisation (règle de FC_SITUATION)."""
+    out = {}
+    for facilitator in facilitators:
+        initial = {
+            int(ad["id"]) for ad in (facilitator.administrative_levels or [])
+            if ad.get("project_name") == project_name and str(ad.get("id")).isdigit()
+        }
+        for hq_id in (initial | set(facilitator.stabilization_administrative_ids or [])) & hq_ids:
+            out.setdefault(hq_id, []).append(facilitator.name)
+    return out
+
+
+def _build_invalidation_sheets(project, task_status_by_project, scope_ids, facilitators, excluded_hq_ids, geo_cache):
+    """{nom_feuille: DataFrame} : une ligne par (tâche, village siège) invalidée, puis une feuille par état."""
+    prefix = SHEET_PREFIX_BY_PROJECT.get(project.name.upper(), project.name)
+    hq_ids = _headquarters_village_ids_by_project([project.name])[project.name] - set(excluded_hq_ids)
+    fcs = _facilitators_by_hq_village(facilitators, project.name, hq_ids)
+    invalidated = [
+        (sid, aid, v) for (sid, aid), v in task_status_by_project.get(project.name, {}).items()
+        if v.get("invalidation") and sid in scope_ids and aid in hq_ids
+    ]
+    tasks = Task.objects.select_related("phase", "activity").in_bulk({sid for sid, _, _ in invalidated})
+    villages = dict(mis_objects_call.filter_objects(AdministrativeLevel, id__in={aid for _, aid, _ in invalidated})
+                    .values_list("id", "name")) if invalidated else {}
+    records = []
+    for sid, aid, v in invalidated:
+        geo = _geo_for_cvd(aid, geo_cache) or ("", "", "", "", "", "", "")
+        task = tasks.get(sid)
+        date, by, comment = _last_invalidation(v.get("doc") or {})
+        records.append({
+            "REGION": geo[0], "PREFECTURE": geo[1], "COMMUNE": geo[2], "CANTON": geo[3], "CVD": geo[4], "CVD_ID": geo[5],
+            "VILLAGE": villages.get(aid) or (v.get("doc") or {}).get("administrative_level_name") or "", "VILLAGE_ID": aid,
+            "PHASE": task.phase.name if task and task.phase else "",
+            "ACTIVITE": task.activity.name if task and task.activity else "",
+            "TACHE": task.name if task else "", "TACHE_ID": sid,
+            "STATUT": INVALIDATION_LABELS[v["invalidation"]], "_state": v["invalidation"],
+            "_order": (task.phase.order if task and task.phase else 0, task.activity.order if task and task.activity else 0,
+                       task.order if task else 0),
+            "FC": ", ".join(sorted(fcs.get(aid, []))),
+            "Date d'invalidation": date, "Invalidée par": by, "Motif de l'invalidation": comment,
+        })
+    records.sort(key=lambda r: (r["REGION"], r["PREFECTURE"], r["COMMUNE"], r["CANTON"], r["CVD"], r["VILLAGE"], r["_order"]))
+    return {
+        f"{prefix} {suffix}": pd.DataFrame([r for r in records if state is None or r["_state"] == state],
+                                           columns=INVALIDATION_SHEET_COLUMNS)
+        for suffix, state in INVALIDATION_SHEETS
+    }
 
 
 # --- Feuilles CVD ---------------------------------------------------------
@@ -786,6 +915,15 @@ def build_fc_situation_workbook(params, source="couchdb"):
 
     cvd_status = _collect_cvd_status(task_docs_by_project, three_priorities_rule)
 
+    # 2ter) Villages des tâches invalidées (mêmes entrées que les colonnes d'invalidation de FC_SITUATION)
+    invalidation_geo_cache = {}
+    invalidation_sheets = {}
+    for project in projects:
+        invalidation_sheets.update(_build_invalidation_sheets(
+            project, dedup_task_status, scope_by_project_name.get(project.name, set()),
+            fc_situation_facilitators, excluded_hq_ids, invalidation_geo_cache,
+        ))
+
     # 3) Feuilles CVD par projet
     geo_cache = {}
     invalid_sheets, not3_sheets, rollup_sheets = {}, {}, {}
@@ -814,6 +952,8 @@ def build_fc_situation_workbook(params, source="couchdb"):
         for name, df in not3_sheets.items():
             df.to_excel(writer, sheet_name=name[:31], index=False)
         for name, df in rollup_sheets.items():
+            df.to_excel(writer, sheet_name=name[:31], index=False)
+        for name, df in invalidation_sheets.items():
             df.to_excel(writer, sheet_name=name[:31], index=False)
 
     try:

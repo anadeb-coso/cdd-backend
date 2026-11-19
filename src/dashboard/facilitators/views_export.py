@@ -65,6 +65,16 @@ def export_fc_situation_to_excel(request):
     projects_mis = mis_objects_call.filter_objects(MisProject, name__contains='COSO')
     projects_names = [p.name for p in projects_mis]
 
+    # Projets choisis sur /reports/facilitators-status (paramètre `projects`, noms séparés
+    # par des virgules) : limités aux projets proposés à l'utilisateur. Vide = tous.
+    from dashboard.statistics.utils import cdd_projects_for_request
+    requested_names = [n for n in (request.GET.get('projects') or '').split(',') if n.strip()]
+    if requested_names:
+        allowed_names = set(cdd_projects_for_request(request).values_list('name', flat=True))
+        chosen = [n for n in requested_names if n in allowed_names]
+        if chosen:
+            projects_names = [n for n in chosen if mis_objects_call.filter_objects(MisProject, name=n).exists()] or projects_names
+
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
@@ -78,11 +88,14 @@ def export_fc_situation_to_excel(request):
 
     # --- 3. Définition des En-têtes de Colonnes (Headers) ---
     
+    # Colonnes d'invalidation : même découpage que le classeur FC_SITUATION (fc_situation.INVALIDATION_*), sans
+    # recouvrement — invalidées = non revues (achevées) + revues (achevées) + remises en cours (non achevées).
+    from dashboard.reports.excel_csv.fc_situation import INVALIDATION_METRIC_LABELS
+    metric_labels = [_("Nombre de tâches achevées"), _("Pourcentage d'achevement"), _("Nombre de tâches validées"),
+                     _("Pourcentage de validation"), _("Nombre de tâches")] + INVALIDATION_METRIC_LABELS
     columns_lazy = [
         _("FC"), _("CVD initialement affectés"), _("CVD de Stabilisation"), _("Total CVD")
-    ] + [f"{c} {p}" for p in projects_names for c in [_("Nombre de tâches achevées"), _("Pourcentage d'achevement"), _("Nombre de tâches validées"), _("Pourcentage de validation"), _("Nombre de tâches")]] + [
-        _("Nombre de tâches achevées"), _("Pourcentage d'achevement"), _("Nombre de tâches validées"), _("Pourcentage de validation"), _("Nombre de tâches")
-    ]
+    ] + [f"{c} {p}" for p in projects_names for c in metric_labels] + list(metric_labels)
     
     columns = [str(header) for header in columns_lazy]
 
@@ -95,6 +108,7 @@ def export_fc_situation_to_excel(request):
     }
     all_headquarters_village_ids = set().union(*_headquarters_village_ids.values())
     
+    fcs_by_village = {}  # {projet: {village siège: [FC]}} pour les feuilles des tâches invalidées
     # Récupérer les facilitateurs en une seule requête
     facilitators = Facilitator.objects.filter(facilitator_type='community_facilitator', active=True, develop_mode=False, training_mode=False, projects__name__in=projects_names).distinct()
     
@@ -149,6 +163,7 @@ def export_fc_situation_to_excel(request):
         _total_tasks_completed = 0
         _total_tasks_validated = 0
         _total_tasks = 0
+        _total_invalidation = [0, 0, 0, 0]
         _fcs = [
             facilitator.name,
             len(list(set(facilitator.administrative_levels_ids or []) & all_headquarters_village_ids)),
@@ -171,8 +186,12 @@ def export_fc_situation_to_excel(request):
 
                 _fcs.append(v_ag['total_tasks'])
                 _total_tasks += v_ag['total_tasks']
+
+                invalidation = _invalidation_counts(v_ag)
+                _fcs.extend(invalidation)
+                _total_invalidation = [a + b for a, b in zip(_total_invalidation, invalidation)]
             else:
-                _fcs.extend(["", "", "", "", ""])
+                _fcs.extend([""] * len(metric_labels))
 
         # _t_column_remain = (4 + len(projects_names)*5) - len(_fcs)
         # if _t_column_remain:
@@ -187,14 +206,80 @@ def export_fc_situation_to_excel(request):
         _fcs.append(round((_total_tasks_validated / _total_tasks) * 100, 2) if _total_tasks > 0 else 0)
         
         _fcs.append(_total_tasks)
+        _fcs.extend(_total_invalidation)
 
         ws.append(_fcs)
+        for _project_name, _ids in ads_for_fc.items():
+            for _hq_id in _ids:
+                fcs_by_village.setdefault(_project_name, {}).setdefault(_hq_id, []).append(facilitator.name)
         
 
     # Ajustement de la largeur des colonnes (Optionnel) ---
     for col in range(1, len(columns) + 1):
         ws.column_dimensions[get_column_letter(col)].width = 25
 
+    _append_invalidation_sheets(wb, projects_names, fcs_by_village)
+
     wb.save(response)
     print("ok export")
     return response
+
+
+def _invalidation_counts(totals):
+    """[invalidées, non revues, revues, remises en cours] à partir des sommes d'AggregatedStatus."""
+    remises = (totals.get('total_tasks_invalidated_review_in_pending') or 0) + (totals.get('total_tasks_invalidated_unreview_in_pending') or 0)
+    return [
+        totals.get('total_tasks_invalidated') or 0,
+        totals.get('total_tasks_invalidated_unreview_completed') or 0,
+        totals.get('total_tasks_invalidated_review_completed') or 0,
+        remises,
+    ]
+
+
+def _append_invalidation_sheets(wb, projects_names, fcs_by_village):
+    """Feuilles des villages des tâches invalidées (par projet) : toutes, puis une par état. Mêmes lignes
+    AggregatedStatus que les colonnes de la feuille principale (tâche de priorisation, villages sièges des FC)."""
+    from dashboard.reports.excel_csv.fc_situation import (
+        INVALIDATION_LABELS, INVALIDATION_REVIEWED, INVALIDATION_RESUBMITTING, INVALIDATION_SHEETS,
+        INVALIDATION_UNREVIEWED, SHEET_PREFIX_BY_PROJECT, _geo_for_cvd,
+    )
+    headers = ["REGION", "PREFECTURE", "COMMUNE", "CANTON", "CVD", "CVD_ID", "VILLAGE", "VILLAGE_ID",
+               "PHASE", "ACTIVITE", "TACHE", "TACHE_ID", "STATUT", "FC"]
+    geo_cache = {}
+    for project_name in projects_names:
+        villages_fcs = fcs_by_village.get(project_name, {})
+        rows = AggregatedStatus.objects.filter(
+            administrative_level_id__in=list(villages_fcs), project__name=project_name, facilitator=None,
+            task__name__icontains="Soutenir la communauté dans la sélection des priorités par sous-composante (1.1",
+            total_tasks_invalidated__gt=0,
+        ).select_related('task', 'task__phase', 'task__activity') if villages_fcs else []
+        village_names = dict(mis_objects_call.filter_objects(
+            administrativelevels_models.AdministrativeLevel, id__in=[r.administrative_level_id for r in rows]
+        ).values_list('id', 'name')) if rows else {}
+        records = []
+        for row in rows:
+            if row.total_tasks_invalidated_review_in_pending or row.total_tasks_invalidated_unreview_in_pending:
+                state = INVALIDATION_RESUBMITTING
+            elif row.total_tasks_invalidated_review_completed or row.total_tasks_invalidated_review:
+                state = INVALIDATION_REVIEWED
+            else:
+                state = INVALIDATION_UNREVIEWED
+            geo = _geo_for_cvd(row.administrative_level_id, geo_cache) or ("", "", "", "", "", "", "")
+            task = row.task
+            records.append((state, [
+                geo[0], geo[1], geo[2], geo[3], geo[4], geo[5],
+                village_names.get(row.administrative_level_id, ""), row.administrative_level_id,
+                task.phase.name if task and task.phase else "", task.activity.name if task and task.activity else "",
+                task.name if task else "", task.id if task else "", INVALIDATION_LABELS[state],
+                ", ".join(sorted(set(villages_fcs.get(row.administrative_level_id, [])))),
+            ]))
+        records.sort(key=lambda r: [str(x) for x in r[1][:7]])
+        prefix = SHEET_PREFIX_BY_PROJECT.get(project_name.upper(), project_name)
+        for suffix, wanted in INVALIDATION_SHEETS:
+            sheet = wb.create_sheet(f"{prefix} {suffix}"[:31])
+            sheet.append(headers)
+            for state, values in records:
+                if wanted is None or state == wanted:
+                    sheet.append(values)
+            for col in range(1, len(headers) + 1):
+                sheet.column_dimensions[get_column_letter(col)].width = 22

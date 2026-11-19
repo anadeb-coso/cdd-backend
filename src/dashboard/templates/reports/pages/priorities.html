@@ -9,6 +9,20 @@
                     {% translate "Generate Excel reports on the situation of the task(s) selected in the filters above." %}
                 </p>
 
+                <div class="mb-3" id="fc-situation-projects-filter">
+                    <span class="filter-group-label">{% translate "Projects" %}</span>
+                    <div style="max-width: 520px;">
+                        <select id="fc_situation_projects" class="form-control" multiple>
+                            {% for project in cdd_projects %}
+                                <option value="{{ project.name }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <small class="text-muted d-block">
+                        {% translate "Applies to the “FC situation (by task)”, “FC situation (by task, aggregated statuses)” and “FC situations” exports. Leave empty to include all projects." %}
+                    </small>
+                </div>
+
                 <h6 class="filter-group-label">{% translate "Consolidated reports" %}</h6>
                 <div class="row task-situation-reports">
 
@@ -227,7 +241,18 @@
             };
         })();
 
+        // Projets choisis pour les exports « Situation des FC » (vide = tous les projets).
+        window.getFcSituationProjects = function () {
+            return ($('#fc_situation_projects').val() || []).join(',');
+        };
+
         $(document).ready(function() {
+
+            $('#fc_situation_projects').select2({
+                placeholder: "{% translate 'All projects' %}",
+                allowClear: true,
+                width: '100%'
+            });
 
             // Export "source" : la vue renvoie directement le fichier (attachment) -> navigation.
             $(".export_adl_situation").on("click", function(event) {
@@ -251,6 +276,9 @@
             $(".export_fc_raw").on("click", function(event) {
                 var $btn = $(this);
                 if (!window.reportDownloadUI.begin($btn)) { event.preventDefault(); return; }
+                var baseUrl = $btn.attr('href').split('?')[0];
+                var projects = window.getFcSituationProjects();
+                $btn.attr('href', projects ? baseUrl + "?projects=" + encodeURIComponent(projects) : baseUrl);
                 setTimeout(function () { window.reportDownloadUI.end(false); }, 8000);
             });
 
@@ -274,6 +302,10 @@
 
                 if (window.getExcludedLocalities && window.getExcludedLocalities()) {
                     url += `&excluded=` + encodeURIComponent(window.getExcludedLocalities());
+                }
+
+                if (window.getFcSituationProjects()) {
+                    url += `&projects=` + encodeURIComponent(window.getFcSituationProjects());
                 }
 
                 window.reportDownloadUI.ajaxDownload(url, $btn.data('filename') || "fc_situation.xlsx",
