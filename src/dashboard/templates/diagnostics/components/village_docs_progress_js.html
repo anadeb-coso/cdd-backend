@@ -1,0 +1,73 @@
+{% load i18n %}
+{# Rendu d'une VillageDocsOperation (barre de progression) : pages « Documents des villages » et encart de base.html #}
+<script type="text/javascript">
+window.VillageDocsProgress = window.VillageDocsProgress || (function () {
+    var T = {
+        running: "{% translate 'In progress'|escapejs %}",
+        pending: "{% translate 'Waiting for another operation to finish'|escapejs %}",
+        since: "{% translate 'for'|escapejs %}",
+        on: "{% translate 'on'|escapejs %}",
+        by: "{% translate 'by'|escapejs %}",
+        done: "{% translate 'Finished'|escapejs %}",
+        in_: "{% translate 'in'|escapejs %}",
+        failed: "{% translate 'Failed'|escapejs %}",
+        interrupted: "{% translate 'Interrupted (no news from the server for 10 minutes)'|escapejs %}",
+        current: "{% translate 'current'|escapejs %}",
+        documents: "{% translate 'documents'|escapejs %}",
+        pairs: "{% translate 'task × village pairs'|escapejs %}",
+        items: "{% translate 'line(s) processed'|escapejs %}",
+        details: "{% translate 'Details'|escapejs %}",
+        problems: "{% translate 'problem(s)'|escapejs %}",
+        listing: "{% translate 'Listing the documents…'|escapejs %}",
+        nothing: "{% translate 'No document to move for these villages.'|escapejs %}"
+    };
+    function esc(t) { return $("<div>").text(t === null || t === undefined ? "" : String(t)).html(); }
+    function dur(s) {
+        var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+        return (h ? h + " h " : "") + (h || m ? m + " min " : "") + r + " s";
+    }
+    function resultsHtml(op) {
+        if (!op.results.length) return "";
+        var cls = { ok: "text-success", warning: "text-warning", refused: "text-warning", error: "text-danger" };
+        return '<details class="mt-1"' + (op.problems ? " open" : "") + '><summary class="small">' + esc(T.details) + " (" + op.ok + " OK"
+            + (op.problems ? ", " + op.problems + " " + esc(T.problems) : "") + ')</summary><ul class="small mb-0 pl-3">'
+            + op.results.map(function (r) {
+                return '<li class="' + (cls[r.status] || "") + '">' + esc(r.label) + " : " + esc(r.message)
+                    + (r.warnings && r.warnings.length ? "<br>" + esc(r.warnings.join(" ")) : "") + "</li>";
+            }).join("") + "</ul></details>";
+    }
+    function counts(op) {
+        return esc(op.items_done) + " / " + esc(op.items_total) + " " + esc(T.items) + " — "
+            + esc(op.units_done) + (op.units_total ? " / " + esc(op.units_total) : "") + " "
+            + esc(op.kind === "sync" ? T.pairs : T.documents);
+    }
+    function render(op, extraHead) {
+        var who = op.started_by ? ", " + esc(T.by) + " " + esc(op.started_by) : "";
+        var head = esc(op.kind_label) + (op.db ? ' — <span class="text-monospace" style="color:inherit">' + esc(op.db) + "</span>" : "")
+            + ' <small class="font-weight-normal">(' + esc(T.on) + " " + esc(op.started_at) + who + ")</small>" + (extraHead || "");
+        if (op.status === "pending") {
+            return '<div class="alert alert-secondary mb-2"><div class="font-weight-bold"><i class="far fa-clock mr-1"></i>'
+                + esc(T.pending) + " — " + head + "</div></div>";
+        }
+        if (op.status === "running") {
+            var pct = op.units_total ? op.units_done / op.units_total : (op.items_total ? op.items_done / op.items_total : 0);
+            pct = Math.max(3, Math.min(100, Math.round(pct * 100)));
+            return '<div class="alert alert-info mb-2"><div class="font-weight-bold"><i class="fa fa-spinner fa-spin mr-1"></i>'
+                + esc(T.running) + " " + esc(T.since) + " " + dur(op.elapsed) + " — " + head + "</div>"
+                + '<div class="progress my-2" style="height:10px"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:' + pct + '%"></div></div>'
+                + '<div class="small">' + (op.units_total || op.kind === "sync" ? counts(op) : esc(T.listing))
+                + (op.current ? "<br>" + esc(T.current) + " : " + esc(op.current) : "") + "</div>" + resultsHtml(op) + "</div>";
+        }
+        if (op.status === "done") {
+            return '<div class="alert ' + (op.problems ? "alert-warning" : "alert-success") + ' mb-2"><div class="font-weight-bold"><i class="fa fa-check-circle mr-1"></i>'
+                + esc(T.done) + " " + esc(T.on) + " " + esc(op.finished_at) + " " + esc(T.in_) + " " + dur(op.elapsed) + " — " + head + "</div>"
+                + '<div class="progress my-2" style="height:10px"><div class="progress-bar bg-success" style="width:100%"></div></div>'
+                + '<div class="small">' + (op.items_total ? counts(op) : esc(T.nothing)) + "</div>" + resultsHtml(op) + "</div>";
+        }
+        return '<div class="alert alert-danger mb-2"><div class="font-weight-bold"><i class="fa fa-times-circle mr-1"></i>'
+            + esc(op.status === "interrupted" ? T.interrupted : T.failed) + " — " + head + "</div>"
+            + '<div class="small">' + (op.error ? "<code>" + esc(op.error) + "</code><br>" : "") + counts(op) + "</div>" + resultsHtml(op) + "</div>";
+    }
+    return { render: render, esc: esc };
+})();
+</script>

@@ -1,0 +1,499 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12">
+            <div class="callout callout-info small">
+                {% if page == 'orphans' %}
+                    {% translate "Phases, activities and tasks found in the CouchDB database of a community facilitator for a village that is no longer (or was never) among his assignment villages for this project and cycle. They can be moved to the backup database backup_db_facilitators_docs (then deleted from the facilitator's database)." %}
+                {% else %}
+                    {% translate "Headquarters assignment villages of a community facilitator with no phase, activity or task in his database for this project and cycle. If the backup database holds this village's documents, they can be moved to the facilitator's database; otherwise tick the villages and synchronize the chosen tasks." %}
+                {% endif %}
+                <a href="{% if other_page == 'missing' %}{% url 'dashboard:diagnostics:village_docs_missing' %}{% else %}{% url 'dashboard:diagnostics:village_docs_orphans' %}{% endif %}" class="ml-1">
+                    {% if other_page == 'missing' %}{% translate "Villages without documents" %}{% else %}{% translate "Documents without village" %}{% endif %} &rarr;
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-5 form-group">
+                            <label for="vd-project">{% translate 'Projects' %}</label>
+                            <select class="form-control vd-select" id="vd-project" multiple data-placeholder="{% translate 'All my projects' %}">
+                                {% for project in projects %}
+                                    <option value="{{ project.id }}"{% if project.id == default_project %} selected{% endif %}>{{ project.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label for="vd-cycle">{% translate 'Cycles' %}</label>
+                            <select class="form-control vd-select" id="vd-cycle" multiple data-placeholder="{% translate 'All' %}">
+                                {% for cycle in cycles %}
+                                    <option value="{{ cycle.id }}" data-project="{{ cycle.project_id }}">{{ cycle.project.name }} — {{ cycle.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>{% translate 'Accounts' %}</label>
+                            {% for key, label in kinds %}
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input vd-kind" id="vd-kind-{{ key }}" value="{{ key }}"{% if key == 'real' %} checked{% endif %}>
+                                    <label class="custom-control-label font-weight-normal" for="vd-kind-{{ key }}">{{ label }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary" id="vd-scan"><i class="fa fa-search mr-1"></i>{% translate 'Analyze the databases' %}</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="vd-operation" class="mb-3"></div>
+
+            <div class="card">
+                <div class="card-header d-flex flex-wrap align-items-center">
+                    <span id="vd-summary" class="text-muted mr-auto"></span>
+                    <input type="search" id="vd-search" class="form-control form-control-sm mr-2 my-1" style="max-width:260px" placeholder="{% translate 'Search…' %}">
+                    {% if can_act %}
+                        {% if page == 'orphans' %}
+                            <button type="button" class="btn btn-sm btn-warning my-1" id="vd-bulk" disabled>
+                                <i class="fa fa-archive mr-1"></i>{% translate 'Move the selection to the backup' %} (<span class="vd-count">0</span>)
+                            </button>
+                        {% else %}
+                            <button type="button" class="btn btn-sm btn-primary my-1" id="vd-bulk" disabled>
+                                <i class="fa fa-sync mr-1"></i>{% translate 'Synchronize the selection' %} (<span class="vd-count">0</span>)
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    <div id="vd-errors"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0" id="vd-table">
+                            <thead class="thead-light">
+                                <tr>
+                                    {% if can_act %}<th style="width:28px"><input type="checkbox" id="vd-all" title="{% translate 'Select all' %}"></th>{% endif %}
+                                    <th>{% translate 'Village' %}</th>
+                                    <th>{% translate 'Project' %} / {% translate 'Cycle' %}</th>
+                                    <th>{% translate 'Facilitator (database)' %}</th>
+                                    {% if page == 'orphans' %}<th>{% translate 'Documents' %}</th>{% endif %}
+                                    <th>{% translate 'Normally assigned (MIS)' %}</th>
+                                    {% if page == 'missing' %}<th>{% translate 'Backup database' %}</th>{% endif %}
+                                    <th>{% translate 'Comments' %}</th>
+                                    {% if can_act and page == 'orphans' %}<th></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="9" class="text-center text-muted py-4">{% translate 'Choose the filters then click « Analyze the databases ».' %}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Commentaires d'une identification #}
+    <div class="modal fade" id="vd-comment-modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{% translate 'Comments' %} — <span id="vd-comment-title"></span></h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="vd-comment-list" class="mb-3"></div>
+                    <div class="form-group">
+                        <label for="vd-comment-assigned">{% translate 'Facilitator normally assigned there' %}</label>
+                        <select class="form-control" id="vd-comment-assigned"></select>
+                        <small class="form-text text-muted">{% translate 'Proposed from the MIS assignments (AssignAdministrativeLevelToFacilitator).' %}</small>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label for="vd-comment-text">{% translate 'New comment' %}</label>
+                        <textarea class="form-control" id="vd-comment-text" rows="3"></textarea>
+                    </div>
+                    <div id="vd-comment-feedback" class="mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">{% translate 'Close' %}</button>
+                    <button type="button" class="btn btn-primary" id="vd-comment-save">{% translate 'Add the comment' %}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if can_act and page == 'missing' %}
+    {# Synchronisation : tâches à synchroniser par projet / cycle de la sélection #}
+    <div class="modal fade" id="vd-sync-modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{% translate 'Synchronize the tasks' %}</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted" id="vd-sync-intro"></p>
+                    <div id="vd-sync-groups"></div>
+                    <div id="vd-sync-feedback" class="mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">{% translate 'Cancel' %}</button>
+                    <button type="button" class="btn btn-primary" id="vd-sync-run"><i class="fa fa-sync mr-1"></i>{% translate 'Start the synchronization' %}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% include 'diagnostics/components/village_docs_progress_js.html' %}
+    <script type="text/javascript">
+    (function () {
+        var PAGE = "{{ page }}";
+        var CAN_ACT = {{ can_act|yesno:"true,false" }};
+        var URLS = {
+            data: "{% url 'dashboard:diagnostics:village_docs_data' %}",
+            comment: "{% url 'dashboard:diagnostics:village_docs_comment' %}",
+            operation: "{% url 'dashboard:diagnostics:village_docs_operation' %}",
+            status: "{% url 'dashboard:diagnostics:village_docs_operation_status' %}",
+            facilitator: "{% url 'dashboard:facilitators:detail' '000' %}"
+        };
+        var CSRF = "{{ csrf_token }}";
+        var T = {
+            loading: "{% translate 'Reading the facilitators databases…'|escapejs %}",
+            none: "{% translate 'No line: nothing to fix for these filters.'|escapejs %}",
+            lines: "{% translate 'line(s)'|escapejs %}",
+            dbs: "{% translate 'database(s) read'|escapejs %}",
+            unreadable: "{% translate 'Unreadable databases (ignored):'|escapejs %}",
+            phases: "{% translate 'phases'|escapejs %}",
+            activities: "{% translate 'activities'|escapejs %}",
+            tasks: "{% translate 'tasks'|escapejs %}",
+            completed: "{% translate 'completed'|escapejs %}",
+            nobody: "{% translate 'Nobody'|escapejs %}",
+            same: "{% translate 'this facilitator'|escapejs %}",
+            inactive: "{% translate 'inactive'|escapejs %}",
+            training: "{% translate 'training'|escapejs %}",
+            develop: "{% translate 'development'|escapejs %}",
+            unknown_cycle: "{% translate 'unknown cycle'|escapejs %}",
+            to_backup: "{% translate 'To the backup'|escapejs %}",
+            from_backup: "{% translate 'Move to the facilitator database'|escapejs %}",
+            no_backup: "{% translate 'Nothing in the backup'|escapejs %}",
+            check_has_backup: "{% translate 'The backup holds this village documents: use « Move to the facilitator database » instead of a synchronization.'|escapejs %}",
+            check_no_cycle: "{% translate 'Unknown cycle: synchronization impossible.'|escapejs %}",
+            legacy: "{% translate 'previous backup (unknown origin)'|escapejs %}",
+            from: "{% translate 'from'|escapejs %}",
+            comments: "{% translate 'Comments'|escapejs %}",
+            no_comment: "{% translate 'No comment yet.'|escapejs %}",
+            assigned_none: "{% translate '— nobody —'|escapejs %}",
+            mention: "{% translate 'Normally assigned:'|escapejs %}",
+            confirm_to_backup: "{% translate 'Move the documents of %(n)s village(s) to the backup database, then delete them from the facilitators databases?'|escapejs %}",
+            confirm_from_backup: "{% translate 'Move these documents from the backup database to the database of %(name)s?'|escapejs %}",
+            sync_intro: "{% translate '%(n)s village(s) selected. Choose, for each project and cycle, the tasks to synchronize.'|escapejs %}",
+            sync_no_cycle: "{% translate 'Lines without cycle are ignored.'|escapejs %}",
+            villages: "{% translate 'village(s)'|escapejs %}",
+            all_tasks: "{% translate 'All the tasks'|escapejs %}",
+            network: "{% translate 'Network error.'|escapejs %}",
+            running: "{% translate 'In progress'|escapejs %}",
+            since: "{% translate 'for'|escapejs %}",
+            on: "{% translate 'on'|escapejs %}",
+            by: "{% translate 'by'|escapejs %}",
+            done: "{% translate 'Finished'|escapejs %}",
+            in_: "{% translate 'in'|escapejs %}",
+            failed: "{% translate 'Failed'|escapejs %}",
+            interrupted: "{% translate 'Interrupted (no news from the server for 10 minutes)'|escapejs %}",
+            current: "{% translate 'current'|escapejs %}",
+            documents: "{% translate 'documents'|escapejs %}",
+            pairs: "{% translate 'task × village pairs'|escapejs %}",
+            items: "{% translate 'line(s) processed'|escapejs %}",
+            details: "{% translate 'Details'|escapejs %}",
+            problems: "{% translate 'problem(s)'|escapejs %}",
+            listing: "{% translate 'Listing the documents…'|escapejs %}",
+            last_op: "{% translate 'Last operation'|escapejs %}"
+        };
+
+        function esc(t) { return $("<div>").text(t === null || t === undefined ? "" : String(t)).html(); }
+        function fmt(s, vars) { return s.replace(/%\((\w+)\)s/g, function (_, k) { return vars[k]; }); }
+        function dur(s) {
+            var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+            return (h ? h + " h " : "") + (h || m ? m + " min " : "") + r + " s";
+        }
+        function norm(t) { return (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+        function postJSON(url, body) {
+            return fetch(url, { method: "POST", credentials: "same-origin",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF }, body: JSON.stringify(body) })
+                .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); });
+        }
+
+        $(".vd-select").each(function () {
+            var $s = $(this);
+            $s.select2({ width: "100%", placeholder: $s.data("placeholder"), allowClear: true, closeOnSelect: false });
+        });
+
+        var DATA = { rows: [], tasks: {} }, BY_KEY = {}, selected = {}, opRunning = false, pollTimer = null, scanning = false;
+        var $tbody = $("#vd-table tbody"), COLS = $("#vd-table thead th").length;
+
+        function params() {
+            var q = new URLSearchParams();
+            q.append("page", PAGE);
+            ($("#vd-project").val() || []).forEach(function (v) { q.append("project", v); });
+            ($("#vd-cycle").val() || []).forEach(function (v) { q.append("cycle", v); });
+            $(".vd-kind:checked").each(function () { q.append("kind", this.value); });
+            return q.toString();
+        }
+
+        function scan() {
+            if (scanning) return;
+            scanning = true;
+            $("#vd-scan").prop("disabled", true);
+            $tbody.html('<tr><td colspan="' + COLS + '" class="text-center text-muted py-4"><i class="fa fa-spinner fa-spin mr-1"></i>' + esc(T.loading) + "</td></tr>");
+            $("#vd-errors").empty();
+            fetch(URLS.data + "?" + params(), { credentials: "same-origin" })
+                .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+                .then(function (res) {
+                    if (!res.ok) throw new Error((res.j.errors || []).join(" "));
+                    DATA = res.j; BY_KEY = {}; selected = {};
+                    DATA.rows.forEach(function (r) { BY_KEY[r.key] = r; });
+                    $("#vd-summary").text(DATA.rows.length + " " + T.lines + " — " + DATA.facilitators_scanned + " " + T.dbs);
+                    if (DATA.errors && DATA.errors.length) {
+                        $("#vd-errors").html('<div class="alert alert-warning m-2 small">' + esc(T.unreadable) + " "
+                            + DATA.errors.map(function (e) { return esc(e.name) + " (<code>" + esc(e.db) + "</code> : " + esc(e.error) + ")"; }).join(", ") + "</div>");
+                    }
+                    render();
+                })
+                .catch(function (e) {
+                    $tbody.html('<tr><td colspan="' + COLS + '" class="text-danger py-3">' + esc(e.message || T.network) + "</td></tr>");
+                })
+                .then(function () { scanning = false; $("#vd-scan").prop("disabled", false); });
+        }
+
+        function facilitatorCell(r) {
+            var badges = "";
+            if (!r.active) badges += ' <span class="badge badge-secondary">' + esc(T.inactive) + "</span>";
+            if (r.kind === "training") badges += ' <span class="badge badge-info">' + esc(T.training) + "</span>";
+            if (r.kind === "develop") badges += ' <span class="badge badge-dark">' + esc(T.develop) + "</span>";
+            return '<a href="' + URLS.facilitator.replace("000", esc(r.facilitator_id)) + '" target="_blank">' + esc(r.facilitator) + "</a>" + badges
+                + '<br><small class="text-muted"><code>' + esc(r.db) + "</code></small>";
+        }
+        function assignedCell(r) {
+            if (!r.assigned.length) return '<span class="text-danger">' + esc(T.nobody) + "</span>";
+            return r.assigned.map(function (a) {
+                return esc(a.name) + (a.db === r.db ? ' <span class="badge badge-light">' + esc(T.same) + "</span>" : "");
+            }).join("<br>");
+        }
+        function commentsCell(r) {
+            var last = r.comments.length ? r.comments[r.comments.length - 1] : null;
+            return '<button type="button" class="btn btn-xs btn-outline-secondary vd-comments" data-key="' + esc(r.key) + '">'
+                + '<i class="far fa-comment mr-1"></i>' + r.comments.length + "</button>"
+                + (last ? '<div class="small text-muted text-truncate" style="max-width:220px" title="' + esc(last.text) + '">' + esc(last.text) + "</div>" : "");
+        }
+        function backupCell(r) {
+            if (!r.backup.length) return '<span class="text-muted">' + esc(T.no_backup) + "</span>";
+            return r.backup.map(function (b, i) {
+                var origin = b.source ? (b.facilitator || b.source) : T.legacy;
+                return '<div class="mb-1"><small>' + esc(T.from) + " " + esc(origin)
+                    + (b.backup_cycle ? "" : " (" + esc(T.unknown_cycle) + ")") + " : "
+                    + b.phases + " " + esc(T.phases) + ", " + b.activities + " " + esc(T.activities) + ", " + b.tasks + " " + esc(T.tasks)
+                    + " (" + b.completed + " " + esc(T.completed) + ")</small>"
+                    + (CAN_ACT ? '<br><button type="button" class="btn btn-xs btn-success vd-from-backup" data-key="' + esc(r.key) + '" data-i="' + i + '">'
+                        + '<i class="fa fa-download mr-1"></i>' + esc(T.from_backup) + "</button>" : "") + "</div>";
+            }).join("");
+        }
+
+        function render() {
+            var term = norm($("#vd-search").val());
+            var rows = DATA.rows.filter(function (r) {
+                return !term || norm([r.village, r.canton, r.commune, r.project, r.cycle, r.facilitator, r.db, r.village_id].join(" ")).indexOf(term) !== -1;
+            });
+            if (!rows.length) {
+                $tbody.html('<tr><td colspan="' + COLS + '" class="text-center text-muted py-4">' + esc(T.none) + "</td></tr>");
+                updateSelection();
+                return;
+            }
+            $tbody.html(rows.map(function (r) {
+                var selectable = PAGE === "orphans" || (!r.backup.length && r.cycle_id);
+                var html = "<tr>";
+                if (CAN_ACT) {
+                    // Ligne non synchronisable : case grisée + raison (sinon la colonne paraît vide)
+                    var why = selectable ? "" : (r.backup.length ? T.check_has_backup : T.check_no_cycle);
+                    html += "<td>" + (selectable
+                        ? '<input type="checkbox" class="vd-check" data-key="' + esc(r.key) + '"' + (selected[r.key] ? " checked" : "") + ">"
+                        : '<span title="' + esc(why) + '" data-toggle="tooltip"><input type="checkbox" disabled style="pointer-events:none"></span>') + "</td>";
+                }
+                html += "<td><strong>" + esc(r.village) + '</strong> <small class="text-muted">#' + esc(r.village_id) + "</small><br><small class=\"text-muted\">"
+                    + esc([r.canton, r.commune].filter(Boolean).join(", ")) + "</small></td>";
+                html += "<td>" + esc(r.project) + "<br><small>" + (r.cycle ? esc(r.cycle) : '<span class="text-warning">' + esc(T.unknown_cycle) + "</span>") + "</small></td>";
+                html += "<td>" + facilitatorCell(r) + "</td>";
+                if (PAGE === "orphans") {
+                    html += "<td><small>" + r.phases + " " + esc(T.phases) + ", " + r.activities + " " + esc(T.activities) + ", "
+                        + r.tasks + " " + esc(T.tasks) + "<br>" + r.completed + " " + esc(T.completed) + "</small></td>";
+                }
+                html += "<td>" + assignedCell(r) + "</td>";
+                if (PAGE === "missing") html += "<td>" + backupCell(r) + "</td>";
+                html += "<td>" + commentsCell(r) + "</td>";
+                if (CAN_ACT && PAGE === "orphans") {
+                    html += '<td><button type="button" class="btn btn-xs btn-warning vd-to-backup" data-key="' + esc(r.key) + '">'
+                        + '<i class="fa fa-archive mr-1"></i>' + esc(T.to_backup) + "</button></td>";
+                }
+                return html + "</tr>";
+            }).join(""));
+            updateSelection();
+        }
+
+        function selectedKeys() { return Object.keys(selected).filter(function (k) { return selected[k] && BY_KEY[k]; }); }
+        function updateSelection() {
+            var n = selectedKeys().length;
+            $(".vd-count").text(n);
+            $("#vd-bulk").prop("disabled", !n || opRunning);
+            $(".vd-to-backup, .vd-from-backup").prop("disabled", opRunning);
+        }
+        function label(r) { return r.village + " (" + r.facilitator + ")"; }
+
+        $("#vd-scan").on("click", scan);
+        $("#vd-search").on("input", render);
+        $tbody.on("change", ".vd-check", function () { selected[$(this).data("key")] = this.checked; updateSelection(); });
+        $("#vd-all").on("change", function () {
+            var on = this.checked;
+            $tbody.find(".vd-check").each(function () { this.checked = on; selected[$(this).data("key")] = on; });
+            updateSelection();
+        });
+
+        // --- opérations -----------------------------------------------------------------------------------
+        function startOperation(body) {
+            return postJSON(URLS.operation, body).then(function (res) {
+                if (res.j.operation) showOperation(res.j.operation);
+                if (!res.ok) { alert((res.j.errors || []).join(" ")); return false; }
+                if (opRunning) { clearTimeout(pollTimer); pollTimer = setTimeout(poll, 1500); }
+                return true;
+            }).catch(function () { alert(T.network); return false; });
+        }
+        function toBackup(keys) {
+            if (!keys.length || !confirm(fmt(T.confirm_to_backup, { n: keys.length }))) return;
+            startOperation({ kind: "to_backup", items: keys.map(function (k) { return { key: k, label: label(BY_KEY[k]) }; }) });
+        }
+        $tbody.on("click", ".vd-to-backup", function () { toBackup([$(this).data("key")]); });
+        $tbody.on("click", ".vd-from-backup", function () {
+            var r = BY_KEY[$(this).data("key")], b = r.backup[+$(this).data("i")];
+            if (!confirm(fmt(T.confirm_from_backup, { name: r.facilitator }))) return;
+            startOperation({ kind: "from_backup", items: [{ key: r.key, label: label(r), source: b.source, backup_cycle: b.backup_cycle }] });
+        });
+        $("#vd-bulk").on("click", function () {
+            if (PAGE === "orphans") toBackup(selectedKeys()); else openSync();
+        });
+
+        function openSync() {
+            var keys = selectedKeys().filter(function (k) { return BY_KEY[k].cycle_id; });
+            var groups = {};
+            keys.forEach(function (k) {
+                var r = BY_KEY[k], g = r.project_id + "|" + r.cycle_id;
+                (groups[g] = groups[g] || { label: r.project + " — " + r.cycle, keys: [] }).keys.push(k);
+            });
+            $("#vd-sync-intro").text(fmt(T.sync_intro, { n: keys.length }));
+            $("#vd-sync-feedback").empty();
+            var $g = $("#vd-sync-groups").empty();
+            Object.keys(groups).forEach(function (g) {
+                var tasks = DATA.tasks[g] || [];
+                var $sel = $('<select class="form-control vd-sync-tasks" multiple></select>').attr("data-group", g);
+                tasks.forEach(function (t) {
+                    $sel.append($("<option>").val(t.id).text(t.phase + " › " + t.activity + " › " + t.name));
+                });
+                var $box = $('<div class="form-group"></div>')
+                    .append($("<label>").text(groups[g].label + " — " + groups[g].keys.length + " " + T.villages))
+                    .append($sel)
+                    .append($('<div class="mt-1"><a href="#" class="small vd-sync-all"></a></div>').find("a").text(T.all_tasks).end());
+                $g.append($box);
+                $sel.select2({ width: "100%", closeOnSelect: false, dropdownParent: $("#vd-sync-modal") });
+            });
+            $("#vd-sync-modal").data("groups", groups).modal("show");
+        }
+        $("#vd-sync-groups").on("click", ".vd-sync-all", function (e) {
+            e.preventDefault();
+            var $sel = $(this).closest(".form-group").find("select");
+            $sel.val($sel.find("option").map(function () { return this.value; }).get()).trigger("change");
+        });
+        $("#vd-sync-run").on("click", function () {
+            var groups = $("#vd-sync-modal").data("groups") || {}, tasks = {}, items = [];
+            $(".vd-sync-tasks").each(function () { tasks[$(this).attr("data-group")] = $(this).val() || []; });
+            Object.keys(groups).forEach(function (g) {
+                groups[g].keys.forEach(function (k) { items.push({ key: k, label: label(BY_KEY[k]) }); });
+            });
+            $("#vd-sync-run").prop("disabled", true);
+            startOperation({ kind: "sync", items: items, tasks: tasks }).then(function (ok) {
+                $("#vd-sync-run").prop("disabled", false);
+                if (ok) $("#vd-sync-modal").modal("hide");
+            });
+        });
+
+        // --- suivi : barre de progression (comme « Synchroniser cette tâche » du générateur de formulaire) ---------
+        var seenRunning = false;
+        function showOperations(ops) {
+            ops = ops.filter(Boolean);
+            opRunning = ops.some(function (op) { return op.running; });
+            if (opRunning) seenRunning = true;
+            $("#vd-operation").html(ops.map(function (op) {
+                return window.VillageDocsProgress.render(op, op.running ? "" : ' <small class="font-weight-normal">— ' + esc(T.last_op) + "</small>");
+            }).join(""));
+            updateSelection();
+        }
+        function showOperation(op) { showOperations([op]); }
+        function poll() {
+            clearTimeout(pollTimer);
+            fetch(URLS.status, { credentials: "same-origin" })
+                .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                .then(function (st) {
+                    var wasRunning = opRunning;
+                    showOperations(st.operations);
+                    if (opRunning) pollTimer = setTimeout(poll, 3000);
+                    else if (wasRunning && seenRunning && DATA.rows.length) scan();  // fin : la liste est relue
+                })
+                .catch(function () { if (opRunning) pollTimer = setTimeout(poll, 10000); });
+        }
+        poll();   // une opération peut déjà tourner (lancée par quelqu'un d'autre)
+
+        // --- commentaires ---------------------------------------------------------------------------------------
+        var commentKey = null;
+        function renderComments(r) {
+            $("#vd-comment-list").html(r.comments.length ? r.comments.map(function (c) {
+                return '<div class="border-bottom py-1"><small class="text-muted">' + esc(c.at) + " — " + esc(c.author) + "</small>"
+                    + (c.assigned ? ' <span class="badge badge-info">' + esc(T.mention) + " " + esc(c.assigned) + "</span>" : "")
+                    + '<div style="white-space:pre-wrap">' + esc(c.text) + "</div></div>";
+            }).join("") : '<p class="text-muted small mb-0">' + esc(T.no_comment) + "</p>");
+        }
+        $tbody.on("click", ".vd-comments", function () {
+            commentKey = $(this).data("key");
+            var r = BY_KEY[commentKey];
+            $("#vd-comment-title").text(r.village + " — " + r.project + (r.cycle ? " / " + r.cycle : "") + " — " + r.facilitator);
+            renderComments(r);
+            var $a = $("#vd-comment-assigned").empty().append($("<option>").val("").text(T.assigned_none));
+            r.assigned.forEach(function (a) { $a.append($("<option>").val(a.id).text(a.name)); });
+            if (r.assigned.length) $a.val(String(r.assigned[0].id));
+            $("#vd-comment-text").val(r.assigned.length ? T.mention + " " + r.assigned.map(function (a) { return a.name; }).join(", ") + ". " : "");
+            $("#vd-comment-feedback").empty();
+            $("#vd-comment-modal").modal("show");
+        });
+        $("#vd-comment-save").on("click", function () {
+            var $b = $(this).prop("disabled", true);
+            postJSON(URLS.comment, { page: PAGE, key: commentKey, text: $("#vd-comment-text").val(),
+                                     assigned_facilitator_id: $("#vd-comment-assigned").val() })
+                .then(function (res) {
+                    if (!res.ok) { $("#vd-comment-feedback").html('<div class="text-danger">' + esc((res.j.errors || []).join(" ")) + "</div>"); return; }
+                    var r = BY_KEY[commentKey];
+                    r.comments.push(res.j.comment);
+                    renderComments(r);
+                    $("#vd-comment-text").val("");
+                    render();
+                })
+                .catch(function () { $("#vd-comment-feedback").html('<div class="text-danger">' + esc(T.network) + "</div>"); })
+                .then(function () { $b.prop("disabled", false); });
+        });
+
+        scan();
+    })();
+    </script>
+{% endblock %}
+
+{% block select2 %}{% endblock select2 %}

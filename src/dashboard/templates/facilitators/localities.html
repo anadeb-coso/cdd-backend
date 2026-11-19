@@ -72,7 +72,7 @@
 
                 {% if not errors %}
                     {% if preview.changed %}
-                        <form method="post">
+                        <form method="post" data-vd-track="1">{# encart : déplacement des documents des villages #}
                             {% csrf_token %}
                             {% for key, value in submitted.items %}{% if value is not None %}<input type="hidden" name="{{ key }}_ids" value="{{ value }}">{% endif %}{% endfor %}
                             <input type="hidden" name="change_date" value="{{ change_date }}">

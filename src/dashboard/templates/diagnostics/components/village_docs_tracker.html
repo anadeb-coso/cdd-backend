@@ -1,0 +1,94 @@
+{% load i18n %}
+{# Encart flottant : déplacements de documents déclenchés par l'enregistrement de villages d'affectation.             #}
+{# Suivi en base (opérations de l'utilisateur non fermées). Surveillance dès l'envoi d'un formulaire data-vd-track     #}
+{# (page Localités, modification, création, imports) : le déplacement tourne pendant que l'enregistrement se termine. #}
+{% include 'diagnostics/components/village_docs_progress_js.html' %}
+<div id="vd-tracker" class="card shadow" style="position:fixed; bottom:20px; left:20px; z-index:99998; width:420px; max-width:calc(100vw - 40px); display:none;">
+    <div class="card-header py-2 d-flex align-items-center">
+        <div class="mr-auto small" style="min-width:0">
+            <strong><i class="fas fa-folder-open mr-1"></i>{% translate "Moving the villages documents" %}</strong>
+            <div id="vd-tracker-summary" class="text-muted text-truncate"></div>
+        </div>
+        <button type="button" class="btn btn-tool" id="vd-tracker-toggle" title="{% translate 'Reduce' %}"><i class="fas fa-minus"></i></button>
+        <button type="button" class="btn btn-tool" id="vd-tracker-close" title="{% translate 'Close' %}" style="display:none"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="card-body p-2" id="vd-tracker-body" style="max-height:55vh; overflow-y:auto;"></div>
+</div>
+<script type="text/javascript">
+(function () {
+    var URL = "{% url 'dashboard:diagnostics:village_docs_operation_status' %}";
+    var CSRF = "{{ csrf_token }}";
+    var ACTIVE_AT_LOAD = {{ vd_tracker_active|yesno:"true,false" }};
+    var T = {
+        saving: "{% translate 'Saving… the documents of the villages added or removed will be moved.'|escapejs %}",
+        running: "{% translate 'In progress'|escapejs %}",
+        pending: "{% translate 'Waiting for another operation to finish'|escapejs %}",
+        done: "{% translate 'Finished'|escapejs %}",
+        problems: "{% translate 'problem(s)'|escapejs %}",
+        failed: "{% translate 'Failed'|escapejs %}",
+        documents: "{% translate 'documents'|escapejs %}"
+    };
+    var $box = $("#vd-tracker"), $body = $("#vd-tracker-body"), $summary = $("#vd-tracker-summary");
+    var timer = null, closable = [], saving = false;
+    function esc(t) { return window.VillageDocsProgress.esc(t); }
+    function reduced() { try { return sessionStorage.getItem("vd-tracker-reduced") === "1"; } catch (e) { return false; } }
+    function applyReduced() {
+        $body.toggle(!reduced());
+        $("#vd-tracker-toggle i").attr("class", reduced() ? "fas fa-plus" : "fas fa-minus");
+    }
+    function summary(ops) {
+        // Résumé dans l'en-tête : lisible même encart réduit
+        var running = ops.filter(function (o) { return o.status === "running"; });
+        if (running.length) {
+            var o = running[0], pct = o.units_total ? Math.round(100 * o.units_done / o.units_total) : 0;
+            return T.running + " — " + o.units_done + (o.units_total ? " / " + o.units_total : "") + " " + T.documents + (o.units_total ? " (" + pct + " %)" : "");
+        }
+        if (ops.some(function (o) { return o.status === "pending"; })) return T.pending;
+        var bad = ops.filter(function (o) { return o.status === "failed" || o.status === "interrupted"; }).length
+            + ops.reduce(function (n, o) { return n + (o.problems || 0); }, 0);
+        return bad ? T.done + " — " + bad + " " + T.problems : T.done;
+    }
+    function show(ops, running) {
+        closable = ops.filter(function (o) { return !o.running; }).map(function (o) { return o.id; });
+        var html = ops.map(function (op) { return window.VillageDocsProgress.render(op); }).join("");
+        if (saving) {
+            html = '<div class="alert alert-info mb-2 small"><i class="fa fa-spinner fa-spin mr-1"></i>' + esc(T.saving) + "</div>" + html;
+        }
+        $body.html(html);
+        $summary.text(ops.length ? summary(ops) : (saving ? T.saving : ""));
+        $("#vd-tracker-close").toggle(!running && !saving && closable.length > 0);
+        applyReduced();
+        $box.show();
+    }
+    function poll() {
+        clearTimeout(timer);
+        fetch(URL + "?tracked=1", { credentials: "same-origin", cache: "no-store" })
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function (st) {
+                var ops = st.operations || [];
+                if (!ops.length && !saving) { $box.hide(); return; }
+                show(ops, st.running);
+                if (st.running || saving) timer = setTimeout(poll, saving ? 1500 : 2500);
+            })
+            .catch(function () { timer = setTimeout(poll, 8000); });
+    }
+    // Envoi d'un formulaire qui peut déplacer des documents : l'encart s'ouvre et suit l'opération pendant l'enregistrement
+    $(document).on("submit", "form[data-vd-track]", function (e) {
+        if (e.isDefaultPrevented()) return;
+        saving = true;
+        show([], true);
+        timer = setTimeout(poll, 800);
+    });
+    $("#vd-tracker-toggle").on("click", function () {
+        try { sessionStorage.setItem("vd-tracker-reduced", reduced() ? "0" : "1"); } catch (e) {}
+        applyReduced();
+    });
+    $("#vd-tracker-close").on("click", function () {
+        fetch(URL, { method: "POST", credentials: "same-origin",
+                     headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+                     body: JSON.stringify({ ids: closable }) })
+            .then(function () { poll(); });
+    });
+    if (ACTIVE_AT_LOAD) poll();
+})();
+</script>

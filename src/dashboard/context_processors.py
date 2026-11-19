@@ -95,3 +95,20 @@ def settings_vars(request):
         "TOTAL_TASKS_INVALIDATED_REVIEW_IN_PENDING": total_tasks_invalidated_review_in_pending
 
     }
+
+
+def village_docs_tracker(request):
+    """Encart de progression des déplacements de documents de villages (layouts/base.html) : calculé seulement si le
+    gabarit l'utilise (fonctions appelées par le moteur de gabarits)."""
+    user = getattr(request, 'user', None)
+
+    def enabled():
+        # Comptes du tableau de bord (pas les FC/FT), comme les vues de suivi
+        return bool(user and user.is_authenticated and (
+            user.is_superuser or not user.groups.filter(name__in=("CommunityFacilitator", "TechnicalFacilitator")).exists()))
+
+    def active():
+        from dashboard.diagnostics.village_docs import has_tracked_operations
+        return enabled() and has_tracked_operations(user)
+
+    return {'vd_tracker_enabled': enabled, 'vd_tracker_active': active}

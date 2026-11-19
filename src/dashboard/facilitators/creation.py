@@ -21,7 +21,7 @@ from no_sql_client import NoSQLClient
 from process_manager.models import Cycle, ProcessAddOrRemoveADL, Project
 from subprojects.models import Project as MisProject
 
-from .localities import AdministrativeTree
+from .localities import AdministrativeTree, has_sig_assignments
 from .localities_apply import replicate_assignment_to_stabilization
 from .localities_history import facilitator_state, record_facilitator_changes, record_localities_change
 
@@ -45,6 +45,7 @@ class FacilitatorCreation:
         self.mgp_status = None  # 'created' | 'exists' | 'error' | None (pas d'e-mail)
         self.mgp_detail = None
         self.stabilization_replicated = False
+        self.documents_operation = None  # documents des villages sièges repris de la base de sauvegarde (thread)
 
     def as_row(self):
         facilitator = self.facilitator
@@ -135,8 +136,8 @@ def create_facilitator(*, last_name, first_names, email, phone, sex, facilitator
 
     _administrative_levels = decorate_administrative_levels(administrative_levels, project_cdd, cycle_cdd, project_mis)
 
-    #Assign ADL
-    for adl in _administrative_levels:
+    #Assign ADL (vrais facilitateurs seulement : pas les comptes de développement / formation)
+    for adl in (_administrative_levels if has_sig_assignments(facilitator) else []):
         _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True).first()
 
         if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
@@ -184,16 +185,11 @@ def create_facilitator(*, last_name, first_names, email, phone, sex, facilitator
     facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
     nsc.create_document(facilitator_database, doc)
 
-    process_adls = [d.get('id') for d in _administrative_levels if d.get('is_headquarters_village')]
-    if process_adls:
-        process_add_or_remove_adl = ProcessAddOrRemoveADL(
-            name = f"backup_db_facilitators_docs_{facilitator.no_sql_db_name}",
-            move_from = "backup_db_facilitators_docs",
-            move_to = facilitator.no_sql_db_name,
-            administrative_levels = process_adls,
-            query_action = "create"
-        )
-        process_add_or_remove_adl.save()
+    # Villages sièges d'affectation : leurs documents sont repris de la base de sauvegarde s'ils y sont (thread)
+    from .localities import schedule_administrative_levels_documents_moves
+    creation.documents_operation = schedule_administrative_levels_documents_moves(
+        facilitator.no_sql_db_name, _administrative_levels, [], kept_administrative_levels=_administrative_levels,
+        user=created_by)
 
     # Unités géographiques, CVD et nombres de tâches du document du facilitateur (lus par le mobile)
     sync_geographicalunits_with_cvd_on_facilittor(

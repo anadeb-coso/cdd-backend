@@ -54,7 +54,7 @@ def apply_facilitator_localities(change, facilitator, facilitator_db, doc, proje
     from dashboard.utils import search_facilitators_db_with_villages_stabilized, sync_geographicalunits_with_cvd_on_facilittor
     from .localities_history import facilitator_state, record_facilitator_changes
 
-    result = {'events': [], 'grm': None, 'databases_error': None}
+    result = {'events': [], 'grm': None, 'databases_error': None, 'documents_operation': None}
     before = facilitator_state(facilitator)
 
     if change.assignment_changed:
@@ -68,8 +68,10 @@ def apply_facilitator_localities(change, facilitator, facilitator_db, doc, proje
         if doc:
             # `update_doc_uncontrolled` : une liste vidée doit aussi l'être dans CouchDB.
             NoSQLClient().update_doc_uncontrolled(facilitator_db, doc['_id'], {"administrative_levels": _administrative_levels})
-        schedule_administrative_levels_documents_moves(facilitator.no_sql_db_name, administrative_levels_new, administrative_levels_remove,
-                                                       kept_administrative_levels=_administrative_levels)
+        # Documents des villages retirés -> sauvegarde, des villages ajoutés <- sauvegarde (thread, suivi affiché)
+        result['documents_operation'] = schedule_administrative_levels_documents_moves(
+            facilitator.no_sql_db_name, administrative_levels_new, administrative_levels_remove,
+            kept_administrative_levels=_administrative_levels, user=history.get('changed_by'))
         sync_geographicalunits_with_cvd_on_facilittor(
             project_id, facilitator.develop_mode, facilitator.training_mode, facilitator.no_sql_db_name
         )
@@ -90,4 +92,13 @@ def apply_facilitator_localities(change, facilitator, facilitator_db, doc, proje
             result['databases_error'] = str(exc)
         result['grm'] = send_stabilization_to_grm(facilitator)
 
+    if change.assignment_changed or change.stabilization_changed:
+        mark_facilitator_stats_outdated(facilitator)
     return result
+
+
+def mark_facilitator_stats_outdated(facilitator):
+    """Statistiques en cache de la liste des facilitateurs (AggregatedStatusFacilitator : colonnes CVD et
+    pourcentages) à recalculer au prochain affichage, les localités ayant changé."""
+    from process_manager.models import AggregatedStatusFacilitator
+    AggregatedStatusFacilitator.objects.filter(facilitator=facilitator).update(new_update_exists=True)

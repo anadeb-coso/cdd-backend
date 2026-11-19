@@ -312,7 +312,7 @@ class Command(BaseCommand):
             if response.status_code not in (200, 201):
                 self.stderr.write(f"CouchDB non modifié pour {self.who(f.id)} : HTTP {response.status_code} {response.text[:200]}")
                 continue
-            schedule_administrative_levels_documents_moves(f.no_sql_db_name, [], a['data']['removed'])
+            schedule_administrative_levels_documents_moves(f.no_sql_db_name, [], a['data']['removed'], background=False)
             self.stdout.write(f"CouchDB vidé : {self.who(f.id)}")
 
     # -----------------------------------------------------------------------------------------------

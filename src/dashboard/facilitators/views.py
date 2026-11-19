@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.cache import cache
 from django.db.models import Count
@@ -30,6 +32,8 @@ from .functions import (
     update_facilitators_stats
 )
 from cdd.constants import VALIDATION_PROCESS_COLORS
+
+logger = logging.getLogger(__name__)
 from administrativelevels import models as administrativelevels_models
 from assignments.models import AssignAdministrativeLevelToFacilitator
 from dashboard.administrative_levels.functions import get_cascade_villages_by_administrative_level_id
@@ -43,6 +47,7 @@ from .localities_history import facilitator_state, record_facilitator_changes
 from .creation import create_facilitator
 from .localities_apply import replicate_assignment_to_stabilization, send_stabilization_to_grm
 from .localities_notify import notify_localities_change
+from .projects_sync import find_facilitator_doc
 from authentication.accounts import split_full_name
 from dashboard.utils import search_facilitators_db_with_villages_stabilized
 from django.contrib import messages
@@ -144,15 +149,11 @@ class FacilitatorMixin(LoginRequiredMixin):
 
             self.facilitator_db_name = kwargs['id']
             self.facilitator_db = nsc.get_db(self.facilitator_db_name)
-            query_result = self.facilitator_db.get_query_result({
-                "type": 'facilitator',
-                "$or": [
-                    {"project_id": request.session.get('project_couch_id')},
-                    {"projects_ids": {"$in": [request.session.get('project_couch_id')]}}
-                ]
-            })[:]
-            self.doc = self.facilitator_db[query_result[0]['_id']]
             self.obj = get_object_or_404(Facilitator, no_sql_db_name=kwargs['id'])
+            # Repli sur le lien en base si le document CouchDB ne porte pas le projet de la session.
+            found = find_facilitator_doc(self.facilitator_db, request.session.get('project_couch_id'),
+                                         self.obj, request.session.get('project_id'))
+            self.doc = self.facilitator_db[found['_id']]
 
             project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
             self.project_mis_id = project_mis.id if project_mis else 1
@@ -197,6 +198,9 @@ class FacilitatorMixin(LoginRequiredMixin):
             self.cvds = sorted(self.cvds, key=lambda obj: obj.get('name'))
 
         except Exception:
+            # 404 pour l'utilisateur, mais la cause réelle dans le journal (sinon introuvable).
+            logger.exception("Profil du facilitateur %s (projet %s) : page introuvable",
+                             kwargs.get('id'), request.session.get('project_name'))
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 
@@ -643,14 +647,9 @@ class FacilitatorsPercentView(AJAXRequestMixin, LoginRequiredMixin, JSONResponse
             nsc = NoSQLClient()
             project_mis = mis_objects_call.filter_objects(MisProject, name=self.request.session.get('project_name')).first()
             project_mis_id = project_mis.id if project_mis else 1
-            query_result = facilitator_db.get_query_result({
-                "type": 'facilitator',
-                "$or": [
-                    {"project_id": request.session.get('project_couch_id')},
-                    {"projects_ids": {"$in": [request.session.get('project_couch_id')]}}
-                ]
-            })[:]
-            no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator_db[query_result[0]['_id']])
+            found = find_facilitator_doc(facilitator_db, request.session.get('project_couch_id'),
+                                         Facilitator.objects.filter(no_sql_db_name=f).first(), request.session.get('project_id'))
+            no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized = get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator_db[found['_id']])
             for k_db_name, v in no_sql_dbs_names_with_village_ids.items():
                 _db = nsc.get_db(k_db_name)
                 docs += _db.get_query_result(selector, limit=1000000)[:]
@@ -1095,8 +1094,13 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
         context['form'] = FacilitatorForm(initial={
             'project_id': self.request.session.get('project_id'),
             'user_id': self.request.user.id
-        })
+        }, current_user=self.request.user)
         return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['current_user'] = self.request.user
+        return kwargs
 
     def form_valid(self, form):
         data = form.cleaned_data
@@ -1110,6 +1114,8 @@ class CreateFacilitatorFormView(PageMixin, LoginRequiredMixin, AdminPermissionRe
             project_couch_id=session.get('project_couch_id'), project_name=session.get('project_name'),
             administrative_levels=data.get('administrative_levels') or [],
         )
+        from dashboard.diagnostics.village_docs import track_operation
+        track_operation(self.request, creation.documents_operation)
         return accounts_created_response(
             self.request, [creation.as_row()], str(self.success_url), gettext_lazy('Create Facilitator'),
         )
@@ -1166,7 +1172,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
             ctx['form'] = UpdateFacilitatorForm(initial={
                 'facilitator_doc': self.doc, 'facilitator_projects': self.facilitator.projects.all(),
                 'project_id': self.request.session.get('project_id')
-            })
+            }, current_user=self.request.user)
             if form:
                 for label, field in form.fields.items():
                     try:
@@ -1195,7 +1201,7 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         if not self.facilitator_db_name:
             raise Http404("We don't find the database name for the facilitators.")
 
-        form = UpdateFacilitatorForm(request.POST, instance=self.facilitator)
+        form = UpdateFacilitatorForm(request.POST, instance=self.facilitator, current_user=request.user)
         if form.is_valid():
             return self.form_valid(form)
         return self.get(request, *args, **kwargs)
@@ -1302,8 +1308,11 @@ class UpdateFacilitatorView(PageMixin, LoginRequiredMixin, CDDSpecialistPermissi
         #     [d.get('id') for d in administrative_levels_remove if d.get('is_headquarters_village')]
         # ) #Copy facilitator db docs (for villages removed) to backup db and clear docs on backup db
 
-        schedule_administrative_levels_documents_moves(self.facilitator_db_name, administrative_levels_new, administrative_levels_remove,
-                                                       kept_administrative_levels=_administrative_levels)
+        from dashboard.diagnostics.village_docs import track_operation
+        track_operation(self.request, schedule_administrative_levels_documents_moves(
+            self.facilitator_db_name, administrative_levels_new, administrative_levels_remove,
+            kept_administrative_levels=_administrative_levels, user=self.request.user,
+        ))  # documents des villages retirés -> sauvegarde, des villages ajoutés <- sauvegarde (thread, suivi affiché)
 
 
         sync_geographicalunits_with_cvd_on_facilittor(

@@ -122,7 +122,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
 
-                'dashboard.context_processors.settings_vars' #Called the function which presents the globals variables
+                'dashboard.context_processors.settings_vars', #Called the function which presents the globals variables
+                'dashboard.context_processors.village_docs_tracker',  # encart des déplacements de documents de villages
             ],
         },
     },
