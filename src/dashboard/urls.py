@@ -16,4 +16,5 @@ urlpatterns = [
     path('news/', include('dashboard.news.urls')),
     path('task-cycle/', include('dashboard.task_cycle.urls')),
     path('coso-collect/', include('dashboard.coso_collect.urls')),
+    path('commands/sync/', include('dashboard.commands_runner.urls')),  # superutilisateurs seulement
 ]

@@ -1,0 +1,302 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <style>
+        .cr-card { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: 1rem 1.1rem; margin-bottom: 1rem; }
+        .cr-card h6 { font-weight: 600; margin-bottom: .75rem; }
+        .cr-log { max-height: 380px; overflow: auto; background: #1e1e1e; color: #e6e6e6; font-size: .78rem; padding: .75rem; border-radius: .5rem; white-space: pre-wrap; word-break: break-word; }
+        .cr-cmd { font-family: monospace; font-size: .75rem; background: #f6f8fa; border-radius: .35rem; padding: .3rem .5rem; word-break: break-all; }
+        .cr-flag { font-family: monospace; font-size: .72rem; color: #6c757d; }
+        .cr-details li { margin-bottom: .2rem; }
+        .cr-field-error { font-size: .78rem; color: #dc3545; }
+        .cr-history td { font-size: .82rem; vertical-align: middle; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-info small">
+    <i class="fas fa-info-circle mr-1"></i>
+    {% blocktranslate with mb=commands_config.max_memory_mb %}Superusers only. The command runs in the background in a separate process with a low priority (the web server stays responsive), stopped above {{ mb }} MB of memory. One command at a time; you can leave the page and come back to follow it.{% endblocktranslate %}
+</div>
+
+<div class="cr-card">
+    <h6><i class="fas fa-terminal mr-1"></i>{% translate "Command" %}</h6>
+    <select id="cr-command" class="form-control form-control-sm"></select>
+</div>
+
+<div id="cr-active-card" class="cr-card" style="display:none;">
+    <h6 class="text-primary"><i class="fas fa-spinner fa-spin mr-1"></i>{% translate "Command in progress" %}</h6>
+    <div id="cr-active"></div>
+</div>
+
+<div id="cr-selected" style="display:none;">
+    <div class="cr-card">
+        <h6 id="cr-title"></h6>
+        <p id="cr-summary" class="mb-2"></p>
+        <ul id="cr-details" class="small text-muted cr-details mb-2"></ul>
+        <div id="cr-badges"></div>
+    </div>
+
+    <form id="cr-form" onsubmit="return false;" autocomplete="off">
+        {% csrf_token %}
+        <input type="hidden" name="command" id="cr-command-name">
+        <div class="cr-card">
+            <h6><i class="fas fa-sliders-h mr-1"></i>{% translate "Options" %}</h6>
+            <div id="cr-fields" class="form-row"></div>
+            <div class="form-row align-items-center mt-2">
+                <div class="col-md-4 mb-2">
+                    <button type="button" id="cr-run" class="btn btn-sm btn-primary btn-block rounded-xl">
+                        <i class="fas fa-play mr-1"></i>{% translate "Run in the background" %}
+                    </button>
+                </div>
+                <div class="col-md-8 mb-2"><div id="cr-message" class="small"></div></div>
+            </div>
+        </div>
+    </form>
+
+    <div class="cr-card">
+        <h6><i class="fas fa-tasks mr-1"></i>{% translate "Last run of this command" %}</h6>
+        <div id="cr-last"></div>
+    </div>
+    <div class="cr-card">
+        <h6><i class="fas fa-history mr-1"></i>{% translate "Previous runs" %}</h6>
+        <div id="cr-history"></div>
+    </div>
+</div>
+
+{{ commands_config|json_script:"cr-config" }}
+{% endblock %}
+
+{% block select2 %}
+<script>
+$(function () {
+    var CFG = JSON.parse(document.getElementById("cr-config").textContent);
+    var T = CFG.i18n, BY_NAME = {}, current = null, timer = null;
+    CFG.commands.forEach(function (c) { BY_NAME[c.name] = c; });
+
+    function esc(v) { return $("<div>").text(v == null ? "" : String(v)).html(); }
+    function dur(s) {
+        s = Math.max(0, s | 0);
+        var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+        return (h ? h + " h " : "") + (h || m ? m + " min " : "") + r + " s";
+    }
+
+    // ---------------------------------------------------------------- choix de la commande
+    var $command = $("#cr-command");
+    $command.append(new Option("", "", true, true));
+    CFG.commands.forEach(function (c) { $command.append(new Option(c.title + " — " + c.name, c.name)); });
+    $command.select2({ width: "100%", placeholder: T.choose });
+
+    // ---------------------------------------------------------------- champs
+    function fieldId(f) { return "cr-f-" + f.key; }
+    function labelHtml(f) {
+        return '<label class="small mb-1' + (f.danger ? " text-danger" : " text-muted") + '" for="' + fieldId(f) + '">' + esc(f.label) +
+            (f.required ? " *" : "") + (f.flag ? ' <span class="cr-flag">(' + esc(f.flag) + ")</span>" : "") + "</label>";
+    }
+    function helpHtml(f) {
+        return (f.help ? '<small class="d-block text-muted">' + esc(f.help) + "</small>" : "") +
+               '<div class="cr-field-error" data-error-for="' + esc(f.key) + '"></div>';
+    }
+    function fieldHtml(f) {
+        var id = fieldId(f), html;
+        if (f.type === "bool") {
+            html = '<div class="custom-control custom-checkbox">' +
+                '<input type="checkbox" class="custom-control-input" name="' + esc(f.key) + '" id="' + id + '" value="1"' + (f["default"] ? " checked" : "") + ">" +
+                '<label class="custom-control-label small' + (f.danger ? " text-danger" : "") + '" for="' + id + '">' + esc(f.label) +
+                (f.flag ? ' <span class="cr-flag">(' + esc(f.flag) + ")</span>" : "") + "</label></div>";
+            return '<div class="col-md-6 mb-2 cr-field" data-key="' + esc(f.key) + '">' + html + helpHtml(f) + "</div>";
+        }
+        if (f.type === "int" || f.type === "float" || f.type === "text") {
+            var type = f.type === "text" ? "text" : "number";
+            var step = f.type === "float" ? ' step="any"' : (f.type === "int" ? ' step="1"' : "");
+            var min = f.min != null ? ' min="' + f.min + '"' : "", max = f.max != null ? ' max="' + f.max + '"' : "";
+            html = '<input type="' + type + '"' + step + min + max + ' class="form-control form-control-sm" name="' + esc(f.key) +
+                   '" id="' + id + '" value="' + esc(f["default"] == null ? "" : f["default"]) + '">';
+        } else {
+            var multiple = ["tasks", "collect_forms", "couch_dbs", "cantons"].indexOf(f.type) !== -1;
+            html = '<select class="form-control form-control-sm" name="' + esc(f.key) + '" id="' + id + '"' + (multiple ? " multiple" : "") + "></select>";
+        }
+        var wide = ["tasks", "couch_dbs", "cantons", "text"].indexOf(f.type) !== -1;
+        return '<div class="' + (wide ? "col-md-12" : "col-md-6") + ' mb-2 cr-field" data-key="' + esc(f.key) + '">' + labelHtml(f) + html + helpHtml(f) + "</div>";
+    }
+    function ajaxSelect($el, url, multiple, tags) {
+        $el.select2({
+            width: "100%", multiple: multiple, tags: !!tags, allowClear: !multiple, placeholder: T.all,
+            minimumInputLength: 2, language: { inputTooShort: function () { return T.search; } },
+            ajax: { url: url, delay: 250, dataType: "json", data: function (p) { return { q: p.term }; } }
+        });
+    }
+    function initField(f) {
+        var $el = $("#" + fieldId(f));
+        if (f.type === "project") {
+            CFG.projects.forEach(function (p) { $el.append(new Option(p.text, p.id, false, p.id === CFG.default_project)); });
+            $el.select2({ width: "100%" });
+        } else if (f.type === "cycle") {
+            $el.select2({ width: "100%" });
+        } else if (f.type === "tasks" || f.type === "collect_forms") {
+            var items = f.type === "tasks" ? CFG.tasks : CFG.collect_forms, wanted = f["default"] || [];
+            items.forEach(function (it) { $el.append(new Option(it.text, it.id, false, wanted.indexOf(it.id) !== -1)); });
+            $el.select2({ width: "100%", placeholder: T.all });
+        } else if (f.type === "couch_dbs" || f.type === "couch_db") {
+            if (f.type === "couch_db") $el.append(new Option("", "", true, true));
+            ajaxSelect($el, CFG.urls.couch_dbs, f.type === "couch_dbs", true);
+        } else if (f.type === "cantons") {
+            ajaxSelect($el, CFG.urls.cantons, true, false);
+        }
+    }
+    function fillCycles() {
+        var $project = $("#cr-f-project"), $cycle = $("#cr-f-cycle");
+        if (!$project.length || !$cycle.length) return;
+        var pid = parseInt($project.val(), 10), first = true;
+        $cycle.empty();
+        CFG.cycles.filter(function (c) { return c.project === pid; }).forEach(function (c) {
+            $cycle.append(new Option(c.text, c.id, first, first)); first = false;
+        });
+        $cycle.trigger("change.select2");
+    }
+    function applyShowIf() {
+        (current ? current.fields : []).forEach(function (f) {
+            var visible = Object.keys(f.show_if || {}).every(function (other) {
+                return $("#cr-f-" + other).is(":checked") === f.show_if[other];
+            });
+            $('.cr-field[data-key="' + f.key + '"]').toggle(visible);
+        });
+    }
+
+    function selectCommand(name) {
+        current = BY_NAME[name] || null;
+        $("#cr-selected").toggle(!!current);
+        $("#cr-message").removeClass("text-danger text-success").text("");
+        if (!current) { poll(); return; }
+        try { history.replaceState(null, "", "?command=" + encodeURIComponent(name)); } catch (e) { /* ignoré */ }
+        $("#cr-command-name").val(current.name);
+        $("#cr-title").html('<i class="fas fa-terminal mr-1"></i>' + esc(current.title) + ' <code class="ml-1">' + esc(current.name) + "</code>");
+        $("#cr-summary").text(current.summary);
+        $("#cr-details").html((current.details || []).map(function (d) { return "<li>" + esc(d) + "</li>"; }).join(""));
+        var w = current.writes, badge;
+        if (w === "always") badge = '<span class="badge badge-danger mr-1">' + esc(T.writes) + "</span>";
+        else badge = '<span class="badge badge-warning mr-1">' + esc(T.writes) + " / " + esc(T.read_only) + "</span>";
+        $("#cr-badges").html(badge + (current.duration ? '<span class="badge badge-light">' + esc(T.duration) + " : " + esc(current.duration) + "</span>" : ""));
+
+        var $fields = $("#cr-fields");
+        $fields.find("select").each(function () { if ($(this).data("select2")) $(this).select2("destroy"); });
+        $fields.html(current.fields.length ? current.fields.map(fieldHtml).join("") : '<div class="col-12 small text-muted">' + esc(T.no_option) + "</div>");
+        current.fields.forEach(initField);
+        $("#cr-f-project").on("change", fillCycles);
+        fillCycles();
+        $fields.find('input[type="checkbox"]').on("change", applyShowIf);
+        applyShowIf();
+        $("#cr-last, #cr-history").empty();
+        poll();
+    }
+    $command.on("change", function () { selectCommand($command.val()); });
+
+    // ---------------------------------------------------------------- suivi
+    function statusBadge(run) {
+        var cls = { starting: "info", running: "primary", done: "success", failed: "danger", cancelled: "secondary", interrupted: "warning" }[run.status] || "secondary";
+        return '<span class="badge badge-' + cls + '">' + (run.active ? '<i class="fa fa-spinner fa-spin mr-1"></i>' : "") + esc(T[run.status] || run.status) + "</span>";
+    }
+    function renderRun(run) {
+        if (!run) return '<p class="small text-muted mb-0">' + esc(T.no_run) + "</p>";
+        var html = '<div class="d-flex flex-wrap align-items-center" style="gap:.5rem;">' + statusBadge(run) +
+            "<strong>" + esc(run.title) + "</strong> <code>" + esc(run.command) + "</code>" +
+            (run.writes ? '<span class="badge badge-danger">' + esc(T.writes) + "</span>" : '<span class="badge badge-light">' + esc(T.read_only) + "</span>") +
+            '<span class="small text-muted">' + esc(run.started_at) + (run.started_by ? ", " + esc(T.started_by) + " " + esc(run.started_by) : "") +
+            " — " + esc(T.elapsed) + " " + dur(run.elapsed) + (run.active ? " — " + esc(T.silent) + " " + dur(run.silent_for) : "") +
+            (run.peak_memory_mb ? " — " + esc(T.memory) + " " + esc(run.peak_memory_mb) + " Mo" : "") + "</span>";
+        if (run.active) {
+            html += run.cancel_requested ? '<span class="small text-warning">' + esc(T.stop_requested) + "</span>"
+                : '<button type="button" class="btn btn-xs btn-outline-danger rounded-xl cr-stop" data-url="' + esc(run.cancel_url) + '"><i class="fas fa-stop mr-1"></i>' + esc(T.stop) + "</button>";
+        }
+        html += "</div>";
+        if (run.command_line) html += '<div class="small text-muted mt-2 mb-1">' + esc(T.equivalent) + '</div><div class="cr-cmd">' + esc(run.command_line) + "</div>";
+        if (run.phase || run.active) {
+            var known = run.total > 0;
+            var pct = known ? Math.min(100, Math.round(100 * run.done / run.total)) : (run.active ? 100 : (run.status === "done" ? 100 : 0));
+            html += '<div class="small mt-2">' + esc(run.phase || T.step) + (known ? " : " + esc(run.done) + " / " + esc(run.total) : "") +
+                    (run.current && run.active ? ' <span class="text-muted">(' + esc(run.current) + ")</span>" : "") + "</div>" +
+                    '<div class="progress mt-1" style="height: 1.1rem;"><div class="progress-bar' +
+                    (run.active ? " progress-bar-striped progress-bar-animated" : "") +
+                    (run.status === "failed" || run.status === "interrupted" ? " bg-danger" : run.status === "done" ? " bg-success" : run.status === "cancelled" ? " bg-secondary" : "") +
+                    (run.active && !known ? " bg-info" : "") +
+                    '" role="progressbar" style="width:' + pct + '%">' + (known || !run.active ? pct + " %" : "") + "</div></div>";
+        }
+        if (run.error) html += '<div class="alert alert-danger small mt-2 mb-0" style="white-space:pre-wrap;"><strong>' + esc(T.error) + " :</strong> " + esc(run.error) + "</div>";
+        if (run.log) html += '<div class="small text-muted mt-3 mb-1">' + esc(T.log) + '</div><pre class="cr-log mb-0">' + esc(run.log) + "</pre>";
+        return html;
+    }
+    function renderHistory(runs) {
+        var older = runs.slice(1);
+        if (!older.length) return '<p class="small text-muted mb-0">—</p>';
+        return '<table class="table table-sm cr-history mb-0"><tbody>' + older.map(function (r) {
+            return "<tr><td>" + statusBadge(r) + '</td><td class="text-muted">' + esc(r.started_at) + (r.started_by ? " — " + esc(r.started_by) : "") +
+                   "</td><td>" + dur(r.elapsed) + '</td><td><div class="cr-cmd">' + esc(r.command_line) + "</div>" +
+                   (r.error ? '<div class="small text-danger">' + esc(r.error.split("\n")[0]) + "</div>" : "") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+    function keepScroll(selector, html) {
+        var $log = $(selector + " .cr-log"), atBottom = !$log.length || $log[0].scrollTop + $log[0].clientHeight >= $log[0].scrollHeight - 20;
+        $(selector).html(html);
+        $log = $(selector + " .cr-log");
+        if ($log.length && atBottom) $log[0].scrollTop = $log[0].scrollHeight;
+    }
+    function show(data) {
+        var active = data.active, runs = data.runs || [];
+        var activeIsCurrent = active && current && active.command === current.name;
+        $("#cr-active-card").toggle(!!active && !activeIsCurrent);
+        if (active && !activeIsCurrent) keepScroll("#cr-active", renderRun(active));
+        if (current) {
+            keepScroll("#cr-last", renderRun(activeIsCurrent ? active : runs[0]));
+            $("#cr-history").html(renderHistory(runs));
+        }
+        $("#cr-run").prop("disabled", !!active).attr("title", active ? T.busy : "");
+    }
+    function poll() {
+        clearTimeout(timer);
+        $.getJSON(CFG.urls.status, { command: current ? current.name : "" }).done(function (data) {
+            show(data);
+            timer = setTimeout(poll, data.active ? 2000 : 15000);
+        }).fail(function () { timer = setTimeout(poll, 10000); });
+    }
+    $(document).on("click", ".cr-stop", function () {
+        if (!window.confirm(T.stop_confirm)) return;
+        $.ajax({ url: $(this).data("url"), method: "POST", headers: { "X-CSRFToken": $("[name=csrfmiddlewaretoken]").val() } })
+            .always(poll);
+    });
+
+    // ---------------------------------------------------------------- lancement
+    function writesNow() {
+        if (!current) return false;
+        var w = current.writes;
+        if (w === "always") return true;
+        if (w.indexOf("if:") === 0) return $("#cr-f-" + w.slice(3)).is(":checked");
+        if (w.indexOf("unless:") === 0) return !$("#cr-f-" + w.slice(7)).is(":checked");
+        return false;
+    }
+    $("#cr-run").on("click", function () {
+        if (!current) return;
+        if (writesNow() && !window.confirm(T.confirm_write)) return;
+        var $msg = $("#cr-message").removeClass("text-danger text-success").text("");
+        $(".cr-field-error").text("");
+        $("#cr-run").prop("disabled", true);
+        // Champs masqués (show_if) : non envoyés.
+        var data = $("#cr-form").find(".cr-field:hidden :input").prop("disabled", true).end().serialize();
+        $("#cr-form").find(".cr-field :input").prop("disabled", false);
+        $.ajax({ url: CFG.urls.start, method: "POST", data: data, dataType: "json" })
+            .done(function () { poll(); })
+            .fail(function (xhr) {
+                var r = xhr.responseJSON || {};
+                Object.keys(r.errors || {}).forEach(function (k) { $('[data-error-for="' + k + '"]').text(r.errors[k]); });
+                var rest = Object.keys(r.errors || {}).filter(function (k) { return !$('[data-error-for="' + k + '"]').length; })
+                    .map(function (k) { return r.errors[k]; });
+                $msg.addClass("text-danger").text((r.message || xhr.statusText) + (rest.length ? " — " + rest.join(" ; ") : ""));
+                poll();
+            });
+    });
+
+    if (CFG.selected) $command.val(CFG.selected).trigger("change");
+    else poll();
+});
+</script>
+{% endblock select2 %}
