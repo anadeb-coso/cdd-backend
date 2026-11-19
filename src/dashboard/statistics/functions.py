@@ -14,6 +14,7 @@ from subprojects.models import Project as MisProject
 from cdd.call_objects_from_other_db import mis_objects_call
 from process_manager.models import Project
 from .utils import safe_get, comparer_chaines
+from .canevas_normalization import normalize_task_doc, alias_task_names, population_or_computed_total
 from cdd.functions import normalize_text
 
 
@@ -790,6 +791,8 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
             "Réalisation de l'auto évaluation participative de la mise en œuvre du sous projet",
             "Elaboration et mise en oeuvre du plan d'entretien et de maintenance de l'ouvrage"
         ]
+        # Tâches du projet qui alimentent le canevas sous un autre nom (ex. FA2-COSO)
+        tasks_names = tasks_names + alias_task_names(project.name)
         tasks_ids = [t.id for t in project.task_set.filter(name_normalized__in=[normalize_text(name) for name in tasks_names])]
         
         query_result_docs = facilitator_db.get_query_result({
@@ -811,6 +814,8 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                 }
             ]
         }, limit=1000000)[:]
+        # Documents mis au format du canevas (correspondance des tâches et des champs par projet)
+        query_result_docs = [normalize_task_doc(doc, project.name) for doc in query_result_docs]
 
                 
         # query_result_docs = [doc.get('doc') for doc in query_result_docs if doc.get('doc') and (doc.get('doc').get('type') == "facilitator" or (doc.get('doc').get('type') == "task" and doc.get('doc').get('cycle_id') == cycle_id and doc.get('doc').get('project_id') == project.couch_id))]
@@ -880,6 +885,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                                         population = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                                     except:
                                                         population = None
+                                        population = population_or_computed_total(population, form_response, old_form_response)
                                         datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = population
                                         # End Eff. Population
 
@@ -3380,6 +3386,8 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
     backup_db = nsc.get_db("backup_db_facilitators_docs")
     query_result_docs = [_ for _ in backup_db.all_docs(include_docs=True)['rows'] if type(_) is dict and _.get('doc') and _.get('doc').get('type') == 'task' and _.get('doc').get('cycle_id') == cycle_id and _.get('doc').get('project_id') == project.couch_id]
     
+    # Documents mis au format du canevas (correspondance des tâches et des champs par projet)
+    query_result_docs = [{'doc': normalize_task_doc(_.get('doc'), project.name)} for _ in query_result_docs]
     administrative_level_cvd_villages = list(set([_.get('doc')["administrative_level_id"] for _ in query_result_docs if _.get('doc')])) #and _.get('doc')["administrative_level_id"] not in administrative_level_cvd_villages
             
     for administrative_level_cvd_village in administrative_level_cvd_villages:
@@ -3441,6 +3449,7 @@ def get_global_statistic_under_file_excel_or_csv(facilitator_dbs_name, file_type
                                             population = get_datas_dict(old_form_response, "generalitiesSurVillage", 1)["populationVillage"]
                                         except:
                                             population = None
+                            population = population_or_computed_total(population, form_response, old_form_response)
                             datas[("FICHE DE SUIVI MENSUEL DES INDICATGEURS DES RÉUNIONS CANTONNALES/VILLAGEOISES", "POPULATION", "Eff. Population", "Eff. Population", "Eff. Population", "Eff. Population", "ind_9")][count] = population
                             # End Eff. Population
 
