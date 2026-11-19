@@ -10,9 +10,11 @@ remplis sur le mobile (hors connexion, WatermelonDB) ou sur le web.
 import os
 import time
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import Group, User
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from authentication.models import Facilitator
@@ -254,3 +256,41 @@ class CollectAttachment(models.Model):
     @property
     def is_image(self):
         return (self.mime_type or '').startswith('image/')
+
+
+class CollectTaskMigrationRun(models.Model):
+    """Exécution de `migrate_cosocollect_to_tasks` lancée depuis l'onglet « Import vers les tâches » d'un
+    formulaire (superutilisateurs), en thread. Tenue en base (et non en mémoire) : la page qui suit
+    l'avancement peut être servie par un autre processus que celui qui exécute. « En cours » sans nouvelle depuis
+    STALE_AFTER = interrompue (serveur redémarré)."""
+    STATUS_RUNNING = 'running'
+    STATUS_DONE = 'done'
+    STATUS_FAILED = 'failed'
+    STATUSES = [(STATUS_RUNNING, 'En cours'), (STATUS_DONE, 'Terminée'), (STATUS_FAILED, 'Échec')]
+    STALE_AFTER = timedelta(minutes=10)
+
+    form = models.ForeignKey(CollectForm, on_delete=models.CASCADE, related_name='task_migration_runs')
+    started_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUSES, default=STATUS_RUNNING)
+    action = models.CharField(max_length=20)            # simulate | matches | apply | undo_simulate | undo_apply
+    params = models.JSONField(default=dict, blank=True)  # options de la commande (projet, cycle, tâche…)
+    phase = models.CharField(max_length=20, blank=True)  # index | write | undo
+    total = models.PositiveIntegerField(default=0)       # étapes de la phase en cours
+    done = models.PositiveIntegerField(default=0)
+    current = models.CharField(max_length=255, blank=True)
+    counts = models.JSONField(default=dict, blank=True)  # statut -> nombre (documents traités)
+    log = models.TextField(blank=True)                   # sortie de la commande
+    report = models.TextField(blank=True)                # rapport CSV (--report)
+    error = models.TextField(blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    heartbeat = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-started_at', '-id']
+
+    def is_stale(self):
+        return self.status == self.STATUS_RUNNING and self.heartbeat < timezone.now() - self.STALE_AFTER
+
+    def __str__(self):
+        return f'import COSOCollect {self.form_id} -> tâches ({self.action}, {self.status})'

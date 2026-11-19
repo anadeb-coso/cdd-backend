@@ -1,6 +1,9 @@
+from datetime import timedelta
+
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User, Group
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.db.models import Q
 
 from authentication.models import Facilitator
@@ -8,6 +11,30 @@ from no_sql_client import NoSQLClient
 from administrativelevels.models import AdministrativeLevel
 from cdd.models_base import BaseModel, CustomQuerySet
 from cdd.functions import normalize_text
+
+
+def _without_force_insert(kwargs):
+    """Arguments du second `super().save()` des modèles synchronisés avec CouchDB.
+
+    Ces `save()` enregistrent deux fois (avant puis après la création du document CouchDB,
+    pour mémoriser `couch_id`). Avec `objects.create()` (force_insert=True), le second
+    enregistrement retentait un INSERT et échouait sur la clé unique, en laissant un
+    document CouchDB orphelin.
+    """
+    return {k: v for k, v in kwargs.items() if k != 'force_insert'}
+
+
+def _propagate_to_process_design_docs(nsc, nsc_database, selector, fields):
+    """Recopie `fields` dans les documents `process_design` correspondant à `selector`.
+
+    Les tâches (et activités) gardent dans CouchDB le nom de leur activité / phase : sans
+    cette recopie, renommer une activité ou une phase laisse l'ancien nom, et le mobile ne
+    retrouve plus la phase de l'activité (« Mes tâches » > planification).
+    """
+    for doc in nsc.find_all(nsc_database, selector):
+        if any(doc.get(k) != v for k, v in fields.items()):
+            # Document complet (avec _rev) : update_cloudant_document réécrit tout le document.
+            nsc.update_cloudant_document(nsc_database, doc['_id'], {**doc, **fields})
 
 # class BaseModel(models.Model):
 #     created_date = models.DateTimeField(auto_now_add = True, blank=True, null=True)
@@ -79,7 +106,7 @@ class Project(BaseModel):
                 new_document['name'] = self.name
                 new_document['description'] = self.description
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
-        super().save(*args, **kwargs)
+        super().save(*args, **_without_force_insert(kwargs))
 
         return self
 
@@ -203,7 +230,7 @@ class Cycle(BaseModel):
                 new_document['project_name'] = self.project.name
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
 
-        super().save(*args, **kwargs)
+        super().save(*args, **_without_force_insert(kwargs))
         return self
     
 
@@ -279,8 +306,13 @@ class Phase(BaseModel):
                 new_document['capacity_attachments'] = capacity_attachments
                 new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+                _propagate_to_process_design_docs(
+                    nsc, nsc_database,
+                    {"type": {"$in": ["activity", "task"]}, "phase_id": self.couch_id},
+                    {"phase_name": self.name},
+                )
 
-        super().save(*args, **kwargs)
+        super().save(*args, **_without_force_insert(kwargs))
         return self
 
 
@@ -339,6 +371,7 @@ class Activity(BaseModel):
             "project_id": self.project.couch_id,
             "project_name": self.project.name,
             "phase_id": self.phase.couch_id,
+            "phase_name": self.phase.name,
             "total_tasks": self.total_tasks,
             "completed_tasks": 0,
             "sql_id": self.id,
@@ -367,8 +400,13 @@ class Activity(BaseModel):
                 new_document['capacity_attachments'] = capacity_attachments
                 new_document['cycles'] = [c.couch_id for c in self.cycles.all()]
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
+                _propagate_to_process_design_docs(
+                    nsc, nsc_database,
+                    {"type": "task", "activity_id": self.couch_id},
+                    {"activity_name": self.name},
+                )
 
-        super().save(*args, **kwargs)
+        super().save(*args, **_without_force_insert(kwargs))
         return self
 
 
@@ -581,7 +619,7 @@ class Task(BaseModel):
                 nsc.update_cloudant_document(nsc_database,  new_document["_id"], new_document)
         #     nsc.update_doc_uncontrolled(nsc_database, new_document['_id'], new_document)
 
-        super().save(*args, **kwargs)
+        super().save(*args, **_without_force_insert(kwargs))
         return self
 
 
@@ -761,12 +799,136 @@ class TaskShareRecord(BaseModel):
     # cf. ValidateTaskView._trigger_share_copy / build_task_detail_context.
     share_targets = models.JSONField(default=list, blank=True)
     last_synced = models.DateTimeField(auto_now=True)
+    # Type de compte du facilitateur qui tient cette instance (Facilitator.training_mode / develop_mode).
+    # Le partage ne se fait qu'entre comptes du MÊME type (règle du 14/11/2026) : un vrai FC ne reçoit jamais
+    # les données d'un compte de formation ou de démonstration, et inversement — alors qu'ils travaillent sur
+    # les mêmes villages. Fait donc partie de l'identité de la ligne.
+    training_mode = models.BooleanField(default=False)
+    develop_mode = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("task", "project", "cycle", "administrative_level_id")
+        unique_together = ("task", "project", "cycle", "administrative_level_id", "training_mode", "develop_mode")
 
     def __str__(self):
         return f"{self.task_id} @ADL{self.administrative_level_id} ({self.status})"
+
+
+class TaskSyncRun(models.Model):
+    """Suivi d'une synchronisation lancée depuis la fenêtre « Synchroniser cette tâche » du générateur de
+    formulaire (`dashboard.utils.sync_tasks` en thread). Tenu en base (et non en cache mémoire) : la page qui
+    interroge l'avancement peut être servie par un autre processus ou une autre instance que celui qui
+    synchronise. Une synchronisation « en cours » sans nouvelle depuis STALE_AFTER est considérée interrompue
+    (serveur redémarré pendant la synchronisation, thread perdu)."""
+    STATUS_RUNNING = "running"
+    STATUS_DONE = "done"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [(STATUS_RUNNING, "En cours"), (STATUS_DONE, "Terminée"), (STATUS_FAILED, "Échec")]
+    STALE_AFTER = timedelta(minutes=10)
+
+    task = models.ForeignKey("Task", on_delete=models.CASCADE, related_name="sync_runs")
+    project = models.ForeignKey("Project", on_delete=models.SET_NULL, null=True, blank=True)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True, blank=True)
+    started_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RUNNING)
+    params = models.JSONField(default=dict, blank=True)  # choix de la fenêtre (modes, bases, zone, villages)
+    expected_villages = models.PositiveIntegerField(default=0)
+    expected_facilitators = models.PositiveIntegerField(default=0)
+    expected_pairs = models.PositiveIntegerField(default=0)  # couples (base, village siège) à traiter
+    dbs_total = models.PositiveIntegerField(default=0)  # bases parcourues par sync_tasks
+    dbs_done = models.PositiveIntegerField(default=0)
+    current_db = models.CharField(max_length=255, blank=True)
+    pairs_done = models.PositiveIntegerField(default=0)
+    created_docs = models.PositiveIntegerField(default=0)
+    updated_docs = models.PositiveIntegerField(default=0)
+    error = models.TextField(blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    heartbeat = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-started_at", "-id")
+
+    def is_stale(self):
+        return self.status == self.STATUS_RUNNING and self.heartbeat < timezone.now() - self.STALE_AFTER
+
+    def __str__(self):
+        return f"sync tâche {self.task_id} ({self.status}, {self.started_at:%Y-%m-%d %H:%M})"
+
+
+class VillageDocsComment(models.Model):
+    """Commentaire sur une identification des pages « Documents de villages » (diagnostics) : un village dont les
+    phases/activités/tâches d'un projet et d'un cycle sont dans la base CouchDB d'un facilitateur (`no_sql_db_name`)
+    sans que le village figure dans ses `administrative_levels`, ou l'inverse. `assigned_facilitator` : celui qui
+    est normalement affecté au village (AssignAdministrativeLevelToFacilitator), mentionné par l'auteur."""
+    PAGE_ORPHANS = "orphans"
+    PAGE_MISSING = "missing"
+    PAGE_CHOICES = [(PAGE_ORPHANS, "Documents sans village"), (PAGE_MISSING, "Village sans documents")]
+
+    page = models.CharField(max_length=20, choices=PAGE_CHOICES, default=PAGE_ORPHANS)
+    administrative_level_id = models.IntegerField(db_index=True)  # pas de FK : même convention que TaskShareRecord
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    cycle = models.ForeignKey("Cycle", on_delete=models.SET_NULL, null=True, blank=True)
+    facilitator = models.ForeignKey(Facilitator, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    no_sql_db_name = models.CharField(max_length=255)
+    assigned_facilitator = models.ForeignKey(Facilitator, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    text = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+    def __str__(self):
+        return f"commentaire village {self.administrative_level_id} ({self.no_sql_db_name})"
+
+
+class VillageDocsOperation(models.Model):
+    """Suivi d'un transfert ou d'une synchronisation lancé depuis les pages « Documents de villages » (thread) :
+    vers la base de sauvegarde `backup_db_facilitators_docs`, depuis elle vers la base d'un facilitateur, ou
+    synchronisation des tâches choisies. Tenu en base comme TaskSyncRun (l'avancement peut être lu par un autre
+    processus) ; « en cours » sans nouvelle depuis STALE_AFTER = interrompu."""
+    KIND_TO_BACKUP = "to_backup"
+    KIND_FROM_BACKUP = "from_backup"
+    KIND_SYNC = "sync"
+    KIND_LOCALITIES = "localities"  # automatique : villages d'affectation ajoutés / retirés d'un facilitateur
+    KIND_NAMES = "names"  # noms corrigés sur le SIG -> CouchDB (page Vérification des villages)
+    KIND_CHOICES = [(KIND_TO_BACKUP, "Vers la sauvegarde"), (KIND_FROM_BACKUP, "Depuis la sauvegarde"),
+                    (KIND_SYNC, "Synchronisation des tâches"),
+                    (KIND_LOCALITIES, "Déplacement des documents des villages d'affectation"),
+                    (KIND_NAMES, "Noms des villages et CVD (SIG -> CouchDB)")]
+    STATUS_PENDING = "pending"  # en file : une autre opération tourne
+    STATUS_RUNNING = "running"
+    STATUS_DONE = "done"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [(STATUS_PENDING, "En attente"), (STATUS_RUNNING, "En cours"), (STATUS_DONE, "Terminée"),
+                      (STATUS_FAILED, "Échec")]
+    ACTIVE_STATUSES = (STATUS_PENDING, STATUS_RUNNING)
+    STALE_AFTER = timedelta(minutes=10)
+
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_RUNNING)
+    no_sql_db_name = models.CharField(max_length=255, blank=True)  # base du facilitateur (opération automatique)
+    started_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    params = models.JSONField(default=dict, blank=True)  # éléments demandés (base, village, projet, cycle…), tâches
+    results = models.JSONField(default=list, blank=True)  # un résultat par élément : ok / refus / erreur, nombres
+    items_total = models.PositiveIntegerField(default=0)
+    items_done = models.PositiveIntegerField(default=0)
+    units_total = models.PositiveIntegerField(default=0)  # documents (transferts) ou couples tâche × village (synchro)
+    units_done = models.PositiveIntegerField(default=0)
+    current = models.CharField(max_length=255, blank=True)
+    error = models.TextField(blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    heartbeat = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-started_at", "-id")
+
+    def is_stale(self):
+        return self.status in self.ACTIVE_STATUSES and self.heartbeat < timezone.now() - self.STALE_AFTER
+
+    def __str__(self):
+        return f"{self.kind} ({self.status}, {self.started_at:%Y-%m-%d %H:%M})"
 
 
 class Wave(BaseModel):
@@ -949,3 +1111,70 @@ post_save.connect(create_or_update_project, sender=Project)
 post_delete.connect(delete_process_design_doc, sender=Phase)
 post_delete.connect(delete_process_design_doc, sender=Activity)
 post_delete.connect(delete_process_design_doc, sender=Task)
+
+def report_facilitators_projects_to_couch(sender, instance, action, reverse, pk_set, **kwargs):
+    """Facilitateur rattaché à un projet (formulaire de projet, admin, import…) : le projet est ajouté à son
+    document CouchDB, sans quoi ses pages (profil…) répondent « Page introuvable » dans ce projet."""
+    if action != 'post_add' or not pk_set:
+        return
+    from django.db import transaction
+    from dashboard.facilitators.projects_sync import sync_facilitators_projects_safely
+
+    facilitator_ids = [instance.pk] if reverse else list(pk_set)
+    transaction.on_commit(lambda: sync_facilitators_projects_safely(
+        Facilitator.objects.filter(pk__in=facilitator_ids)))
+
+
+m2m_changed.connect(report_facilitators_projects_to_couch, sender=Project.facilitators.through)
+
+
+class CommandRun(models.Model):
+    """Exécution d'une commande de gestion lancée depuis le menu « Commandes / sync » (superutilisateurs).
+
+    La commande tourne dans un PROCESSUS séparé (`manage.py run_tracked_command <id>`, priorité basse, plafond
+    mémoire), pas dans le serveur web : le suivi est tenu ici, lisible par n'importe quel processus ou instance.
+    Le processus écrit `heartbeat` toutes les quelques secondes ; « en cours » sans nouvelle depuis STALE_AFTER =
+    interrompue (processus tué, serveur redémarré)."""
+    STATUS_STARTING = "starting"
+    STATUS_RUNNING = "running"
+    STATUS_DONE = "done"
+    STATUS_FAILED = "failed"
+    STATUS_CANCELLED = "cancelled"
+    STATUSES = [
+        (STATUS_STARTING, "Démarrage"), (STATUS_RUNNING, "En cours"), (STATUS_DONE, "Terminée"),
+        (STATUS_FAILED, "Échec"), (STATUS_CANCELLED, "Arrêtée"),
+    ]
+    ACTIVE_STATUSES = (STATUS_STARTING, STATUS_RUNNING)
+    STALE_AFTER = timedelta(minutes=2)
+
+    command = models.CharField(max_length=100)
+    params = models.JSONField(default=dict, blank=True)   # {"options": {...call_command}, "answers": [...]}
+    command_line = models.TextField(blank=True)           # commande équivalente (rejouable en SSH)
+    writes = models.BooleanField(default=False)           # l'exécution écrit (sinon simulation / lecture)
+    status = models.CharField(max_length=20, choices=STATUSES, default=STATUS_STARTING)
+    started_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    host = models.CharField(max_length=255, blank=True)   # machine qui exécute
+    pid = models.IntegerField(null=True, blank=True)
+    phase = models.CharField(max_length=255, blank=True)
+    total = models.PositiveIntegerField(default=0)
+    done = models.PositiveIntegerField(default=0)
+    current = models.CharField(max_length=255, blank=True)
+    log = models.TextField(blank=True)                    # fin de la sortie de la commande
+    error = models.TextField(blank=True)
+    peak_memory_mb = models.PositiveIntegerField(null=True, blank=True)
+    cancel_requested = models.BooleanField(default=False)
+    started_at = models.DateTimeField(auto_now_add=True)
+    heartbeat = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-id"]
+
+    def is_active(self):
+        return self.status in self.ACTIVE_STATUSES
+
+    def is_stale(self):
+        return self.is_active() and self.heartbeat < timezone.now() - self.STALE_AFTER
+
+    def __str__(self):
+        return f"{self.command} ({self.status})"
