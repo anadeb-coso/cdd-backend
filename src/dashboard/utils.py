@@ -311,7 +311,10 @@ def get_documents_by_type(db, _type, empty_choice=True, attrs={}):
 
 
 # TODO Refactor para la nueva logica
-def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_dbs=False, administrativelevel_ids=[], project_id=None, cycle_id=None):
+def create_task_all_facilitators(database, task_model, develop_mode=False, trainning_mode=False, no_sql_dbs=False, administrativelevel_ids=[], project_id=None, cycle_id=None, progress=None):
+    # progress (facultatif) : appelée progress("start", total=n), progress("facilitator", db=...),
+    # progress("village", db=..., created=bool), progress("facilitator_done", db=...) — suivi de la fenêtre
+    # « Synchroniser cette tâche » (process_manager.TaskSyncRun).
     if no_sql_dbs:
         facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=trainning_mode, no_sql_db_name__in=no_sql_dbs)
     else:
@@ -331,7 +334,12 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
     project = nsc_database.get_query_result({"_id": task_model.project.couch_id})[0]
     cycle = nsc_database.get_query_result({"_id": cycle_object.couch_id})[0]
 
+    if progress:
+        facilitators = list(facilitators)
+        progress("start", total=len(facilitators))
     for facilitator in facilitators:
+        if progress:
+            progress("facilitator", db=facilitator.no_sql_db_name)
         facilitator_database = nsc.get_db(facilitator.no_sql_db_name)
         print(facilitator.no_sql_db_name, facilitator.username)
         facilitator_administrative_levels = facilitator_database.get_query_result(
@@ -527,6 +535,8 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     # Get activity
                     fc_task = facilitator_database.get_query_result(new_task)[0]
                     print(fc_task)
+                    if progress:
+                        progress("village", db=facilitator.no_sql_db_name, created=True)
                 else:
                     #Update task if it exists
                     _fc_task = fc_task[0].copy()
@@ -586,7 +596,11 @@ def create_task_all_facilitators(database, task_model, develop_mode=False, train
                     nsc.update_cloudant_document(facilitator_database,  _fc_task["_id"], _fc_task, 
                         {"attachments": ["name", "order"]}, fc_task[0]['attachments'])  # Update task for the facilitator
                     print(_fc_task)
+                    if progress:
+                        progress("village", db=facilitator.no_sql_db_name, created=False)
                 print(administrative_level)
+        if progress:
+            progress("facilitator_done", db=facilitator.no_sql_db_name)
 
 
 def add_news_attr_to_doc(db_name, objects_list, attrs_to_add = ["sql_id"]):
@@ -743,7 +757,7 @@ def create_task_one_facilitator(database, task_model, no_sql_db):
 
 
 # from dashboard.utils import sync_tasks
-def sync_tasks(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_dbs=False, administrativelevel_ids=[], tasks_ids=[], attachmentsPresented=None):
+def sync_tasks(project_id, cycle_id, develop_mode=False, training_mode=False, no_sql_dbs=False, administrativelevel_ids=[], tasks_ids=[], attachmentsPresented=None, progress=None):
     
     if attachmentsPresented in (False, True):
         if tasks_ids:
@@ -761,7 +775,7 @@ def sync_tasks(project_id, cycle_id, develop_mode=False, training_mode=False, no
         #     create_task_one_facilitator("process_design", task, no_sql_db)
         # else:
         #     create_task_all_facilitators("process_design", task, develop_mode, training_mode)
-        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_dbs, administrativelevel_ids, project_id=project_id, cycle_id=cycle_id)
+        create_task_all_facilitators("process_design", task, develop_mode, training_mode, no_sql_dbs, administrativelevel_ids, project_id=project_id, cycle_id=cycle_id, progress=progress)
     
     print("Sync done!")
 
@@ -1581,12 +1595,10 @@ def add_facilitator_design(develop_mode=False, trainning_mode=False, no_sql_dbs=
     nsc = NoSQLClient()
     nsc_database = nsc.get_db("process_design")
     
+    from no_sql_client import FACILITATOR_DESIGN_DOC_IDS
     doc_designs = [
-        # nsc_database.get_design_document('_design/views_docs')[:],
-        (nsc_database.get_design_document('_design/tasks_number'), False),
         (nsc_database.get_query_result({"type": "geolocation"})[:], True),
-        (nsc_database.get_design_document('_design/task_stats'), False),
-    ]
+    ] + [(nsc_database.get_design_document(ddoc_id), False) for ddoc_id in FACILITATOR_DESIGN_DOC_IDS]
 
     for doc_design, will_be_delete in doc_designs:
         if doc_design and type(doc_design) is list:
@@ -3599,7 +3611,13 @@ def get_facilitator_db_which_have_cvd_id(project_id, cycle_id, cvd_ids, develop_
 
     facilitators = Facilitator.objects.filter(develop_mode=develop_mode, training_mode=training_mode, projects__in=[project_id])
 
-    administrativelevels_dict = {str(ad.id): str(ad.cvd.id) for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])}
+    # village -> CVD ; les villages sans CVD (CVD pas encore créés dans le SIG, ex. nouvelles zones d'un projet) sont
+    # ignorés : sans CVD, pas de village siège ni de tâche à répartir sur ses villages.
+    administrativelevels_dict = {
+        str(ad.id): str(ad.cvd_id)
+        for ad in mis_objects_call.filter_objects(AdministrativeLevel, type="Village", administrative_levels_projects__in=[project_mis_id], administrative_levels_cycles__in=[cycle_mis_id])
+        if ad.cvd_id
+    }
     
     for f in facilitators.order_by('id'):
         count_facilitator += 1
@@ -3635,7 +3653,39 @@ def get_facilitator_db_which_have_cvd_id(project_id, cycle_id, cvd_ids, develop_
 # ``dashboard.process_manager.tasks.views._run_sync_tasks_in_thread``).
 # ---------------------------------------------------------------------------
 
-def find_task_share_record(task_id, project_id, administrative_level_id, prefer_field=None):
+# Type de compte (training_mode, develop_mode) : le partage ne se fait qu'entre comptes du MÊME type (règle du
+# 14/11/2026). Un vrai FC (False, False) ne lit / ne reçoit que des données de vrais FC, un compte de formation
+# (True, False) que de comptes de formation, etc. — les comptes de test travaillant sur les mêmes villages que les
+# vrais FC, le village seul ne suffit pas à distinguer les instances.
+REAL_ACCOUNT_KIND = (False, False)
+
+
+def facilitator_account_kind(facilitator):
+    """``(training_mode, develop_mode)`` d'un facilitateur (aucun : vrai FC)."""
+    if facilitator is None:
+        return REAL_ACCOUNT_KIND
+    return bool(facilitator.training_mode), bool(facilitator.develop_mode)
+
+
+def account_kind_for(no_sql_db_name=None, facilitator_id=None):
+    """Type de compte du facilitateur désigné par son id SQL ou sa base CouchDB (inconnu : vrai FC)."""
+    facilitator = None
+    if facilitator_id:
+        try:
+            facilitator = Facilitator.objects.filter(id=int(facilitator_id)).first()
+        except (TypeError, ValueError):
+            facilitator = None
+    if facilitator is None and no_sql_db_name:
+        facilitator = Facilitator.objects.filter(no_sql_db_name=no_sql_db_name).first()
+    return facilitator_account_kind(facilitator)
+
+
+def _account_kind_filter(kind):
+    kind = tuple(kind or REAL_ACCOUNT_KIND)
+    return {'training_mode': bool(kind[0]), 'develop_mode': bool(kind[1])}
+
+
+def find_task_share_record(task_id, project_id, administrative_level_id, prefer_field=None, kind=REAL_ACCOUNT_KIND):
     """Résout LE ``TaskShareRecord`` pertinent pour (tâche, projet, village),
     en ignorant délibérément ``cycle`` dans la recherche — cf.
     :func:`upsert_task_share_record` pour l'explication complète du bug que
@@ -3645,9 +3695,13 @@ def find_task_share_record(task_id, project_id, administrative_level_id, prefer_
     contact). ``prefer_field`` : parmi les candidats (doublons hérités
     compris), préfère celui où ce champ est "vrai" (ex. ``share_values`` pour
     lire les données à copier, ``share_targets``/``couch_task_id`` pour lire
-    les cibles/raccourcis déjà connus) plutôt que le plus récent."""
+    les cibles/raccourcis déjà connus) plutôt que le plus récent.
+
+    ``kind`` : type de compte ``(training_mode, develop_mode)`` — seules les
+    lignes de ce type sont lues (cf. :data:`REAL_ACCOUNT_KIND`)."""
     candidates = list(TaskShareRecord.objects.filter(
         task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
+        **_account_kind_filter(kind),
     ).order_by('-updated_date'))
     if not candidates:
         return None
@@ -3658,7 +3712,7 @@ def find_task_share_record(task_id, project_id, administrative_level_id, prefer_
     return candidates[0]
 
 
-def upsert_task_share_record(task_id, project_id, administrative_level_id, defaults):
+def upsert_task_share_record(task_id, project_id, administrative_level_id, defaults, kind=REAL_ACCOUNT_KIND):
     """Équivalent tolérant de ``TaskShareRecord.objects.update_or_create(
     task_id=..., project_id=..., administrative_level_id=..., defaults=defaults)``
     MAIS QUI IGNORE ``cycle`` DANS L'IDENTITÉ DE LA LIGNE.
@@ -3682,15 +3736,21 @@ def upsert_task_share_record(task_id, project_id, administrative_level_id, defau
     (déjà noté dans le modèle) -> (task, project, adl) suffit à identifier
     UNE instance réelle du registre. Fusionne au passage tout doublon hérité
     (créé avant ce correctif) en une seule ligne, la plus complète possible,
-    avant d'appliquer ``defaults``."""
+    avant d'appliquer ``defaults``.
+
+    ``kind`` : type de compte ``(training_mode, develop_mode)``, fait partie de
+    l'identité de la ligne (un compte de formation et le vrai FC du même
+    village ont chacun la leur)."""
+    kind_filter = _account_kind_filter(kind)
     candidates = list(TaskShareRecord.objects.filter(
         task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
+        **kind_filter,
     ).order_by('id'))
 
     if not candidates:
         record = TaskShareRecord.objects.create(
             task_id=task_id, project_id=project_id, administrative_level_id=administrative_level_id,
-            **defaults,
+            **kind_filter, **defaults,
         )
         return record, True
 
@@ -3719,8 +3779,8 @@ def upsert_task_share_record(task_id, project_id, administrative_level_id, defau
 def canton_headquarters_village_ids(source_administrative_level_id):
     """Ids des villages sièges (``CVD.headquarters_village``) du MÊME canton
     que ``source_administrative_level_id`` (village siège lui-même), le
-    village source exclu. Règle canonique (pas l'heuristique AggregatedStatus
-    de ``_headquarters_village_choices``) : cf. plan de partage."""
+    village source exclu. Règle canonique (pas une heuristique AggregatedStatus) :
+    cf. plan de partage."""
     try:
         source_cvd = CVD.objects.using('mis').filter(
             headquarters_village_id=int(source_administrative_level_id),
@@ -3741,7 +3801,8 @@ def canton_headquarters_village_ids(source_administrative_level_id):
         return []
 
 
-def _find_facilitator_task_doc(nsc, project_id, task_sql_id, target_administrative_level_id, cycle_id=None):
+def _find_facilitator_task_doc(nsc, project_id, task_sql_id, target_administrative_level_id, cycle_id=None,
+                               kind=REAL_ACCOUNT_KIND):
     """Cherche, en parcourant les facilitateurs du projet, celui qui détient
     le document de tâche (déjà provisionné par ``sync_tasks``) pour
     ``target_administrative_level_id``. Renvoie ``(facilitator, db, doc)`` ou
@@ -3779,26 +3840,53 @@ def _find_facilitator_task_doc(nsc, project_id, task_sql_id, target_administrati
     aucune village stabilisé) portait un doc ``sql_id=102`` avec
     ``administrative_level_id='1986'`` copié depuis une démo, jamais nettoyé,
     qui interceptait silencieusement toute copie destinée au vrai village
-    1986 (TIMANGA/CINKASSE, facilitateur réel 120)."""
-    query = {"type": "task", "sql_id": task_sql_id}
+    1986 (TIMANGA/CINKASSE, facilitateur réel 120).
+
+    ``kind`` (14/11/2026) : ne parcourt que les facilitateurs de ce type de
+    compte ``(training_mode, develop_mode)`` — vrais FC par défaut (le
+    comportement ci-dessus) ; le partage d'un compte de formation cherche sa
+    cible parmi les comptes de formation."""
+    # Lecture COMPLÈTE et ciblée (corrigé le 11/11/2026) : `db.get_query_result(query)[:]` n'envoie pas de
+    # `limit` -> CouchDB tronquait silencieusement à 25 documents, et un village au-delà des 25 premiers docs
+    # de la tâche chez un facilitateur n'était jamais trouvé (partage non copié, sans message). On filtre
+    # désormais sur le village (chaîne OU entier, cf. ci-dessus) et on lit toutes les pages (`find_all`).
     target = str(target_administrative_level_id)
+    village_values = [target]
+    try:
+        village_values.append(int(target))
+    except (TypeError, ValueError):
+        pass
+    query = {"type": "task", "sql_id": task_sql_id, "administrative_level_id": {"$in": village_values}}
+    # `cycle_id` (id SQL, jusqu'ici accepté mais ignoré) : à village égal, le document du bon cycle est préféré.
+    cycle_couch_id = None
+    if cycle_id:
+        cycle_couch_id = Cycle.objects.filter(id=cycle_id).values_list("couch_id", flat=True).first()
+    fallback = None
     for facilitator in Facilitator.objects.filter(
-        projects__in=[project_id], active=True, develop_mode=False, training_mode=False,
+        projects__in=[project_id], active=True, **_account_kind_filter(kind),
     ):
         try:
             db = nsc.get_db(facilitator.no_sql_db_name)
-            found = db.get_query_result(query)[:]
-            for row in found:
-                if str(row.get("administrative_level_id")) == target:
-                    doc = db[row["_id"]]  # chauffe le cache local de `db` (cf. docstring)
-                    return facilitator, db, doc
+            for row in nsc.find_all(db, query, fields=["_id", "administrative_level_id", "cycle_id"]):
+                if str(row.get("administrative_level_id")) != target:
+                    continue
+                if cycle_couch_id and row.get("cycle_id") and row["cycle_id"] != cycle_couch_id:
+                    if fallback is None:
+                        fallback = (facilitator, db, row["_id"])
+                    continue
+                doc = db[row["_id"]]  # chauffe le cache local de `db` (cf. docstring)
+                return facilitator, db, doc
         except Exception:
             continue
+    if fallback is not None:  # aucun document du cycle demandé : comportement d'avant (premier trouvé)
+        facilitator, db, doc_id = fallback
+        return facilitator, db, db[doc_id]
     return None, None, None
 
 
 def copy_shared_task_data(task_id, source_administrative_level_id, target_administrative_level_ids,
-                           project_id, cycle_id, mode, share_values=None, validated_by=None):
+                           project_id, cycle_id, mode, share_values=None, validated_by=None,
+                           kind=REAL_ACCOUNT_KIND, source_facilitator=None):
     """Copie les valeurs des champs marqués ``share`` **du mode ``mode``
     uniquement** (form builder web — le mode de partage est porté PAR CHAMP,
     cf. ``form_design.group_share_paths_by_mode`` ; une même tâche peut avoir
@@ -3832,7 +3920,12 @@ def copy_shared_task_data(task_id, source_administrative_level_id, target_admini
     ``ValidateTaskView.get`` — ``user_name``/``user_id``/``user_last_name``/
     ``user_first_name``/``user_email``), utilisée UNIQUEMENT pour l'entrée
     ``actions_by`` de validation automatique dans le cas "toutes les
-    données". Best-effort par cible."""
+    données". Best-effort par cible.
+
+    ``kind`` : type de compte ``(training_mode, develop_mode)`` de la tâche
+    source ; source et cibles sont toujours du même type (un compte de
+    formation ne copie que vers des comptes de formation, un vrai FC que vers
+    de vrais FC)."""
     from dashboard.process_manager.tasks.form_design import (
         merge_share_values, group_share_paths_by_mode, all_fields_shared,
     )
@@ -3852,7 +3945,7 @@ def copy_shared_task_data(task_id, source_administrative_level_id, target_admini
     full_task_share = all_fields_shared(task.form, mode=mode, attachments=task.attachments)
 
     source_record = find_task_share_record(
-        task_id, project_id, source_administrative_level_id, prefer_field='share_values',
+        task_id, project_id, source_administrative_level_id, prefer_field='share_values', kind=kind,
     )
     all_values = share_values or (source_record.share_values if source_record else None)
     # `share_values` (paramètre ou snapshot TaskShareRecord) couvre TOUS les
@@ -3866,7 +3959,12 @@ def copy_shared_task_data(task_id, source_administrative_level_id, target_admini
         )
         return
 
-    source_facilitator = source_record.facilitator if source_record and source_record.facilitator_id else None
+    # Facilitateur affiché dans l'historique de la cible (« Données chargées depuis une autre tâche ») : celui dont la
+    # tâche FOURNIT les valeurs. Passé explicitement par la validation (propriétaire de la tâche validée) ; la ligne
+    # du registre n'est qu'un repli — son `facilitator` est celui du dernier achèvement mobile, qui n'était pas
+    # forcément le propriétaire des valeurs (bug du 14/11/2026 : valeurs d'un vrai FC affichées « Training1 »).
+    if source_facilitator is None:
+        source_facilitator = source_record.facilitator if source_record and source_record.facilitator_id else None
     source_label = None
     try:
         source_label = AdministrativeLevel.objects.using('mis').filter(
@@ -3888,7 +3986,7 @@ def copy_shared_task_data(task_id, source_administrative_level_id, target_admini
                 nsc, task, target_id, project_id, cycle_id, values, merge_share_values,
                 source_administrative_level_id, source_label, source_facilitator,
                 action='copied_at_validation',
-                full_task_share=full_task_share, validated_by=validated_by,
+                full_task_share=full_task_share, validated_by=validated_by, kind=kind,
             )
         except Exception:
             logger.exception(
@@ -3920,14 +4018,18 @@ def _copy_shared_task_data_to_target(nsc, task, target_administrative_level_id, 
                                       values, merge_share_values,
                                       source_administrative_level_id=None, source_label=None,
                                       source_facilitator=None, action='copied_at_validation',
-                                      full_task_share=False, validated_by=None):
+                                      full_task_share=False, validated_by=None, kind=REAL_ACCOUNT_KIND):
     record = find_task_share_record(
-        task.id, project_id, target_administrative_level_id, prefer_field='couch_task_id',
+        task.id, project_id, target_administrative_level_id, prefer_field='couch_task_id', kind=kind,
     )
 
     db = None
     doc = None
     facilitator = record.facilitator if record and record.facilitator_id else None
+    # Raccourci du registre seulement si son facilitateur est bien du même type de compte (facilitateur passé
+    # en formation / démonstration depuis l'écriture de la ligne...).
+    if facilitator and facilitator_account_kind(facilitator) != tuple(kind or REAL_ACCOUNT_KIND):
+        facilitator = None
     if facilitator and record.couch_task_id:
         try:
             db = nsc.get_db(facilitator.no_sql_db_name)
@@ -3940,7 +4042,7 @@ def _copy_shared_task_data_to_target(nsc, task, target_administrative_level_id, 
         # tâche (aucun TaskShareRecord) -> on la retrouve parmi les
         # facilitateurs du projet (doc déjà provisionné par sync_tasks).
         facilitator, db, doc = _find_facilitator_task_doc(
-            nsc, project_id, task.id, target_administrative_level_id, cycle_id,
+            nsc, project_id, task.id, target_administrative_level_id, cycle_id, kind=kind,
         )
         if doc is None:
             logger.info(
@@ -4018,4 +4120,4 @@ def _copy_shared_task_data_to_target(nsc, task, target_administrative_level_id, 
         target_defaults["status"] = target_status
     if cycle_id is not None:
         target_defaults["cycle_id"] = cycle_id
-    upsert_task_share_record(task.id, project_id, target_administrative_level_id, defaults=target_defaults)
+    upsert_task_share_record(task.id, project_id, target_administrative_level_id, defaults=target_defaults, kind=kind)

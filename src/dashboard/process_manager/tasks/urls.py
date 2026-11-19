@@ -32,4 +32,6 @@ urlpatterns = [
     path('task/<slug:id>/form-builder/datasource-preview/', views.TaskFormDataSourcePreviewView.as_view(), name='task_form_builder_datasource_preview'),
     path('task/<slug:id>/form-builder/dataset-sheet/', views.TaskFormDatasetSheetView.as_view(), name='task_form_builder_dataset_sheet'),
     path('task/<slug:id>/form-builder/sync/', views.TaskFormSyncView.as_view(), name='task_form_builder_sync'),
+    path('task/<slug:id>/form-builder/sync/scope/', views.TaskFormSyncScopeView.as_view(), name='task_form_builder_sync_scope'),
+    path('task/<slug:id>/form-builder/sync/status/', views.TaskFormSyncStatusView.as_view(), name='task_form_builder_sync_status'),
 ]

@@ -56,6 +56,8 @@
 {% endblock javascript %}
 
 {% block select2 %}
+    {# Avant le script : le bloc select2 est rendu à l'intérieur du bloc javascript de la base. #}
+    {% if class_object == 'Task' %}{{ activity_phases|json_script:"activity-phases" }}{% endif %}
     <script type="text/javascript">
         {% if class_object == 'Task' or class_object == 'Activity' %}
         $("#id_phase").select2({
@@ -69,6 +71,43 @@
             placeholder: "{% translate 'Activity' %}",
             allowClear: true,
         });
+
+        // Activités limitées à la phase choisie (toutes si aucune phase). Choisir une activité sans phase
+        // renseigne sa phase.
+        (function () {
+            var phasesEl = document.getElementById("activity-phases");
+            var $phase = $("#id_phase"), $activity = $("#id_activity");
+            if (!phasesEl || !$phase.length || !$activity.length) return;
+            var activityPhases = JSON.parse(phasesEl.textContent);
+            var allOptions = $activity.find("option").clone();
+            var syncing = false;
+
+            function filterActivities() {
+                var phase = $phase.val(), current = $activity.val();
+                $activity.empty();
+                allOptions.each(function () {
+                    var value = this.value;
+                    if (!value || !phase || String(activityPhases[value]) === String(phase)) {
+                        $activity.append($(this).clone());
+                    }
+                });
+                var keep = current && $activity.find('option[value="' + current + '"]').length;
+                syncing = true;
+                $activity.val(keep ? current : "").trigger("change");
+                syncing = false;
+            }
+
+            $phase.on("change", function () { if (!syncing) filterActivities(); });
+            $activity.on("change", function () {
+                var value = $activity.val();
+                if (syncing || !value || $phase.val() || activityPhases[value] == null) return;
+                syncing = true;
+                $phase.val(String(activityPhases[value])).trigger("change");
+                syncing = false;
+                filterActivities();
+            });
+            filterActivities();
+        })();
 
         $("#id_groups_collectors").select2({
             placeholder: "{% translate 'Groups collectors' %}",

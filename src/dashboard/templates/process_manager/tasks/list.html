@@ -59,11 +59,48 @@
             <div class="clearfix"></div>
              
             
-            <div class="input-group mb-3 search-bar">
-                <div class="input-group-prepend">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <div class="row">
+                <div class="col-md mb-3">
+                    <div class="input-group search-bar">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+                    </div>
                 </div>
-                <input class="form-control" id="search" placeholder="{% translate 'Search by name' %}...">
+                {% if class_object == 'Activity' or class_object == 'Task' %}
+                <div class="col-md mb-3">
+                    <select class="form-control js-list-filter js-multi-filter" id="filter-phase" multiple
+                            aria-label="{% translate 'Phase' %}" data-placeholder="{% translate 'All phases' %}">
+                        {% for phase in filter_phases %}
+                        <option value="{{ phase.pk }}">{{ phase.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                {% if class_object == 'Phase' or class_object == 'Task' %}
+                <div class="col-md mb-3">
+                    <select class="form-control js-list-filter js-multi-filter" id="filter-activity" multiple
+                            aria-label="{% translate 'Activity' %}"
+                            data-placeholder="{% if class_object == 'Phase' %}{% translate 'Search by activity' %}...{% else %}{% translate 'All activities' %}{% endif %}"
+                            {% if class_object == 'Phase' %}data-free-text="1"{% endif %}>
+                        {% for activity in filter_activities %}
+                        <option value="{{ activity.pk }}" data-phase="{{ activity.phase_id }}">{{ activity.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+                {% if class_object == 'Phase' or class_object == 'Activity' %}
+                <div class="col-md mb-3">
+                    <select class="form-control js-list-filter js-multi-filter" id="filter-task" multiple
+                            aria-label="{% translate 'Task' %}" data-placeholder="{% translate 'Search by task' %}..."
+                            data-free-text="1">
+                        {% for task in filter_tasks %}
+                        <option value="{{ task.pk }}">{{ task.name }}{% if task.activity %} ({{ task.activity.name }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
             </div>
 
             <div class="card">
@@ -95,7 +132,7 @@
                                 </thead>
                                 <tbody>
                                 {% for object in objects %}
-                                    <tr>
+                                    <tr{% if class_object == 'Activity' or class_object == 'Task' %} data-phase="{{ object.phase_id }}"{% endif %}{% if class_object == 'Task' %} data-activity="{{ object.activity_id }}"{% endif %}{% if class_object == 'Phase' %} data-activities="{{ object.search_activities }}" data-activity-ids="{{ object.filter_activity_ids }}"{% endif %}{% if class_object == 'Phase' or class_object == 'Activity' %} data-tasks="{{ object.search_tasks }}" data-task-ids="{{ object.filter_task_ids }}"{% endif %}>
                                         <td align="left">
                                             {{ object.name }}
                                             {% if class_object == 'Task' and object.non_blocking %}
@@ -208,6 +245,92 @@
             });
             $('#search').on('keyup', function () {
                 table.search($(this).val()).draw();
+            });
+
+            // Filtres à choix multiples avec autocomplétion (select2) : phase, activité, tâche.
+            // Plusieurs choix dans un même filtre = l'un OU l'autre ; plusieurs filtres = tous à la fois.
+            // Pages Phases / Activités : un texte libre saisi (puis Entrée) cherche dans les noms des
+            // activités / tâches de la ligne (insensible à la casse et aux accents).
+            function normalize(text) {
+                return (text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            }
+            $('.js-multi-filter').each(function () {
+                let $sel = $(this);
+                let free = String($sel.data('free-text') || '') === '1';
+                $sel.select2({
+                    width: '100%',
+                    placeholder: $sel.data('placeholder'),
+                    allowClear: true,
+                    closeOnSelect: false,
+                    language: {
+                        noResults: function () { return "{% translate 'No results found' %}"; }
+                    },
+                    tags: free,
+                    createTag: function (params) {
+                        let term = $.trim(params.term);
+                        return term ? { id: '__text__' + term, text: term, newTag: true } : null;
+                    },
+                    insertTag: function (data, tag) { data.push(tag); },  // vrais choix d'abord, texte libre en dernier
+                    // Options masquées (activités hors des phases choisies) : absentes de la liste.
+                    templateResult: function (item) {
+                        if (item.element && item.element.hidden) { return null; }
+                        return item.text;
+                    },
+                    matcher: function (params, data) {
+                        let term = normalize(params.term);
+                        if (!term) { return data; }
+                        return normalize(data.text).indexOf(term) !== -1 ? data : null;
+                    }
+                });
+            });
+            // Choix d'un filtre : identifiants sélectionnés et textes libres saisis.
+            function selection(id) {
+                let el = document.getElementById(id);
+                let result = { ids: [], texts: [] };
+                if (!el) { return result; }
+                Array.prototype.forEach.call(el.options, function (opt) {
+                    if (!opt.selected) { return; }
+                    if (opt.value.indexOf('__text__') === 0) { result.texts.push(normalize(opt.value.slice(8))); }
+                    else if (opt.value) { result.ids.push(opt.value); }
+                });
+                return result;
+            }
+            // La ligne passe si l'un des identifiants choisis est le sien (ou dans sa liste), ou si l'un des
+            // textes libres figure dans ses noms ; aucun choix = pas de filtre.
+            function matches(sel, rowIds, rowNames) {
+                if (!sel.ids.length && !sel.texts.length) { return true; }
+                let ids = (rowIds || "").split(/\s+/).filter(Boolean);
+                if (sel.ids.some(function (v) { return ids.indexOf(v) !== -1; })) { return true; }
+                let names = normalize(rowNames);
+                return sel.texts.some(function (t) { return names.indexOf(t) !== -1; });
+            }
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (settings.nTable.id !== 'table') { return true; }
+                let row = settings.aoData[dataIndex].nTr;
+                if (!matches(selection('filter-phase'), row.getAttribute('data-phase'), '')) { return false; }
+                let activityIds = row.getAttribute('data-activity-ids') || row.getAttribute('data-activity');
+                if (!matches(selection('filter-activity'), activityIds, row.getAttribute('data-activities'))) { return false; }
+                if (!matches(selection('filter-task'), row.getAttribute('data-task-ids'), row.getAttribute('data-tasks'))) { return false; }
+                return true;
+            });
+
+            // Page des tâches : la liste des activités se limite aux phases choisies ; une activité choisie
+            // hors de ces phases est retirée.
+            $('#filter-phase').on('change', function () {
+                let $activity = $('#filter-activity');
+                if (!$activity.length) { return; }
+                let phases = selection('filter-phase').ids;
+                let changed = false;
+                $activity.find('option[data-phase]').each(function () {
+                    let show = !phases.length || phases.indexOf(this.getAttribute('data-phase')) !== -1;
+                    this.hidden = !show;
+                    if (!show && this.selected) { this.selected = false; changed = true; }
+                });
+                if (changed) { $activity.trigger('change.select2'); }
+            });
+
+            $('.js-list-filter').on('input change', function () {
+                table.draw();
             });
         });
     </script>

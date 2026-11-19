@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -41,6 +41,7 @@
         {% if user.is_superuser %}
         <button type="button" class="btn btn-warning btn-sm rounded-xl" data-toggle="modal" data-target="#tfb-sync-modal">
             <i class="fa fa-sync-alt mr-1"></i> {% translate "Sync this task" %}
+            <span id="tfb-sync-badge" class="badge badge-light ml-1" style="display:none"></span>
         </button>
         {% endif %}
         <a href="{% url 'dashboard:process_manager:tasks:task_list' %}"
@@ -94,23 +95,32 @@
                             </div>
                         </div>
                     </div>
+                    <div class="form-row">
+                        {% for g in sync_geo_levels %}
+                        <div class="form-group col-md-6">
+                            <label for="tfb-sync-geo-{{ g.key }}">{{ g.label }} <small class="text-muted">({% translate "empty = all" %})</small></label>
+                            <select id="tfb-sync-geo-{{ g.key }}" class="form-control tfb-sync-geo" data-level="{{ g.key }}" multiple></select>
+                        </div>
+                        {% endfor %}
+                    </div>
                     <div class="form-group">
                         <label for="tfb-sync-dbs">{% translate "Facilitator CouchDB databases" %} <small class="text-muted">({% translate "empty = all facilitators of the project" %})</small></label>
-                        <select id="tfb-sync-dbs" class="form-control" multiple>
-                            {% for c in sync_facilitator_dbs %}
-                                <option value="{{ c.value }}">{{ c.label }}</option>
-                            {% endfor %}
-                        </select>
+                        <select id="tfb-sync-dbs" class="form-control" multiple></select>
                     </div>
                     <div class="form-group">
                         <label for="tfb-sync-adls">{% translate "Headquarters villages" %} <small class="text-muted">({% translate "empty = all" %})</small></label>
-                        <select id="tfb-sync-adls" class="form-control" multiple>
-                            {% for c in sync_headquarters_villages %}
-                                <option value="{{ c.value }}">{{ c.label }}</option>
-                            {% endfor %}
-                        </select>
+                        <select id="tfb-sync-adls" class="form-control" multiple></select>
+                        <small id="tfb-sync-no-village" class="form-text text-warning" style="display:none">{% translate "No headquarters village of this project and cycle in the facilitators' localities." %}</small>
+                        <small id="tfb-sync-fallback" class="form-text text-warning" style="display:none"></small>
                     </div>
-                    <div id="tfb-sync-feedback"></div>
+                    <div id="tfb-sync-source" class="d-flex flex-wrap align-items-center small mb-2" style="gap:.5rem; display:none !important;">
+                        <span id="tfb-sync-source-label" class="text-muted"></span>
+                        <button type="button" id="tfb-sync-source-switch" class="btn btn-outline-secondary btn-sm py-0"></button>
+                    </div>
+                    <p id="tfb-sync-loading" class="small text-muted mb-2"><i class="fa fa-spinner fa-spin mr-1"></i><span id="tfb-sync-loading-text"></span></p>
+                    <p id="tfb-sync-summary" class="small text-muted mb-2"></p>
+                    <div id="tfb-sync-feedback" class="mb-2"></div>
+                    <div id="tfb-sync-status"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">{% translate "Cancel" %}</button>
@@ -121,6 +131,7 @@
             </div>
         </div>
     </div>
+    {{ sync_i18n|json_script:"tfb-sync-i18n" }}
     {% endif %}
 
     {{ task_form|json_script:"tfb-form-json" }}
@@ -142,7 +153,9 @@
             "task_fields_tmpl": "{% url 'dashboard:process_manager:tasks:task_form_builder_task_fields' task.id 'other_task_id' %}",
             "datasource_preview": "{% url 'dashboard:process_manager:tasks:task_form_builder_datasource_preview' task.id %}",
             "dataset_sheet": "{% url 'dashboard:process_manager:tasks:task_form_builder_dataset_sheet' task.id %}",
-            "sync": "{% url 'dashboard:process_manager:tasks:task_form_builder_sync' task.id %}"
+            "sync": "{% url 'dashboard:process_manager:tasks:task_form_builder_sync' task.id %}",
+            "sync_scope": "{% url 'dashboard:process_manager:tasks:task_form_builder_sync_scope' task.id %}",
+            "sync_status": "{% url 'dashboard:process_manager:tasks:task_form_builder_sync_status' task.id %}"
         },
         "i18n": {
 {% include "process_manager/tasks/_form_builder_i18n.html" %}
@@ -162,7 +175,7 @@
             );
         })();
     </script>
-    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v=cascade1"></script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v={{ VERSION_CUSTOM }}"></script>
     {% comment %}
         Moteur de remplissage réel (menu web "Tâches (cycle DCC)"), réutilisé
         tel quel pour l'onglet "Aperçu" ci-dessus (renderPreview) -- même
@@ -171,7 +184,7 @@
     <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=cascade1"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=cascade1"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v={{ VERSION_CUSTOM }}"></script>
 
     <script>
         // --- Modale « Synchroniser la tâche » : POST vers sync_tasks (exécuté en thread côté serveur) ---
@@ -184,12 +197,248 @@
             var $run = $("#tfb-sync-run");
             var $fb = $("#tfb-sync-feedback");
 
+            var LEVELS = ["region", "prefecture", "commune", "canton"];
+            var $geo = {};
+            LEVELS.forEach(function (k) { $geo[k] = $("#tfb-sync-geo-" + k); });
+            var S2 = {
+                dropdownParent: $modal, width: "100%", placeholder: "—", allowClear: true,
+                // option masquée (hors zone, hors bases, autre mode) : absente de la liste
+                templateResult: function (d) { return d.element && d.element.dataset.hidden === "1" ? null : d.text; },
+                language: { noResults: function () { return "{% translate 'No results found' %}"; } }
+            };
             if ($.fn.select2) {
-                $dbs.select2({ dropdownParent: $modal, width: "100%", placeholder: "—", allowClear: true });
-                $adls.select2({ dropdownParent: $modal, width: "100%", placeholder: "—", allowClear: true });
+                $dbs.select2(S2);
+                $adls.select2(S2);
+                LEVELS.forEach(function (k) { $geo[k].select2(S2); });
             }
 
+            function chosen($s) { return ($s.val() || []).map(String); }
+            function geoChoice() {
+                var g = {};
+                LEVELS.forEach(function (k) { var v = chosen($geo[k]); if (v.length) g[k] = v; });
+                return g;
+            }
+            // Masque les options hors des choix ; un choix devenu masqué est retiré. Renvoie true si un choix a changé.
+            var touched = [];   // listes dont la sélection a changé (affichage select2 à rafraîchir)
+            function hide($s, keep) {
+                var changed = false;
+                $s.find("option").each(function () {
+                    var ok = keep(this);
+                    this.dataset.hidden = ok ? "0" : "1";
+                    if (!ok && this.selected) { this.selected = false; changed = true; }
+                });
+                if (changed && touched.indexOf($s[0]) === -1) touched.push($s[0]);
+                return changed;
+            }
+            function inArea(el, g, upto) {
+                for (var i = 0; i < upto; i++) {
+                    var k = LEVELS[i];
+                    if (g[k] && g[k].indexOf(el.dataset[k] || "") === -1) return false;
+                }
+                return true;
+            }
+            function refresh() {
+                var dev = $("#tfb-sync-develop").is(":checked") ? "1" : "0";
+                var tr = $("#tfb-sync-training").is(":checked") ? "1" : "0";
+                var changed = false, g;
+                // 1) cascade région -> préfecture -> commune -> canton
+                LEVELS.forEach(function (k, i) {
+                    g = geoChoice();
+                    changed = hide($geo[k], function (el) { return inArea(el, g, i); }) || changed;
+                });
+                g = geoChoice();
+                // 2) bases : même develop_mode / training_mode que demandé, et au moins un village siège dans la zone
+                var areaDbs = {};
+                $adls.find("option").each(function () {
+                    if (inArea(this, g, LEVELS.length)) (this.dataset.dbs || "").split(" ").forEach(function (d) { if (d) areaDbs[d] = 1; });
+                });
+                var geoOn = Object.keys(g).length > 0;
+                changed = hide($dbs, function (el) {
+                    return el.dataset.develop === dev && el.dataset.training === tr && (!geoOn || areaDbs[el.value] === 1);
+                }) || changed;
+                // 3) villages sièges : dans la zone, et suivis par une base retenue
+                var eligible = {}, pickedDbs = chosen($dbs).length > 0;
+                $dbs.find("option").each(function () {
+                    if (this.dataset.hidden !== "1" && (!pickedDbs || this.selected)) eligible[this.value] = 1;
+                });
+                changed = hide($adls, function (el) {
+                    return inArea(el, g, LEVELS.length) && (el.dataset.dbs || "").split(" ").some(function (d) { return eligible[d] === 1; });
+                }) || changed;
+                // 4) résumé : villages et facilitateurs visés
+                var pickedVillages = chosen($adls).length > 0, villages = 0, dbsHit = {};
+                $adls.find("option").each(function () {
+                    if (this.dataset.hidden === "1" || (pickedVillages && !this.selected)) return;
+                    villages++;
+                    (this.dataset.dbs || "").split(" ").forEach(function (d) { if (eligible[d] === 1) dbsHit[d] = 1; });
+                });
+                $("#tfb-sync-summary").text("{% translate 'Expected' %} : " + villages + " {% translate 'headquarters village(s)' %}, "
+                    + Object.keys(dbsHit).length + " {% translate 'facilitator(s)' %}.");
+                $run.prop("disabled", villages === 0 || syncRunning);
+                return changed;
+            }
+            function refreshAll() {
+                touched = [];
+                for (var n = 0; n < 6 && refresh(); n++) { /* jusqu'à stabilité */ }
+                touched.forEach(function (el) {
+                    if ($.fn.select2 && $(el).hasClass("select2-hidden-accessible")) $(el).trigger("change.select2");
+                });
+            }
+            $modal.on("change", ".tfb-sync-geo, #tfb-sync-dbs, #tfb-sync-adls, #tfb-sync-develop, #tfb-sync-training", function () {
+                if (loaded) refreshAll();
+            });
+
+            // Listes lues dans CouchDB à la 1re ouverture de la fenêtre (comme la synchronisation elle-même).
+            var loaded = false, loading = false, loadingHtml = $("#tfb-sync-loading").html();
+            // Source des listes : copie en base (défaut, instantané) ou CouchDB (bouton) ; envoyée au lancement.
+            var source = "postgres";
+            var SRC = {
+                postgres: { label: "{% translate 'Lists read from the stored copy (PostgreSQL).' %}",
+                            loading: "{% translate 'Reading the stored copy…' %}",
+                            other: "{% translate 'Read from CouchDB instead' %}" },
+                couch: { label: "{% translate 'Lists read from the facilitators CouchDB databases.' %}",
+                         loading: "{% translate 'Reading the facilitators CouchDB databases…' %}",
+                         other: "{% translate 'Back to the stored copy (PostgreSQL)' %}" }
+            };
+            function clearLists() {
+                [$dbs, $adls].concat(LEVELS.map(function (k) { return $geo[k]; })).forEach(function ($s) {
+                    $s.find("option").remove();
+                    if ($.fn.select2 && $s.hasClass("select2-hidden-accessible")) $s.val(null).trigger("change.select2");
+                });
+                $("#tfb-sync-no-village, #tfb-sync-fallback").hide();
+                $("#tfb-sync-summary").text("");
+            }
+            function showSource() {
+                $("#tfb-sync-source-label").text(SRC[source].label);
+                $("#tfb-sync-source-switch").text(SRC[source].other);
+                $("#tfb-sync-source").attr("style", "gap:.5rem;");
+            }
+            $("#tfb-sync-source-switch").on("click", function () {
+                if (loading) return;
+                source = source === "couch" ? "postgres" : "couch";
+                loaded = false;
+                clearLists();
+                load();
+            });
+            function option(value, label, data) {
+                var o = document.createElement("option");
+                o.value = value; o.textContent = label;
+                Object.keys(data).forEach(function (k) { o.dataset[k] = data[k] === null || data[k] === undefined ? "" : String(data[k]); });
+                return o;
+            }
+            function fill(scope) {
+                LEVELS.forEach(function (k) {
+                    var el = $geo[k][0];
+                    (scope.geo[k] || []).forEach(function (r) {
+                        el.appendChild(option(r.value, r.label, { region: r.region, prefecture: r.prefecture, commune: r.commune }));
+                    });
+                });
+                scope.facilitators.forEach(function (f) {
+                    $dbs[0].appendChild(option(f.value, f.label + " (" + f.villages + ")", { develop: f.develop ? "1" : "0", training: f.training ? "1" : "0" }));
+                });
+                scope.villages.forEach(function (v) {
+                    $adls[0].appendChild(option(v.value, v.label, { region: v.region, prefecture: v.prefecture, commune: v.commune, canton: v.canton, dbs: v.dbs }));
+                });
+                $("#tfb-sync-no-village").toggle(!scope.villages.length);
+                if (scope.fallback_dbs && scope.fallback_dbs.length) {
+                    $("#tfb-sync-fallback").text("{% translate 'Unreadable CouchDB databases, stored copy used' %} : " + scope.fallback_dbs.join(", ")).show();
+                }
+            }
+            function load() {
+                if (loaded || loading) return;
+                loading = true;
+                $run.prop("disabled", true);
+                $("#tfb-sync-loading").html(loadingHtml).show();
+                $("#tfb-sync-loading-text").text(SRC[source].loading);
+                $("#tfb-sync-source-switch").prop("disabled", true);
+                fetch(CFG.urls.sync_scope + "?source=" + source, { credentials: "same-origin" })
+                    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                    .then(function (scope) {
+                        fill(scope);
+                        loaded = true;
+                        showSource();
+                        $("#tfb-sync-loading").hide();
+                        refreshAll();
+                        [$dbs, $adls].concat(LEVELS.map(function (k) { return $geo[k]; })).forEach(function ($s) {
+                            if ($.fn.select2 && $s.hasClass("select2-hidden-accessible")) $s.trigger("change.select2");
+                        });
+                    })
+                    .catch(function () {
+                        $("#tfb-sync-loading").html('<span class="text-danger">{% translate "Could not load the lists, close and reopen the window." %}</span>');
+                    })
+                    .then(function () { loading = false; $("#tfb-sync-source-switch").prop("disabled", false); });
+            }
+            $run.prop("disabled", true);
+            $modal.on("show.bs.modal", load);
+
+            // --- Suivi : dernière synchronisation de la tâche (TaskSyncRun), interrogée toutes les 3 s tant qu'elle tourne ---
+            var T = JSON.parse(document.getElementById("tfb-sync-i18n").textContent);
+            var syncRunning = false, seenRunning = false, pollTimer = null;
+            function esc(t) { return $("<div>").text(t === null || t === undefined ? "" : String(t)).html(); }
+            function dur(s) {
+                var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+                return (h ? h + " h " : "") + (h || m ? m + " min " : "") + r + " s";
+            }
+            function counts(run) {
+                return esc(run.pairs_done) + (run.expected_pairs ? " / " + esc(run.expected_pairs) : "") + " " + esc(T.villages)
+                    + " (" + esc(run.created_docs) + " " + esc(T.created) + ", " + esc(run.updated_docs) + " " + esc(T.updated) + ")";
+            }
+            function renderRun(run) {
+                if (!run) return '<p class="small text-muted mb-0">' + esc(T.none) + "</p>";
+                var who = run.started_by ? ", " + esc(T.by) + " " + esc(run.started_by) : "";
+                var dbs = esc(run.dbs_done) + " / " + esc(run.dbs_total) + " " + esc(T.dbs);
+                if (run.status === "running") {
+                    var pct = run.expected_pairs ? run.pairs_done / run.expected_pairs : (run.dbs_total ? run.dbs_done / run.dbs_total : 0);
+                    pct = Math.max(3, Math.min(100, Math.round(pct * 100)));
+                    return '<div class="alert alert-info mb-0" data-run-status="running">'
+                        + '<div class="font-weight-bold"><i class="fa fa-spinner fa-spin mr-1"></i>' + esc(T.running) + " " + esc(T.since) + " " + dur(run.elapsed)
+                        + ' <small class="font-weight-normal">(' + esc(T.on) + " " + esc(run.started_at) + who + ")</small></div>"
+                        + '<div class="progress my-2" style="height:8px"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:' + pct + '%"></div></div>'
+                        + '<div class="small">' + dbs + (run.current_db ? " — " + esc(T.current) + " : <code>" + esc(run.current_db) + "</code>" : "") + "<br>" + counts(run) + "</div></div>";
+                }
+                if (run.status === "done") {
+                    var short = run.expected_pairs && run.pairs_done < run.expected_pairs;
+                    return '<div class="alert ' + (short ? "alert-warning" : "alert-success") + ' mb-0" data-run-status="done">'
+                        + '<div class="font-weight-bold"><i class="fa fa-check-circle mr-1"></i>' + esc(T.done) + " " + esc(T.on) + " " + esc(run.finished_at)
+                        + " " + esc(T["in"]) + " " + dur(run.elapsed) + ' <small class="font-weight-normal">(' + esc(T.on) + " " + esc(run.started_at) + who + ")</small></div>"
+                        + '<div class="small">' + counts(run) + " — " + dbs + (short ? "<br>" + esc(T.differs) : "") + "</div></div>";
+                }
+                if (run.status === "interrupted") {
+                    return '<div class="alert alert-warning mb-0" data-run-status="interrupted">'
+                        + '<div class="font-weight-bold"><i class="fa fa-exclamation-triangle mr-1"></i>' + esc(T.interrupted)
+                        + ' <small class="font-weight-normal">(' + esc(T.on) + " " + esc(run.started_at) + who + ")</small></div>"
+                        + '<div class="small">' + esc(T.silent) + " " + dur(run.silent_for) + ". " + counts(run) + " — " + dbs + "<br>" + esc(T.rerun) + "</div></div>";
+                }
+                return '<div class="alert alert-danger mb-0" data-run-status="failed">'
+                    + '<div class="font-weight-bold"><i class="fa fa-times-circle mr-1"></i>' + esc(T.failed) + " " + esc(T.on) + " " + esc(run.finished_at || "")
+                    + " " + esc(T.after) + " " + dur(run.elapsed) + ' <small class="font-weight-normal">(' + esc(T.on) + " " + esc(run.started_at) + who + ")</small></div>"
+                    + '<div class="small"><code>' + esc(run.error) + "</code><br>" + counts(run) + " — " + dbs
+                    + (run.current_db ? " — " + esc(T.current) + " : <code>" + esc(run.current_db) + "</code>" : "") + "<br>" + esc(T.rerun) + "</div></div>";
+            }
+            function showRun(run) {
+                syncRunning = !!(run && run.running);
+                if (syncRunning) seenRunning = true;
+                $("#tfb-sync-status").html(renderRun(run));
+                var $b = $("#tfb-sync-badge");
+                if (syncRunning) $b.html('<i class="fa fa-spinner fa-spin mr-1"></i>' + esc(T.badge_running)).show();
+                else if (seenRunning && run) $b.text(run.status === "done" ? T.badge_done : T.badge_failed).show();
+                else $b.hide();
+                if (loaded) refreshAll(); else $run.prop("disabled", true);
+            }
+            function poll() {
+                clearTimeout(pollTimer);
+                fetch(CFG.urls.sync_status, { credentials: "same-origin" })
+                    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                    .then(function (st) {
+                        showRun(st.runs[0] || null);
+                        if (syncRunning) pollTimer = setTimeout(poll, 3000);
+                    })
+                    .catch(function () { if (syncRunning) pollTimer = setTimeout(poll, 10000); });
+            }
+            poll();   // à l'ouverture de la page : une synchronisation peut déjà tourner (lancée par quelqu'un d'autre)
+            $modal.on("show.bs.modal", poll);
+
             $run.on("click", function () {
+                if (syncRunning) return;
                 $run.prop("disabled", true);
                 $fb.html('<div class="text-muted">{% translate "Starting…" %}</div>');
                 fetch(CFG.urls.sync, {
@@ -199,18 +448,22 @@
                         develop_mode: $("#tfb-sync-develop").is(":checked"),
                         training_mode: $("#tfb-sync-training").is(":checked"),
                         no_sql_dbs: $dbs.val() || [],
-                        administrativelevel_ids: $adls.val() || []
+                        administrativelevel_ids: $adls.val() || [],
+                        source: source,
+                        geo: geoChoice()
                     })
                 })
                     .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
                     .then(function (res) {
                         $run.prop("disabled", false);
                         if (res.j.ok) {
-                            $fb.html('<div class="alert alert-success mb-0">' + (res.j.message || "OK") + '</div>');
-                            setTimeout(function () { $modal.modal("hide"); $fb.empty(); }, 2500);
+                            // la fenêtre reste ouverte : l'avancement s'affiche dessous (on peut aussi la fermer, le bouton garde l'état)
+                            $fb.html('<div class="alert alert-light border mb-0 small">' + esc(res.j.message || "OK") + '</div>');
                         } else {
-                            $fb.html('<div class="alert alert-danger mb-0">' + ((res.j.errors || []).join(" ") || "{% translate 'Sync failed.' %}") + '</div>');
+                            $fb.html('<div class="alert alert-danger mb-0">' + esc((res.j.errors || []).join(" ") || "{% translate 'Sync failed.' %}") + '</div>');
                         }
+                        if (res.j.run) { showRun(res.j.run); if (syncRunning) pollTimer = setTimeout(poll, 1500); }
+                        else refreshAll();
                     })
                     .catch(function () {
                         $run.prop("disabled", false);

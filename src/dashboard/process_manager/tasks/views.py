@@ -11,12 +11,12 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from dashboard.mixins import PageMixin
 from authentication.permissions import FullStackPermissionRequiredMixin
 from django.contrib import messages
-from django.db import connections
+from django.db import connections, transaction
+from django.db.models import F
+from django.utils import timezone
 from django.http import Http404, JsonResponse, HttpResponse
 
-from administrativelevels import models as administrativelevels_models
-from authentication.models import Facilitator
-from process_manager.models import Phase, Activity, Task, AggregatedStatus
+from process_manager.models import Phase, Activity, Task, TaskSyncRun
 from dashboard.process_manager.tasks.forms import *
 from dashboard.process_manager.tasks.form_design import (
     validate_form_design,
@@ -34,8 +34,20 @@ from dashboard.process_manager.tasks.form_design import (
     DATASOURCE_OPS,
 )
 from dashboard.utils import sync_tasks
+from dashboard.process_manager.tasks.sync_scope import SyncScope
 
 logger = logging.getLogger(__name__)
+
+
+def _names_for_search(objects):
+    """Noms joints, posés en data-attribut des lignes pour la recherche côté navigateur des listes."""
+    return ' | '.join(o.name for o in objects if o.name)
+
+
+def _ids_for_filter(objects):
+    """Identifiants séparés par des espaces (data-attribut des lignes pour les filtres à choix multiples)."""
+    return ' '.join(str(o.pk) for o in objects)
+
 
 # Phase
 
@@ -55,11 +67,25 @@ class PhaseListView(PageMixin, FullStackPermissionRequiredMixin, generic.ListVie
     ]
 
     def get_queryset(self):
-        return Phase.objects.filter(project_id=self.request.session.get('project_id')).order_by('order')
+        return Phase.objects.filter(project_id=self.request.session.get('project_id')).select_related(
+            'project').prefetch_related('activity_set', 'task_set').order_by('order')
     
     def get_context_data(self, **kwargs):
         ctx = super(PhaseListView, self).get_context_data(**kwargs)
         ctx['class_object'] = 'Phase'
+        # Recherche par activité / tâche (côté navigateur) : noms des activités et tâches de chaque phase.
+        objects = list(ctx['objects'])
+        for obj in objects:
+            obj.search_activities = _names_for_search(obj.activity_set.all())
+            obj.search_tasks = _names_for_search(obj.task_set.all())
+            obj.filter_activity_ids = _ids_for_filter(obj.activity_set.all())
+            obj.filter_task_ids = _ids_for_filter(obj.task_set.all())
+        ctx['objects'] = objects
+        project_id = self.request.session.get('project_id')
+        ctx['filter_activities'] = Activity.objects.filter(project_id=project_id).select_related(
+            'phase').order_by('phase__order', 'order')
+        ctx['filter_tasks'] = Task.objects.filter(project_id=project_id).select_related(
+            'activity').order_by('phase__order', 'activity__order', 'order')
         return ctx
 
 
@@ -212,11 +238,23 @@ class ActivityListView(PageMixin, FullStackPermissionRequiredMixin, generic.List
     ]
 
     def get_queryset(self):
-        return Activity.objects.filter(project_id=self.request.session.get('project_id')).order_by('phase__order', 'order')
+        return Activity.objects.filter(project_id=self.request.session.get('project_id')).select_related(
+            'phase', 'project').prefetch_related('task_set').order_by('phase__order', 'order')
     
     def get_context_data(self, **kwargs):
         ctx = super(ActivityListView, self).get_context_data(**kwargs)
         ctx['class_object'] = 'Activity'
+        # Filtre par phase + recherche par tâche (côté navigateur).
+        objects = list(ctx['objects'])
+        for obj in objects:
+            obj.search_tasks = _names_for_search(obj.task_set.all())
+            obj.filter_task_ids = _ids_for_filter(obj.task_set.all())
+        ctx['objects'] = objects
+        ctx['filter_phases'] = Phase.objects.filter(
+            project_id=self.request.session.get('project_id')).order_by('order')
+        ctx['filter_tasks'] = Task.objects.filter(
+            project_id=self.request.session.get('project_id')).select_related(
+            'activity').order_by('phase__order', 'activity__order', 'order')
         return ctx
 
 
@@ -369,11 +407,16 @@ class TaskListView(PageMixin, FullStackPermissionRequiredMixin, generic.ListView
     ]
 
     def get_queryset(self):
-        return Task.objects.filter(project_id=self.request.session.get('project_id')).order_by('phase__order', 'activity__order', 'order')
+        return Task.objects.filter(project_id=self.request.session.get('project_id')).select_related(
+            'phase', 'activity', 'project').order_by('phase__order', 'activity__order', 'order')
     
     def get_context_data(self, **kwargs):
         ctx = super(TaskListView, self).get_context_data(**kwargs)
         ctx['class_object'] = 'Task'
+        # Filtres par phase et par activité (côté navigateur).
+        project_id = self.request.session.get('project_id')
+        ctx['filter_phases'] = Phase.objects.filter(project_id=project_id).order_by('order')
+        ctx['filter_activities'] = Activity.objects.filter(project_id=project_id).order_by('phase__order', 'order')
         return ctx
 
 
@@ -431,6 +474,10 @@ class CreateUpdateTaskFormView(PageMixin, FullStackPermissionRequiredMixin, gene
                 }
             )
 
+        # Phase de chaque activité proposée : le formulaire ne montre que les activités de la phase choisie.
+        ctx['activity_phases'] = {
+            str(a_id): ph_id for a_id, ph_id in ctx['form'].fields['activity'].queryset.values_list('id', 'phase_id')
+        }
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -533,54 +580,6 @@ class _TaskScopedMixin(LoginRequiredMixin, FullStackPermissionRequiredMixin):
         return first.id if first else None
 
 
-def _facilitator_db_choices(project_id):
-    """[{value: <no_sql_db_name>, label: '<nom> — <db>'}] pour les
-    facilitateurs du projet courant."""
-    seen, out = set(), []
-    qs = (
-        Facilitator.objects.filter(projects__id=project_id)
-        .order_by('name', 'username')
-        if project_id else Facilitator.objects.none()
-    )
-    for f in qs:
-        db = (f.no_sql_db_name or '').strip()
-        if not db or db in seen:
-            continue
-        seen.add(db)
-        name = (f.name or f.username or db).strip()
-        out.append({'value': db, 'label': f'{name} — {db}'})
-    return out
-
-
-def _headquarters_village_choices(project_id, cycle_id):
-    """[{value: <id>, label: '<village> (<canton>)'}] : villages sièges suivis
-    pour le projet/cycle (lignes AggregatedStatus sans tâche ni facilitateur)."""
-    base = AggregatedStatus.objects.filter(
-        project_id=project_id, task__isnull=True, facilitator__isnull=True,
-        administrative_level_id__isnull=False,
-    )
-    adl_ids = list(
-        base.filter(cycle_id=cycle_id).values_list('administrative_level_id', flat=True).distinct()
-    ) if cycle_id else []
-    if not adl_ids:
-        adl_ids = list(base.values_list('administrative_level_id', flat=True).distinct())
-    if not adl_ids:
-        return []
-    adls = (
-        administrativelevels_models.AdministrativeLevel.objects.using('mis')
-        .filter(id__in=adl_ids)
-        .select_related('parent')
-        .order_by('parent__name', 'name')
-    )
-    return [
-        {
-            'value': a.id,
-            'label': f"{a.name} ({a.parent.name if a.parent else '—'})",
-        }
-        for a in adls
-    ]
-
-
 class TaskFormBuilderView(PageMixin, _TaskScopedMixin, generic.TemplateView):
     """Interface visuelle de création du formulaire d'une tâche (attribut
     ``Task.form``). Le compilateur arbre -> format stocké vit dans le JS ;
@@ -608,12 +607,39 @@ class TaskFormBuilderView(PageMixin, _TaskScopedMixin, generic.TemplateView):
             cycle_id = self.get_cycle_id(self.request, task)
             ctx['sync_cycle_id'] = cycle_id
             ctx['sync_cycle_name'] = self.request.session.get('cycle_name')
-            ctx['sync_facilitator_dbs'] = _facilitator_db_choices(
-                self.request.session.get('project_id'),
-            )
-            ctx['sync_headquarters_villages'] = _headquarters_village_choices(
-                self.request.session.get('project_id'), cycle_id,
-            )
+            # Listes de la fenêtre lues dans CouchDB à son ouverture (TaskFormSyncScopeView) : la page reste rapide.
+            ctx['sync_geo_levels'] = [
+                {'key': 'region', 'label': gettext_lazy('Regions')},
+                {'key': 'prefecture', 'label': gettext_lazy('Prefectures')},
+                {'key': 'commune', 'label': gettext_lazy('Communes')},
+                {'key': 'canton', 'label': gettext_lazy('Cantons')},
+            ]
+            # Libellés du suivi de synchronisation (json_script : apostrophes sans risque dans le JS).
+            ctx['sync_i18n'] = {key: str(text) for key, text in {
+                'running': gettext_lazy('Sync in progress'),
+                'done': gettext_lazy('Sync finished'),
+                'failed': gettext_lazy('Sync failed'),
+                'interrupted': gettext_lazy('Sync interrupted'),
+                'since': gettext_lazy('for'),
+                'in': gettext_lazy('in'),
+                'after': gettext_lazy('after'),
+                'on': gettext_lazy('on'),
+                'by': gettext_lazy('started by'),
+                'dbs': gettext_lazy('databases walked through'),
+                'current': gettext_lazy('current'),
+                'villages': gettext_lazy('headquarters villages processed'),
+                'created': gettext_lazy('created'),
+                'updated': gettext_lazy('updated'),
+                'expected': gettext_lazy('expected'),
+                'differs': gettext_lazy('Fewer villages processed than expected: check the facilitators concerned.'),
+                'silent': gettext_lazy('No news from the server for'),
+                'rerun': gettext_lazy('You can run it again: already synchronised villages are updated, not duplicated.'),
+                'badge_running': gettext_lazy('sync in progress'),
+                'badge_done': gettext_lazy('sync finished'),
+                'badge_failed': gettext_lazy('sync failed'),
+                'last': gettext_lazy('Last sync'),
+                'none': gettext_lazy('No sync of this task launched from this window yet.'),
+            }.items()}
         ctx['breadcrumb'] = [
             {
                 'url': reverse_lazy('dashboard:process_manager:tasks:task_list'),
@@ -978,16 +1004,55 @@ class TaskFormDatasetSheetView(_TaskScopedMixin, generic.View):
         })
 
 
-def _run_sync_tasks_in_thread(**kwargs):
+class _SyncRunProgress:
+    """Rappel d'avancement passé à ``sync_tasks`` : met à jour la ligne TaskSyncRun (et son « signe de vie »)."""
+
+    def __init__(self, run_id):
+        self.run_id = run_id
+
+    def _update(self, **fields):
+        TaskSyncRun.objects.filter(pk=self.run_id).update(heartbeat=timezone.now(), **fields)
+
+    def __call__(self, event, db=None, total=None, created=None):
+        if event == 'start':
+            self._update(dbs_total=F('dbs_total') + (total or 0))
+        elif event == 'facilitator':
+            self._update(current_db=(db or '')[:255])
+        elif event == 'village':
+            field = 'created_docs' if created else 'updated_docs'
+            self._update(pairs_done=F('pairs_done') + 1, **{field: F(field) + 1})
+        elif event == 'facilitator_done':
+            self._update(dbs_done=F('dbs_done') + 1)
+
+    def finish(self, error=None):
+        fields = {'finished_at': timezone.now(),
+                  'status': TaskSyncRun.STATUS_FAILED if error else TaskSyncRun.STATUS_DONE}
+        if error:
+            fields['error'] = error[:2000]
+        else:
+            fields['current_db'] = ''
+        self._update(**fields)
+
+
+def _run_sync_tasks_in_thread(run_id=None, **kwargs):
     """Lance ``sync_tasks`` dans un thread démon : l'action peut être longue
     (parcours des bases CouchDB des facilitateurs) et ne doit ni bloquer la
-    réponse HTTP ni les requêtes des autres utilisateurs."""
+    réponse HTTP ni les requêtes des autres utilisateurs. Avec ``run_id``,
+    l'avancement et la fin (ou l'échec) sont tenus dans TaskSyncRun."""
+    progress = _SyncRunProgress(run_id) if run_id else None
 
     def _worker():
         try:
-            sync_tasks(**kwargs)
-        except Exception:  # noqa: BLE001 - on loggue, le thread ne doit pas planter en silence
+            sync_tasks(progress=progress, **kwargs)
+            if progress:
+                progress.finish()
+        except Exception as exc:  # noqa: BLE001 - on loggue, le thread ne doit pas planter en silence
             logger.exception('sync_tasks (form builder) a échoué : %s', kwargs)
+            if progress:
+                try:
+                    progress.finish(error=f'{type(exc).__name__}: {exc}')
+                except Exception:  # noqa: BLE001
+                    logger.exception('TaskSyncRun %s : échec non enregistré', run_id)
         finally:
             # Chaque thread a ses propres connexions DB : on les ferme.
             for conn in connections.all():
@@ -999,6 +1064,66 @@ def _run_sync_tasks_in_thread(**kwargs):
         daemon=True,
     )
     thread.start()
+
+
+def _sync_run_json(run):
+    """Avancement d'une synchronisation pour la fenêtre (durées calculées côté serveur : pas d'écart d'horloge)."""
+    now = timezone.now()
+    state = 'interrupted' if run.is_stale() else run.status
+    user = run.started_by
+    return {
+        'id': run.id,
+        'status': state,
+        'running': state == TaskSyncRun.STATUS_RUNNING,
+        'started_at': timezone.localtime(run.started_at).strftime('%d/%m/%Y %H:%M:%S'),
+        'finished_at': timezone.localtime(run.finished_at).strftime('%d/%m/%Y %H:%M:%S') if run.finished_at else None,
+        'elapsed': int(((run.finished_at or now) - run.started_at).total_seconds()),
+        'silent_for': int((now - run.heartbeat).total_seconds()),
+        'started_by': (user.get_full_name() or user.username) if user else '',
+        'expected_villages': run.expected_villages,
+        'expected_facilitators': run.expected_facilitators,
+        'expected_pairs': run.expected_pairs,
+        'dbs_total': run.dbs_total,
+        'dbs_done': run.dbs_done,
+        'current_db': run.current_db,
+        'pairs_done': run.pairs_done,
+        'created_docs': run.created_docs,
+        'updated_docs': run.updated_docs,
+        'error': run.error,
+    }
+
+
+class TaskFormSyncStatusView(_TaskScopedMixin, generic.View):
+    """Avancement des dernières synchronisations de la tâche (JSON), interrogé par la fenêtre. Superutilisateurs."""
+
+    def test_func(self):
+        return bool(self.request.user.is_authenticated and self.request.user.is_superuser)
+
+    def get(self, request, *args, **kwargs):
+        task = self.get_task(request, kwargs['id'])
+        runs = [_sync_run_json(r) for r in TaskSyncRun.objects.filter(task=task).select_related('started_by')[:5]]
+        return JsonResponse({'runs': runs, 'running': any(r['running'] for r in runs)})
+
+
+def _scope_reads_couch(source):
+    """Source des villages sièges de la fenêtre : 'postgres' (défaut, copie en base `Facilitator.administrative_levels`,
+    instantané) ou 'couch' (documents facilitateur CouchDB, ceux que lit sync_tasks ; bouton de la fenêtre)."""
+    return source == 'couch'
+
+
+class TaskFormSyncScopeView(_TaskScopedMixin, generic.View):
+    """Listes de la fenêtre « Synchroniser cette tâche » (JSON) : villages sièges du projet et du cycle (copie en
+    base, ou CouchDB avec ?source=couch), leurs régions … cantons, et les bases. Superutilisateurs seulement."""
+
+    def test_func(self):
+        return bool(self.request.user.is_authenticated and self.request.user.is_superuser)
+
+    def get(self, request, *args, **kwargs):
+        task = self.get_task(request, kwargs['id'])
+        cycle_id = self.get_cycle_id(request, task)
+        source = 'couch' if _scope_reads_couch(request.GET.get('source')) else 'postgres'
+        scope = SyncScope(request.session.get('project_id'), cycle_id, read_couch=source == 'couch')
+        return JsonResponse(dict(scope.as_json(), source=source))
 
 
 class TaskFormSyncView(_TaskScopedMixin, generic.View):
@@ -1031,30 +1156,77 @@ class TaskFormSyncView(_TaskScopedMixin, generic.View):
         develop_mode = bool(payload.get('develop_mode', False))
         training_mode = bool(payload.get('training_mode', False))
         no_sql_dbs = [str(x) for x in (payload.get('no_sql_dbs') or []) if str(x).strip()]
-        try:
-            administrativelevel_ids = [
-                int(x) for x in (payload.get('administrativelevel_ids') or [])
-            ]
-        except (TypeError, ValueError):
-            return JsonResponse(
-                {'ok': False, 'errors': ['administrativelevel_ids invalide.']}, status=400,
-            )
+        raw_ids = payload.get('administrativelevel_ids') or []
+        geo = payload.get('geo') or {}
+        if not isinstance(raw_ids, list) or not isinstance(geo, dict):
+            return JsonResponse({'ok': False, 'errors': ['Paramètres invalides.']}, status=400)
 
-        _run_sync_tasks_in_thread(
-            project_id=project_id,
-            cycle_id=cycle_id,
-            develop_mode=develop_mode,
-            training_mode=training_mode,
-            no_sql_dbs=no_sql_dbs or False,
-            administrativelevel_ids=administrativelevel_ids,
-            tasks_ids=[task.id],
+        # Zone (régions … cantons), villages sièges, bases, develop_mode et training_mode se combinent.
+        # Les identifiants sont passés en TEXTE : sync_tasks compare `str(id) in administrativelevel_ids`.
+        # Même source que les listes affichées dans la fenêtre (copie en base par défaut, CouchDB si relu).
+        source = 'couch' if _scope_reads_couch(payload.get('source')) else 'postgres'
+        scope = SyncScope(project_id, cycle_id, read_couch=source == 'couch')
+        administrativelevel_ids, facilitators, villages = scope.resolve(
+            develop_mode, training_mode, no_sql_dbs, raw_ids, geo,
         )
+        restricted = bool(raw_ids) or any(geo.get(key) for key in ('region', 'prefecture', 'commune', 'canton'))
+        if restricted and not administrativelevel_ids:
+            return JsonResponse({'ok': False, 'errors': [gettext_lazy(
+                'No headquarters village matches the chosen area and villages.').__str__()]}, status=422)
+        if not facilitators:
+            return JsonResponse({'ok': False, 'errors': [gettext_lazy(
+                'No facilitator matches these choices (databases, villages, develop_mode, training_mode).'
+            ).__str__()]}, status=422)
+
+        targeted = set(villages)
+        expected_pairs = sum(len(f['villages'] & targeted) for f in facilitators)
+        with transaction.atomic():
+            # Une seule synchronisation à la fois par tâche (verrou sur la ligne de la tâche pendant la vérification).
+            Task.objects.select_for_update().filter(pk=task.pk).first()
+            running = TaskSyncRun.objects.filter(
+                task=task, status=TaskSyncRun.STATUS_RUNNING,
+                heartbeat__gte=timezone.now() - TaskSyncRun.STALE_AFTER,
+            ).first()
+            if running:
+                return JsonResponse({'ok': False, 'errors': [gettext_lazy(
+                    'A sync of this task is already running; wait for it to finish.').__str__()],
+                    'run': _sync_run_json(running)}, status=409)
+            # Synchronisations restées « en cours » sans nouvelle : serveur redémarré, thread perdu.
+            TaskSyncRun.objects.filter(task=task, status=TaskSyncRun.STATUS_RUNNING).update(
+                status=TaskSyncRun.STATUS_FAILED, finished_at=timezone.now(),
+                error=gettext_lazy('Interrupted: no news from the server for 10 minutes (restart?).').__str__())
+            run = TaskSyncRun.objects.create(
+                task=task, project_id=project_id, cycle_id=cycle_id, started_by=request.user,
+                params={'source': source, 'develop_mode': develop_mode, 'training_mode': training_mode, 'no_sql_dbs': no_sql_dbs,
+                        'administrativelevel_ids': [str(x) for x in raw_ids], 'geo': geo},
+                expected_villages=len(villages), expected_facilitators=len(facilitators),
+                expected_pairs=expected_pairs,
+            )
+        try:
+            _run_sync_tasks_in_thread(
+                run_id=run.id,
+                project_id=project_id,
+                cycle_id=cycle_id,
+                develop_mode=develop_mode,
+                training_mode=training_mode,
+                no_sql_dbs=no_sql_dbs or False,
+                administrativelevel_ids=administrativelevel_ids,
+                tasks_ids=[task.id],
+            )
+        except Exception as exc:  # noqa: BLE001 - thread non démarré : la ligne ne doit pas rester « en cours »
+            _SyncRunProgress(run.id).finish(error=f'{type(exc).__name__}: {exc}')
+            raise
         return JsonResponse({
             'ok': True,
+            'run': _sync_run_json(TaskSyncRun.objects.get(pk=run.pk)),
             'message': gettext_lazy(
                 'Synchronisation lancée en arrière-plan. Elle peut prendre '
                 'plusieurs minutes selon le nombre de facilitateurs.'
-            ).__str__(),
+            ).__str__() + ' ' + gettext_lazy(
+                'Expected: %(villages)s headquarters village(s), %(facilitators)s facilitator(s).'
+            ).__str__() % {'villages': len(villages), 'facilitators': len(facilitators)},
+            'villages': len(villages),
+            'facilitators': len(facilitators),
         })
 
 # End Task form builder
