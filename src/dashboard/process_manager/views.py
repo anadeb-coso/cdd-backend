@@ -169,21 +169,25 @@ class GetChoicesForNextPhaseActivitiesTasksByIdView(AJAXRequestMixin, LoginRequi
 
 
 class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, generic.View):
-    def _trigger_share_copy(self, request, task):
+    def _trigger_share_copy(self, request, task, no_sql_db_name=None):
         """Résout les cibles de partage — PAR MODE, un même formulaire pouvant
         avoir des champs en modes différents (cf.
         ``form_design.group_share_paths_by_mode``) — pour la tâche couch qui
         vient d'être validée, et lance la copie en thread (une passe par mode
         présent, chacune vers ses propres cibles). ``task`` est le document
         CouchDB (dict-like) déjà mis à jour avec ``validated: True``. Aucun
-        effet si la tâche n'a aucun champ partageable."""
+        effet si la tâche n'a aucun champ partageable.
+
+        ``no_sql_db_name`` : base du facilitateur dont la tâche est validée —
+        donne le type de compte (vrai FC / formation / démonstration) ; la
+        copie ne va que vers des comptes du même type."""
         import json
         import threading
         from django.db import connections
         from process_manager.models import Task as TaskModel, TaskShareRecord
         from dashboard.utils import (
             canton_headquarters_village_ids, copy_shared_task_data,
-            find_task_share_record, upsert_task_share_record,
+            find_task_share_record, upsert_task_share_record, account_kind_for,
         )
         from dashboard.process_manager.tasks.form_design import (
             group_share_paths_by_mode, extract_share_values, extract_attachment_share_values,
@@ -234,8 +238,12 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             except (TypeError, ValueError):
                 explicit_by_mode = {}
 
+        # Propriétaire de la tâche validée = source réelle des valeurs copiées (nom affiché chez les cibles).
+        from authentication.models import Facilitator
+        owner = Facilitator.objects.filter(no_sql_db_name=no_sql_db_name).first() if no_sql_db_name else None
+        kind = account_kind_for(no_sql_db_name=no_sql_db_name)
         source_record = find_task_share_record(
-            task_sql_id, project_id, source_adl, prefer_field='share_targets',
+            task_sql_id, project_id, source_adl, prefer_field='share_targets', kind=kind,
         )
         # share_targets du registre source : dict {mode: [ids]} désormais ;
         # tolère l'ancienne forme (liste nue = choix du facilitateur en mode
@@ -272,14 +280,19 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
             source_defaults['share_values'] = doc_values
         if cycle_id is not None:
             source_defaults['cycle_id'] = cycle_id
-        upsert_task_share_record(task_sql_id, project_id, source_adl, defaults=source_defaults)
+        if owner is not None:
+            # La ligne source désigne le facilitateur ET le document dont viennent ses valeurs.
+            source_defaults['facilitator'] = owner
+            source_defaults['couch_task_id'] = task.get('_id') or ''
+        upsert_task_share_record(task_sql_id, project_id, source_adl, defaults=source_defaults, kind=kind)
 
         def _worker():
             try:
                 for mode, targets in targets_by_mode.items():
                     copy_shared_task_data(
                         task_sql_id, source_adl, targets, project_id, cycle_id, mode,
-                        share_values=doc_values or None, validated_by=validated_by,
+                        share_values=doc_values or None, validated_by=validated_by, kind=kind,
+                        source_facilitator=owner,
                     )
             finally:
                 for conn in connections.all():
@@ -358,7 +371,7 @@ class ValidateTaskView(AJAXRequestMixin, LoginRequiredMixin, JSONResponseMixin, 
                 # affecter le message de validation renvoyé ci-dessous.
                 if bool(action_code):
                     try:
-                        self._trigger_share_copy(request, task)
+                        self._trigger_share_copy(request, task, no_sql_db_name)
                     except Exception:
                         logger.exception(
                             "ValidateTaskView: échec best-effort du déclenchement de la copie "

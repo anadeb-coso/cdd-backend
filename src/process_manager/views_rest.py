@@ -152,10 +152,14 @@ class ReportTaskCompletion(APIView):
                 Task.SHARE_MODE_FACILITATOR_THEN_VALIDATOR: [t for t in share_targets if t is not None],
             }
 
-        from dashboard.utils import upsert_task_share_record
+        from dashboard.utils import upsert_task_share_record, facilitator_account_kind, account_kind_for
 
+        # Ligne du type de compte de l'appelant (vrai FC / formation / démonstration) : un compte de test qui
+        # travaille sur le village d'un vrai FC n'écrase plus sa ligne, et inversement.
+        kind = facilitator_account_kind(facilitator) if facilitator else account_kind_for(
+            no_sql_db_name=data.get('no_sql_db_name'))
         record, _created = upsert_task_share_record(
-            task.id, project_id, administrative_level_id, defaults=defaults,
+            task.id, project_id, administrative_level_id, defaults=defaults, kind=kind,
         )
         return Response({'ok': True, 'tracked': True, 'status': record.status})
 
@@ -177,10 +181,28 @@ class PullableTaskSource(APIView):
             return Response({'found': False})
 
         from dashboard.process_manager.tasks.form_design import has_share_fields
+        from dashboard.utils import account_kind_for, _account_kind_filter, canton_headquarters_village_ids
 
         task = Task.objects.filter(id=task_sql_id).first()
         if not task or not has_share_fields(task.form, task.attachments):
             return Response({'found': False})
+
+        # Seuls les villages sièges du MÊME canton que le village courant peuvent
+        # servir de source (même règle que la copie à la validation,
+        # copy_shared_task_data). Sans ce filtre, un FC du canton NAYEGA se
+        # voyait proposer les données de GOUNDOGA-CENTRE (canton Goundoga).
+        # Village courant non siège / canton introuvable : aucune source.
+        same_canton_ids = canton_headquarters_village_ids(administrative_level_id)
+        if not same_canton_ids:
+            return Response({'found': False})
+
+        # Seules les sources du même type de compte que l'appelant (vrai FC / formation / démonstration).
+        # Ancienne application (ni base ni facilitateur envoyés) : vrai FC — PullTaskData refuse de toute
+        # façon une source d'un autre type que la base cible.
+        kind = account_kind_for(
+            no_sql_db_name=request.GET.get('no_sql_db_name'),
+            facilitator_id=request.GET.get('facilitator_sql_id'),
+        )
 
         # NB : `cycle_id` n'est PLUS utilisé pour filtrer ici — le mobile ne
         # l'envoie jamais et un même (tâche, village) peut se retrouver
@@ -192,6 +214,8 @@ class PullableTaskSource(APIView):
         candidates = list(TaskShareRecord.objects.filter(
             task_id=task_sql_id, project_id=project_id,
             status__in=[TaskShareRecord.STATUS_COMPLETED, TaskShareRecord.STATUS_VALIDATED],
+            administrative_level_id__in=same_canton_ids,
+            **_account_kind_filter(kind),
         ).exclude(administrative_level_id=administrative_level_id).order_by('-last_synced'))
         record = next((r for r in candidates if r.share_values), None)
         if not record:
@@ -226,7 +250,10 @@ class PullTaskData(APIView):
         from dashboard.process_manager.tasks.form_design import (
             merge_share_values, merge_attachment_share_values, has_share_fields,
         )
-        from dashboard.utils import _share_history_entry, find_task_share_record, upsert_task_share_record
+        from dashboard.utils import (
+            _share_history_entry, find_task_share_record, upsert_task_share_record, account_kind_for,
+            canton_headquarters_village_ids,
+        )
         from administrativelevels.models import AdministrativeLevel
 
         data = request.data or {}
@@ -248,8 +275,23 @@ class PullTaskData(APIView):
         if not has_share_fields(task.form, task.attachments):
             return Response({'ok': False, 'error': 'Cette tâche ne permet pas le partage.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # La source doit être un village siège du même canton que la cible
+        # (cf. PullableTaskSource) — refuse un chargement inter-cantons.
+        try:
+            source_in_canton = int(source_administrative_level_id) in canton_headquarters_village_ids(
+                target_administrative_level_id)
+        except (TypeError, ValueError):
+            source_in_canton = False
+        if not source_in_canton:
+            return Response(
+                {'ok': False, 'error': "La source n'est pas un village siège du même canton."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Source lue parmi les comptes du même type que la base cible (vrai FC / formation / démonstration).
+        kind = account_kind_for(no_sql_db_name=target_no_sql_db_name)
         source_record = find_task_share_record(
-            task_sql_id, project_id, source_administrative_level_id, prefer_field='share_values',
+            task_sql_id, project_id, source_administrative_level_id, prefer_field='share_values', kind=kind,
         )
         values = source_record.share_values if source_record else None
         if not values:
@@ -293,7 +335,7 @@ class PullTaskData(APIView):
         if cycle_id is not None:
             pull_defaults['cycle_id'] = cycle_id
         upsert_task_share_record(
-            task_sql_id, project_id, target_administrative_level_id, defaults=pull_defaults,
+            task_sql_id, project_id, target_administrative_level_id, defaults=pull_defaults, kind=kind,
         )
 
         return Response({
