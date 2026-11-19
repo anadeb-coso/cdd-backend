@@ -639,6 +639,12 @@ msgstr "Modifiée après invalidation"
 msgid "Data loaded from another task"
 msgstr "Données chargées depuis une autre tâche"
 
+msgid "Data imported from COSOCollect"
+msgstr "Données importées de COSOCollect"
+
+msgid "COSOCollect import cancelled"
+msgstr "Import COSOCollect annulé"
+
 #: .\dashboard\templates\facilitators\profile.html
 msgid "Choice"
 msgstr "Choisir"
@@ -6230,3 +6236,1208 @@ msgstr "Animateur et validateur"
 
 msgid "Read all other details on the DCC application"
 msgstr "Lisez tous les autres détails sur l'application DCC"
+
+msgid "Works"
+msgstr "Ouvrages"
+
+msgid "Sector"
+msgstr "Secteur"
+
+msgid "Type of subproject"
+msgstr "Type de sous-projet"
+
+msgid "Designation"
+msgstr "Désignation"
+
+msgid "Works type"
+msgstr "Type de travaux"
+
+msgid "Step"
+msgstr "Étape"
+
+msgid "Filter the works files"
+msgstr "Filtrer les fichiers des ouvrages"
+
+msgid "Search (number, title, file)"
+msgstr "Recherche (numéro, intitulé, fichier)"
+
+#: dashboard/templates/layouts/project_picker.html
+msgid "Search a project"
+msgstr "Rechercher un projet"
+
+#: dashboard/templates/layouts/project_picker.html
+msgid "No project matches your search."
+msgstr "Aucun projet ne correspond à votre recherche."
+
+#: dashboard/templates/process_manager/tasks/list.html
+msgid "Search by activity"
+msgstr "Rechercher par activité"
+
+#: dashboard/templates/process_manager/tasks/list.html
+msgid "Search by task"
+msgstr "Rechercher par tâche"
+
+#: dashboard/templates/process_manager/tasks/list.html
+msgid "All phases"
+msgstr "Toutes les phases"
+
+#: dashboard/templates/process_manager/tasks/list.html
+msgid "All activities"
+msgstr "Toutes les activités"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "The target field and the condition fields can be on other pages (P1, P2…). A rule whose target is on another page is stored on the target page when saving."
+msgstr "Le champ cible et les champs des conditions peuvent être sur d'autres pages (P1, P2…). Une règle dont la cible est sur une autre page est rangée sur la page de la cible à l'enregistrement."
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Field rules"
+msgstr "Règles sur les champs"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Page display condition"
+msgstr "Condition d'affichage de la page"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Based on the answer to a field of a previous page. A skipped page is not displayed and its answer is empty."
+msgstr "Selon la réponse à un champ d'une page précédente. Une page sautée n'est pas affichée et sa réponse est vide."
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "The first page is always displayed (no page before it)."
+msgstr "La 1re page est toujours affichée (aucune page avant elle)."
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Add a page condition"
+msgstr "Ajouter une condition de page"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Delete the page condition"
+msgstr "Supprimer la condition de page"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Show this page only if"
+msgstr "Afficher cette page seulement si"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Skip (hide) this page if"
+msgstr "Sauter (masquer) cette page si"
+
+#: dashboard/templates/process_manager/tasks/_form_builder_i18n.html
+msgid "Multi-line text"
+msgstr "Texte sur plusieurs lignes"
+
+msgid "No results found"
+msgstr "Aucun résultat"
+
+msgid "Villages checking"
+msgstr "Vérification des villages"
+
+msgid "Villages without CVD"
+msgstr "Villages sans CVD"
+
+msgid "Villages not assigned to a facilitator"
+msgstr "Villages non affectés à un facilitateur"
+
+msgid "Villages without stabilized community facilitator"
+msgstr "Villages sans FC stabilisé"
+
+msgid "Villages without stabilized technical facilitator"
+msgstr "Villages sans FT stabilisé"
+
+msgid "All my projects"
+msgstr "Tous mes projets"
+
+msgid "Projects without assignment"
+msgstr "Projets sans affectation"
+
+msgid "Stabilized community facilitators"
+msgstr "FC stabilisés"
+
+msgid "Stabilized technical facilitators"
+msgstr "FT stabilisés"
+
+msgid "A village is listed when it has no active assignment in at least one of the selected projects it belongs to."
+msgstr "Un village est listé s'il n'a pas d'affectation active dans au moins un des projets choisis auxquels il appartient."
+
+msgid "Only active facilitators outside test mode are counted, by their stabilization villages (additional villages are not counted)."
+msgstr "Seuls les facilitateurs actifs hors mode test sont comptés, d'après leurs villages de stabilisation (les villages additionnels ne comptent pas)."
+
+msgid "%(counter)s village in the selected scope."
+msgid_plural "%(counter)s villages in the selected scope."
+msgstr[0] "%(counter)s village dans le périmètre choisi."
+msgstr[1] "%(counter)s villages dans le périmètre choisi."
+
+msgid "Identifier no longer in the database"
+msgstr "Identifiant absent de la base"
+
+msgid "Name changed in the database"
+msgstr "Nom changé dans la base"
+
+msgid "Name entered instead of an identifier"
+msgstr "Nom saisi au lieu d'un identifiant"
+
+msgid "Line %(n)s: no village chosen."
+msgstr "Ligne %(n)s : aucun village choisi."
+
+msgid "Line %(n)s: record not found."
+msgstr "Ligne %(n)s : saisie introuvable."
+
+msgid "the value was modified in the meantime, reload the page"
+msgstr "la valeur a été modifiée entre-temps, rechargez la page"
+
+msgid "unknown village"
+msgstr "village inconnu"
+
+msgid "Line %(n)s (%(title)s): %(reason)s."
+msgstr "Ligne %(n)s (%(title)s) : %(reason)s."
+
+msgid "No line selected."
+msgstr "Aucune ligne sélectionnée."
+
+msgid "Village relinked by an administrator"
+msgstr "Village corrigé par un administrateur"
+
+msgid "This form has no village question."
+msgstr "Ce formulaire n'a pas de question village."
+
+msgid "Records whose village (question « %(label)s ») no longer matches a village of the database: identifier deleted, name changed since the record, or name typed instead of an identifier. For each one, the most likely villages are proposed (close name, same canton or commune as the record)."
+msgstr "Saisies dont le village (question « %(label)s ») ne correspond plus à un village de la base : identifiant supprimé, nom changé depuis la saisie, ou nom tapé au lieu d'un identifiant. Pour chacune, les villages les plus probables sont proposés (nom proche, même canton ou même commune que la saisie)."
+
+msgid "Problem"
+msgstr "Problème"
+
+msgid "All the villages of the records exist in the database."
+msgstr "Tous les villages des saisies existent dans la base."
+
+msgid "Also update the other location questions of the record with the parents of the chosen village"
+msgstr "Mettre aussi à jour les autres questions de localisation de la saisie avec les parents du village choisi"
+
+msgid "Change the village of %(count)s record(s)?"
+msgstr "Changer le village de %(count)s saisie(s) ?"
+
+msgid "Apply to the selected lines"
+msgstr "Appliquer aux lignes cochées"
+
+msgid "Record"
+msgstr "Saisie"
+
+msgid "Village in the record"
+msgstr "Village de la saisie"
+
+msgid "Proposed villages"
+msgstr "Villages proposés"
+
+msgid "New village"
+msgstr "Nouveau village"
+
+msgid "Now"
+msgstr "Désormais"
+
+msgid "same canton"
+msgstr "même canton"
+
+msgid "current identifier"
+msgstr "identifiant actuel"
+
+msgid "No close village: search one in the list."
+msgstr "Aucun village proche : cherchez-en un dans la liste."
+
+msgid "Search a village"
+msgstr "Chercher un village"
+
+msgid "Apply to this record"
+msgstr "Appliquer à cette saisie"
+
+msgid "Searching…"
+msgstr "Recherche…"
+
+msgid "Choose a village first."
+msgstr "Choisissez d'abord un village."
+
+msgid "%(count)d record updated."
+msgid_plural "%(count)d records updated."
+msgstr[0] "%(count)d saisie mise à jour."
+msgstr[1] "%(count)d saisies mises à jour."
+
+msgid "Select the %(counter)s sure proposal"
+msgid_plural "Select the %(counter)s sure proposals"
+msgstr[0] "Cocher la proposition sûre (%(counter)s)"
+msgstr[1] "Cocher les %(counter)s propositions sûres"
+
+msgid "Name found in the title of the record"
+msgstr "Nom trouvé dans le titre de la saisie"
+
+msgid "from the title: « %(hint)s »"
+msgstr "d'après le titre : « %(hint)s »"
+
+msgid "Without a good proposal for the known name, the words of the record title (often « canton_village_date ») are tried too."
+msgstr "Sans bonne proposition pour le nom connu, les mots du titre de la saisie (souvent « canton_village_date ») sont aussi essayés."
+
+msgid "Regions"
+msgstr "Régions"
+
+msgid "Prefectures"
+msgstr "Préfectures"
+
+msgid "Communes"
+msgstr "Communes"
+
+msgid "Cantons"
+msgstr "Cantons"
+
+msgid "No headquarters village of this project and cycle in the facilitators' localities."
+msgstr "Aucun village siège de ce projet et de ce cycle dans les localités des facilitateurs."
+
+msgid "Expected"
+msgstr "Prévu"
+
+msgid "facilitator(s)"
+msgstr "facilitateur(s)"
+
+msgid "No headquarters village matches the chosen area and villages."
+msgstr "Aucun village siège ne correspond à la zone et aux villages choisis."
+
+msgid "No facilitator matches these choices (databases, villages, develop_mode, training_mode)."
+msgstr "Aucun facilitateur ne correspond à ces choix (bases, villages, develop_mode, training_mode)."
+
+msgid "Expected: %(villages)s headquarters village(s), %(facilitators)s facilitator(s)."
+msgstr "Prévu : %(villages)s village(s) siège(s), %(facilitators)s facilitateur(s)."
+
+msgid "Reading the facilitators' CouchDB databases…"
+msgstr "Lecture des bases CouchDB des facilitateurs…"
+
+msgid "Unreadable CouchDB databases, stored copy used"
+msgstr "Bases CouchDB illisibles, copie en base utilisée"
+
+msgid "Could not load the lists, close and reopen the window."
+msgstr "Impossible de charger les listes, fermez puis rouvrez la fenêtre."
+
+msgid "Sync in progress"
+msgstr "Synchronisation en cours"
+
+msgid "Sync finished"
+msgstr "Synchronisation terminée"
+
+msgid "Sync failed"
+msgstr "Échec de la synchronisation"
+
+msgid "Sync interrupted"
+msgstr "Synchronisation interrompue"
+
+msgid "for"
+msgstr "depuis"
+
+msgid "in"
+msgstr "en"
+
+msgid "after"
+msgstr "après"
+
+msgid "on"
+msgstr "le"
+
+msgid "started by"
+msgstr "lancée par"
+
+msgid "databases walked through"
+msgstr "bases parcourues"
+
+msgid "current"
+msgstr "en cours"
+
+msgid "headquarters villages processed"
+msgstr "villages sièges traités"
+
+msgid "created"
+msgstr "créés"
+
+msgid "updated"
+msgstr "mis à jour"
+
+msgid "expected"
+msgstr "prévus"
+
+msgid "Fewer villages processed than expected: check the facilitators concerned."
+msgstr "Moins de villages traités que prévu : vérifiez les facilitateurs concernés."
+
+msgid "No news from the server for"
+msgstr "Aucune nouvelle du serveur depuis"
+
+msgid "You can run it again: already synchronised villages are updated, not duplicated."
+msgstr "Vous pouvez la relancer : les villages déjà synchronisés sont mis à jour, pas dupliqués."
+
+msgid "sync in progress"
+msgstr "synchro en cours"
+
+msgid "sync finished"
+msgstr "synchro terminée"
+
+msgid "sync failed"
+msgstr "synchro en échec"
+
+msgid "Last sync"
+msgstr "Dernière synchronisation"
+
+msgid "No sync of this task launched from this window yet."
+msgstr "Aucune synchronisation de cette tâche lancée depuis cette fenêtre pour l'instant."
+
+msgid "A sync of this task is already running; wait for it to finish."
+msgstr "Une synchronisation de cette tâche est déjà en cours : attendez qu'elle se termine."
+
+msgid "Interrupted: no news from the server for 10 minutes (restart?)."
+msgstr "Interrompue : aucune nouvelle du serveur pendant 10 minutes (redémarrage ?)."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "A run is already in progress for this form."
+msgstr "Une exécution est déjà en cours pour ce formulaire."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "All the villages"
+msgstr "Tous les villages"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Also replace the data of VALIDATED tasks (validation kept)"
+msgstr "Remplacer aussi les données des tâches VALIDÉES (la validation est conservée)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Automatic (by title)"
+msgstr "Automatique (par le titre)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Automatic match"
+msgstr "Correspondance automatique"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Command output"
+msgstr "Sortie de la commande"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Cycle"
+msgstr "Cycle"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Do not overwrite a task already filled"
+msgstr "Ne pas écraser une tâche déjà remplie"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Download the report (CSV)"
+msgstr "Télécharger le rapport (CSV)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Failed"
+msgstr "Échec"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Files"
+msgstr "Fichiers"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Files -> attachments"
+msgstr "Fichiers -> pièces jointes"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Finished"
+msgstr "Terminée"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Import into the tasks"
+msgstr "Import vers les tâches"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Import into the tasks (writes)"
+msgstr "Importer dans les tâches (écriture)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Interrupted (no news for more than 10 minutes)"
+msgstr "Interrompue (aucune nouvelle depuis plus de 10 minutes)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Invalid options."
+msgstr "Options invalides."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Last run"
+msgstr "Dernière exécution"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Matches only (form -> task, field differences)"
+msgstr "Correspondances seulement (formulaire -> tâche, écarts de champs)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "No run yet for this form."
+msgstr "Aucune exécution pour ce formulaire."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "No task found automatically"
+msgstr "Aucune tâche trouvée automatiquement"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Only these villages / cantons"
+msgstr "Seulement ces villages / cantons"
+
+msgid "Only these administrative levels (region, prefecture, commune, canton, village)"
+msgstr "Seulement ces niveaux (région, préfecture, commune, canton, village)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Options"
+msgstr "Options"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Previous runs"
+msgstr "Exécutions précédentes"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Reading the facilitators databases"
+msgstr "Lecture des bases des facilitateurs"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Rewrite even an up-to-date document; undo: restore even a modified one"
+msgstr "Réécrire même un document à jour ; annulation : restaurer même un document modifié"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Run"
+msgstr "Lancer"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Simulating the task documents"
+msgstr "Simulation des documents de tâche"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Simulation (nothing is written)"
+msgstr "Simulation (rien n'est écrit)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "This cycle does not belong to the project."
+msgstr "Ce cycle n'appartient pas au projet."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "This run WRITES into the task documents of the facilitators. Continue?"
+msgstr "Cette exécution ÉCRIT dans les documents de tâche des facilitateurs. Continuer ?"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "This task does not belong to the project."
+msgstr "Cette tâche n'appartient pas au projet."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "This task is not in the cycle."
+msgstr "Cette tâche n'est pas dans le cycle."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Title match threshold"
+msgstr "Seuil de rapprochement des titres"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Undo the last import (writes)"
+msgstr "Annuler le dernier import (écriture)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Undo the last import — simulation"
+msgstr "Annuler le dernier import — simulation"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Undoing in the facilitators databases"
+msgstr "Annulation dans les bases des facilitateurs"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Village / canton identifiers: whole numbers separated by commas."
+msgstr "Identifiants de villages / cantons : nombres entiers séparés par des virgules."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Writing into the task documents"
+msgstr "Écriture dans les documents de tâche"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "already up to date"
+msgstr "déjà à jour"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "by name"
+msgstr "par nom"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "by order"
+msgstr "par ordre"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "close task under ANOTHER activity: choose it below if intended"
+msgstr "tâche proche sous une AUTRE activité : la choisir ci-dessous si c'est voulu"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "copy for the task"
+msgstr "copie pour la tâche"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "document not found"
+msgstr "document introuvable"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "duration"
+msgstr "durée"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "errors"
+msgstr "erreurs"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "last news"
+msgstr "dernière nouvelle"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "link to the COSOCollect file"
+msgstr "lien vers le fichier COSOCollect"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "not written (no common field)"
+msgstr "non écrits (aucun champ commun)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "projects linked to this form"
+msgstr "projets liés à ce formulaire"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "restored"
+msgstr "restaurés"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "several possible tasks: choose one below"
+msgstr "plusieurs tâches possibles : en choisir une ci-dessous"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "skipped (already filled)"
+msgstr "ignorés (déjà remplis)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "skipped (modified since)"
+msgstr "ignorés (modifiés depuis)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "skipped (validated)"
+msgstr "ignorés (validés)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "to write (simulation)"
+msgstr "à écrire (simulation)"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "without backup"
+msgstr "sans sauvegarde"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "written"
+msgstr "écrits"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Status of the records to copy"
+msgstr "Statut des enregistrements à recopier"
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Records not sent may be incomplete: the task is marked completed all the same."
+msgstr "Les enregistrements non envoyés peuvent être incomplets : la tâche est quand même marquée réalisée."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Choose at least one record status."
+msgstr "Choisissez au moins un statut d'enregistrement."
+
+#: dashboard/coso_collect/views_task_migration.py
+msgid "Copies the records of this form (by default the SENT ones) into the matching task of the investment cycle (command migrate_cosocollect_to_tasks): the most recent record per village, files with the attachments, a canton record to all its villages, a village that is not a CVD headquarters to its headquarters. Start with a simulation, check the result and the report, then import."
+msgstr "Recopie les enregistrements de ce formulaire (par défaut les ENVOYÉS) dans la tâche correspondante du cycle d'investissement (commande migrate_cosocollect_to_tasks) : l'enregistrement le plus récent par village, les fichiers dans les pièces jointes, un enregistrement de canton vers tous ses villages, un village non siège de CVD vers son village siège. Commencez par une simulation, vérifiez le résultat et le rapport, puis importez."
+
+#: dashboard/facilitators/views_training.py
+msgid "%(n)s training account(s) created: %(names)s — password: %(password)s"
+msgstr "%(n)s compte(s) de formation créé(s) : %(names)s — mot de passe : %(password)s"
+
+#: dashboard/facilitators/views_training.py
+msgid "Back to the stored copy (PostgreSQL)"
+msgstr "Revenir à la copie en base (PostgreSQL)"
+
+#: dashboard/facilitators/views_training.py
+msgid "Choose at least one CVD headquarters village."
+msgstr "Choisissez au moins un village siège de CVD."
+
+#: dashboard/facilitators/views_training.py
+msgid "Create the accounts"
+msgstr "Créer les comptes"
+
+#: dashboard/facilitators/views_training.py
+msgid "Create the tasks of the cycle in these accounts"
+msgstr "Créer les tâches du cycle dans ces comptes"
+
+#: dashboard/facilitators/views_training.py
+msgid "Create training accounts"
+msgstr "Créer des comptes de formation"
+
+#: dashboard/facilitators/views_training.py
+msgid "Creation stopped: %(error)s"
+msgstr "Création interrompue : %(error)s"
+
+#: dashboard/facilitators/views_training.py
+msgid "First number"
+msgstr "Premier numéro"
+
+#: dashboard/facilitators/views_training.py
+msgid "Lists read from the facilitators CouchDB databases."
+msgstr "Listes lues dans les bases CouchDB des facilitateurs."
+
+#: dashboard/facilitators/views_training.py
+msgid "Lists read from the stored copy (PostgreSQL)."
+msgstr "Listes lues dans la copie en base (PostgreSQL)."
+
+#: dashboard/facilitators/views_training.py
+msgid "No training account in this project."
+msgstr "Aucun compte de formation dans ce projet."
+
+#: dashboard/facilitators/views_training.py
+msgid "Number of accounts"
+msgstr "Nombre de comptes"
+
+#: dashboard/facilitators/views_training.py
+msgid "Password (same for all)"
+msgstr "Mot de passe (le même pour tous)"
+
+#: dashboard/facilitators/views_training.py
+msgid "Read from CouchDB instead"
+msgstr "Lire plutôt dans CouchDB"
+
+#: dashboard/facilitators/views_training.py
+msgid "Reading the facilitators CouchDB databases…"
+msgstr "Lecture des bases CouchDB des facilitateurs…"
+
+#: dashboard/facilitators/views_training.py
+msgid "Reading the stored copy…"
+msgstr "Lecture de la copie en base…"
+
+#: dashboard/facilitators/views_training.py
+msgid "SIG assignments"
+msgstr "Affectations SIG"
+
+#: dashboard/facilitators/views_training.py
+msgid "Select a project and a cycle first."
+msgstr "Sélectionnez d'abord un projet et un cycle."
+
+#: dashboard/facilitators/views_training.py
+msgid "Test accounts for the mobile application (training_mode): usernames trainingN, name « TrainingN Account », e-mail trainingN@test.com. Their villages are recorded in the DCC and in their CouchDB database, but they never receive an assignment in the SIG (reserved to the real community facilitators), no MGP account and no e-mail."
+msgstr "Comptes de test pour l'application mobile (training_mode) : identifiants trainingN, nom « TrainingN Account », e-mail trainingN@test.com. Leurs villages sont enregistrés dans le DCC et dans leur base CouchDB, mais ils ne reçoivent jamais d'affectation dans le SIG (réservée aux vrais facilitateurs communautaires), ni compte MGP, ni e-mail."
+
+#: dashboard/facilitators/views_training.py
+msgid "These usernames already exist: %(names)s"
+msgstr "Ces identifiants existent déjà : %(names)s"
+
+#: dashboard/facilitators/views_training.py
+msgid "Training accounts"
+msgstr "Comptes de formation"
+
+#: dashboard/facilitators/views_training.py
+msgid "Training accounts of the project"
+msgstr "Comptes de formation du projet"
+
+#: dashboard/facilitators/views_training.py
+msgid "Villages (CVD headquarters villages; the other villages of the CVD are added)"
+msgstr "Villages (villages sièges de CVD ; les autres villages du CVD sont ajoutés)"
+
+#: dashboard/facilitators/views_training.py
+msgid "The tasks of the cycle are being created in these accounts (in the background, a few minutes)."
+msgstr "Les tâches du cycle sont en cours de création dans ces comptes (en arrière-plan, quelques minutes)."
+
+#: dashboard/templates/facilitators/training_accounts.html
+msgid "%(counter)s training account has assignments in the SIG, which is reserved to the real community facilitators."
+msgid_plural "%(counter)s training accounts have assignments in the SIG, which is reserved to the real community facilitators."
+msgstr[0] "%(counter)s compte de formation a des affectations dans le SIG, réservées aux vrais facilitateurs communautaires."
+msgstr[1] "%(counter)s comptes de formation ont des affectations dans le SIG, réservées aux vrais facilitateurs communautaires."
+
+#: dashboard/templates/facilitators/localities_history.html
+msgid "Show the test accounts (development / training)"
+msgstr "Afficher les comptes de test (développement / formation)"
+
+msgid "Accounts whose records are taken into account"
+msgstr "Comptes dont les enregistrements sont pris en compte"
+
+msgid "Author of the record (facilitator account, or the facilitator of the web account). The records of the other accounts are ignored: they cannot replace the record of a retained account. The tasks written are always those of the real FC."
+msgstr "Auteur de l'enregistrement (compte facilitateur, ou facilitateur du compte web). Les enregistrements des autres comptes sont ignorés : ils ne peuvent pas remplacer celui d'un compte retenu. Les tâches écrites sont toujours celles des vrais FC."
+
+msgid "Real CF"
+msgstr "Vrais FC"
+
+msgid "Real TF"
+msgstr "Vrais FT"
+
+msgid "Development / demo accounts"
+msgstr "Comptes de démonstration (develop)"
+
+msgid "Other accounts (web accounts without facilitator)"
+msgstr "Autres comptes (comptes web sans facilitateur)"
+
+msgid "Choose at least one kind of account."
+msgstr "Choisir au moins un type de compte."
+
+msgid "User groups allowed to fill in the form"
+msgstr "Groupes d'utilisateurs autorisés à charger et remplir le formulaire"
+
+msgid "All the connected users"
+msgstr "Tous les utilisateurs connectés"
+
+msgid "Empty: every connected user can load and fill in the form (web and mobile). Otherwise only the members of these groups (a facilitator belongs to the Facilitator group and to the group of their type). Users and facilitators can be added one by one in the Settings. The creator and the administrators always keep access."
+msgstr "Vide : tout utilisateur connecté peut charger et remplir le formulaire (web et mobile). Sinon, seuls les membres de ces groupes (un facilitateur appartient au groupe Facilitator et au groupe de son type). Des utilisateurs et facilitateurs peuvent être ajoutés un par un dans les Paramètres. Le créateur et les administrateurs gardent toujours l'accès."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Phases, activities and tasks found in the CouchDB database of a community facilitator for a village that is no longer (or was never) among his assignment villages for this project and cycle. They can be moved to the backup database backup_db_facilitators_docs (then deleted from the facilitator's database)."
+msgstr "Phases, activités et tâches présentes dans la base CouchDB d'un facilitateur communautaire pour un village qui ne figure plus (ou n'a jamais figuré) parmi ses villages d'affectation pour ce projet et ce cycle. Elles peuvent être transférées dans la base de sauvegarde backup_db_facilitators_docs (puis supprimées de la base du facilitateur)."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Headquarters assignment villages of a community facilitator with no phase, activity or task in his database for this project and cycle. If the backup database holds this village's documents, they can be moved to the facilitator's database; otherwise tick the villages and synchronize the chosen tasks."
+msgstr "Villages sièges d'affectation d'un facilitateur communautaire sans aucune phase, activité ni tâche dans sa base pour ce projet et ce cycle. Si la base de sauvegarde contient les documents du village, ils peuvent être transférés dans la base du facilitateur ; sinon, cochez les villages et synchronisez les tâches choisies."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Villages without documents"
+msgstr "Villages sans documents"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Documents without village"
+msgstr "Documents sans village"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Analyze the databases"
+msgstr "Analyser les bases"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Move the selection to the backup"
+msgstr "Transférer la sélection vers la sauvegarde"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Synchronize the selection"
+msgstr "Synchroniser la sélection"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Facilitator (database)"
+msgstr "Facilitateur (base)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Normally assigned (MIS)"
+msgstr "Normalement affecté (SIG)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Backup database"
+msgstr "Base de sauvegarde"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Comments"
+msgstr "Commentaires"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Choose the filters then click « Analyze the databases »."
+msgstr "Choisissez les filtres puis cliquez sur « Analyser les bases »."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Facilitator normally assigned there"
+msgstr "Facilitateur normalement affecté à ce village"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Proposed from the MIS assignments (AssignAdministrativeLevelToFacilitator)."
+msgstr "Proposé d'après les affectations du SIG (AssignAdministrativeLevelToFacilitator)."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "New comment"
+msgstr "Nouveau commentaire"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Add the comment"
+msgstr "Ajouter le commentaire"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Synchronize the tasks"
+msgstr "Synchroniser les tâches"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Start the synchronization"
+msgstr "Lancer la synchronisation"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Reading the facilitators databases…"
+msgstr "Lecture des bases des facilitateurs…"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "No line: nothing to fix for these filters."
+msgstr "Aucune ligne : rien à corriger pour ces filtres."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "line(s)"
+msgstr "ligne(s)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "database(s) read"
+msgstr "base(s) lue(s)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Unreadable databases (ignored):"
+msgstr "Bases illisibles (ignorées) :"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "phases"
+msgstr "phases"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "activities"
+msgstr "activités"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "tasks"
+msgstr "tâches"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "completed"
+msgstr "terminée(s)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Nobody"
+msgstr "Personne"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "this facilitator"
+msgstr "ce facilitateur"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "inactive"
+msgstr "inactif"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "training"
+msgstr "formation"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "development"
+msgstr "développement"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "unknown cycle"
+msgstr "cycle inconnu"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "To the backup"
+msgstr "Vers la sauvegarde"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Move to the facilitator database"
+msgstr "Transférer dans la base du facilitateur"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Nothing in the backup"
+msgstr "Rien dans la sauvegarde"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "previous backup (unknown origin)"
+msgstr "sauvegarde antérieure (origine inconnue)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "from"
+msgstr "de"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "No comment yet."
+msgstr "Aucun commentaire pour l'instant."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "— nobody —"
+msgstr "— personne —"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Normally assigned:"
+msgstr "Normalement affecté :"
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "Move the documents of %(n)s village(s) to the backup database, then delete them from the facilitators databases?"
+msgstr "Transférer les documents de %(n)s village(s) dans la base de sauvegarde, puis les supprimer des bases des facilitateurs ?"
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "Move these documents from the backup database to the database of %(name)s?"
+msgstr "Transférer ces documents de la base de sauvegarde vers la base de %(name)s ?"
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "%(n)s village(s) selected. Choose, for each project and cycle, the tasks to synchronize."
+msgstr "%(n)s village(s) sélectionné(s). Choisissez, pour chaque projet et cycle, les tâches à synchroniser."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Lines without cycle are ignored."
+msgstr "Les lignes sans cycle sont ignorées."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "All the tasks"
+msgstr "Toutes les tâches"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Interrupted (no news from the server for 10 minutes)"
+msgstr "Interrompue (aucune nouvelle du serveur depuis 10 minutes)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "documents"
+msgstr "documents"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "task × village pairs"
+msgstr "couples tâche × village"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "line(s) processed"
+msgstr "ligne(s) traitée(s)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "problem(s)"
+msgstr "problème(s)"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Listing the documents…"
+msgstr "Recensement des documents…"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Last operation"
+msgstr "Dernière opération"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Real accounts"
+msgstr "Comptes réels"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Development accounts"
+msgstr "Comptes de développement"
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "Could not read CouchDB: %(error)s"
+msgstr "Lecture de CouchDB impossible : %(error)s"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Write a comment."
+msgstr "Écrivez un commentaire."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Unknown project."
+msgstr "Projet inconnu."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Reserved for super administrators."
+msgstr "Réservé aux super-administrateurs."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Select at least one line."
+msgstr "Sélectionnez au moins une ligne."
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "At most %(n)s lines at a time."
+msgstr "%(n)s lignes au plus à la fois."
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "Unknown facilitator database: %(db)s"
+msgstr "Base de facilitateur inconnue : %(db)s"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "The same line is selected twice."
+msgstr "La même ligne est sélectionnée deux fois."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Another transfer or synchronization is running; wait for it to finish."
+msgstr "Un autre transfert ou une autre synchronisation est en cours ; attendez qu'il se termine."
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "A cycle is required to synchronize %(village)s."
+msgstr "Un cycle est nécessaire pour synchroniser %(village)s."
+
+#: dashboard/diagnostics (documents des villages)
+#, python-format
+msgid "Choose the tasks to synchronize for %(project)s / %(cycle)s."
+msgstr "Choisissez les tâches à synchroniser pour %(project)s / %(cycle)s."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Village documents"
+msgstr "Documents des villages"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Waiting for another operation to finish"
+msgstr "En attente de la fin d'une autre opération"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "No document to move for these villages."
+msgstr "Aucun document à déplacer pour ces villages."
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Moving the villages documents"
+msgstr "Déplacement des documents des villages"
+
+#: dashboard/diagnostics (documents des villages)
+msgid "Reduce"
+msgstr "Réduire"
+
+#: dashboard/templates/layouts/sidebar.html
+msgid "Villages control"
+msgstr "Contrôle des villages"
+
+#: dashboard/templates/diagnostics/village_docs.html
+msgid "The backup holds this village documents: use « Move to the facilitator database » instead of a synchronization."
+msgstr "La sauvegarde contient les documents de ce village : utilisez « Transférer dans la base du facilitateur » plutôt qu'une synchronisation."
+
+#: dashboard/templates/diagnostics/village_docs.html
+msgid "Unknown cycle: synchronization impossible."
+msgstr "Cycle inconnu : synchronisation impossible."
+
+#: dashboard/templates/diagnostics/village_docs.html
+msgid "Saving… the documents of the villages added or removed will be moved."
+msgstr "Enregistrement… les documents des villages ajoutés ou retirés vont être déplacés."
+
+msgid "All projects"
+msgstr "Tous les projets"
+
+msgid "Applies to the “FC situation (by task)”, “FC situation (by task, aggregated statuses)” and “FC situations” exports. Leave empty to include all projects."
+msgstr "S'applique aux exports « Situation des FC (par tâche) », « Situation des FC (par tâche, statuts agrégés) » et « Situations des FC ». Laisser vide pour inclure tous les projets."
+
+msgid "Parent"
+msgstr "Parent"
+
+msgid "Databases"
+msgstr "Bases"
+
+msgid "databases"
+msgstr "bases"
+
+msgid "villages"
+msgstr "villages"
+
+msgid "Interrupted"
+msgstr "Interrompue"
+
+msgid "Check all"
+msgstr "Tout cocher"
+
+msgid "Geographical unit"
+msgstr "Unité géographique"
+
+msgid "Run the analysis again."
+msgstr "Relancez l'analyse."
+
+msgid "Name in CouchDB"
+msgstr "Nom dans CouchDB"
+
+msgid "Name on the SIG"
+msgstr "Nom sur le SIG"
+
+msgid "Analysis of"
+msgstr "Analyse du"
+
+msgid "Names corrected on the SIG: update the facilitators CouchDB"
+msgstr "Noms corrigés sur le SIG : mise à jour des CouchDB des facilitateurs"
+
+msgid "Village, canton, CVD and geographical unit names are copied into the facilitators CouchDB databases (facilitator document read by the mobile, tasks, backup database) when they are distributed. The analysis compares them with the SIG names for the villages of the selected scope; only the checked names are then updated (nothing else changes in the documents)."
+msgstr "Les noms des villages, cantons, CVD et unités géographiques sont recopiés dans les bases CouchDB des facilitateurs (document du facilitateur lu par le mobile, tâches, base de sauvegarde) au moment de leur distribution. L'analyse les compare aux noms du SIG pour les villages du périmètre filtré ; seuls les noms cochés sont ensuite mis à jour (rien d'autre ne change dans les documents)."
+
+msgid "Analyse the names of the selected scope"
+msgstr "Analyser les noms du périmètre filtré"
+
+msgid "Update the checked names"
+msgstr "Mettre à jour les noms cochés"
+
+msgid "Analysis in progress"
+msgstr "Analyse en cours"
+
+msgid "Update in progress"
+msgstr "Mise à jour en cours"
+
+msgid "Waiting for another operation"
+msgstr "En attente d'une autre opération"
+
+msgid "No difference: the CouchDB names match the SIG."
+msgstr "Aucun écart : les noms dans CouchDB correspondent au SIG."
+
+msgid "This analysis was made on other filters: run it again to see the selected scope."
+msgstr "Cette analyse a été faite sur d'autres filtres : relancez-la pour voir le périmètre choisi."
+
+msgid "Update the checked names in the facilitators CouchDB databases?"
+msgstr "Mettre à jour les noms cochés dans les bases CouchDB des facilitateurs ?"
+
+msgid "Update finished"
+msgstr "Mise à jour terminée"
+
+msgid "Commands / sync"
+msgstr "Commandes / sync"
+
+msgid "Command"
+msgstr "Commande"
+
+msgid "Command in progress"
+msgstr "Commande en cours"
+
+msgid "Run in the background"
+msgstr "Lancer en arrière-plan"
+
+msgid "Last run of this command"
+msgstr "Dernière exécution de cette commande"
+
+msgid "Superusers only. The command runs in the background in a separate process with a low priority (the web server stays responsive), stopped above %(mb)s MB of memory. One command at a time; you can leave the page and come back to follow it."
+msgstr "Réservé aux superutilisateurs. La commande tourne en arrière-plan dans un processus séparé à priorité basse (le serveur web reste disponible), arrêté au-delà de %(mb)s Mo de mémoire. Une seule commande à la fois ; vous pouvez quitter la page et revenir suivre l'avancement."
+
+msgid "Starting"
+msgstr "Démarrage"
+
+msgid "Stopped"
+msgstr "Arrêtée"
+
+msgid "Interrupted (no news from the process)"
+msgstr "Interrompue (aucune nouvelle du processus)"
+
+msgid "Writes"
+msgstr "Écrit"
+
+msgid "Simulation / read only"
+msgstr "Simulation / lecture seule"
+
+msgid "Duration"
+msgstr "Durée"
+
+msgid "peak memory"
+msgstr "mémoire max."
+
+msgid "No run yet for this command."
+msgstr "Aucune exécution pour cette commande."
+
+msgid "Stop"
+msgstr "Arrêter"
+
+msgid "Stop this command? What is already written stays written."
+msgstr "Arrêter cette commande ? Ce qui est déjà écrit le reste."
+
+msgid "Stop requested…"
+msgstr "Arrêt demandé…"
+
+msgid "This command WRITES (database, CouchDB or S3). Run it?"
+msgstr "Cette commande ÉCRIT (base de données, CouchDB ou S3). La lancer ?"
+
+msgid "Another command is running: wait for it to finish (one command at a time)."
+msgstr "Une autre commande est en cours : attendez sa fin (une seule commande à la fois)."
+
+msgid "(all)"
+msgstr "(toutes)"
+
+msgid "Type at least 2 characters"
+msgstr "Saisir au moins 2 caractères"
+
+msgid "No option."
+msgstr "Aucune option."
+
+msgid "Equivalent command"
+msgstr "Commande équivalente"
+
+msgid "Choose a command above."
+msgstr "Choisir une commande ci-dessus."
+
+msgid "Unknown command."
+msgstr "Commande inconnue."
+
+msgid "Export zone supervisors and cantons (Excel)"
+msgstr "Exporter les SZ et les cantons (Excel)"
+
+msgid "Zone supervisors with their cantons, and the cantons with their zone supervisor (selected projects and area)"
+msgstr "Superviseurs de zone avec leurs cantons, et cantons avec leur superviseur de zone (projets et zone choisis)"
