@@ -172,6 +172,16 @@ class Facilitator(BaseModel):
             facilitator_db = nsc.create_db(self.no_sql_db_name)
             if replicate_design:
                 nsc.replicate_design_db(facilitator_db)
+            # Vues CouchDB attendues par l'application mobile (copiées de `process_design`), quel que soit
+            # `replicate_design` : toutes les créations passent replicate_design=False et la base `design`
+            # n'existe pas. Un échec ne bloque pas la création : `ensure_facilitator_design_docs` rattrape.
+            try:
+                statuses = nsc.ensure_design_docs(facilitator_db)
+                failed = {k: v for k, v in statuses.items() if v != "created"}
+                if failed:
+                    print("Design documents not installed for", self.no_sql_db_name, failed)
+            except Exception as exc:
+                print("Design documents not installed for", self.no_sql_db_name, exc)
             nsc.add_member_to_database(facilitator_db, self.no_sql_user)
 
         if self.password and self.password != self.__current_password:

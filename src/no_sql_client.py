@@ -1,9 +1,30 @@
+import json
+
 from django.conf import settings
 
 
 # Réglages d'une pièce jointe de tâche (Task.attachments) recopiés sur les
 # tâches déjà distribuées, le fichier saisi restant inchangé.
 ATTACHMENT_CONFIG_KEYS = ("optional", "conditions", "file_type", "share")
+
+# Documents de conception (vues CouchDB) attendus dans chaque base facilitateur. La version de
+# référence est celle de la base `process_design`. L'application mobile en dépend :
+# - `_design/task_stats` (vue `status_count_full`) : statistiques des tâches par village. Sans elle,
+#   la liste des CVD du « Cycle d'investissement » reste vide (fetchTaskStatsFull) ;
+# - `_design/tasks_number` : nombres de tâches / dernières activités (tableaux de bord web) ;
+# - `_design/views_docs` : tâches planifiées triées par date (planning).
+DESIGN_SOURCE_DB = "process_design"
+FACILITATOR_DESIGN_DOC_IDS = ("_design/task_stats", "_design/tasks_number", "_design/views_docs")
+
+
+def _comparable_design(doc):
+    """Contenu d'un document de conception sans les métadonnées CouchDB, pour comparer deux versions.
+    Ignore ce que cloudant (DesignDocument) ajoute sans effet : `options: {partitioned: false}` et les
+    sections vides (`lists: {}`, `indexes: {}`, `shows: {}`...)."""
+    doc = {k: v for k, v in (doc or {}).items() if k not in ("_id", "_rev") and v not in ({}, None)}
+    if doc.get("options") == {"partitioned": False}:
+        doc.pop("options")
+    return doc
 
 
 class NoSQLClient:
@@ -174,6 +195,73 @@ class NoSQLClient:
     def replicate_design_db(self, target_db, **kwargs):
         source_db = self.get_db('design')
         return self.create_replication(source_db, target_db, **kwargs)
+
+    def _raw_get(self, db, doc_id):
+        """Document brut (dict) ou None s'il n'existe pas. Passe par HTTP plutôt que par les objets
+        Document/DesignDocument de cloudant, qui gardent un cache et ajoutent des champs par défaut."""
+        resp = self.client.r_session.get(f"{db.database_url}/{doc_id}")
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.json()
+
+    def ensure_design_docs(self, target_db, ddoc_ids=FACILITATOR_DESIGN_DOC_IDS, source_db_name=DESIGN_SOURCE_DB,
+                           update=False, dry_run=False, source_docs=None):
+        """Copie dans `target_db` les documents de conception `ddoc_ids` de la base `source_db_name`.
+
+        Un document absent est créé. Un document présent n'est réécrit qu'avec `update=True` et seulement
+        s'il diffère de la source. `dry_run=True` n'écrit rien. `source_docs` ({id: doc}) évite de relire
+        la source pour chaque base quand on en traite beaucoup (cf. `load_design_docs`).
+
+        Renvoie {ddoc_id: statut} avec statut parmi : created, updated, unchanged, outdated (diffère, non
+        réécrit), missing_in_source, conflict, error: <message>.
+        """
+        if source_docs is None:
+            source_docs = self.load_design_docs(ddoc_ids, source_db_name)
+        result = {}
+        for ddoc_id in ddoc_ids:
+            source = source_docs.get(ddoc_id)
+            if not source:
+                result[ddoc_id] = "missing_in_source"
+                continue
+            try:
+                current = self._raw_get(target_db, ddoc_id)
+                body = {k: v for k, v in source.items() if k not in ("_id", "_rev")}
+                if current is None:
+                    status = "created"
+                elif _comparable_design(current) == _comparable_design(source):
+                    result[ddoc_id] = "unchanged"
+                    continue
+                elif not update:
+                    result[ddoc_id] = "outdated"
+                    continue
+                else:
+                    status = "updated"
+                    body["_rev"] = current["_rev"]
+
+                if not dry_run:
+                    resp = self.client.r_session.put(
+                        f"{target_db.database_url}/{ddoc_id}", data=json.dumps(body),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    if resp.status_code == 409:
+                        result[ddoc_id] = "conflict"
+                        continue
+                    resp.raise_for_status()
+                result[ddoc_id] = status
+            except Exception as exc:  # noqa: BLE001 - une base en erreur ne doit pas arrêter les autres
+                result[ddoc_id] = f"error: {exc}"
+        return result
+
+    def load_design_docs(self, ddoc_ids=FACILITATOR_DESIGN_DOC_IDS, source_db_name=DESIGN_SOURCE_DB):
+        """{ddoc_id: document} des documents de conception de référence (absents ignorés)."""
+        source_db = self.get_db(source_db_name)
+        docs = {}
+        for ddoc_id in ddoc_ids:
+            doc = self._raw_get(source_db, ddoc_id)
+            if doc:
+                docs[ddoc_id] = doc
+        return docs
 
     def add_member_to_database(self, db, username, roles=None):
         security_doc = db.get_security_document()
