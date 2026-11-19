@@ -1,0 +1,10 @@
+{% load i18n %}{# Groupes d'utilisateurs autorisés à charger (mobile) et remplir le formulaire (création, import). `af` = formulaire, `uid` = suffixe unique. #}
+<div class="form-group cc-access-groups">
+    <label for="cc-ag-{{ uid }}">{{ af.access_groups.label }}</label>
+    <select name="access_groups" id="cc-ag-{{ uid }}" multiple class="form-control" style="width:100%" data-placeholder="{% translate 'All the connected users' %}">
+        {% for g in af.fields.access_groups.queryset %}
+            <option value="{{ g.pk }}">{% translate g.name %}</option>
+        {% endfor %}
+    </select>
+    <small class="form-text text-muted">{% translate "Empty: every connected user can load and fill in the form (web and mobile). Otherwise only the members of these groups (a facilitator belongs to the Facilitator group and to the group of their type). Users and facilitators can be added one by one in the Settings. The creator and the administrators always keep access." %}</small>
+</div>

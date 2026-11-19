@@ -1,0 +1,290 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
+    <style>
+        .cc-tm-card { background: #fff; border: 1px solid rgba(0,0,0,.08); border-radius: .75rem; padding: 1rem 1.1rem; margin-bottom: 1rem; }
+        .cc-tm-card h6 { font-weight: 600; margin-bottom: .75rem; }
+        .cc-tm-log { max-height: 360px; overflow: auto; background: #1e1e1e; color: #e6e6e6; font-size: .78rem; padding: .75rem; border-radius: .5rem; white-space: pre-wrap; word-break: break-word; }
+        .cc-tm-counts span { display: inline-block; margin: 0 .35rem .35rem 0; }
+        .cc-tm-cmd { font-family: monospace; font-size: .75rem; background: #f6f8fa; border-radius: .35rem; padding: .3rem .5rem; word-break: break-all; }
+        .cc-tm-match { font-size: .85rem; }
+        .cc-tm-history td { font-size: .82rem; vertical-align: middle; }
+    </style>
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+<div class="cc-banner alert-info small">
+    <i class="fas fa-info-circle mr-1"></i>
+    {% translate "Copies the records of this form (by default the SENT ones) into the matching task of the investment cycle (command migrate_cosocollect_to_tasks): the most recent record per village, files with the attachments, a canton record to all its villages, a village that is not a CVD headquarters to its headquarters. Start with a simulation, check the result and the report, then import." %}
+</div>
+
+<form id="cc-tm-form" onsubmit="return false;" autocomplete="off">
+    {% csrf_token %}
+    <div class="cc-tm-card">
+        <h6><i class="fas fa-sliders-h mr-1"></i>{% translate "Options" %}</h6>
+        <div class="form-row">
+            <div class="col-md-4 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-project">{% translate "Project" %} (--project)</label>
+                <select name="project" id="cc-tm-project" class="form-control form-control-sm">
+                    {% for p in projects %}
+                        <option value="{{ p.id }}" {% if p.id == default_project %}selected{% endif %}>{{ p.name }}{% if p.id in linked_projects %} ★{% endif %}</option>
+                    {% endfor %}
+                </select>
+                {% if linked_projects %}<small class="text-muted">★ {% translate "projects linked to this form" %}</small>{% endif %}
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-cycle">{% translate "Cycle" %} (--cycle)</label>
+                <select name="cycle" id="cc-tm-cycle" class="form-control form-control-sm"></select>
+            </div>
+            <div class="col-md-5 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-task">{% translate "Task" %} (--map)</label>
+                <select name="task" id="cc-tm-task" class="form-control form-control-sm"></select>
+                <div id="cc-tm-match" class="cc-tm-match mt-1"></div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-8 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-villages">{% translate "Only these administrative levels (region, prefecture, commune, canton, village)" %} (--village)</label>
+                <select id="cc-tm-villages" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All the villages' %}"></select>
+                <input type="hidden" name="villages" id="cc-tm-villages-ids">
+            </div>
+            <div class="col-md-4 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-min-score">{% translate "Title match threshold" %} (--min-score)</label>
+                <input type="number" step="0.01" min="0" max="1" name="min_score" id="cc-tm-min-score" value="{{ default_min_score }}" class="form-control form-control-sm">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-12 mb-2">
+                <label class="small text-muted mb-1 d-block">{% translate "Status of the records to copy" %} (--status)</label>
+                {% for s in record_statuses %}
+                    <div class="custom-control custom-checkbox custom-control-inline">
+                        <input type="checkbox" class="custom-control-input cc-tm-status" name="statuses" id="cc-tm-status-{{ s.key }}" value="{{ s.key }}" {% if s.default %}checked{% endif %}>
+                        <label class="custom-control-label small" for="cc-tm-status-{{ s.key }}">{{ s.label }} <span class="text-muted">({{ s.count }})</span></label>
+                    </div>
+                {% endfor %}
+                <small id="cc-tm-status-warning" class="d-block text-warning" style="display:none !important;">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>{% translate "Records not sent may be incomplete: the task is marked completed all the same." %}
+                </small>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-12 mb-2">
+                <label class="small text-muted mb-1 d-block">{% translate "Accounts whose records are taken into account" %} (--accounts)</label>
+                {% for a in record_accounts %}
+                    <div class="custom-control custom-checkbox custom-control-inline">
+                        <input type="checkbox" class="custom-control-input cc-tm-account" name="accounts" id="cc-tm-account-{{ a.key }}" value="{{ a.key }}" {% if a.default %}checked{% endif %}>
+                        <label class="custom-control-label small" for="cc-tm-account-{{ a.key }}">{{ a.label }} <span class="text-muted">({{ a.count }})</span></label>
+                    </div>
+                {% endfor %}
+                <small class="d-block text-muted">
+                    {% translate "Author of the record (facilitator account, or the facilitator of the web account). The records of the other accounts are ignored: they cannot replace the record of a retained account. The tasks written are always those of the real FC." %}
+                </small>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="col-md-3 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-attachments-by">{% translate "Files -> attachments" %} (--attachments-by)</label>
+                <select name="attachments_by" id="cc-tm-attachments-by" class="form-control form-control-sm">
+                    <option value="name">{% translate "by name" %}</option>
+                    <option value="order">{% translate "by order" %}</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-files">{% translate "Files" %} (--files)</label>
+                <select name="files" id="cc-tm-files" class="form-control form-control-sm">
+                    <option value="copy">{% translate "copy for the task" %}</option>
+                    <option value="link">{% translate "link to the COSOCollect file" %}</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-2 pt-md-4">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" name="no_overwrite" id="cc-tm-no-overwrite" value="1">
+                    <label class="custom-control-label small" for="cc-tm-no-overwrite">{% translate "Do not overwrite a task already filled" %} (--no-overwrite)</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" name="force" id="cc-tm-force" value="1">
+                    <label class="custom-control-label small" for="cc-tm-force">{% translate "Rewrite even an up-to-date document; undo: restore even a modified one" %} (--force)</label>
+                </div>
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" name="force_validated" id="cc-tm-force-validated" value="1">
+                    <label class="custom-control-label small text-danger" for="cc-tm-force-validated">{% translate "Also replace the data of VALIDATED tasks (validation kept)" %} (--force-validated)</label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row align-items-end">
+            <div class="col-md-6 mb-2">
+                <label class="small text-muted mb-1" for="cc-tm-action">{% translate "Action" %}</label>
+                <select name="action" id="cc-tm-action" class="form-control form-control-sm">
+                    {% for key, label in actions %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 mb-2">
+                <button type="button" id="cc-tm-run" class="btn btn-sm btn-primary btn-block rounded-xl">
+                    <i class="fas fa-play mr-1"></i>{% translate "Run" %}
+                </button>
+            </div>
+        </div>
+        <div id="cc-tm-message" class="small"></div>
+    </div>
+</form>
+
+<div class="cc-tm-card">
+    <h6><i class="fas fa-tasks mr-1"></i>{% translate "Last run" %}</h6>
+    <div id="cc-tm-status"></div>
+</div>
+<div class="cc-tm-card">
+    <h6><i class="fas fa-history mr-1"></i>{% translate "Previous runs" %}</h6>
+    <div id="cc-tm-history"></div>
+</div>
+
+{{ migration_i18n|json_script:"cc-tm-i18n" }}
+<script id="cc-tm-cycles" type="application/json">[{% for c in cycles %}{"id": {{ c.id }}, "project": {{ c.project_id }}, "name": "{{ c.name|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]</script>
+<script id="cc-tm-config" type="application/json">{"default_cycle": {{ default_cycle|default:"null" }}, "tasks": "{% url 'dashboard:coso_collect:task_migration_tasks' collect_form.pk %}", "levels": "{% url 'dashboard:coso_collect:task_migration_levels' collect_form.pk %}", "start": "{% url 'dashboard:coso_collect:task_migration_start' collect_form.pk %}", "status": "{% url 'dashboard:coso_collect:task_migration_status' collect_form.pk %}"}</script>
+{% endblock %}
+
+{% block select2 %}
+<script>
+$(function () {
+    var T = JSON.parse(document.getElementById("cc-tm-i18n").textContent);
+    var CYCLES = JSON.parse(document.getElementById("cc-tm-cycles").textContent);
+    var CFG = JSON.parse(document.getElementById("cc-tm-config").textContent);
+    var running = false, timer = null;
+
+    function esc(v) { return $("<div>").text(v == null ? "" : String(v)).html(); }
+    function dur(s) {
+        s = Math.max(0, s | 0);
+        var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+        return (h ? h + " h " : "") + (h || m ? m + " min " : "") + r + " s";
+    }
+
+    var $project = $("#cc-tm-project"), $cycle = $("#cc-tm-cycle"), $task = $("#cc-tm-task");
+    $("#cc-tm-project, #cc-tm-cycle, #cc-tm-task, #cc-tm-attachments-by, #cc-tm-files, #cc-tm-action").select2({ width: "100%" });
+    $("#cc-tm-villages").select2({
+        width: "100%", placeholder: $("#cc-tm-villages").data("placeholder"), minimumInputLength: 2,
+        ajax: { url: CFG.levels, delay: 250, dataType: "json", data: function (p) { return { q: p.term }; } }
+    });
+
+    function fillCycles(keep) {
+        var pid = parseInt($project.val(), 10);
+        $cycle.empty();
+        CYCLES.filter(function (c) { return c.project === pid; }).forEach(function (c) {
+            $cycle.append(new Option(c.name, c.id, false, c.id === keep));
+        });
+        $cycle.trigger("change.select2");
+    }
+    function loadTasks() {
+        $task.empty().append(new Option(T.auto, "", true, true)).trigger("change.select2");
+        $("#cc-tm-match").empty();
+        if (!$cycle.val()) return;
+        $.getJSON(CFG.tasks, { project: $project.val(), cycle: $cycle.val() }).done(function (data) {
+            data.tasks.forEach(function (t) { $task.append(new Option(t.text, t.id)); });
+            $task.trigger("change.select2");
+            var m = data.match, html;
+            if (m && m.task) {
+                html = '<span class="text-success"><i class="fas fa-link mr-1"></i>' + esc(T.matched) + " : " + esc(m.task) +
+                       " (" + esc(m.method) + ", " + esc(m.score) + ")</span>";
+            } else if (m) {
+                html = '<span class="text-danger"><i class="fas fa-unlink mr-1"></i>' + esc(T.none) +
+                       (T[m.method] ? " — " + esc(T[m.method]) : "") + "</span>";
+                if (m.candidates.length) html += '<br><span class="text-muted">? ' + m.candidates.map(esc).join("<br>? ") + "</span>";
+            }
+            $("#cc-tm-match").html(html || "");
+        });
+    }
+    $project.on("change", function () { fillCycles(null); loadTasks(); });
+    $cycle.on("change", loadTasks);
+    fillCycles(CFG.default_cycle);
+    loadTasks();
+
+    // Avertissement dès qu'un statut autre que « Envoyée » est coché
+    function statusWarning() {
+        var others = $(".cc-tm-status:checked").filter(function () { return this.value !== "submitted"; }).length;
+        $("#cc-tm-status-warning").attr("style", others ? "" : "display:none !important;");
+    }
+    $(".cc-tm-status").on("change", statusWarning);
+    statusWarning();
+
+    function counts(run) {
+        var keys = Object.keys(run.counts || {});
+        if (!keys.length) return "";
+        return '<div class="cc-tm-counts mt-2">' + keys.map(function (k) {
+            var bad = ["error", "missing_doc", "no_common_fields"].indexOf(k) !== -1;
+            return '<span class="badge badge-' + (bad ? "danger" : "light") + '">' + esc((T.statuses || {})[k] || k) + " : " + esc(run.counts[k]) + "</span>";
+        }).join("") + "</div>";
+    }
+    function statusBadge(run) {
+        var cls = { running: "primary", done: "success", failed: "danger", interrupted: "warning" }[run.status] || "secondary";
+        return '<span class="badge badge-' + cls + '">' + (run.running ? '<i class="fa fa-spinner fa-spin mr-1"></i>' : "") + esc(T[run.status] || run.status) + "</span>";
+    }
+    function renderRun(run) {
+        if (!run) return '<p class="small text-muted mb-0">' + esc(T.no_run) + "</p>";
+        var html = '<div class="d-flex flex-wrap align-items-center" style="gap:.5rem;">' + statusBadge(run) +
+            "<strong>" + esc(run.action_label) + "</strong>" +
+            '<span class="small text-muted">' + esc(run.started_at) + (run.started_by ? ", " + esc(T.started_by) + " " + esc(run.started_by) : "") +
+            " — " + esc(T.elapsed) + " " + dur(run.elapsed) + (run.running ? " — " + esc(T.silent) + " " + dur(run.silent_for) : "") + "</span></div>";
+        if (run.command) html += '<div class="cc-tm-cmd mt-2">' + esc(run.command) + "</div>";
+        if (run.phase) {
+            var label = run.phase === "write" ? (run.writes ? T.phase_write : T.phase_write_dry) : T["phase_" + run.phase];
+            var pct = run.total ? Math.min(100, Math.round(100 * run.done / run.total)) : (run.running ? 0 : 100);
+            html += '<div class="small mt-2">' + esc(label) + " : " + esc(run.done) + " / " + esc(run.total) +
+                    (run.current && run.running ? ' <span class="text-muted">(' + esc(run.current) + ")</span>" : "") + "</div>" +
+                    '<div class="progress mt-1" style="height: 1.1rem;"><div class="progress-bar' + (run.running ? " progress-bar-striped progress-bar-animated" : "") +
+                    (run.status === "failed" ? " bg-danger" : run.status === "done" ? " bg-success" : "") +
+                    '" role="progressbar" style="width:' + pct + '%">' + pct + " %</div></div>";
+        }
+        html += counts(run);
+        if (run.error) html += '<div class="alert alert-danger small mt-2 mb-0"><strong>' + esc(T.error) + " :</strong> " + esc(run.error) + "</div>";
+        if (run.report_url) html += '<a class="btn btn-sm btn-outline-primary rounded-xl mt-2" href="' + esc(run.report_url) + '"><i class="fas fa-file-csv mr-1"></i>' + esc(T.report) + "</a>";
+        if (run.log) html += '<div class="small text-muted mt-3 mb-1">' + esc(T.log) + '</div><pre class="cc-tm-log mb-0">' + esc(run.log) + "</pre>";
+        return html;
+    }
+    function renderHistory(runs) {
+        var older = runs.slice(1);
+        if (!older.length) return '<p class="small text-muted mb-0">—</p>';
+        return '<table class="table table-sm cc-tm-history mb-0"><tbody>' + older.map(function (r) {
+            return "<tr><td>" + statusBadge(r) + "</td><td>" + esc(r.action_label) + '</td><td class="text-muted">' + esc(r.started_at) +
+                   (r.started_by ? " — " + esc(r.started_by) : "") + "</td><td>" + dur(r.elapsed) + "</td><td>" + counts(r) + "</td><td>" +
+                   (r.report_url ? '<a href="' + esc(r.report_url) + '"><i class="fas fa-file-csv"></i> CSV</a>' : "") + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    }
+    function show(data) {
+        var runs = data.runs || [];
+        running = !!data.running;
+        var $log = $("#cc-tm-status .cc-tm-log"), atBottom = !$log.length || $log[0].scrollTop + $log[0].clientHeight >= $log[0].scrollHeight - 20;
+        $("#cc-tm-status").html(renderRun(runs[0]));
+        $log = $("#cc-tm-status .cc-tm-log");
+        if ($log.length && atBottom) $log[0].scrollTop = $log[0].scrollHeight;
+        $("#cc-tm-history").html(renderHistory(runs));
+        $("#cc-tm-run").prop("disabled", running);
+    }
+    function poll() {
+        clearTimeout(timer);
+        $.getJSON(CFG.status).done(function (data) {
+            show(data);
+            if (data.running) timer = setTimeout(poll, 2000);
+        });
+    }
+    poll();
+
+    $("#cc-tm-run").on("click", function () {
+        var action = $("#cc-tm-action").val();
+        if ((action === "apply" || action === "undo_apply") && !window.confirm(T.confirm_write)) return;
+        $("#cc-tm-villages-ids").val(($("#cc-tm-villages").val() || []).join(","));
+        var $msg = $("#cc-tm-message").removeClass("text-danger text-success").text("");
+        $("#cc-tm-run").prop("disabled", true);
+        $.ajax({ url: CFG.start, method: "POST", data: $("#cc-tm-form").serialize(), dataType: "json" })
+            .done(function () { poll(); })
+            .fail(function (xhr) {
+                var r = xhr.responseJSON || {}, details = [];
+                Object.keys(r.errors || {}).forEach(function (k) { details.push(k + " : " + r.errors[k].join(" ")); });
+                $msg.addClass("text-danger").text((r.message || xhr.statusText) + (details.length ? " — " + details.join(" ; ") : ""));
+                poll();
+            });
+    });
+});
+</script>
+{% endblock select2 %}

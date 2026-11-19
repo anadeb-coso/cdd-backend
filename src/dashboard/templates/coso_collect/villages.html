@@ -1,0 +1,243 @@
+{% extends 'layouts/base.html' %}
+{% load static i18n %}
+
+{% block extracss %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
+    <style>
+        .cc-vc-cands { list-style: none; padding: 0; margin: 0; }
+        .cc-vc-cands li { margin-bottom: .15rem; }
+        .cc-vc-score { display: inline-block; min-width: 2.8rem; text-align: right; }
+        .cc-vc-row.cc-vc-sure { background: rgba(40, 167, 69, .06); }
+    </style>
+{% endblock %}
+
+{% block content %}
+{% include "coso_collect/_admin_header.html" %}
+
+{% if not village_field %}
+    <div class="cc-banner alert-secondary"><i class="fas fa-info-circle mr-1"></i>{% translate "This form has no village question." %}</div>
+{% else %}
+<div class="cc-banner alert-info small">
+    <i class="fas fa-info-circle mr-1"></i>
+    {% blocktranslate with label=village_field.label %}Records whose village (question « {{ label }} ») no longer matches a village of the database: identifier deleted, name changed since the record, or name typed instead of an identifier. For each one, the most likely villages are proposed (close name, same canton or commune as the record).{% endblocktranslate %}
+    {% translate "Without a good proposal for the known name, the words of the record title (often « canton_village_date ») are tried too." %}
+</div>
+
+<form method="get" class="cc-filters">
+    <div class="form-row align-items-end">
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Search" %}</label>
+            <input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="{% translate 'Combined title' %}">
+        </div>
+        <div class="col-md-3 mb-2">
+            <label class="small text-muted mb-1">{% translate "Status" %}</label>
+            <select name="status" class="form-control form-control-sm" multiple data-placeholder="{% translate 'All' %}">
+                {% for key, label in statuses %}<option value="{{ key }}" {% if key in selected_statuses %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 mb-2">
+            <label class="small text-muted mb-1">{% translate "Problem" %}</label>
+            <select name="problem" class="form-control form-control-sm">
+                <option value="">{% translate "All" %} ({{ issues_total }})</option>
+                {% for key, label in problem_labels.items %}
+                    <option value="{{ key }}" {% if key == selected_problem %}selected{% endif %}>{{ label }} ({% for k, n in problem_counts.items %}{% if k == key %}{{ n }}{% endif %}{% endfor %})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 mb-2">
+            <button class="btn btn-sm btn-primary btn-block">{% translate "Filter" %}</button>
+        </div>
+    </div>
+</form>
+
+{% if not issues_page.object_list %}
+    <div class="cc-banner alert-success"><i class="fas fa-check-circle mr-1"></i>{% translate "All the villages of the records exist in the database." %}</div>
+{% else %}
+<form method="post" action="{% url 'dashboard:coso_collect:villages_relink' collect_form.pk %}" id="cc-vc-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    {# Ligne seule : portée par un champ caché (disableOnSubmit.js désactive les boutons, qui n'envoient alors plus leur valeur). #}
+    <input type="hidden" name="only" id="cc-vc-only" value="">
+    {% if rights.edit_data %}
+    <div class="d-flex flex-wrap align-items-center mb-2" style="gap:.75rem;">
+        <div class="custom-control custom-checkbox">
+            <input type="checkbox" class="custom-control-input" id="cc-vc-parents" name="update_parents" value="1" checked>
+            <label class="custom-control-label small" for="cc-vc-parents">
+                {% translate "Also update the other location questions of the record with the parents of the chosen village" %}{% if other_geo_fields %} ({{ other_geo_fields|join:", " }}){% endif %}
+            </label>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-success" id="cc-vc-pick-sure" {% if not sure_count %}disabled{% endif %}>
+            <i class="fas fa-check-double mr-1"></i>{% blocktranslate count counter=sure_count %}Select the {{ counter }} sure proposal{% plural %}Select the {{ counter }} sure proposals{% endblocktranslate %}
+        </button>
+        <button type="submit" class="btn btn-sm btn-primary" id="cc-vc-apply-selected" disabled
+                data-confirm="{% translate 'Change the village of %(count)s record(s)?' %}">
+            <i class="fas fa-link mr-1"></i>{% translate "Apply to the selected lines" %} (<span id="cc-vc-count">0</span>)
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="card"><div class="card-body p-0 table-responsive">
+        <table class="table table-sm table-hover mb-0 cc-table">
+            <thead>
+            <tr>
+                {% if rights.edit_data %}<th style="width:1%;"><input type="checkbox" id="cc-vc-all"></th>{% endif %}
+                <th>{% translate "Record" %}</th>
+                <th>{% translate "Village in the record" %}</th>
+                <th>{% translate "Problem" %}</th>
+                <th>{% translate "Proposed villages" %}</th>
+                {% if rights.edit_data %}<th style="min-width:280px;">{% translate "New village" %}</th>{% endif %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for issue in issues_page.object_list %}
+                {% with idx=forloop.counter0 sub=issue.submission %}
+                <tr class="cc-vc-row{% if issue.sure %} cc-vc-sure{% endif %}" data-sure="{{ issue.sure|default:'' }}">
+                    {% if rights.edit_data %}
+                    <td>
+                        <input type="checkbox" class="cc-vc-pick" name="pick" value="{{ idx }}">
+                        <input type="hidden" name="uuid-{{ idx }}" value="{{ sub.uuid }}">
+                        <input type="hidden" name="value-{{ idx }}" value="{{ issue.value }}">
+                    </td>
+                    {% endif %}
+                    <td>
+                        <a href="{% url 'dashboard:coso_collect:submission' sub.uuid %}" target="_blank">{{ sub.title|default:sub.uuid }}</a>
+                        <div class="small text-muted">{{ sub.author_name }} · {{ sub.created_at|date:"d/m/Y H:i" }} · {% include "coso_collect/_submission_status.html" with submission=sub %}</div>
+                    </td>
+                    <td>
+                        <code>{{ issue.value }}</code>
+                        {% if issue.recorded_name and issue.problem != 'text' %}<div>{{ issue.recorded_name }}</div>{% endif %}
+                        {% if issue.canton or issue.commune %}<div class="small text-muted">{% if issue.canton %}{% translate "Canton" %} : {{ issue.canton }}{% endif %}{% if issue.commune %} · {% translate "Commune" %} : {{ issue.commune }}{% endif %}</div>{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if issue.problem == 'unknown_id' %}badge-danger{% elif issue.problem == 'renamed' %}badge-warning{% else %}badge-info{% endif %}">{{ issue.problem_label }}</span>
+                        {% if issue.problem == 'renamed' %}<div class="small">{% translate "Now" %} : <b>{{ issue.db_name }}</b></div>{% endif %}
+                    </td>
+                    <td>
+                        {% if issue.candidates %}
+                        <ul class="cc-vc-cands small">
+                            {% for c in issue.candidates|slice:":6" %}
+                                <li>
+                                    {% if c.score is not None %}<span class="badge {% if c.exact %}badge-success{% else %}badge-light{% endif %} cc-vc-score">{{ c.score }} %</span>{% endif %}
+                                    <b>{{ c.name }}</b> <span class="text-muted">— {{ c.path }}</span>
+                                    {% if c.same_canton %}<span class="badge badge-secondary">{% translate "same canton" %}</span>{% endif %}
+                                    {% if c.current %}<span class="badge badge-warning">{% translate "current identifier" %}</span>{% endif %}
+                                    {% if c.title_hint %}<span class="badge badge-info" title="{% translate 'Name found in the title of the record' %}">{% blocktranslate with hint=c.title_hint %}from the title: « {{ hint }} »{% endblocktranslate %}</span>{% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                            <span class="small text-muted">{% translate "No close village: search one in the list." %}</span>
+                        {% endif %}
+                    </td>
+                    {% if rights.edit_data %}
+                    <td>
+                        <div class="d-flex" style="gap:.35rem;">
+                            <select name="village-{{ idx }}" class="form-control form-control-sm cc-village-choice" style="width:100%;"
+                                    data-placeholder="{% translate 'Search a village' %}">
+                                <option value=""></option>
+                                {% for c in issue.candidates %}
+                                    <option value="{{ c.id }}" {% if c.id == issue.sure %}selected{% endif %}>{{ c.name }} — {{ c.path }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary cc-vc-apply-one" data-idx="{{ idx }}" title="{% translate 'Apply to this record' %}">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div></div>
+</form>
+{% with page_obj=issues_page %}{% include "coso_collect/_pagination.html" %}{% endwith %}
+{% endif %}
+{% endif %}
+{% endblock content %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% if rights.edit_data and issues_page.object_list %}
+    <script>
+        $(function () {
+            var searchUrl = "{% url 'dashboard:coso_collect:villages_search' collect_form.pk %}";
+            function normalize(text) {
+                return (text || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+            }
+            // Choix du nouveau village : villages proposés (liste vide = propositions), sinon recherche par nom
+            // dans tous les villages de la base (au moins 2 lettres).
+            $(".cc-village-choice").each(function () {
+                var $sel = $(this);
+                var proposed = $sel.find("option").filter(function () { return this.value; })
+                    .map(function () { return { id: this.value, text: $(this).text() }; }).get();
+                $sel.select2({
+                    width: "100%", placeholder: $sel.data("placeholder"), allowClear: true,
+                    language: {
+                        noResults: function () { return "{% translate 'No results found' %}"; },
+                        searching: function () { return "{% translate 'Searching…' %}"; }
+                    },
+                    ajax: {
+                        delay: 250,
+                        transport: function (params, success, failure) {
+                            var term = (params.data && params.data.q) || "";
+                            if (normalize(term).length < 2) {
+                                var hits = proposed.filter(function (o) { return normalize(o.text).indexOf(normalize(term)) !== -1; });
+                                success({ results: hits });
+                                return { abort: function () {} };
+                            }
+                            return $.ajax({ url: searchUrl, data: { q: term }, dataType: "json" }).then(success, failure);
+                        }
+                    }
+                });
+            });
+            var $picks = $(".cc-vc-pick"), $all = $("#cc-vc-all"), $apply = $("#cc-vc-apply-selected");
+            function refresh() {
+                var n = $picks.filter(":checked").length;
+                $("#cc-vc-count").text(n);
+                $apply.prop("disabled", n === 0);
+                $all.prop("checked", n > 0 && n === $picks.length).prop("indeterminate", n > 0 && n < $picks.length);
+            }
+            $all.on("change", function () { $picks.prop("checked", this.checked); refresh(); });
+            $picks.on("change", refresh);
+            // Choisir un village coche la ligne.
+            $(".cc-village-choice").on("change", function () {
+                $(this).closest("tr").find(".cc-vc-pick").prop("checked", !!this.value);
+                refresh();
+            });
+            $("#cc-vc-pick-sure").on("click", function () {
+                $(".cc-vc-row").each(function () {
+                    var sure = this.getAttribute("data-sure");
+                    if (sure) {
+                        $(this).find(".cc-village-choice").val(sure).trigger("change.select2");
+                        $(this).find(".cc-vc-pick").prop("checked", true);
+                    }
+                });
+                refresh();
+            });
+            $apply.on("click", function (e) {
+                $("#cc-vc-only").val("");
+                var n = $picks.filter(":checked").length;
+                if (n === 0 || !confirm($(this).data("confirm").replace("%(count)s", n))) { e.preventDefault(); }
+            });
+            $(".cc-vc-apply-one").on("click", function (e) {
+                var idx = this.getAttribute("data-idx");
+                if (!$("[name='village-" + idx + "']").val()) {
+                    e.preventDefault();
+                    alert("{% translate 'Choose a village first.' %}");
+                    return;
+                }
+                $("#cc-vc-only").val(idx);
+            });
+            refresh();
+        });
+    </script>
+    {% endif %}
+{% endblock %}
+
+{% block select2 %}
+    <script>
+        $(function () { $("select:not(.cc-village-choice)").select2({ width: "100%" }); });
+    </script>
+{% endblock select2 %}

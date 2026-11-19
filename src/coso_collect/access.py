@@ -139,10 +139,17 @@ def administered_forms(user):
 
 
 def _group_ids(actor):
+    """Groupes de la personne : ceux de ses comptes web, plus, pour un compte facilitateur, « Facilitator » et le
+    groupe de SON type (CommunityFacilitator ou TechnicalFacilitator — pas les deux : un formulaire ouvert au
+    groupe des FT n'est pas proposé aux FC)."""
+    from authentication import FACILITATOR_TYPE_TO_GROUP_NAME
+    from authentication.models import Facilitator
     users, facilitators = accounts(actor)
     group_ids = set(Group.objects.filter(user__in=users).values_list('pk', flat=True))
     if facilitators:
-        group_ids |= set(Group.objects.filter(name__in=('Facilitator',) + FACILITATOR_GROUPS).values_list('pk', flat=True))
+        types = set(Facilitator.objects.filter(pk__in=facilitators).values_list('facilitator_type', flat=True))
+        names = {'Facilitator'} | {FACILITATOR_TYPE_TO_GROUP_NAME[t] for t in types if t in FACILITATOR_TYPE_TO_GROUP_NAME}
+        group_ids |= set(Group.objects.filter(name__in=names).values_list('pk', flat=True))
     return group_ids
 
 

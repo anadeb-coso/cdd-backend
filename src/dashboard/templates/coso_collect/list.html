@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -125,6 +125,7 @@
                     <label for="id_description">{% translate "Description" %}</label>
                     {{ create_form.description }}
                 </div>
+                {% include "coso_collect/_access_groups_fields.html" with af=create_form uid="create" %}
                 {% include "coso_collect/_project_scope_fields.html" with pf=create_form uid="create" %}
             </div>
             <div class="modal-footer">
@@ -145,6 +146,7 @@
             <div class="modal-body">
                 <p class="text-muted small">{% translate "XLSForm workbook (.xlsx, e.g. exported from kobocollect or from this application) or COSOCollect file (.json). The combined title is read from the instance_name setting." %}</p>
                 <input type="file" name="file" accept=".xlsx,.json" class="form-control-file mb-3" required>
+                {% include "coso_collect/_access_groups_fields.html" with af=import_scope_form uid="import" %}
                 {% include "coso_collect/_project_scope_fields.html" with pf=import_scope_form uid="import" %}
             </div>
             <div class="modal-footer">

@@ -57,6 +57,9 @@
     <a class="{% if tab == 'data' %}active{% endif %}" href="{% url 'dashboard:coso_collect:data' collect_form.pk %}"><i class="fas fa-table mr-1"></i>{% translate "Data" %}</a>
     <a class="{% if tab == 'gallery' %}active{% endif %}" href="{% url 'dashboard:coso_collect:gallery' collect_form.pk %}"><i class="fas fa-images mr-1"></i>{% translate "Photos & documents" %}</a>
     <a class="{% if tab == 'map' %}active{% endif %}" href="{% url 'dashboard:coso_collect:map' collect_form.pk %}"><i class="fas fa-map-marked-alt mr-1"></i>{% translate "Map" %}</a>
+    {% if has_village_field %}
+    <a class="{% if tab == 'villages' %}active{% endif %}" href="{% url 'dashboard:coso_collect:villages' collect_form.pk %}"><i class="fas fa-map-signs mr-1"></i>{% translate "Villages" %}</a>
+    {% endif %}
     {% endif %}
     {% if rights.export %}
     <a class="{% if tab == 'export' %}active{% endif %}" href="{% url 'dashboard:coso_collect:export' collect_form.pk %}"><i class="fas fa-file-download mr-1"></i>{% translate "Downloads" %}</a>
@@ -65,4 +68,7 @@
     <a class="{% if tab == 'builder' %}active{% endif %}" href="{% url 'dashboard:coso_collect:builder' collect_form.pk %}"><i class="fas fa-tools mr-1"></i>{% translate "Form" %}</a>
     {% endif %}
     <a class="{% if tab == 'settings' %}active{% endif %}" href="{% url 'dashboard:coso_collect:settings' collect_form.pk %}"><i class="fas fa-cog mr-1"></i>{% translate "Settings" %}</a>
+    {% if request.user.is_superuser %}
+    <a class="{% if tab == 'task_migration' %}active{% endif %}" href="{% url 'dashboard:coso_collect:task_migration' collect_form.pk %}"><i class="fas fa-file-import mr-1"></i>{% translate "Import into the tasks" %}</a>
+    {% endif %}
 </nav>

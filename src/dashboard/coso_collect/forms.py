@@ -6,14 +6,17 @@ from django.utils.translation import gettext_lazy as _
 from authentication.models import Facilitator
 from coso_collect.models import CollectForm
 from process_manager.models import Project
+from process_manager.project_access import restrict_projects_field
 
 
 class ProjectScopeMixin:
     """Projets liés au formulaire : « Projets choisis » exige au moins un projet ; sinon la liste est vidée."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, current_user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['project_scope'].required = False  # non envoyé : « aucun »
+        # Projets proposés : ceux où intervient l'utilisateur connecté (tous pour un super-administrateur)
+        restrict_projects_field(self, current_user)
 
     def clean(self):
         cleaned = super().clean()
@@ -33,15 +36,36 @@ _PROJECT_WIDGETS = {
 }
 
 
-class ProjectScopeForm(ProjectScopeMixin, forms.ModelForm):
-    """Projets liés, seuls (formulaire importé depuis un fichier)."""
+class AccessGroupsMixin:
+    """Groupes d'utilisateurs qui peuvent charger (mobile) et remplir le formulaire, dès sa création : aucun groupe
+    = tous les comptes connectés ; sinon accès restreint à ces groupes (complété ensuite dans Paramètres :
+    utilisateurs, facilitateurs)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['access_groups'] = forms.ModelMultipleChoiceField(
+            queryset=Group.objects.order_by('name'), required=False, label=_('User groups allowed to fill in the form'),
+            widget=forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'width:100%',
+                                               'data-placeholder': _('All the connected users')}),
+        )
+
+    def apply_access(self, obj):
+        """À appeler après l'enregistrement de `obj` (relation many-to-many)."""
+        groups = list(self.cleaned_data.get('access_groups') or [])
+        obj.access_scope = CollectForm.ACCESS_RESTRICTED if groups else CollectForm.ACCESS_ALL
+        obj.save(update_fields=['access_scope'])
+        obj.allowed_groups.set(groups)
+
+
+class ProjectScopeForm(AccessGroupsMixin, ProjectScopeMixin, forms.ModelForm):
+    """Projets liés et groupes autorisés (formulaire importé depuis un fichier)."""
     class Meta:
         model = CollectForm
         fields = ('project_scope', 'projects')
         widgets = _PROJECT_WIDGETS
 
 
-class CollectFormCreateForm(ProjectScopeMixin, forms.ModelForm):
+class CollectFormCreateForm(AccessGroupsMixin, ProjectScopeMixin, forms.ModelForm):
     class Meta:
         model = CollectForm
         fields = ('title', 'description', 'project_scope', 'projects')
@@ -126,9 +150,10 @@ class AddFormAdminForm(forms.Form):
         widget=forms.SelectMultiple(attrs={'class': 'form-control form-control-sm', 'style': 'width:100%', 'id': 'id_admin_projects'}),
     )
 
-    def __init__(self, collect_form, *args, **kwargs):
+    def __init__(self, collect_form, *args, current_user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.collect_form = collect_form
+        restrict_projects_field(self, current_user)
         self.fields['users'].queryset = self.candidates()
 
     def candidates(self):

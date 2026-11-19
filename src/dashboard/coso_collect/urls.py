@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.coso_collect import views
+from dashboard.coso_collect import views, views_task_migration, views_villages
 
 app_name = 'coso_collect'
 urlpatterns = [
@@ -30,6 +30,22 @@ urlpatterns = [
     path('<int:pk>/gallery/', views.GalleryView.as_view(), name='gallery'),
     path('<int:pk>/map/', views.MapView.as_view(), name='map'),
     path('<int:pk>/export/', views.ExportView.as_view(), name='export'),
+    # Villages disparus de la base : analyse et correction (cf. coso_collect/village_check.py)
+    path('<int:pk>/villages/', views_villages.VillagesCheckView.as_view(), name='villages'),
+    path('<int:pk>/villages/relink/', views_villages.VillagesRelinkView.as_view(), name='villages_relink'),
+    path('<int:pk>/villages/search/', views_villages.VillagesSearchView.as_view(), name='villages_search'),
+    # Import des enregistrements dans les tâches du cycle (migrate_cosocollect_to_tasks), superutilisateurs
+    path('<int:pk>/tasks-import/', views_task_migration.TaskMigrationView.as_view(), name='task_migration'),
+    path('<int:pk>/tasks-import/tasks/', views_task_migration.TaskMigrationTasksView.as_view(),
+         name='task_migration_tasks'),
+    path('<int:pk>/tasks-import/levels/', views_task_migration.TaskMigrationLevelsSearchView.as_view(),
+         name='task_migration_levels'),
+    path('<int:pk>/tasks-import/start/', views_task_migration.TaskMigrationStartView.as_view(),
+         name='task_migration_start'),
+    path('<int:pk>/tasks-import/status/', views_task_migration.TaskMigrationStatusView.as_view(),
+         name='task_migration_status'),
+    path('<int:pk>/tasks-import/report/<int:run_id>/', views_task_migration.TaskMigrationReportView.as_view(),
+         name='task_migration_report'),
 
     # Saisie (tout utilisateur ayant accès au formulaire)
     path('<int:pk>/my-records/', views.MySubmissionsView.as_view(), name='my_submissions'),

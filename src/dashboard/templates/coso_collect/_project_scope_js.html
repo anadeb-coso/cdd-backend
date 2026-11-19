@@ -22,5 +22,17 @@
             $box.on("change", "input[name='project_scope']", toggle);
             toggle();
         });
+        // Groupes autorisés (création / import) : recherche Select2, initialisée à l'ouverture de la fenêtre
+        $(".cc-access-groups select").each(function () {
+            var $select = $(this), $modal = $select.closest(".modal");
+            function initSelect() {
+                if (!$.fn.select2 || $select.hasClass("select2-hidden-accessible")) return;
+                $select.select2({
+                    width: "100%", allowClear: true, placeholder: $select.data("placeholder"),
+                    dropdownParent: $modal.length ? $modal : $(document.body)
+                });
+            }
+            if ($modal.length) $modal.on("shown.bs.modal", initSelect); else initSelect();
+        });
     });
 </script>

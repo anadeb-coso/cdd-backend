@@ -2,8 +2,8 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}">
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/task_form_builder.css' %}?v={{ VERSION_CUSTOM }}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
 {% endblock %}
 
 {% block content %}
@@ -101,12 +101,12 @@
                 .replace("__TITLE_TEMPLATE_JSON__", function () { return titleJson; });
         })();
     </script>
-    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v=cascade1"></script>
+    <script src="{% static 'dashboard/js/task_form_builder.js' %}?v={{ VERSION_CUSTOM }}"></script>
     {# Moteur de remplissage réel, réutilisé pour l'onglet « Aperçu ». #}
     <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=cascade1"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=cascade1"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v={{ VERSION_CUSTOM }}"></script>
 {% endblock javascript %}
 
 {% block select2 %}{% endblock select2 %}

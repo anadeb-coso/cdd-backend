@@ -2,7 +2,7 @@
 {% load static i18n %}
 
 {% block extracss %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/coso_collect.css' %}?v={{ VERSION_CUSTOM }}">
     <style>
         .tcf-checklist.is-invalid { border: 1px solid #dc3545; border-radius: 4px; padding: 4px; }
         .tcf-repeat-row.is-invalid-row { border-color: #dc3545 !important; }
@@ -43,7 +43,7 @@
     <script src="{% static 'dashboard/js/task_cycle_form_logic.js' %}?v=cascade1"></script>
     <script src="{% static 'dashboard/js/task_cycle_cross_task.js' %}"></script>
     <script src="{% static 'dashboard/js/task_cycle_attachment_conditions.js' %}"></script>
-    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v=cascade1"></script>
+    <script src="{% static 'dashboard/js/task_cycle_fill_form.js' %}?v={{ VERSION_CUSTOM }}"></script>
     <script>
     (function () {
         var FORM_ID = {{ collect_form.pk }};

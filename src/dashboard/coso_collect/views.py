@@ -4,6 +4,7 @@ import json
 import os
 import re
 import uuid
+from process_manager.project_access import keep_hidden_projects, visible_projects
 from urllib.parse import quote
 
 from django.conf import settings
@@ -21,7 +22,7 @@ from django.utils.translation import gettext as _, gettext_lazy
 from django.contrib.auth.models import Group
 from django.views import generic
 
-from coso_collect import access, exports, stats
+from coso_collect import access, exports, stats, village_check
 from coso_collect.api_views import attachment_payload, serve_attachment
 from coso_collect.display import build_tree, cell_value, media_kind, table_columns
 from cdd.my_librairies.doc_convert import DocConversionError, docx_bytes_to_pdf_bytes, pdf_bytes_to_docx_bytes
@@ -146,10 +147,12 @@ class FormAdminMixin:
             'submissions_count': form.submissions.count(),
             # Choix des filtres « groupe d'utilisateurs » / « projet » de l'auteur (cf. filtered_submissions)
             'filter_groups': Group.objects.order_by('name'),
-            'filter_projects': Project.objects.order_by('name'),
+            'filter_projects': visible_projects(self.request.user),
             'selected_groups': self.request.GET.getlist('group'),
             'selected_projects': self.request.GET.getlist('project'),
             'has_own_record': form.single_submission and has_own_submission(self.request.user, form),
+            # Onglet « Villages » : seulement pour un formulaire qui a un champ village
+            'has_village_field': village_check.has_village_field(form),
             'breadcrumb': [
                 {'url': reverse('dashboard:coso_collect:list'), 'title': _('COSOCollect')},
                 {'url': '', 'title': form.title},
@@ -203,9 +206,9 @@ class FormListView(CollectPageMixin, generic.TemplateView):
             'fillable_forms': fillable,
             'administered_forms': administered,
             'can_create': access.can_create_forms(user),
-            'create_form': CollectFormCreateForm(),
+            'create_form': CollectFormCreateForm(current_user=user),
             'import_form': ImportFormFileForm(),
-            'import_scope_form': ProjectScopeForm(),
+            'import_scope_form': ProjectScopeForm(current_user=user),
         })
         return ctx
 
@@ -214,7 +217,7 @@ class FormCreateView(LoginRequiredMixin, generic.View):
     def post(self, request, *args, **kwargs):
         if not access.can_create_forms(request.user):
             raise PermissionDenied
-        form = CollectFormCreateForm(request.POST)
+        form = CollectFormCreateForm(request.POST, current_user=request.user)
         if not form.is_valid():
             messages.error(request, _('The title is required.') if 'title' in form.errors
                            else ' '.join(e for errs in form.errors.values() for e in errs))
@@ -224,6 +227,7 @@ class FormCreateView(LoginRequiredMixin, generic.View):
         obj.form = []
         obj.save()
         form.save_m2m()
+        form.apply_access(obj)
         return redirect('dashboard:coso_collect:builder', pk=obj.pk)
 
 
@@ -233,7 +237,7 @@ class FormImportCreateView(LoginRequiredMixin, generic.View):
     def post(self, request, *args, **kwargs):
         if not access.can_create_forms(request.user):
             raise PermissionDenied
-        scope_form = ProjectScopeForm(request.POST)
+        scope_form = ProjectScopeForm(request.POST, current_user=request.user)
         if not scope_form.is_valid():
             messages.error(request, ' '.join(e for errs in scope_form.errors.values() for e in errs))
             return redirect('dashboard:coso_collect:list')
@@ -253,6 +257,7 @@ class FormImportCreateView(LoginRequiredMixin, generic.View):
             project_scope=scope_form.cleaned_data['project_scope'],
         )
         obj.projects.set(scope_form.cleaned_data['projects'])
+        scope_form.apply_access(obj)
         if result.get('errors'):
             messages.warning(request, _('Partial import: ') + ' '.join(result['errors']))
         else:
@@ -397,6 +402,7 @@ class SettingsView(CollectPageMixin, FormAdminMixin, generic.FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['instance'] = self.form_obj
+        kwargs['current_user'] = self.request.user
         return kwargs
 
     def get_form(self, form_class=None):
@@ -421,12 +427,16 @@ class SettingsView(CollectPageMixin, FormAdminMixin, generic.FormView):
                 row.cells = [{'code': code, 'label': label, 'on': row.has(code)}
                              for code, label in CollectFormAdmin.RIGHTS]
             ctx['admin_rows'] = rows
-            ctx['add_admin_form'] = AddFormAdminForm(self.form_obj)
+            ctx['add_admin_form'] = AddFormAdminForm(self.form_obj, current_user=self.request.user)
             ctx['right_requires'] = access.RIGHT_REQUIRES
         return ctx
 
     def form_valid(self, form):
-        form.save()
+        previous_projects = list(self.form_obj.projects.all())
+        obj = form.save()
+        if obj.project_scope == CollectForm.PROJECTS_SELECTED:
+            # projets déjà liés que l'utilisateur connecté ne voit pas : conservés
+            obj.projects.set(keep_hidden_projects(self.request.user, previous_projects, form.cleaned_data['projects']))
         messages.success(self.request, _('Settings saved.'))
         return redirect('dashboard:coso_collect:settings', pk=self.form_obj.pk)
 
@@ -496,7 +506,7 @@ class FormAdminsView(LoginRequiredMixin, FormAdminMixin, generic.View):
         back = reverse('dashboard:coso_collect:settings', args=[form.pk]) + '#cc-admins'
         action = request.POST.get('action')
         if action == 'add':
-            add_form = AddFormAdminForm(form, request.POST)
+            add_form = AddFormAdminForm(form, request.POST, current_user=request.user)
             if not add_form.is_valid():
                 messages.error(request, _('Choose users or groups whose members are not yet administrators of this form.'))
                 return redirect(back)
@@ -801,6 +811,7 @@ HISTORY_LABELS = {
     'reopened': gettext_lazy('Reopened for modification'),
     'locked': gettext_lazy('Locked again'),
     'edited_by_admin': gettext_lazy('Data corrected by an administrator'),
+    'village_relinked': gettext_lazy('Village relinked by an administrator'),
 }
 
 
@@ -810,7 +821,10 @@ def _history_display(history):
         if not isinstance(entry, dict):
             continue
         at = parse_iso(entry.get('at'))
-        out.append(dict(entry, label=HISTORY_LABELS.get(entry.get('action'), entry.get('action')),
+        label = HISTORY_LABELS.get(entry.get('action'), entry.get('action'))
+        if entry.get('action') == 'village_relinked':
+            label = f"{label} : {entry.get('from')} -> {entry.get('to_name') or ''} ({entry.get('to')})"
+        out.append(dict(entry, label=label,
                         at_display=timezone.localtime(at).strftime('%d/%m/%Y %H:%M') if at else ''))
     return out
 
