@@ -54,6 +54,10 @@
             <div class="card-footer py-2">
                 <button type="submit" class="btn btn-primary btn-sm rounded-xl">{% translate "Filter" %}</button>
                 <a href="{% url 'dashboard:facilitators:localities_history' %}" class="btn btn-default btn-sm rounded-xl">{% translate "Reset" %}</a>
+                <div class="custom-control custom-checkbox d-inline-block ml-2">
+                    <input type="checkbox" class="custom-control-input" name="test_accounts" id="filter-test-accounts" value="1" {% if filters.test_accounts %}checked{% endif %}>
+                    <label class="custom-control-label small" for="filter-test-accounts">{% translate "Show the test accounts (development / training)" %}</label>
+                </div>
                 <span class="localities-note ml-2">{% translate "≈ : reconstructed date (import of the MIS assignments: unassignment date = last modification)." %}</span>
             </div>
         </form>

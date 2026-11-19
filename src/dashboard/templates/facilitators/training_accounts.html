@@ -1,0 +1,124 @@
+{% extends 'layouts/base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header"><b><i class="fas fa-user-graduate mr-1"></i>{% translate "Create training accounts" %}</b>
+                {% if project %}<span class="text-muted">— {{ project.name }}{% if cycle %} / {{ cycle.name }}{% endif %}</span>{% endif %}
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    {% translate "Test accounts for the mobile application (training_mode): usernames trainingN, name « TrainingN Account », e-mail trainingN@test.com. Their villages are recorded in the DCC and in their CouchDB database, but they never receive an assignment in the SIG (reserved to the real community facilitators), no MGP account and no e-mail." %}
+                </p>
+                {% if not cycle %}
+                    <div class="alert alert-warning mb-0">{% translate "Select a project and a cycle first." %}</div>
+                {% else %}
+                <form method="post" id="training-form">{% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <div class="form-row">
+                        <div class="form-group col-md-2">
+                            <label for="id_count">{% translate "Number of accounts" %}</label>
+                            <input type="number" name="count" id="id_count" min="1" max="{{ max_accounts }}" class="form-control form-control-sm {% if form.count.errors %}is-invalid{% endif %}" value="{{ form.count.value|default:1 }}">
+                            {% for e in form.count.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="id_start">{% translate "First number" %}</label>
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend"><span class="input-group-text">training</span></div>
+                                <input type="number" name="start" id="id_start" min="1" class="form-control {% if form.start.errors %}is-invalid{% endif %}" value="{{ form.start.value|default:'' }}">
+                                {% for e in form.start.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            </div>
+                            <small id="training-usernames" class="form-text text-muted"></small>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="id_password">{% translate "Password (same for all)" %}</label>
+                            <input type="text" name="password" id="id_password" class="form-control form-control-sm {% if form.password.errors %}is-invalid{% endif %}" value="{{ form.password.value|default:'' }}" autocomplete="off">
+                            {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group col-md-4 pt-md-4">
+                            <div class="custom-control custom-checkbox mt-md-2">
+                                <input type="checkbox" class="custom-control-input" name="sync_tasks" id="id_sync_tasks" value="1" {% if form.sync_tasks.value %}checked{% endif %}>
+                                <label class="custom-control-label" for="id_sync_tasks">{% translate "Create the tasks of the cycle in these accounts" %}</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_headquarters">{% translate "Villages (CVD headquarters villages; the other villages of the CVD are added)" %}</label>
+                        <select name="headquarters" id="id_headquarters" class="form-control {% if form.headquarters.errors %}is-invalid{% endif %}" multiple>
+                            {% for value, label in form.fields.headquarters.choices %}
+                                <option value="{{ value }}" {% if value in form.headquarters.value or value|stringformat:"s" in form.headquarters.value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% for e in form.headquarters.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-xl"><i class="fas fa-plus mr-1"></i>{% translate "Create the accounts" %}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <b>{% translate "Training accounts of the project" %}</b> ({{ accounts|length }})
+            </div>
+            {% if sig_violations %}
+                <div class="alert alert-danger m-2 mb-0">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>{% blocktranslate count counter=sig_violations %}{{ counter }} training account has assignments in the SIG, which is reserved to the real community facilitators.{% plural %}{{ counter }} training accounts have assignments in the SIG, which is reserved to the real community facilitators.{% endblocktranslate %}
+                </div>
+            {% endif %}
+            <div class="card-body table-responsive p-0">
+                <table class="table table-sm table-striped table-hover mb-0" id="training-accounts">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Username" %}</th>
+                            <th>{% translate "Name" %}</th>
+                            <th>{% translate "Email" %}</th>
+                            <th>{% translate "Headquarters villages" %}</th>
+                            <th class="text-center">{% translate "Villages" %}</th>
+                            <th class="text-center">{% translate "Active" %}</th>
+                            <th class="text-center">{% translate "SIG assignments" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for f in accounts %}
+                        <tr>
+                            <td>{{ f.username }}</td>
+                            <td>{{ f.name }}</td>
+                            <td>{{ f.email|default:"" }}</td>
+                            <td>{{ f.hq_names|join:", "|default:"—" }}</td>
+                            <td class="text-center">{{ f.village_count }}</td>
+                            <td class="text-center">{% if f.active %}<i class="fas fa-check text-success"></i>{% else %}<i class="fas fa-times text-muted"></i>{% endif %}</td>
+                            <td class="text-center">{% if f.sig_rows %}<span class="badge badge-danger">{{ f.sig_rows }}</span>{% else %}<span class="text-muted">0</span>{% endif %}</td>
+                            <td class="text-nowrap text-right">
+                                <a class="btn btn-xs btn-outline-primary rounded-xl" href="{% url 'dashboard:facilitators:detail' f.no_sql_db_name %}"><i class="fas fa-id-card mr-1"></i>{% translate "Profile" %}</a>
+                                <a class="btn btn-xs btn-outline-secondary rounded-xl" href="{% url 'dashboard:facilitators:localities' f.pk %}"><i class="fas fa-map-marker-alt mr-1"></i>{% translate "Localities" %}</a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="8" class="text-center text-muted py-3">{% translate "No training account in this project." %}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block select2 %}
+<script>
+$(function () {
+    $("#id_headquarters").select2({ width: "100%" });
+    function names() {
+        var start = parseInt($("#id_start").val(), 10), count = parseInt($("#id_count").val(), 10);
+        if (!(start > 0) || !(count > 0)) { $("#training-usernames").text(""); return; }
+        $("#training-usernames").text("training" + start + (count > 1 ? " … training" + (start + count - 1) : ""));
+    }
+    $("#id_start, #id_count").on("input change", names);
+    names();
+});
+</script>
+{% endblock select2 %}

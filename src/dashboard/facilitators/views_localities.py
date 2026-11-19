@@ -165,6 +165,8 @@ class FacilitatorLocalitiesView(PageMixin, LoginRequiredMixin, generic.TemplateV
             change, self.facilitator, self.facilitator_db, self.doc, session.get('project_id'), session.get('project_name'),
             history, 'localities_page',
         )
+        from dashboard.diagnostics.village_docs import track_operation
+        track_operation(self.request, result['documents_operation'])
         if result['databases_error']:
             messages.warning(self.request, gettext_lazy("Access to other facilitators' databases not updated: %s") % result['databases_error'])
         if result['grm'] is not None:
@@ -210,10 +212,14 @@ class LocalitiesHistoryMixin:
             'localities': [int(v) for v in params.getlist('locality') if str(v).isdigit() and int(v) in self.tree.levels],
             'date_from': iso_date(params.get('date_from')),
             'date_to': iso_date(params.get('date_to')),
+            # comptes de développement / formation : masqués sauf demande (case « Afficher les comptes de test »)
+            'test_accounts': params.get('test_accounts') == '1',
         }
 
     def visible_events(self):
         events = LocalityHistory.objects.all()
+        if self.request.GET.get('test_accounts') != '1':
+            events = events.exclude(facilitator__develop_mode=True).exclude(facilitator__training_mode=True)
         if not can_assign_user_localities(self.request.user):
             events = events.filter(facilitator__isnull=False)  # superviseurs : les facilitateurs seulement
         return events
@@ -291,7 +297,9 @@ class LocalitiesHistoryView(LocalitiesHistoryMixin, PageMixin, LoginRequiredMixi
         can_see_users = can_assign_user_localities(self.request.user)
 
         persons = [(f"f-{pk}", f"{name or email} — {email}" if email else (name or str(pk)))
-                   for pk, name, email in Facilitator.objects.filter(localities_history__isnull=False).distinct()
+                   for pk, name, email in (Facilitator.objects.filter(localities_history__isnull=False) if filters['test_accounts']
+                                           else Facilitator.objects.filter(localities_history__isnull=False, develop_mode=False,
+                                                                           training_mode=False)).distinct()
                    .values_list('id', 'name', 'email')]
         if can_see_users:
             persons += [(f"u-{pk}", f"{(last + ' ' + first).strip() or username} — {email}" if email else (last + ' ' + first).strip() or username)

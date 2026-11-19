@@ -214,6 +214,68 @@ def with_stabilization_localities(facilitators):
 # Villages d'affectation : logique commune avec UpdateFacilitatorView
 # ---------------------------------------------------------------------------------------------
 
+def is_test_account(facilitator):
+    """Compte de développement ou de formation (comptes de test de l'application mobile)."""
+    return bool(getattr(facilitator, 'develop_mode', False) or getattr(facilitator, 'training_mode', False))
+
+
+def has_sig_assignments(facilitator):
+    """Seuls les vrais FC (facilitateurs communautaires ni de développement ni de formation) ont des affectations
+    dans le SIG (`AssignAdministrativeLevelToFacilitator`), comme le veut rebuild_assignments_from_couchdb : un
+    compte de test qui prendrait un village libre en priverait le vrai FC affecté ensuite (une ligne n'est créée
+    que pour un village encore libre)."""
+    return (facilitator.facilitator_type or 'community_facilitator') == 'community_facilitator' \
+        and not (facilitator.develop_mode or facilitator.training_mode)
+
+
+def align_sig_assignments_with_mode(facilitator):
+    """Après un changement de mode (développement / formation) ou de type : compte qui n'a plus droit aux
+    affectations -> ses lignes du SIG sont supprimées (comme rebuild_assignments_from_couchdb) ; vrai FC -> une
+    ligne active pour chacun de ses villages d'affectation encore libres dans leur projet. Renvoie
+    (supprimées, créées, villages déjà affectés à un autre facilitateur)."""
+    from django.db import connections
+    from no_sql_client import NoSQLClient
+
+    if not has_sig_assignments(facilitator):
+        with connections['mis'].cursor() as cursor:
+            cursor.execute("DELETE FROM assignments_assignadministrativeleveltofacilitator WHERE facilitator_id = %s",
+                           [str(facilitator.id)])
+            return cursor.rowcount, 0, []
+    levels = None
+    try:
+        nsc = NoSQLClient()
+        docs = nsc.get_db(facilitator.no_sql_db_name).get_query_result({"type": 'facilitator'})[:]
+        if docs:
+            levels = docs[0].get('administrative_levels') or []
+    except Exception:  # noqa: BLE001 - base illisible : copie en base
+        levels = None
+    if levels is None:
+        levels = facilitator.administrative_levels or []
+    projects_mis = cdd_to_mis_projects()
+    created, taken = 0, []
+    for adl in levels:
+        if not isinstance(adl, dict) or not str(adl.get('id') or '').isdigit():
+            continue
+        project_mis_id = projects_mis.get(adl.get('project_id'))
+        if not project_mis_id:
+            continue
+        rows = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(
+            administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True,
+        ).annotate(_facilitator_id=Cast('facilitator_id', output_field=CharField()))
+        if rows.filter(_facilitator_id=str(facilitator.id)).exists():
+            continue
+        if rows.exists():
+            taken.append(int(adl['id']))
+            continue
+        assign = AssignAdministrativeLevelToFacilitator()
+        assign.administrative_level_id = int(adl['id'])
+        assign.facilitator_id = facilitator.id
+        assign.project_id = project_mis_id
+        assign.save(using='mis')
+        created += 1
+    return 0, created, taken
+
+
 def cdd_to_mis_projects():
     """Projet CDD (couch_id) -> id du projet du SIG (même nom)."""
     mis_projects = dict(mis_objects_call.filter_objects(MisProject).values_list('name', 'id'))
@@ -313,8 +375,8 @@ def apply_administrative_levels(facilitator, administrative_levels_old, submitte
         if ad.get('id') and not exists_id_in_a_dict_by_project_and_cycle(_administrative_levels, ad.get('id'), ad.get('project_id'), ad.get('cycle_id')):
             administrative_levels_remove.append(ad)
 
-    #Assign ADL
-    for adl in administrative_levels_new:
+    #Assign ADL (vrais facilitateurs seulement, cf. has_sig_assignments)
+    for adl in (administrative_levels_new if has_sig_assignments(facilitator) else []):
         _assign = AssignAdministrativeLevelToFacilitator.objects.using('mis').filter(administrative_level_id=int(adl['id']), project_id=project_mis_id, activated=True).first()
         if (adl.get('id') and str(adl.get('id')).isdigit() and not _assign):
                 try:
@@ -352,31 +414,28 @@ def apply_administrative_levels(facilitator, administrative_levels_old, submitte
 
 
 def schedule_administrative_levels_documents_moves(facilitator_db_name, administrative_levels_new, administrative_levels_remove,
-                                                   kept_administrative_levels=None):
-    """Planifie le déplacement des documents CouchDB des villages sièges ajoutés (backup -> base du
-    facilitateur) et retirés (base du facilitateur -> backup) ; un village retiré qui reste chez le facilitateur
-    dans un autre projet ou cycle (`kept_administrative_levels`) garde ses documents."""
-    process_adls = [d.get('id') for d in administrative_levels_new if d.get('is_headquarters_village')]
-    if process_adls:
-        process_add_or_remove_adl = ProcessAddOrRemoveADL(
-            name = f"backup_db_facilitators_docs_{facilitator_db_name}",
-            move_from = "backup_db_facilitators_docs",
-            move_to = facilitator_db_name,
-            administrative_levels = process_adls,
-            query_action = "update"
-        )
-        process_add_or_remove_adl.save()
+                                                   kept_administrative_levels=None, user=None, background=True):
+    """Déplace, AU MOMENT de l'enregistrement des villages d'affectation (initiaux), les phases/activités/tâches
+    CouchDB : villages retirés -> base de sauvegarde `backup_db_facilitators_docs` ; villages sièges ajoutés <- base
+    de sauvegarde, si elle en contient. Le déplacement est fait par (village, projet, cycle) : un village retiré qui
+    reste chez le facilitateur dans le même projet et cycle (`kept_administrative_levels`) garde ses documents.
 
-    process_adls = headquarters_villages_to_move_out(administrative_levels_remove, kept_administrative_levels)
-    if process_adls:
-        process_add_or_remove_adl = ProcessAddOrRemoveADL(
-            name = f"{facilitator_db_name}_backup_db_facilitators_docs",
-            move_from = facilitator_db_name,
-            move_to = "backup_db_facilitators_docs",
-            administrative_levels = process_adls,
-            query_action = "update"
-        )
-        process_add_or_remove_adl.save()
+    Exécuté dans un thread (en file derrière toute autre opération de documents de villages) : l'enregistrement et
+    la navigation ne sont pas bloqués ; l'avancement est suivi dans process_manager.VillageDocsOperation. Remplace
+    les ProcessAddOrRemoveADL, que rien n'exécutait. Renvoie l'opération, ou None.
+
+    Rien pour un compte de test (développement / formation) : ses villages sont ceux de vrais FC, et le
+    déplacement sortirait les vrais documents de la base de sauvegarde (ajout) ou y mettrait des données de test
+    reprises ensuite par un vrai FC (retrait). Rien non plus pour un facilitateur technique (pas de tâches de
+    village siège)."""
+    from authentication.models import Facilitator
+    from dashboard.diagnostics.village_docs import start_localities_moves
+    account = Facilitator.objects.filter(no_sql_db_name=facilitator_db_name).only(
+        'develop_mode', 'training_mode', 'facilitator_type').first()
+    if account is None or is_test_account(account) or account.facilitator_type != 'community_facilitator':
+        return None
+    return start_localities_moves(facilitator_db_name, administrative_levels_new, administrative_levels_remove,
+                                  kept_administrative_levels, user=user, background=background)
 
 
 # ---------------------------------------------------------------------------------------------

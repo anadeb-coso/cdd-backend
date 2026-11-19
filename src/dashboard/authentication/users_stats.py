@@ -76,6 +76,32 @@ class Person:
         return _('Mobile') if self.facilitator else _('Web')
 
 
+def _test_accounts_user_ids():
+    """Comptes web des facilitateurs en mode développement ou formation (même personne : lien, e-mail ou
+    identifiant), hors statistiques — sauf s'ils sont aussi ceux d'un facilitateur réel."""
+    from django.db.models import Q
+    from django.db.models.functions import Lower, Trim
+
+    def accounts(facilitators):
+        ids, emails, usernames = set(), set(), set()
+        for user_id, email, username in facilitators.values_list('user_id', 'email', 'username'):
+            if user_id:
+                ids.add(user_id)
+            if _key(email):
+                emails.add(_key(email))
+            if _key(username):
+                usernames.add(_key(username))
+        if not (ids or emails or usernames):
+            return set()
+        matched = (User.objects.annotate(_email=Lower(Trim('email')), _username=Lower(Trim('username')))
+                   .filter(Q(pk__in=ids) | Q(_email__in=emails) | Q(_username__in=usernames)))
+        return set(matched.values_list('pk', flat=True))
+
+    test = Facilitator.objects.filter(Q(develop_mode=True) | Q(training_mode=True))
+    real = Facilitator.objects.filter(develop_mode=False, training_mode=False)
+    return accounts(test) - accounts(real)
+
+
 def users_statistics(project_id=None):
     """Cartes et liste complète des utilisateurs, d'un projet (`project_id`) ou de tous les projets."""
     facilitator_filters = {'develop_mode': False, 'training_mode': False, 'active': True}
@@ -89,6 +115,7 @@ def users_statistics(project_id=None):
     users = User.objects.filter(is_active=True)
     if project_id:
         users = users.filter(projects__in=[project_id])
+    users = users.exclude(pk__in=_test_accounts_user_ids())
     # `prefetch_related('groups')` : les modales affichent le groupe de chaque utilisateur, sans requête par ligne
     supervisors = users.filter(groups__name__in=['Supervisor']).prefetch_related('groups')
     CDDSpecialists = users.filter(groups__name__in=['CDDSpecialist']).prefetch_related('groups')

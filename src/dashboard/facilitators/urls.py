@@ -1,6 +1,6 @@
 from django.urls import path
 
-from dashboard.facilitators import views, views_stabilized, views_old_profile, views_export, views_localities, views_import
+from dashboard.facilitators import views, views_stabilized, views_old_profile, views_export, views_localities, views_import, views_training
 
 app_name = 'facilitators'
 urlpatterns = [
@@ -9,6 +9,7 @@ urlpatterns = [
     path('facilitators-percent/<slug:id>/', views.FacilitatorsPercentListView.as_view(), name='facilitator_percent'),
     path('facilitators-percent/', views.FacilitatorsPercentView.as_view(), name='facilitators_percent'),
     path('create/', views.CreateFacilitatorFormView.as_view(), name='create'),
+    path('training/', views_training.TrainingAccountsView.as_view(), name='training_accounts'),
     path('<int:pk>/update/', views.UpdateFacilitatorView.as_view(), name='update'),
     path('import/', views_import.FacilitatorsImportView.as_view(), name='import_facilitators'),
     path('import-localities/', views_import.AssignmentsImportView.as_view(), name='import_assignments'),

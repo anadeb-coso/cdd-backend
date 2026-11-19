@@ -39,6 +39,9 @@ def notify_localities_change(account, events, tree=None):
     active = getattr(account, 'active', None) if hasattr(account, 'no_sql_db_name') else getattr(account, 'is_active', False)
     if not events or not email or not active:
         return False
+    # Comptes de test (développement / formation) : adresses fictives (trainingN@test.com), pas de mail.
+    if getattr(account, 'develop_mode', False) or getattr(account, 'training_mode', False):
+        return False
     tree = tree or AdministrativeTree()
     name = getattr(account, 'name', None) or f"{account.last_name or ''} {account.first_name or ''}".strip() or account.username
     title = _("Update of your localities")

@@ -71,7 +71,7 @@ def get_stabilizing_facilitators_emails_by_village(village_ids):
 def get_cvds(project_couch_id, cycle_couch_id, facilitator, ald_ids: list = [], administratives_stabilized: list = []):
     administrative_levels_project = [_ for _ in facilitator['administrative_levels'] if (not cycle_couch_id or _.get('cycle_id') == cycle_couch_id) and (not project_couch_id or _.get('project_id') == project_couch_id)]
     administrative_levels_project_ids = [_.get('id') for _ in administrative_levels_project]
-    geographical_units = [_ for _ in facilitator.get('geographical_units') if any(elem in administrative_levels_project_ids for elem in _['villages'])]
+    geographical_units = [_ for _ in (facilitator.get('geographical_units') or []) if any(elem in administrative_levels_project_ids for elem in _['villages'])]
     CVDs = []
     if geographical_units:
         for index in range(len(geographical_units)) :
@@ -209,6 +209,15 @@ def get_search_for_stabilized_facilitator_dbs(project_mis_id, facilitator):
         if _f:
             administratives_stabilized = [str(_id) for _id in _f.stabilization_administrative_ids]
 
+        # Compte de test (développement / formation) : pas de données des vrais FC pour ses villages de
+        # stabilisation (profil, listes de tâches) ; le compte est repris par son sql_id, sinon par l'e-mail.
+        sql_id = facilitator.get('sql_id')
+        account = Facilitator.objects.filter(id=int(sql_id)).only('develop_mode', 'training_mode').first() \
+            if str(sql_id or '').isdigit() else _f
+        if facilitator.get('develop_mode') or facilitator.get('training_mode') or \
+                (account is not None and (account.develop_mode or account.training_mode)):
+            return no_sql_dbs_names_with_village_ids, cvds, administratives_stabilized
+
         for adl_id in administratives_stabilized:
             if adl_id not in [elt['id'] for elt in facilitator['administrative_levels'] if elt['project_name'] == project_cdd.name]:
                 assing_facilitator_object = mis_objects_call.filter_objects(
@@ -264,6 +273,8 @@ _HISTORY_META = {
     'validated': (gettext_lazy('Validated'), 'badge-success'),
     'invalidated': (gettext_lazy('Invalidated'), 'badge-danger'),
     'shared_data_loaded': (gettext_lazy('Data loaded from another task'), 'badge-primary'),
+    'cosocollect_import': (gettext_lazy('Data imported from COSOCollect'), 'badge-primary'),
+    'cosocollect_undo': (gettext_lazy('COSOCollect import cancelled'), 'badge-secondary'),
 }
 
 
@@ -357,6 +368,13 @@ def build_task_history(task_doc):
             parts.append(', '.join(_share_field_label(f) for f in h['fields']))
         _add('shared_data_loaded', h.get('date'), fac.get('name'), ' — '.join(parts) or None)
 
+    # Données importées d'un enregistrement COSOCollect (coso_collect.task_migration).
+    for h in (task_doc.get('cosocollect_history') or []):
+        author = h.get('author') or {}
+        parts = [str(x) for x in (h.get('form_title'), h.get('source_label')) if x]
+        _add('cosocollect_undo' if h.get('action') == 'undo' else 'cosocollect_import', h.get('date'),
+             author.get('name'), ' — '.join(parts) or None)
+
     entries.sort(key=lambda e: e['date'] or datetime.min, reverse=True)
     return entries
 
@@ -382,7 +400,7 @@ def build_task_detail_context(request, task_doc, no_sql_db_name):
     ``FacilitatorTaskDetailModalView`` (une seule modale, un seul contexte,
     pas de logique dupliquée)."""
     from process_manager.models import Task
-    from dashboard.utils import canton_headquarters_village_ids, find_task_share_record
+    from dashboard.utils import canton_headquarters_village_ids, find_task_share_record, account_kind_for
     from dashboard.process_manager.tasks.form_design import group_share_paths_by_mode
 
     context = {
@@ -422,6 +440,7 @@ def build_task_detail_context(request, task_doc, no_sql_db_name):
 
     record = find_task_share_record(
         sql_id, request.session.get('project_id'), source_adl, prefer_field='share_targets',
+        kind=account_kind_for(no_sql_db_name=no_sql_db_name),
     )
     stored_targets = (record.share_targets if record else None) or {}
     if isinstance(stored_targets, list):
@@ -452,6 +471,10 @@ def update_facilitators_stats(facilitators, liste_villages, cdd_project_id, cdd_
         .select_related('last_task_done_current_project', 'last_task_done_stabilized', 'last_task_done')
     dict_agg_s_fs = {str(ag.facilitator_id): ag for ag in agg_s_fs}
     havent_update = False if (facilitators and (not agg_s_fs.exists() or (agg_s_fs.exists() and agg_s_fs.filter(new_update_exists=True).exists()))) else True
+    # Un facilitateur sans ligne en cache (créé ou importé depuis le dernier calcul) : recalcul, sinon ses colonnes
+    # CVD / pourcentages restent vides (« None/None ») jusqu'au prochain update_funnel.
+    if havent_update and any(str(f.id) not in dict_agg_s_fs for f in facilitators):
+        havent_update = False
     if havent_update:
         for f in facilitators:
             _f = dict_agg_s_fs.get(str(f.id))
