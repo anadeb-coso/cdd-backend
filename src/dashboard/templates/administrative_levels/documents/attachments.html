@@ -934,6 +934,7 @@
             }
 
             function loadLabels() {
+                if (!$label.length) return;  // page sans filtre « libellé » (galerie Ouvrages)
                 var query = labelScopeQuery();
                 if (query === labelsQuery) return;
                 labelsQuery = query;

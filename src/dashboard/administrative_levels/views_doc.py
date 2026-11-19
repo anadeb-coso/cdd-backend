@@ -241,7 +241,8 @@ class AttachmentListView(PageMixin, LoginRequiredMixin, generic.TemplateView):
     grid_template_name = "administrative_levels/documents/_grid.html"
     context_object_name = "attachments"
     title = gettext_lazy("Gallery")
-    active_level1 = 'documents'
+    active_level1 = 'gallery'
+    active_level2 = 'documents'
     paginate_by = GALLERY_PAGE_SIZE
     no_sql_db_name = None
     administrative_level = None

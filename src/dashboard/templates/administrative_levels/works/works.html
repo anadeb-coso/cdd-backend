@@ -1,0 +1,136 @@
+{% extends 'administrative_levels/documents/attachments.html' %}
+{% load i18n %}
+{% comment %}
+    Galerie « Ouvrages » (WorksGalleryView) : fichiers des sous-projets non abandonnés. Reprend la page
+    « Cycle d'investissement » (grille, défilement infini, visionneuse, cascade géographique) avec sa propre barre
+    d'outils et ses propres filtres (projet, secteur, type, désignation, type de travaux, étape, localité, recherche).
+{% endcomment %}
+
+{% block content %}
+    <div class="gallery-toolbar d-flex flex-wrap align-items-center mb-2">
+        <div class="btn-group flex-wrap" role="group" aria-label="{% translate 'Attachment type' %}">
+            <a href="{{ type_links.all }}" class="btn btn-outline-secondary {% if type_links.active == 'all' %}active{% endif %}">{% translate 'All' %}</a>
+            <a href="{{ type_links.Photo }}" class="btn btn-outline-secondary {% if type_links.active == 'Photo' %}active{% endif %}">
+                <i class="fas fa-image"></i> {% translate 'Photos' %}
+            </a>
+            <a href="{{ type_links.Document }}" class="btn btn-outline-secondary {% if type_links.active == 'Document' %}active{% endif %}">
+                <i class="fas fa-file-alt"></i> {% translate 'Documents' %}
+            </a>
+        </div>
+
+        {% if active_filter_chips %}
+            <div class="active-chips d-flex flex-wrap align-items-center">
+                {% for chip in active_filter_chips %}
+                    <span class="badge badge-pill px-2 py-1 mr-1">
+                        {{ chip.label }}
+                        <a href="{{ chip.remove_url }}" class="ml-1" aria-label="{% translate 'Remove filter' %}" title="{% translate 'Remove filter' %}">&times;</a>
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="ml-auto d-flex flex-wrap align-items-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-toggle="modal" data-target="#attachmentFilterModal">
+                <i class="fas fa-sliders-h"></i> {% translate 'More filters' %}
+            </button>
+        </div>
+    </div>
+
+    <p class="gallery-summary mb-3">{{ total_count }} {% translate 'file(s)' %}</p>
+
+    <div id="gallery-root">
+        {% include 'administrative_levels/documents/_grid.html' %}
+    </div>
+
+    <div id="gallery-loading" class="gallery-loading" role="status" aria-live="polite">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>{% translate 'Loading more attachments…' %}</span>
+    </div>
+    <div id="gallery-error" class="gallery-error" role="alert" hidden>
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+        <span>{% translate 'Could not load more attachments. Check your connection and try again.' %}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="gallery-retry">{% translate 'Retry' %}</button>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="attachmentModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="lightbox-counter"></span>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{% translate 'Close' %}">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="lightbox-header-slot"></div>
+                    <div class="lightbox-stage">
+                        <button type="button" class="lightbox-nav lightbox-prev" title="{% translate 'Previous' %}" aria-label="{% translate 'Previous' %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="lightbox-media"></div>
+                        <button type="button" class="lightbox-nav lightbox-next" title="{% translate 'Next' %}" aria-label="{% translate 'Next' %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div class="lightbox-footer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="attachmentFilterModal" tabindex="-1" role="dialog" aria-labelledby="worksFilterLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="worksFilterLabel">{% translate 'Filter the works files' %}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{% translate 'Close' %}">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form action="{% url 'dashboard:administrative_levels:works_gallery' %}" method="get" id="galleryFilterForm">
+                        <input type="hidden" name="type" value="{{ query_strings_raw.type }}">
+                        <div class="form-group">
+                            <label for="id_q">{% translate 'Search (number, title, file)' %}</label>
+                            <input type="text" class="form-control" name="q" id="id_q" value="{{ search }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% for select in works_selects %}
+                                    <div class="form-group">
+                                        <label for="id_{{ select.key }}">{{ select.label }}</label>
+                                        <select class="form-control" name="{{ select.key }}" id="id_{{ select.key }}" style="width: 100%;">
+                                            <option value="">---</option>
+                                            {% for value, label in select.options %}
+                                                <option value="{{ value }}"{% if value == select.selected %} selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {% for select in geo_selects %}
+                                    <div class="form-group">
+                                        <label for="id_{{ select.key }}">{{ select.label }}</label>
+                                        <select class="form-control" name="{{ select.key }}" id="id_{{ select.key }}" style="width: 100%;"{% if select.disabled %} disabled{% endif %}>
+                                            <option value="">---</option>
+                                            {% for option_id, option_name in select.options %}
+                                                <option value="{{ option_id }}"{% if option_id == select.selected %} selected{% endif %}>{{ option_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'dashboard:administrative_levels:works_gallery' %}" class="btn btn-link px-0">{% translate 'Reset' %}</a>
+                            <input type="submit" class="btn btn-primary" value="{% translate 'Apply' %}">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
